@@ -1,7 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, TouchEvent } from 'react';
 import { MOCK_CANDIDATES } from '../constants';
 import { Candidate, FunnelStage, PRICING, CREDITS_TO_EUR, ConfidenceLevel, formatPrice } from '../types';
 import { ConfidenceBadge, StepBadge, ShareModal, useToast } from './ui';
+
+// Swipeable Card Hook for mobile touch interactions
+const useSwipe = (onSwipeLeft?: () => void, onSwipeRight?: () => void) => {
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchMove = (e: TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe && onSwipeLeft) onSwipeLeft();
+    if (isRightSwipe && onSwipeRight) onSwipeRight();
+  };
+
+  return { onTouchStart, onTouchMove, onTouchEnd };
+};
 
 interface Props {
   credits: number;
@@ -12,11 +39,16 @@ interface Props {
 const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandidate }) => {
   const { addToast } = useToast();
   const [candidates, setCandidates] = useState(MOCK_CANDIDATES);
-  const [shareModal, setShareModal] = useState<{ isOpen: boolean; candidate: Candidate | null }>({ 
-    isOpen: false, 
-    candidate: null 
+  const [shareModal, setShareModal] = useState<{ isOpen: boolean; candidate: Candidate | null }>({
+    isOpen: false,
+    candidate: null
   });
   const [sortBy, setSortBy] = useState<'score' | 'name'>('score');
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  const toggleCardExpand = (candidateId: string) => {
+    setExpandedCard(prev => prev === candidateId ? null : candidateId);
+  };
 
   const handleUnlockProfile = (e: React.MouseEvent, candidateId: string) => {
     e.stopPropagation();
@@ -119,8 +151,14 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
               aria-label={isUnlocked ? `View evidence report for ${c.name}` : undefined}
               onKeyDown={(e) => e.key === 'Enter' && isUnlocked && onSelectCandidate(c)}
             >
-              {/* Mobile: Top row with candidate info and score */}
-              <div className="flex items-center justify-between md:hidden">
+              {/* Mobile: Expandable Card Header */}
+              <div
+                className="flex items-center justify-between md:hidden"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleCardExpand(c.id);
+                }}
+              >
                 <div className="flex items-center flex-1 min-w-0">
                   <div className="relative shrink-0">
                     <img
@@ -143,11 +181,67 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                     <div className="text-xs text-slate-500 truncate">{c.currentRole} at {c.company}</div>
                   </div>
                 </div>
-                <div className="flex flex-col items-center ml-3">
-                  <div className={`text-lg font-bold font-mono ${getScoreColor(c.matchScore)}`}>
-                    {c.matchScore}%
+                <div className="flex items-center space-x-2 ml-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`text-lg font-bold font-mono ${getScoreColor(c.matchScore)}`}>
+                      {c.matchScore}%
+                    </div>
+                    <ConfidenceBadge level={c.confidence || ConfidenceLevel.MEDIUM} size="sm" />
                   </div>
-                  <ConfidenceBadge level={c.confidence || ConfidenceLevel.MEDIUM} size="sm" />
+                  <i className={`fa-solid fa-chevron-down text-slate-500 text-xs transition-transform duration-200 ${
+                    expandedCard === c.id ? 'rotate-180' : ''
+                  }`}></i>
+                </div>
+              </div>
+
+              {/* Mobile: Expanded Content */}
+              <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedCard === c.id ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="pt-3 border-t border-apex-700 space-y-3">
+                  {/* Summary */}
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    "{c.shortlistSummary}"
+                  </p>
+                  {/* Evidence Tags */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.keyEvidence?.slice(0, 3).map((ev, i) => (
+                      <span key={i} className="text-[10px] bg-emerald-900/20 text-emerald-400/80 px-2 py-1 rounded border border-emerald-900/30">
+                        <i className="fa-solid fa-check mr-1"></i>{ev.split(' ').slice(0, 4).join(' ')}...
+                      </span>
+                    ))}
+                    {c.risks && c.risks.length > 0 && (
+                      <span className="text-[10px] bg-yellow-900/20 text-yellow-500/80 px-2 py-1 rounded border border-yellow-900/30">
+                        <i className="fa-solid fa-triangle-exclamation mr-1"></i>{c.risks.length} risk{c.risks.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  {/* Mobile Actions */}
+                  <div className="flex space-x-2 pt-2">
+                    {isUnlocked ? (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleShareClick(e, c); }}
+                          className="flex-1 py-2.5 bg-apex-800 hover:bg-apex-700 text-slate-400 hover:text-white rounded-lg border border-apex-700 transition-colors flex items-center justify-center text-xs"
+                        >
+                          <i className="fa-solid fa-share-nodes mr-2"></i> Share
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onSelectCandidate(c); }}
+                          className="flex-1 py-2.5 bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 text-xs font-bold rounded-lg border border-emerald-900/50 flex items-center justify-center transition-colors"
+                        >
+                          <i className="fa-solid fa-microscope mr-2"></i> View Report
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={(e) => handleUnlockProfile(e, c.id)}
+                        className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-bold rounded-lg flex items-center justify-center transition-all shadow-lg shadow-emerald-900/30"
+                      >
+                        <i className="fa-solid fa-lock-open mr-2"></i> Unlock Report ({formatPrice(PRICING.EVIDENCE_REPORT)})
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -195,8 +289,8 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                 </div>
               </div>
 
-              {/* Summary - Shown on both mobile and desktop */}
-              <div className="md:col-span-4">
+              {/* Summary - Desktop only (mobile shows in expanded section) */}
+              <div className="hidden md:block md:col-span-4">
                 <p className="text-xs text-slate-400 leading-relaxed mb-2 line-clamp-2">
                   "{c.shortlistSummary}"
                 </p>
@@ -214,8 +308,8 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                 </div>
               </div>
 
-              {/* Action */}
-              <div className="md:col-span-2 flex justify-end items-center space-x-2 pt-3 md:pt-0 border-t md:border-0 border-apex-700 mt-3 md:mt-0">
+              {/* Action - Desktop only (mobile shows in expanded section) */}
+              <div className="hidden md:flex md:col-span-2 justify-end items-center space-x-2">
                 {isUnlocked ? (
                   <>
                     <button

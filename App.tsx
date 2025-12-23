@@ -26,6 +26,62 @@ const useIsMobile = () => {
 };
 
 // ============================================
+// MOBILE BOTTOM NAVIGATION
+// ============================================
+
+const MobileBottomNav: React.FC<{
+    currentStep: number;
+    completedSteps: Record<number, boolean>;
+    onNavigateToStep: (step: number) => void;
+}> = ({ currentStep, completedSteps, onNavigateToStep }) => {
+    const steps = [
+        { step: 1, label: 'Job', icon: 'fa-file-contract' },
+        { step: 2, label: 'Shortlist', icon: 'fa-users-viewfinder' },
+        { step: 3, label: 'Evidence', icon: 'fa-microscope' },
+        { step: 4, label: 'Outreach', icon: 'fa-paper-plane' },
+    ];
+
+    return (
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-apex-900/95 backdrop-blur-md border-t border-apex-800 flex items-center justify-around z-40 safe-area-pb">
+            {steps.map(({ step, label, icon }) => {
+                const isActive = currentStep === step;
+                const isCompleted = completedSteps[step];
+                const isDisabled = step > 1 && !completedSteps[step - 1] && step !== currentStep;
+
+                return (
+                    <button
+                        key={step}
+                        onClick={() => !isDisabled && onNavigateToStep(step)}
+                        disabled={isDisabled}
+                        className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${
+                            isActive
+                                ? 'text-emerald-400'
+                                : isCompleted
+                                    ? 'text-emerald-600'
+                                    : isDisabled
+                                        ? 'text-slate-700'
+                                        : 'text-slate-500'
+                        }`}
+                    >
+                        <div className={`relative w-10 h-10 flex items-center justify-center rounded-full transition-all ${
+                            isActive ? 'bg-emerald-900/50 scale-110' : ''
+                        }`}>
+                            <i className={`fa-solid ${icon} text-lg`}></i>
+                            {isCompleted && !isActive && (
+                                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center">
+                                    <i className="fa-solid fa-check text-[6px] text-white"></i>
+                                </div>
+                            )}
+                        </div>
+                        <span className={`text-[10px] mt-0.5 font-medium ${isActive ? 'font-bold' : ''}`}>{label}</span>
+                    </button>
+                );
+            })}
+        </nav>
+    );
+};
+
+// ============================================
 // SIDEBAR NAVIGATION
 // ============================================
 
@@ -242,9 +298,18 @@ const Layout: React.FC<{
             </aside>
 
             {/* Main Content Area */}
-            <main className={`flex-1 relative bg-gradient-to-br from-apex-900 via-apex-900 to-[#0f1f1a] overflow-hidden ${isMobile ? 'pt-14' : ''}`}>
+            <main className={`flex-1 relative bg-gradient-to-br from-apex-900 via-apex-900 to-[#0f1f1a] overflow-hidden ${isMobile ? 'pt-14 pb-16' : ''}`}>
                 {children}
             </main>
+
+            {/* Mobile Bottom Navigation */}
+            {isMobile && (
+                <MobileBottomNav
+                    currentStep={currentStep}
+                    completedSteps={completedSteps}
+                    onNavigateToStep={onNavigateToStep}
+                />
+            )}
         </div>
     );
 };

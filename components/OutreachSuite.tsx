@@ -7,6 +7,8 @@ interface Props {
   onClose: () => void;
 }
 
+type MobilePanel = 'strategy' | 'draft';
+
 const OutreachSuite: React.FC<Props> = ({ candidate, onClose }) => {
   const { addToast } = useToast();
   const [template, setTemplate] = useState('');
@@ -15,6 +17,15 @@ const OutreachSuite: React.FC<Props> = ({ candidate, onClose }) => {
   const [approved, setApproved] = useState(false);
   const [shareModal, setShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('strategy');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -140,9 +151,43 @@ Thanks!
             </div>
           </header>
 
+          {/* Mobile Panel Toggle */}
+          {isMobile && (
+            <div className="flex border-b border-apex-800 bg-apex-800/50">
+              <button
+                onClick={() => setMobilePanel('strategy')}
+                className={`flex-1 py-3 px-4 text-center text-xs font-bold uppercase transition-all relative ${
+                  mobilePanel === 'strategy'
+                    ? 'text-emerald-400 bg-apex-900/50'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-route mr-2"></i>Strategy
+                {mobilePanel === 'strategy' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+                )}
+              </button>
+              <button
+                onClick={() => setMobilePanel('draft')}
+                className={`flex-1 py-3 px-4 text-center text-xs font-bold uppercase transition-all relative ${
+                  mobilePanel === 'draft'
+                    ? 'text-emerald-400 bg-apex-900/50'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-pen mr-2"></i>Draft
+                {mobilePanel === 'draft' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+                )}
+              </button>
+            </div>
+          )}
+
           <div className="flex-1 flex flex-col md:grid md:grid-cols-2 overflow-hidden">
             {/* Left: Strategy & Context */}
-            <div className="p-4 md:p-6 border-b md:border-b-0 md:border-r border-apex-800 bg-apex-900/50 overflow-y-auto">
+            <div className={`p-4 md:p-6 border-b md:border-b-0 md:border-r border-apex-800 bg-apex-900/50 overflow-y-auto ${
+              isMobile && mobilePanel !== 'strategy' ? 'hidden' : ''
+            }`}>
               {/* Connection Path */}
               <div className="mb-6">
                 <h4 className="text-xs font-bold uppercase text-slate-500 mb-3 flex items-center">
@@ -247,7 +292,9 @@ Thanks!
             </div>
 
             {/* Right: The Draft */}
-            <div className="p-4 md:p-6 bg-apex-800/20 flex flex-col overflow-hidden flex-1 min-h-[300px] md:min-h-0">
+            <div className={`p-4 md:p-6 bg-apex-800/20 flex flex-col overflow-hidden flex-1 min-h-[300px] md:min-h-0 ${
+              isMobile && mobilePanel !== 'draft' ? 'hidden' : ''
+            }`}>
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-xs font-bold uppercase text-slate-500">Generated Draft</h4>
                 <button
