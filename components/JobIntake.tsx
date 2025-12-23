@@ -85,21 +85,20 @@ What We Offer:
   const isValidLength = charCount >= 100 && charCount <= 10000;
 
   return (
-    <div className="h-full flex flex-col p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
-      
+    <div className="h-full flex flex-col p-4 md:p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
+
       {/* Header */}
-      <header className="mb-8">
+      <header className="mb-6 md:mb-8">
         <StepBadge step={1} label="Job Context" color="emerald" price={{ free: true }} />
-        <h1 className="text-3xl font-bold text-white mt-4">Context & Job Intake</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white mt-4">Context & Job Intake</h1>
         <p className="text-slate-400 mt-2 text-sm max-w-2xl">
           Provide the job context and team profiles. This establishes the baseline for AI-powered match scoring.
-          All information is used to calibrate cultural and technical alignment.
         </p>
       </header>
 
-      <div className="flex gap-8 max-w-7xl">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 max-w-7xl">
         {/* Main Input Column */}
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 space-y-6 order-2 lg:order-1">
           
           {/* Social Context Card */}
           <section className="bg-apex-800 border border-apex-700 rounded-xl p-6 shadow-lg relative overflow-hidden">
@@ -143,7 +142,7 @@ What We Offer:
               </div>
 
               {/* Manager & Benchmark URLs */}
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label htmlFor="managerUrl" className="block text-xs font-bold text-slate-400 uppercase mb-2">
                     Hiring Manager LinkedIn
@@ -252,7 +251,7 @@ What We Offer:
             </p>
 
             {/* Action Button */}
-            <div className="mt-6 flex justify-between items-center">
+            <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="text-xs text-slate-500">
                 {charCount >= 100 && (
                   <span className="text-emerald-500">
@@ -260,24 +259,24 @@ What We Offer:
                   </span>
                 )}
               </div>
-              <button 
+              <button
                 onClick={handleStart}
                 disabled={isProcessing || charCount < 100}
                 className={`
-                  relative px-8 py-3 rounded-lg font-bold text-sm uppercase tracking-wide transition-all shadow-lg 
+                  relative w-full sm:w-auto px-8 py-3 rounded-lg font-bold text-sm uppercase tracking-wide transition-all shadow-lg
                   ${isProcessing || charCount < 100
-                    ? 'bg-apex-700 text-slate-500 cursor-not-allowed' 
+                    ? 'bg-apex-700 text-slate-500 cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0'
                   }
                 `}
                 aria-busy={isProcessing}
               >
                 {isProcessing ? (
-                  <span className="flex items-center">
+                  <span className="flex items-center justify-center">
                     <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Initializing...
                   </span>
                 ) : (
-                  <span className="flex items-center">
+                  <span className="flex items-center justify-center">
                     Generate Shortlist <i className="fa-solid fa-arrow-right ml-2"></i>
                   </span>
                 )}
@@ -287,8 +286,8 @@ What We Offer:
         </div>
 
         {/* Process Preview Sidebar */}
-        <aside className="w-80 space-y-4">
-          <div className="bg-apex-800 border border-apex-700 rounded-xl p-6 sticky top-8">
+        <aside className="w-full lg:w-80 space-y-4 order-1 lg:order-2">
+          <div className="bg-apex-800 border border-apex-700 rounded-xl p-4 md:p-6 lg:sticky lg:top-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Hiring Funnel</h3>
               <div className="flex items-center space-x-1.5">

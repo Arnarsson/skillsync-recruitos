@@ -97,42 +97,42 @@ Thanks!
 
   return (
     <>
-      <div 
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
         aria-labelledby="outreach-title"
       >
-        <div 
-          className="w-[900px] max-h-[85vh] bg-apex-900 border border-apex-700 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
+        <div
+          className="w-full max-w-[900px] max-h-[90vh] md:max-h-[85vh] bg-apex-900 border border-apex-700 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <header className="p-5 border-b border-apex-800 flex justify-between items-center bg-gradient-to-r from-apex-800 to-apex-800/80">
-            <div className="flex items-center space-x-4">
-              <img 
-                src={candidate.avatar} 
+          <header className="p-4 md:p-5 border-b border-apex-800 flex justify-between items-center bg-gradient-to-r from-apex-800 to-apex-800/80">
+            <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
+              <img
+                src={candidate.avatar}
                 alt={candidate.name}
-                className="w-12 h-12 rounded-full border-2 border-emerald-500/50" 
+                className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-emerald-500/50 shrink-0"
               />
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center space-x-3">
                   <StepBadge step={4} label="Outreach Protocol" color="emerald" />
                 </div>
-                <h3 id="outreach-title" className="text-lg font-bold text-white mt-1">{candidate.name}</h3>
+                <h3 id="outreach-title" className="text-base md:text-lg font-bold text-white mt-1 truncate">{candidate.name}</h3>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 md:space-x-3 shrink-0">
               <button
                 onClick={handleShareLink}
-                className="text-xs text-slate-400 hover:text-white flex items-center bg-apex-900 px-3 py-1.5 rounded border border-apex-700 transition-colors"
+                className="text-xs text-slate-400 hover:text-white flex items-center bg-apex-900 px-2 md:px-3 py-1.5 rounded border border-apex-700 transition-colors"
               >
-                <i className="fa-solid fa-share-nodes mr-1.5"></i> Share
+                <i className="fa-solid fa-share-nodes md:mr-1.5"></i> <span className="hidden md:inline">Share</span>
               </button>
-              <button 
-                onClick={onClose} 
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-apex-800 text-slate-400 hover:text-white hover:bg-apex-700 transition-colors"
+              <button
+                onClick={onClose}
+                className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-apex-800 text-slate-400 hover:text-white hover:bg-apex-700 transition-colors"
                 aria-label="Close modal"
               >
                 <i className="fa-solid fa-xmark"></i>
@@ -140,9 +140,9 @@ Thanks!
             </div>
           </header>
 
-          <div className="flex-1 grid grid-cols-2 overflow-hidden">
+          <div className="flex-1 flex flex-col md:grid md:grid-cols-2 overflow-hidden">
             {/* Left: Strategy & Context */}
-            <div className="p-6 border-r border-apex-800 bg-apex-900/50 overflow-y-auto">
+            <div className="p-4 md:p-6 border-b md:border-b-0 md:border-r border-apex-800 bg-apex-900/50 overflow-y-auto">
               {/* Connection Path */}
               <div className="mb-6">
                 <h4 className="text-xs font-bold uppercase text-slate-500 mb-3 flex items-center">
@@ -247,10 +247,10 @@ Thanks!
             </div>
 
             {/* Right: The Draft */}
-            <div className="p-6 bg-apex-800/20 flex flex-col overflow-hidden">
+            <div className="p-4 md:p-6 bg-apex-800/20 flex flex-col overflow-hidden flex-1 min-h-[300px] md:min-h-0">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-xs font-bold uppercase text-slate-500">Generated Draft</h4>
-                <button 
+                <button
                   onClick={handleRegenerate}
                   disabled={loading}
                   className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center transition-colors disabled:opacity-50"
@@ -259,15 +259,15 @@ Thanks!
                 </button>
               </div>
 
-              <div className="flex-1 bg-apex-900 border border-apex-700 rounded-lg relative overflow-hidden">
+              <div className="flex-1 bg-apex-900 border border-apex-700 rounded-lg relative overflow-hidden min-h-[200px]">
                 {loading ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
                     <i className="fa-solid fa-circle-notch fa-spin text-xl mb-2"></i>
                     <span className="text-xs">Generating {channel} message...</span>
                   </div>
                 ) : (
-                  <textarea 
-                    className="w-full h-full bg-transparent border-none focus:ring-0 text-sm text-slate-300 font-mono resize-none leading-relaxed p-4 focus:outline-none"
+                  <textarea
+                    className="w-full h-full bg-transparent border-none focus:ring-0 text-sm text-slate-300 font-mono resize-none leading-relaxed p-3 md:p-4 focus:outline-none"
                     value={template}
                     onChange={(e) => setTemplate(e.target.value)}
                     placeholder="Your message will appear here..."
@@ -276,21 +276,21 @@ Thanks!
               </div>
 
               <div className="mt-4 space-y-3">
-                <div className="flex space-x-3">
-                  <button 
+                <div className="flex space-x-2 md:space-x-3">
+                  <button
                     onClick={handleOpenLinkedIn}
                     disabled={!approved}
-                    className={`flex-1 py-3 font-bold rounded-lg shadow-lg transition-all flex items-center justify-center ${
+                    className={`flex-1 py-2.5 md:py-3 text-sm font-bold rounded-lg shadow-lg transition-all flex items-center justify-center ${
                       approved
                         ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30'
                         : 'bg-apex-700 text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    <i className="fa-brands fa-linkedin mr-2"></i> Open LinkedIn
+                    <i className="fa-brands fa-linkedin mr-2"></i> <span className="hidden sm:inline">Open </span>LinkedIn
                   </button>
-                  <button 
+                  <button
                     onClick={handleCopyTemplate}
-                    className={`px-5 py-3 rounded-lg transition-all flex items-center ${
+                    className={`px-4 md:px-5 py-2.5 md:py-3 rounded-lg transition-all flex items-center ${
                       copied
                         ? 'bg-emerald-600 text-white'
                         : 'bg-apex-700 hover:bg-apex-600 text-white'
@@ -300,7 +300,7 @@ Thanks!
                     <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i>
                   </button>
                 </div>
-                
+
                 {!approved && (
                   <p className="text-[10px] text-yellow-500/80 text-center flex items-center justify-center">
                     <i className="fa-solid fa-lock mr-1.5"></i>
