@@ -1,7 +1,7 @@
 import React, { useState, useRef, TouchEvent } from 'react';
 import { MOCK_CANDIDATES } from '../constants';
 import { Candidate, FunnelStage, PRICING, CREDITS_TO_EUR, ConfidenceLevel, formatPrice } from '../types';
-import { ConfidenceBadge, StepBadge, ShareModal, useToast } from './ui';
+import { ConfidenceBadge, StepBadge, ShareModal, useToast, SavingsWidget, MetricCard } from './ui';
 
 // Swipeable Card Hook for mobile touch interactions
 const useSwipe = (onSwipeLeft?: () => void, onSwipeRight?: () => void) => {
@@ -120,6 +120,43 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
             <div className="text-xs text-slate-500 bg-apex-800 px-3 py-1.5 rounded border border-apex-700 whitespace-nowrap">
               {candidates.length} Candidates
             </div>
+          </div>
+        </div>
+
+        {/* Stats Row - Shows key metrics */}
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-apex-900/50 border border-apex-700 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <i className="fa-solid fa-users text-blue-400"></i>
+              <span className="text-[10px] text-emerald-400 font-bold">FREE</span>
+            </div>
+            <div className="text-lg font-bold text-white mt-1">{candidates.length}</div>
+            <div className="text-[10px] text-slate-500 uppercase">Candidates</div>
+          </div>
+          <div className="bg-apex-900/50 border border-apex-700 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <i className="fa-solid fa-chart-simple text-emerald-400"></i>
+            </div>
+            <div className="text-lg font-bold text-white mt-1">
+              {Math.round(candidates.reduce((sum, c) => sum + c.matchScore, 0) / candidates.length)}%
+            </div>
+            <div className="text-[10px] text-slate-500 uppercase">Avg Score</div>
+          </div>
+          <div className="bg-apex-900/50 border border-apex-700 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <i className="fa-solid fa-unlock text-purple-400"></i>
+            </div>
+            <div className="text-lg font-bold text-white mt-1">
+              {candidates.filter(c => c.unlockedSteps.includes(FunnelStage.EVIDENCE_REPORT)).length}
+            </div>
+            <div className="text-[10px] text-slate-500 uppercase">Unlocked</div>
+          </div>
+          <div className="bg-emerald-900/20 border border-emerald-900/30 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <i className="fa-solid fa-piggy-bank text-emerald-400"></i>
+            </div>
+            <div className="text-lg font-bold text-emerald-400 mt-1">~85%</div>
+            <div className="text-[10px] text-emerald-500/70 uppercase">Saved vs Headhunter</div>
           </div>
         </div>
       </header>

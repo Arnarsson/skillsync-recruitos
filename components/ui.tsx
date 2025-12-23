@@ -361,3 +361,308 @@ export const StepBadge: React.FC<StepBadgeProps> = ({ step, label, color = 'emer
     </div>
   );
 };
+
+// ============================================
+// ROI SAVINGS WIDGET (10x Feature)
+// ============================================
+
+interface SavingsWidgetProps {
+  candidatesEvaluated: number;
+  creditsUsed: number;
+  compact?: boolean;
+}
+
+export const SavingsWidget: React.FC<SavingsWidgetProps> = ({
+  candidatesEvaluated,
+  creditsUsed,
+  compact = false
+}) => {
+  // Headhunter typically charges 25-30% of first year salary
+  // Average senior hire in DK: ~700k DKK = ~21k DKK success fee per candidate reviewed
+  // Or flat fee: ~30,000 DKK per successful hire
+  const headhunterCostPerHire = 30000; // DKK
+  const estimatedHeadhunterCost = Math.round(headhunterCostPerHire * (candidatesEvaluated / 10)); // Assumes 10 candidates per hire
+  const ourCost = Math.round(creditsUsed * 4); // 1 credit = 4 DKK
+  const savings = Math.max(0, estimatedHeadhunterCost - ourCost);
+  const savingsPercent = estimatedHeadhunterCost > 0 ? Math.round((savings / estimatedHeadhunterCost) * 100) : 0;
+
+  if (compact) {
+    return (
+      <div className="flex items-center space-x-2 text-xs">
+        <i className="fa-solid fa-piggy-bank text-emerald-500"></i>
+        <span className="text-emerald-400 font-bold">~{savingsPercent}% saved</span>
+        <span className="text-slate-500">vs headhunter</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-emerald-900/20 to-apex-800/50 rounded-xl p-4 border border-emerald-900/30">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-bold text-emerald-400 uppercase flex items-center">
+          <i className="fa-solid fa-chart-line mr-2"></i> Your Savings
+        </h4>
+        <span className="text-[10px] text-slate-500">vs traditional headhunter</span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase">Headhunter Est.</div>
+          <div className="text-lg font-bold text-slate-400 line-through">{(estimatedHeadhunterCost / 1000).toFixed(0)}k DKK</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase">6Degrees Cost</div>
+          <div className="text-lg font-bold text-white">{(ourCost / 1000).toFixed(1)}k DKK</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase">You Save</div>
+          <div className="text-lg font-bold text-emerald-400">{savingsPercent}%</div>
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 bg-apex-900 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
+          style={{ width: `${100 - savingsPercent}%` }}
+        ></div>
+      </div>
+      <div className="flex justify-between mt-1 text-[10px] text-slate-600">
+        <span>Your cost</span>
+        <span>Headhunter cost</span>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// FUNNEL PROGRESS TRACKER (10x Feature)
+// ============================================
+
+interface FunnelProgressProps {
+  currentStep: number;
+  completedSteps: Record<number, boolean>;
+  stats: {
+    candidatesShortlisted?: number;
+    profilesUnlocked?: number;
+    outreachReady?: number;
+  };
+}
+
+export const FunnelProgress: React.FC<FunnelProgressProps> = ({
+  currentStep,
+  completedSteps,
+  stats
+}) => {
+  const steps = [
+    { step: 1, label: 'Job Context', icon: 'fa-file-contract', stat: null },
+    { step: 2, label: 'Shortlist', icon: 'fa-users-viewfinder', stat: stats.candidatesShortlisted },
+    { step: 3, label: 'Evidence', icon: 'fa-microscope', stat: stats.profilesUnlocked },
+    { step: 4, label: 'Outreach', icon: 'fa-paper-plane', stat: stats.outreachReady },
+  ];
+
+  return (
+    <div className="flex items-center justify-between">
+      {steps.map((s, idx) => (
+        <React.Fragment key={s.step}>
+          <div className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+              completedSteps[s.step]
+                ? 'bg-emerald-600 text-white'
+                : currentStep === s.step
+                  ? 'bg-emerald-900/50 text-emerald-400 ring-2 ring-emerald-500/50'
+                  : 'bg-apex-800 text-slate-600'
+            }`}>
+              {completedSteps[s.step] ? (
+                <i className="fa-solid fa-check"></i>
+              ) : (
+                <i className={`fa-solid ${s.icon}`}></i>
+              )}
+            </div>
+            <span className={`text-[10px] mt-1 font-medium ${
+              currentStep === s.step ? 'text-white' : 'text-slate-500'
+            }`}>{s.label}</span>
+            {s.stat !== null && s.stat !== undefined && (
+              <span className="text-[10px] text-emerald-400 font-bold">{s.stat} ready</span>
+            )}
+          </div>
+          {idx < steps.length - 1 && (
+            <div className={`flex-1 h-0.5 mx-2 ${
+              completedSteps[s.step] ? 'bg-emerald-600' : 'bg-apex-700'
+            }`}></div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+// ============================================
+// METRIC CARD (10x Feature)
+// ============================================
+
+interface MetricCardProps {
+  icon: string;
+  iconColor: string;
+  label: string;
+  value: string | number;
+  subvalue?: string;
+  trend?: 'up' | 'down' | 'neutral';
+}
+
+export const MetricCard: React.FC<MetricCardProps> = ({
+  icon,
+  iconColor,
+  label,
+  value,
+  subvalue,
+  trend
+}) => {
+  const trendColors = {
+    up: 'text-emerald-400',
+    down: 'text-red-400',
+    neutral: 'text-slate-400'
+  };
+
+  return (
+    <div className="bg-apex-800/50 border border-apex-700 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <i className={`fa-solid ${icon} ${iconColor}`}></i>
+        {trend && (
+          <i className={`fa-solid ${trend === 'up' ? 'fa-arrow-up' : trend === 'down' ? 'fa-arrow-down' : 'fa-minus'} ${trendColors[trend]} text-xs`}></i>
+        )}
+      </div>
+      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-[10px] text-slate-500 uppercase font-bold">{label}</div>
+      {subvalue && <div className="text-xs text-slate-400 mt-1">{subvalue}</div>}
+    </div>
+  );
+};
+
+// ============================================
+// QUICK ACTION BUTTON (10x Feature)
+// ============================================
+
+interface QuickActionProps {
+  icon: string;
+  label: string;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  badge?: string | number;
+}
+
+export const QuickAction: React.FC<QuickActionProps> = ({
+  icon,
+  label,
+  onClick,
+  variant = 'secondary',
+  badge
+}) => {
+  const variants = {
+    primary: 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500',
+    secondary: 'bg-apex-800 hover:bg-apex-700 text-slate-300 border-apex-700',
+    ghost: 'bg-transparent hover:bg-apex-800 text-slate-400 hover:text-white border-transparent'
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex items-center space-x-2 px-4 py-2.5 rounded-lg border transition-all ${variants[variant]}`}
+    >
+      <i className={`fa-solid ${icon}`}></i>
+      <span className="text-sm font-medium">{label}</span>
+      {badge !== undefined && (
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+};
+
+// ============================================
+// COMPARISON TABLE (10x Feature)
+// ============================================
+
+interface ComparisonItem {
+  feature: string;
+  traditional: string;
+  sixDegrees: string;
+  highlight?: boolean;
+}
+
+export const ComparisonTable: React.FC<{ items: ComparisonItem[] }> = ({ items }) => (
+  <div className="overflow-hidden rounded-xl border border-apex-700">
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="bg-apex-800">
+          <th className="text-left p-3 text-xs font-bold text-slate-500 uppercase">Feature</th>
+          <th className="text-center p-3 text-xs font-bold text-slate-500 uppercase">Headhunter</th>
+          <th className="text-center p-3 text-xs font-bold text-emerald-400 uppercase">6Degrees</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item, i) => (
+          <tr key={i} className={`border-t border-apex-700 ${item.highlight ? 'bg-emerald-900/10' : ''}`}>
+            <td className="p-3 text-slate-300">{item.feature}</td>
+            <td className="p-3 text-center text-slate-500">{item.traditional}</td>
+            <td className="p-3 text-center text-emerald-400 font-medium">{item.sixDegrees}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+// ============================================
+// EVIDENCE CITATION (10x Trust Feature)
+// ============================================
+
+interface EvidenceCitationProps {
+  text: string;
+  source: string;
+  confidence: ConfidenceLevel;
+  timestamp?: string;
+}
+
+export const EvidenceCitation: React.FC<EvidenceCitationProps> = ({
+  text,
+  source,
+  confidence,
+  timestamp
+}) => {
+  const colors = getConfidenceColor(confidence);
+
+  return (
+    <div className="bg-apex-900/50 rounded-lg p-3 border-l-2 border-apex-600">
+      <p className="text-xs text-slate-300 italic mb-2">"{text}"</p>
+      <div className="flex items-center justify-between text-[10px]">
+        <div className="flex items-center space-x-2">
+          <span className="text-slate-500">Source: {source}</span>
+          <span className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
+            {confidence}
+          </span>
+        </div>
+        {timestamp && <span className="text-slate-600">{timestamp}</span>}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// PULSE INDICATOR (Activity)
+// ============================================
+
+export const PulseIndicator: React.FC<{ active?: boolean; label?: string }> = ({
+  active = true,
+  label
+}) => (
+  <div className="flex items-center space-x-2">
+    <div className="relative">
+      <div className={`w-2 h-2 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-600'}`}></div>
+      {active && (
+        <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
+      )}
+    </div>
+    {label && <span className="text-[10px] text-slate-500 uppercase font-bold">{label}</span>}
+  </div>
+);
