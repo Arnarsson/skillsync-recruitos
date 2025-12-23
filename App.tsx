@@ -36,7 +36,7 @@ const MobileBottomNav: React.FC<{
 }> = ({ currentStep, completedSteps, onNavigateToStep }) => {
     const steps = [
         { step: 1, label: 'Job', icon: 'fa-file-contract' },
-        { step: 2, label: 'Shortlist', icon: 'fa-users-viewfinder' },
+        { step: 2, label: 'Shortlist', icon: 'fa-users' },
         { step: 3, label: 'Evidence', icon: 'fa-microscope' },
         { step: 4, label: 'Outreach', icon: 'fa-paper-plane' },
     ];
@@ -80,6 +80,19 @@ const MobileBottomNav: React.FC<{
         </nav>
     );
 };
+
+// ============================================
+// THEME CONTEXT
+// ============================================
+
+type Theme = 'dark' | 'light';
+
+const ThemeContext = React.createContext<{
+    theme: Theme;
+    toggleTheme: () => void;
+}>({ theme: 'dark', toggleTheme: () => {} });
+
+export const useTheme = () => React.useContext(ThemeContext);
 
 // ============================================
 // SIDEBAR NAVIGATION
@@ -139,6 +152,8 @@ const Layout: React.FC<{
     const location = useLocation();
     const isMobile = useIsMobile();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const { theme, toggleTheme } = useTheme();
 
     // Close sidebar when navigating on mobile
     useEffect(() => {
@@ -199,29 +214,34 @@ const Layout: React.FC<{
             {/* Sidebar */}
             <aside
                 className={`
-                    ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out' : 'w-64'}
+                    ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out' : ''}
+                    ${!isMobile && sidebarCollapsed ? 'w-16' : !isMobile ? 'w-64' : ''}
                     ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
                     ${isMobile ? 'pt-14' : ''}
-                    bg-apex-900 border-r border-apex-800 flex flex-col p-4 shadow-xl
+                    bg-apex-900 border-r border-apex-800 flex flex-col p-4 shadow-xl transition-all duration-300
                 `}
                 aria-label="Main navigation"
             >
                 {/* Logo - Hidden on mobile (shown in header) */}
                 {!isMobile && (
-                    <div className="mb-8 px-2 flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-900 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 mr-3">
+                    <div className={`mb-8 px-2 flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-900 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
                             <i className="fa-solid fa-diagram-project text-white text-lg"></i>
                         </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-white tracking-tight">6Degrees</h1>
-                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">Recruiting OS</span>
-                        </div>
+                        {!sidebarCollapsed && (
+                            <div className="ml-3">
+                                <h1 className="text-xl font-bold text-white tracking-tight">6Degrees</h1>
+                                <span className="text-[10px] text-slate-500 uppercase tracking-widest">Recruiting OS</span>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Navigation */}
                 <nav className="flex-1 space-y-1" aria-label="Funnel steps">
-                    <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3 px-3">Hiring Funnel</div>
+                    {!sidebarCollapsed && (
+                        <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3 px-3">Hiring Funnel</div>
+                    )}
 
                     <SidebarLink
                         step={1}
@@ -238,7 +258,7 @@ const Layout: React.FC<{
                         sublabel={isStep2 && !isStep3 ? "Reviewing" : undefined}
                         active={isStep2 && !isStep3 && !isStep4}
                         completed={completedSteps[2]}
-                        icon="fa-solid fa-users-viewfinder"
+                        icon="fa-solid fa-users"
                         onClick={() => handleNavClick(2)}
                         disabled={isStep1}
                     />
@@ -264,36 +284,81 @@ const Layout: React.FC<{
 
                 {/* Credits & User */}
                 <div className="mt-auto pt-4 border-t border-apex-800 space-y-4">
-                    {/* Credit Balance */}
-                    <div className="bg-apex-800/50 p-4 rounded-lg border border-apex-700">
-                        <div className="flex justify-between items-center mb-2">
-                            <div className="text-[10px] text-slate-500 uppercase font-bold">Credit Balance</div>
-                            <div className="text-[10px] bg-emerald-900/50 text-emerald-400 px-1.5 py-0.5 rounded font-bold">PILOT</div>
+                    {/* Credit Balance - Collapsed shows only icon */}
+                    {sidebarCollapsed ? (
+                        <div className="flex justify-center">
+                            <div className="w-10 h-10 bg-apex-800/50 rounded-lg border border-apex-700 flex items-center justify-center" title={`${credits.toLocaleString()} credits`}>
+                                <i className="fa-solid fa-coins text-emerald-400"></i>
+                            </div>
                         </div>
-                        <div className="text-2xl font-mono text-white font-bold">{credits.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500 mt-1">≈ €{Math.round(credits * CREDITS_TO_EUR).toLocaleString()}</div>
-                        <div className="mt-3 w-full bg-apex-900 rounded-full h-1.5">
-                            <div
-                                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
-                                style={{width: `${(credits / INITIAL_CREDITS) * 100}%`}}
-                            ></div>
+                    ) : (
+                        <div className="bg-apex-800/50 p-4 rounded-lg border border-apex-700">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="text-[10px] text-slate-500 uppercase font-bold">Credit Balance</div>
+                                <div className="text-[10px] bg-emerald-900/50 text-emerald-400 px-1.5 py-0.5 rounded font-bold">PILOT</div>
+                            </div>
+                            <div className="text-2xl font-mono text-white font-bold">{credits.toLocaleString()}</div>
+                            <div className="text-xs text-slate-500 mt-1">≈ €{Math.round(credits * CREDITS_TO_EUR).toLocaleString()}</div>
+                            <div className="mt-3 w-full bg-apex-900 rounded-full h-1.5">
+                                <div
+                                    className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
+                                    style={{width: `${(credits / INITIAL_CREDITS) * 100}%`}}
+                                ></div>
+                            </div>
+                            <div className="text-[10px] text-slate-600 mt-1">{Math.round((credits / INITIAL_CREDITS) * 100)}% remaining</div>
                         </div>
-                        <div className="text-[10px] text-slate-600 mt-1">{Math.round((credits / INITIAL_CREDITS) * 100)}% remaining</div>
+                    )}
+
+                    {/* Theme Toggle & Collapse Toggle */}
+                    <div className={`flex ${sidebarCollapsed ? 'flex-col space-y-2' : 'space-x-2'}`}>
+                        {/* Theme Toggle */}
+                        <button
+                            onClick={toggleTheme}
+                            className={`${sidebarCollapsed ? 'w-full' : 'flex-1'} flex items-center justify-center py-2.5 bg-apex-800 hover:bg-apex-700 rounded-lg border border-apex-700 transition-colors`}
+                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        >
+                            <i className={`fa-solid ${theme === 'dark' ? 'fa-sun text-yellow-400' : 'fa-moon text-blue-400'}`}></i>
+                            {!sidebarCollapsed && (
+                                <span className="ml-2 text-xs text-slate-400">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                            )}
+                        </button>
+
+                        {/* Collapse Toggle - Desktop only */}
+                        {!isMobile && (
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                className={`${sidebarCollapsed ? 'w-full' : ''} flex items-center justify-center py-2.5 px-3 bg-apex-800 hover:bg-apex-700 rounded-lg border border-apex-700 transition-colors`}
+                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            >
+                                <i className={`fa-solid ${sidebarCollapsed ? 'fa-angles-right' : 'fa-angles-left'} text-slate-400`}></i>
+                            </button>
+                        )}
                     </div>
 
                     {/* User Profile */}
-                    <div className="flex items-center px-2 py-2 opacity-70 hover:opacity-100 transition-opacity cursor-pointer rounded-lg hover:bg-apex-800">
-                        <img
-                            src="https://i.pravatar.cc/150?u=manager"
-                            className="w-9 h-9 rounded-full border-2 border-slate-700"
-                            alt="User avatar"
-                        />
-                        <div className="ml-3 flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white truncate">Hiring Manager</p>
-                            <p className="text-[10px] text-emerald-400">Admin</p>
+                    {sidebarCollapsed ? (
+                        <div className="flex justify-center">
+                            <img
+                                src="https://i.pravatar.cc/150?u=manager"
+                                className="w-9 h-9 rounded-full border-2 border-slate-700 cursor-pointer hover:border-emerald-500 transition-colors"
+                                alt="User avatar"
+                                title="Hiring Manager"
+                            />
                         </div>
-                        <i className="fa-solid fa-gear text-slate-600 text-sm"></i>
-                    </div>
+                    ) : (
+                        <div className="flex items-center px-2 py-2 opacity-70 hover:opacity-100 transition-opacity cursor-pointer rounded-lg hover:bg-apex-800">
+                            <img
+                                src="https://i.pravatar.cc/150?u=manager"
+                                className="w-9 h-9 rounded-full border-2 border-slate-700"
+                                alt="User avatar"
+                            />
+                            <div className="ml-3 flex-1 min-w-0">
+                                <p className="text-sm font-bold text-white truncate">Hiring Manager</p>
+                                <p className="text-[10px] text-emerald-400">Admin</p>
+                            </div>
+                            <i className="fa-solid fa-gear text-slate-600 text-sm"></i>
+                        </div>
+                    )}
                 </div>
             </aside>
 
@@ -394,12 +459,46 @@ const AppContent: React.FC = () => {
     );
 };
 
+// ============================================
+// THEME PROVIDER
+// ============================================
+
+const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [theme, setTheme] = useState<Theme>(() => {
+        // Default to dark, check localStorage for saved preference
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('theme');
+            return (saved as Theme) || 'dark';
+        }
+        return 'dark';
+    });
+
+    useEffect(() => {
+        // Apply theme class to document
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
+
+    return (
+        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+            {children}
+        </ThemeContext.Provider>
+    );
+};
+
 const App: React.FC = () => {
     return (
         <HashRouter>
-            <ToastProvider>
-                <AppContent />
-            </ToastProvider>
+            <ThemeProvider>
+                <ToastProvider>
+                    <AppContent />
+                </ToastProvider>
+            </ThemeProvider>
         </HashRouter>
     );
 };

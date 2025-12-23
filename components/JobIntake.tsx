@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PRICING, CREDITS_TO_EUR, formatPrice } from '../types';
-import { useToast, StepBadge, SavingsWidget, ComparisonTable } from './ui';
+import { useToast, StepBadge } from './ui';
 
 // Collapsible Section Component for mobile
 const CollapsibleSection: React.FC<{
@@ -178,7 +178,7 @@ What We Offer:
           <CollapsibleSection
             title="Team Context"
             subtitle="Critical for Culture Match"
-            icon="fa-users-line"
+            icon="fa-people-group"
             iconBg="bg-blue-900/30"
             iconColor="text-blue-400"
             defaultOpen={true}
@@ -412,76 +412,6 @@ What We Offer:
               ))}
             </div>
 
-            {/* Why 6Degrees - Value Proposition */}
-            <div className="mt-8 pt-6 border-t border-apex-700">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Why 6Degrees?</h3>
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-900/30 flex items-center justify-center shrink-0">
-                    <i className="fa-solid fa-eye text-emerald-400 text-xs"></i>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">100% Transparent</div>
-                    <div className="text-[10px] text-slate-500">See exactly why each score</div>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-900/30 flex items-center justify-center shrink-0">
-                    <i className="fa-solid fa-piggy-bank text-emerald-400 text-xs"></i>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">~85% Cost Savings</div>
-                    <div className="text-[10px] text-slate-500">vs traditional headhunters</div>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-900/30 flex items-center justify-center shrink-0">
-                    <i className="fa-solid fa-bolt text-emerald-400 text-xs"></i>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">Hours, Not Weeks</div>
-                    <div className="text-[10px] text-slate-500">Get shortlist same day</div>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-900/30 flex items-center justify-center shrink-0">
-                    <i className="fa-solid fa-shield-halved text-emerald-400 text-xs"></i>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">GDPR Compliant</div>
-                    <div className="text-[10px] text-slate-500">Decision support only</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing Info */}
-            <div className="mt-6 pt-6 border-t border-apex-700">
-              <div className="bg-gradient-to-br from-blue-900/20 to-blue-900/5 border border-blue-900/30 rounded-lg p-4">
-                <div className="flex items-center mb-2">
-                  <i className="fa-solid fa-coins text-blue-400 mr-2 text-sm"></i>
-                  <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wide">Pilot Package</span>
-                </div>
-                <p className="text-xs text-blue-200/70 leading-relaxed">
-                  <strong className="text-blue-200">5,000 credits</strong> = 20,000 DKK
-                </p>
-                <p className="text-[10px] text-blue-200/50 mt-1">
-                  1 Credit ≈ 4 DKK (~€{CREDITS_TO_EUR})
-                </p>
-                <div className="mt-3 pt-3 border-t border-blue-900/30">
-                  <div className="text-[10px] text-blue-200/70">
-                    <div className="flex justify-between mb-1">
-                      <span>Traditional headhunter:</span>
-                      <span className="line-through text-slate-500">30,000+ DKK</span>
-                    </div>
-                    <div className="flex justify-between font-bold">
-                      <span>6Degrees pilot:</span>
-                      <span className="text-emerald-400">20,000 DKK</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </aside>
       </div>

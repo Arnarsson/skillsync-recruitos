@@ -455,7 +455,7 @@ export const FunnelProgress: React.FC<FunnelProgressProps> = ({
 }) => {
   const steps = [
     { step: 1, label: 'Job Context', icon: 'fa-file-contract', stat: null },
-    { step: 2, label: 'Shortlist', icon: 'fa-users-viewfinder', stat: stats.candidatesShortlisted },
+    { step: 2, label: 'Shortlist', icon: 'fa-users', stat: stats.candidatesShortlisted },
     { step: 3, label: 'Evidence', icon: 'fa-microscope', stat: stats.profilesUnlocked },
     { step: 4, label: 'Outreach', icon: 'fa-paper-plane', stat: stats.outreachReady },
   ];
