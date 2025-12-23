@@ -14,15 +14,15 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
 
   const handleUnlockProfile = (e: React.MouseEvent, candidateId: string) => {
     e.stopPropagation();
-    if (credits < PRICING.DEEP_PROFILE) {
+    if (credits < PRICING.EVIDENCE_REPORT) {
         alert("Insufficient credits for pilot.");
         return;
     }
-    onSpendCredits(PRICING.DEEP_PROFILE);
-    
+    onSpendCredits(PRICING.EVIDENCE_REPORT);
+
     setCandidates(prev => prev.map(c => {
         if (c.id === candidateId) {
-            const newSteps = [...c.unlockedSteps, FunnelStage.DEEP_PROFILE];
+            const newSteps = [...c.unlockedSteps, FunnelStage.EVIDENCE_REPORT];
             return { ...c, unlockedSteps: newSteps };
         }
         return c;
@@ -56,11 +56,11 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
       {/* List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3">
         {candidates.map((c) => {
-            const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE);
-            
+            const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.EVIDENCE_REPORT);
+
             return (
-                <div 
-                    key={c.id} 
+                <div
+                    key={c.id}
                     onClick={() => isDeepProfileUnlocked ? onSelectCandidate(c) : null}
                     className={`grid grid-cols-12 gap-4 p-4 rounded-xl border transition-all items-center ${
                         isDeepProfileUnlocked 
@@ -80,13 +80,13 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
 
                     {/* Match Score */}
                     <div className="col-span-2 flex flex-col items-center justify-center">
-                        <div className={`text-lg font-bold font-mono ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>
-                            {c.alignmentScore}%
+                        <div className={`text-lg font-bold font-mono ${c.matchScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                            {c.matchScore}%
                         </div>
                         <div className="w-16 h-1 bg-apex-700 rounded-full mt-1">
-                            <div 
-                                className={`h-full rounded-full ${c.alignmentScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`} 
-                                style={{width: `${c.alignmentScore}%`}}
+                            <div
+                                className={`h-full rounded-full ${c.matchScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`}
+                                style={{width: `${c.matchScore}%`}}
                             ></div>
                         </div>
                     </div>
@@ -106,11 +106,11 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                                 <i className="fa-solid fa-file-invoice mr-2"></i> View Report
                             </button>
                         ) : (
-                            <button 
+                            <button
                                 onClick={(e) => handleUnlockProfile(e, c.id)}
                                 className="px-4 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-700 flex items-center transition-all shadow-sm hover:shadow-emerald-500/20"
                             >
-                                <i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr ~€{(PRICING.DEEP_PROFILE * CREDITS_TO_EUR).toFixed(0)})
+                                <i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.EVIDENCE_REPORT} Cr ~€{(PRICING.EVIDENCE_REPORT * CREDITS_TO_EUR).toFixed(0)})
                             </button>
                         )}
                     </div>

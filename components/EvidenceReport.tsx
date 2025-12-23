@@ -60,73 +60,84 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
 
   return (
     <>
-      <div 
-        className="fixed inset-y-0 right-0 w-[720px] bg-apex-900 border-l border-apex-700 shadow-2xl z-40 flex flex-col font-sans animate-slideIn"
+      <div
+        className="fixed inset-0 md:inset-y-0 md:left-auto md:right-0 w-full md:w-[720px] bg-apex-900 border-l border-apex-700 shadow-2xl z-40 flex flex-col font-sans animate-slideIn"
         role="dialog"
         aria-labelledby="evidence-report-title"
         aria-modal="true"
       >
         {/* Header */}
-        <header className="p-6 bg-gradient-to-r from-apex-800 to-apex-800/80 border-b border-apex-700">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-5">
-              <div className="relative">
-                <img 
-                  src={candidate.avatar} 
+        <header className="p-4 md:p-6 bg-gradient-to-r from-apex-800 to-apex-800/80 border-b border-apex-700">
+          {/* Mobile: Close button row */}
+          <div className="flex justify-between items-center mb-4 md:hidden">
+            <span className="text-xs text-slate-500 uppercase tracking-wider">Evidence Report</span>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-2 rounded hover:bg-apex-700 transition-colors"
+              aria-label="Close panel"
+            >
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div className="flex items-center space-x-4 md:space-x-5 w-full md:w-auto">
+              <div className="relative shrink-0">
+                <img
+                  src={candidate.avatar}
                   alt={`${candidate.name} avatar`}
-                  className="w-16 h-16 rounded-full border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20" 
+                  className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20"
                 />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center border-2 border-apex-800">
-                  <i className="fa-solid fa-check text-xs text-white"></i>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-emerald-600 rounded-full flex items-center justify-center border-2 border-apex-800">
+                  <i className="fa-solid fa-check text-[10px] md:text-xs text-white"></i>
                 </div>
               </div>
-              <div>
-                <h2 id="evidence-report-title" className="text-2xl font-bold text-white">{candidate.name}</h2>
-                <div className="flex items-center text-xs text-slate-400 space-x-4 mt-1">
+              <div className="min-w-0 flex-1">
+                <h2 id="evidence-report-title" className="text-xl md:text-2xl font-bold text-white truncate">{candidate.name}</h2>
+                <div className="flex flex-wrap items-center text-xs text-slate-400 gap-x-4 gap-y-1 mt-1">
                   <span><i className="fa-solid fa-briefcase mr-1.5"></i>{candidate.yearsExperience} years exp</span>
                   <span><i className="fa-solid fa-location-dot mr-1.5"></i>{candidate.location}</span>
                 </div>
-                <div className="text-xs text-slate-500 mt-1">{candidate.currentRole} at {candidate.company}</div>
+                <div className="text-xs text-slate-500 mt-1 truncate">{candidate.currentRole} at {candidate.company}</div>
               </div>
             </div>
-            
+
             {/* Action Buttons */}
-            <div className="flex flex-col items-end space-y-2">
-              <div className="flex items-center space-x-2">
-                <button 
+            <div className="flex flex-wrap gap-2 w-full md:w-auto md:flex-col md:items-end md:space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
                   onClick={handleRefresh}
                   className="text-[10px] text-slate-400 hover:text-white flex items-center bg-apex-900 px-2.5 py-1.5 rounded border border-apex-700 transition-colors"
                   title={`Refresh from LinkedIn (${PRICING.REFRESH} Credit)`}
                 >
-                  <i className="fa-solid fa-rotate mr-1.5"></i> Refresh
+                  <i className="fa-solid fa-rotate mr-1.5"></i> <span className="hidden sm:inline">Refresh</span>
                 </button>
-                <button 
+                <button
                   onClick={handleReport}
                   className="text-[10px] text-slate-400 hover:text-yellow-400 flex items-center bg-apex-900 px-2.5 py-1.5 rounded border border-apex-700 transition-colors"
                   title="Report incorrect data"
                 >
-                  <i className="fa-solid fa-flag mr-1.5"></i> Report
+                  <i className="fa-solid fa-flag mr-1.5"></i> <span className="hidden sm:inline">Report</span>
                 </button>
-                <button 
-                  onClick={onClose} 
-                  className="text-slate-500 hover:text-white p-2 rounded hover:bg-apex-700 transition-colors"
-                  aria-label="Close panel"
-                >
-                  <i className="fa-solid fa-xmark text-lg"></i>
-                </button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button 
+                <button
                   onClick={() => setShareModal(true)}
                   className="text-[10px] text-slate-400 hover:text-emerald-400 flex items-center bg-apex-900 px-2.5 py-1.5 rounded border border-apex-700 transition-colors"
                 >
-                  <i className="fa-solid fa-share-nodes mr-1.5"></i> Share
+                  <i className="fa-solid fa-share-nodes mr-1.5"></i> <span className="hidden sm:inline">Share</span>
                 </button>
-                <button 
+                <button
                   onClick={handleExportPDF}
                   className="text-[10px] text-slate-400 hover:text-blue-400 flex items-center bg-apex-900 px-2.5 py-1.5 rounded border border-apex-700 transition-colors"
                 >
-                  <i className="fa-solid fa-file-pdf mr-1.5"></i> Export PDF
+                  <i className="fa-solid fa-file-pdf mr-1.5"></i> <span className="hidden sm:inline">PDF</span>
+                </button>
+                {/* Desktop close button */}
+                <button
+                  onClick={onClose}
+                  className="hidden md:flex text-slate-500 hover:text-white p-2 rounded hover:bg-apex-700 transition-colors"
+                  aria-label="Close panel"
+                >
+                  <i className="fa-solid fa-xmark text-lg"></i>
                 </button>
               </div>
             </div>
@@ -134,7 +145,7 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 md:space-y-6 custom-scrollbar">
           
           {/* SECTION: Match Score (Step 2 Data) */}
           <section aria-labelledby="match-score-heading">
@@ -143,12 +154,12 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
               <span className="text-[10px] text-slate-500">INCLUDED</span>
             </div>
 
-            <div className="bg-apex-800/50 rounded-xl p-6 border border-apex-700">
+            <div className="bg-apex-800/50 rounded-xl p-4 md:p-6 border border-apex-700">
               {/* Main Score */}
               <div className="flex items-end justify-between mb-3">
                 <div>
                   <h3 id="match-score-heading" className="sr-only">Match Score</h3>
-                  <div className="text-5xl font-bold text-emerald-400">{candidate.matchScore}%</div>
+                  <div className="text-4xl md:text-5xl font-bold text-emerald-400">{candidate.matchScore}%</div>
                 </div>
                 <ConfidenceBadge level={candidate.confidence || ConfidenceLevel.HIGH} size="md" />
               </div>
@@ -205,7 +216,7 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
               )}
 
               {/* Evidence & Risks Grid */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h4 className="text-xs font-bold text-emerald-400 uppercase mb-3 flex items-center">
                     <i className="fa-regular fa-circle-check mr-2"></i> Key Evidence
@@ -270,18 +281,18 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
               )}
 
               {/* Career Trajectory */}
-              <div className="bg-apex-800/30 rounded-xl p-5 border border-apex-700">
+              <div className="bg-apex-800/30 rounded-xl p-4 md:p-5 border border-apex-700">
                 <h4 className="text-xs font-bold text-slate-200 uppercase mb-4 flex items-center">
                   <i className="fa-solid fa-arrow-trend-up mr-2 text-blue-400"></i> Career Trajectory Analysis
                 </h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-apex-900/50 p-4 rounded-lg border border-apex-800">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+                  <div className="bg-apex-900/50 p-3 md:p-4 rounded-lg border border-apex-800">
                     <div className="text-[10px] text-slate-500 uppercase font-bold">Avg Tenure</div>
-                    <div className="text-xl font-bold text-white mt-1">{candidate.avgTenure || 'N/A'}</div>
+                    <div className="text-lg md:text-xl font-bold text-white mt-1">{candidate.avgTenure || 'N/A'}</div>
                   </div>
-                  <div className="bg-apex-900/50 p-4 rounded-lg border border-apex-800">
+                  <div className="bg-apex-900/50 p-3 md:p-4 rounded-lg border border-apex-800">
                     <div className="text-[10px] text-slate-500 uppercase font-bold">Progression Pace</div>
-                    <div className="text-xl font-bold text-white mt-1">{candidate.progressionPace || 'N/A'}</div>
+                    <div className="text-lg md:text-xl font-bold text-white mt-1">{candidate.progressionPace || 'N/A'}</div>
                   </div>
                 </div>
                 {candidate.trajectoryEvidence && (
@@ -292,11 +303,11 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
               </div>
 
               {/* Career & Workstyle Indicators (Spec 16.1 - renamed from Workstyle) */}
-              <div className="bg-apex-800/30 rounded-xl p-5 border border-apex-700">
+              <div className="bg-apex-800/30 rounded-xl p-4 md:p-5 border border-apex-700">
                 <h4 className="text-xs font-bold text-slate-200 uppercase mb-4 flex items-center">
                   <i className="fa-solid fa-fingerprint mr-2 text-purple-400"></i> Career & Workstyle Indicators
                 </h4>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
                   {indicators.map((ind, i) => {
                     const colors = getConfidenceColor(ind.evidence.confidence);
                     return (

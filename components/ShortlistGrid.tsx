@@ -62,38 +62,38 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
   return (
     <div className="h-full flex flex-col bg-apex-900">
       {/* Header */}
-      <header className="p-6 border-b border-apex-800 bg-apex-800/30">
-        <div className="flex justify-between items-start">
+      <header className="p-4 md:p-6 border-b border-apex-800 bg-apex-800/30">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
             <StepBadge step={2} label="Shortlist" color="blue" price={{ credits: PRICING.SHORTLIST }} />
-            <h2 className="text-2xl font-bold text-white mt-3">Match Scores & Evidence</h2>
-            <p className="text-sm text-slate-400 mt-1">
-              Review match scores based on job requirements. Unlock Evidence Reports for vetted candidates.
+            <h2 className="text-xl md:text-2xl font-bold text-white mt-3">Match Scores & Evidence</h2>
+            <p className="text-xs md:text-sm text-slate-400 mt-1">
+              Review match scores. Unlock Evidence Reports for vetted candidates.
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
             {/* Sort Dropdown */}
-            <div className="flex items-center space-x-2">
-              <label htmlFor="sort" className="text-xs text-slate-500">Sort by</label>
+            <div className="flex items-center space-x-2 flex-1 sm:flex-initial">
+              <label htmlFor="sort" className="text-xs text-slate-500 hidden sm:inline">Sort by</label>
               <select
                 id="sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'score' | 'name')}
-                className="bg-apex-800 border border-apex-700 rounded px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+                className="bg-apex-800 border border-apex-700 rounded px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500 flex-1 sm:flex-initial"
               >
                 <option value="score">Match Score</option>
                 <option value="name">Name</option>
               </select>
             </div>
-            <div className="text-xs text-slate-500 bg-apex-800 px-3 py-1.5 rounded border border-apex-700">
+            <div className="text-xs text-slate-500 bg-apex-800 px-3 py-1.5 rounded border border-apex-700 whitespace-nowrap">
               {candidates.length} Candidates
             </div>
           </div>
         </div>
       </header>
 
-      {/* Table Header */}
-      <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-apex-800/50 border-b border-apex-700 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
+      {/* Table Header - Hidden on mobile */}
+      <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-apex-800/50 border-b border-apex-700 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
         <div className="col-span-4">Candidate</div>
         <div className="col-span-2 text-center">Match Score</div>
         <div className="col-span-4">Evidence Summary</div>
@@ -101,17 +101,17 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
       </div>
 
       {/* Candidate List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3">
         {sortedCandidates.map((c) => {
           const isUnlocked = c.unlockedSteps.includes(FunnelStage.EVIDENCE_REPORT);
-          
+
           return (
-            <article 
-              key={c.id} 
+            <article
+              key={c.id}
               onClick={() => isUnlocked ? onSelectCandidate(c) : null}
-              className={`grid grid-cols-12 gap-4 p-5 rounded-xl border transition-all items-center ${
-                isUnlocked 
-                  ? 'bg-apex-800/40 border-apex-700 hover:border-emerald-500/50 cursor-pointer group shadow-lg' 
+              className={`flex flex-col md:grid md:grid-cols-12 gap-4 p-4 md:p-5 rounded-xl border transition-all ${
+                isUnlocked
+                  ? 'bg-apex-800/40 border-apex-700 hover:border-emerald-500/50 cursor-pointer group shadow-lg'
                   : 'bg-apex-900/50 border-apex-800 opacity-80'
               }`}
               role={isUnlocked ? 'button' : undefined}
@@ -119,17 +119,49 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
               aria-label={isUnlocked ? `View evidence report for ${c.name}` : undefined}
               onKeyDown={(e) => e.key === 'Enter' && isUnlocked && onSelectCandidate(c)}
             >
-              {/* Candidate Info */}
-              <div className="col-span-4 flex items-center">
+              {/* Mobile: Top row with candidate info and score */}
+              <div className="flex items-center justify-between md:hidden">
+                <div className="flex items-center flex-1 min-w-0">
+                  <div className="relative shrink-0">
+                    <img
+                      src={c.avatar}
+                      className={`w-10 h-10 rounded-full border-2 mr-3 transition-all ${
+                        isUnlocked
+                          ? 'border-emerald-500/50'
+                          : 'border-slate-700 grayscale'
+                      }`}
+                      alt={`${c.name} avatar`}
+                    />
+                    {isUnlocked && (
+                      <div className="absolute -bottom-1 -right-0 w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center border-2 border-apex-800">
+                        <i className="fa-solid fa-check text-[6px] text-white"></i>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-slate-200 truncate">{c.name}</div>
+                    <div className="text-xs text-slate-500 truncate">{c.currentRole} at {c.company}</div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center ml-3">
+                  <div className={`text-lg font-bold font-mono ${getScoreColor(c.matchScore)}`}>
+                    {c.matchScore}%
+                  </div>
+                  <ConfidenceBadge level={c.confidence || ConfidenceLevel.MEDIUM} size="sm" />
+                </div>
+              </div>
+
+              {/* Desktop: Candidate Info */}
+              <div className="hidden md:flex col-span-4 items-center">
                 <div className="relative">
-                  <img 
-                    src={c.avatar} 
+                  <img
+                    src={c.avatar}
                     className={`w-12 h-12 rounded-full border-2 mr-4 transition-all ${
-                      isUnlocked 
-                        ? 'border-emerald-500/50 group-hover:border-emerald-400' 
+                      isUnlocked
+                        ? 'border-emerald-500/50 group-hover:border-emerald-400'
                         : 'border-slate-700 grayscale'
-                    }`} 
-                    alt={`${c.name} avatar`} 
+                    }`}
+                    alt={`${c.name} avatar`}
                   />
                   {isUnlocked && (
                     <div className="absolute -bottom-1 -right-0 w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center border-2 border-apex-800">
@@ -147,14 +179,14 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                 </div>
               </div>
 
-              {/* Match Score */}
-              <div className="col-span-2 flex flex-col items-center justify-center">
+              {/* Desktop: Match Score */}
+              <div className="hidden md:flex col-span-2 flex-col items-center justify-center">
                 <div className={`text-xl font-bold font-mono ${getScoreColor(c.matchScore)}`}>
                   {c.matchScore}%
                 </div>
                 <div className="w-16 h-1.5 bg-apex-700 rounded-full mt-1.5 overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all ${getScoreBarColor(c.matchScore)}`} 
+                  <div
+                    className={`h-full rounded-full transition-all ${getScoreBarColor(c.matchScore)}`}
                     style={{width: `${c.matchScore}%`}}
                   ></div>
                 </div>
@@ -163,15 +195,15 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className="col-span-4">
+              {/* Summary - Shown on both mobile and desktop */}
+              <div className="md:col-span-4">
                 <p className="text-xs text-slate-400 leading-relaxed mb-2 line-clamp-2">
                   "{c.shortlistSummary}"
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {c.keyEvidence?.slice(0, 2).map((ev, i) => (
                     <span key={i} className="text-[10px] bg-emerald-900/20 text-emerald-400/80 px-2 py-0.5 rounded border border-emerald-900/30">
-                      <i className="fa-solid fa-check mr-1"></i>{ev.split(' ').slice(0, 4).join(' ')}...
+                      <i className="fa-solid fa-check mr-1"></i>{ev.split(' ').slice(0, 3).join(' ')}...
                     </span>
                   ))}
                   {c.risks && c.risks.length > 0 && (
@@ -183,10 +215,10 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
               </div>
 
               {/* Action */}
-              <div className="col-span-2 flex justify-end items-center space-x-2">
+              <div className="md:col-span-2 flex justify-end items-center space-x-2 pt-3 md:pt-0 border-t md:border-0 border-apex-700 mt-3 md:mt-0">
                 {isUnlocked ? (
                   <>
-                    <button 
+                    <button
                       onClick={(e) => handleShareClick(e, c)}
                       className="p-2 bg-apex-800 hover:bg-apex-700 text-slate-400 hover:text-white rounded border border-apex-700 transition-colors"
                       title="Share profile"
@@ -194,19 +226,20 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
                     >
                       <i className="fa-solid fa-share-nodes text-sm"></i>
                     </button>
-                    <button 
-                      className="px-4 py-2 bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 text-xs font-bold rounded border border-emerald-900/50 flex items-center transition-colors"
+                    <button
+                      className="flex-1 md:flex-initial px-4 py-2 bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 text-xs font-bold rounded border border-emerald-900/50 flex items-center justify-center transition-colors"
                     >
                       <i className="fa-solid fa-microscope mr-2"></i> View Report
                     </button>
                   </>
                 ) : (
-                  <button 
+                  <button
                     onClick={(e) => handleUnlockProfile(e, c.id)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-700 hover:border-emerald-500 flex items-center transition-all shadow-sm hover:shadow-emerald-500/20"
+                    className="flex-1 md:flex-initial px-4 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-700 hover:border-emerald-500 flex items-center justify-center transition-all shadow-sm hover:shadow-emerald-500/20"
                   >
-                    <i className="fa-solid fa-lock mr-2"></i> 
-                    Unlock ({formatPrice(PRICING.EVIDENCE_REPORT)})
+                    <i className="fa-solid fa-lock mr-2"></i>
+                    <span className="hidden sm:inline">Unlock ({formatPrice(PRICING.EVIDENCE_REPORT)})</span>
+                    <span className="sm:hidden">Unlock</span>
                   </button>
                 )}
               </div>
@@ -216,13 +249,16 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
       </div>
 
       {/* Algorithm Explainer Footer */}
-      <footer className="p-4 border-t border-apex-800 bg-apex-800/30">
-        <div className="flex items-center justify-between text-[10px] text-slate-500">
-          <div className="flex items-center space-x-4">
+      <footer className="p-3 md:p-4 border-t border-apex-800 bg-apex-800/30">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[10px] text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 sm:space-x-4 sm:gap-0">
             <span><i className="fa-solid fa-calculator mr-1"></i> Algorithm v2.3</span>
-            <span>|</span>
-            <span>
+            <span className="hidden sm:inline">|</span>
+            <span className="hidden md:inline">
               Weights: Skills (35%) • Experience (25%) • Industry (15%) • Seniority (15%) • Location (10%)
+            </span>
+            <span className="md:hidden">
+              5 scoring factors
             </span>
           </div>
           <button className="text-slate-400 hover:text-white transition-colors flex items-center">

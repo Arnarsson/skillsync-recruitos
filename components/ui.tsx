@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { ConfidenceLevel, getConfidenceColor, Toast as ToastType } from './types';
+import { ConfidenceLevel, getConfidenceColor, Toast as ToastType } from '../types';
 
 // ============================================
 // TOAST NOTIFICATION SYSTEM
@@ -337,7 +337,7 @@ interface StepBadgeProps {
   step: number;
   label: string;
   color?: 'emerald' | 'blue' | 'purple' | 'slate';
-  price?: { credits: number; free?: boolean };
+  price?: { credits?: number; free?: boolean };
 }
 
 export const StepBadge: React.FC<StepBadgeProps> = ({ step, label, color = 'emerald', price }) => {
@@ -355,7 +355,7 @@ export const StepBadge: React.FC<StepBadgeProps> = ({ step, label, color = 'emer
       </span>
       {price && (
         <span className="text-[10px] text-slate-500">
-          {price.free ? 'FREE' : `${price.credits} Cr (~€${Math.round(price.credits * 0.54)})`}
+          {price.free ? 'FREE' : `${price.credits ?? 0} Cr (~€${Math.round((price.credits ?? 0) * 0.54)})`}
         </span>
       )}
     </div>

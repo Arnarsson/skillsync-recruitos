@@ -101,11 +101,11 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
             <div className="bg-apex-800/50 rounded-xl p-6 border border-apex-700">
                 {/* Score Bar */}
                 <div className="flex items-end justify-between mb-2">
-                    <div className="text-4xl font-bold text-emerald-400">{candidate.alignmentScore}%</div>
+                    <div className="text-4xl font-bold text-emerald-400">{candidate.matchScore}%</div>
                     <div className="text-xs text-slate-400 pb-1">Confidence: <span className="text-emerald-400 font-bold">High</span></div>
                 </div>
                 <div className="w-full bg-apex-900 rounded-full h-2 mb-4">
-                    <div className="bg-emerald-500 h-2 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{width: `${candidate.alignmentScore}%`}}></div>
+                    <div className="bg-emerald-500 h-2 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{width: `${candidate.matchScore}%`}}></div>
                 </div>
 
                 {/* Score Breakdown (Spec 12.5) */}
