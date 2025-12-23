@@ -79,6 +79,14 @@ const JobIntake: React.FC = () => {
   const [benchmarkUrl, setBenchmarkUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Validation per Spec 17.3
   const validateInputs = (): boolean => {
@@ -151,7 +159,7 @@ What We Offer:
   const isValidLength = charCount >= 100 && charCount <= 10000;
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
+    <div className={`h-full flex flex-col p-4 md:p-8 bg-apex-900 overflow-y-auto custom-scrollbar ${isMobile ? 'pb-32' : ''}`}>
 
       {/* Header */}
       <header className="mb-6 md:mb-8">
@@ -422,6 +430,38 @@ What We Offer:
           </div>
         </aside>
       </div>
+
+      {/* Mobile Sticky CTA - Always visible at bottom */}
+      {isMobile && (
+        <div className="fixed bottom-16 left-0 right-0 p-4 bg-gradient-to-t from-apex-900 via-apex-900/95 to-transparent z-30 safe-area-pb">
+          <button
+            onClick={handleStart}
+            disabled={isProcessing || charCount < 100}
+            className={`
+              w-full py-4 rounded-xl font-bold text-base uppercase tracking-wide transition-all shadow-2xl flex items-center justify-center
+              ${isProcessing || charCount < 100
+                ? 'bg-apex-700 text-slate-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-emerald-900/50 active:scale-[0.98]'
+              }
+            `}
+            aria-busy={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Initializing...
+              </>
+            ) : charCount < 100 ? (
+              <>
+                <i className="fa-solid fa-file-lines mr-2"></i> Add Job Description ({charCount}/100)
+              </>
+            ) : (
+              <>
+                Generate Shortlist <i className="fa-solid fa-arrow-right ml-2"></i>
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
