@@ -122,6 +122,7 @@ const ShortlistGrid: React.FC<Props> = ({ credits, onSpendCredits, onSelectCandi
             </div>
           </div>
         </div>
+
       </header>
 
       {/* Table Header - Hidden on mobile */}

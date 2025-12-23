@@ -50,7 +50,7 @@ Requirements:
               <div className="bg-apex-800 border border-apex-700 rounded-xl p-6 shadow-lg relative overflow-hidden group">
                    <div className="flex items-center space-x-3 mb-5 border-b border-apex-700 pb-4">
                         <div className="w-8 h-8 rounded bg-blue-900/20 flex items-center justify-center text-blue-400">
-                             <i className="fa-solid fa-users-line"></i>
+                             <i className="fa-solid fa-people-group"></i>
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-white">Social Context</h2>

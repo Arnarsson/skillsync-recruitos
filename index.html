@@ -19,14 +19,15 @@
     
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
               apex: {
-                900: '#0a0f1a',
-                800: '#111827',
-                700: '#1f2937',
-                600: '#374151',
+                900: 'var(--apex-900)',
+                800: 'var(--apex-800)',
+                700: 'var(--apex-700)',
+                600: 'var(--apex-600)',
                 accent: '#3b82f6',
                 success: '#10b981',
                 warning: '#f59e0b',
@@ -63,23 +64,80 @@
     </script>
     
     <style>
+      /* Theme CSS Variables */
+      :root, .dark {
+        --apex-900: #0a0f1a;
+        --apex-800: #111827;
+        --apex-700: #1f2937;
+        --apex-600: #374151;
+        --bg-primary: #0a0f1a;
+        --text-primary: #e2e8f0;
+        --text-secondary: #94a3b8;
+        --scrollbar-track: #0a0f1a;
+        --scrollbar-thumb: #1f2937;
+        --scrollbar-thumb-hover: #374151;
+      }
+
+      .light {
+        --apex-900: #f8fafc;
+        --apex-800: #f1f5f9;
+        --apex-700: #e2e8f0;
+        --apex-600: #cbd5e1;
+        --bg-primary: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #475569;
+        --scrollbar-track: #f1f5f9;
+        --scrollbar-thumb: #cbd5e1;
+        --scrollbar-thumb-hover: #94a3b8;
+      }
+
       /* Base */
       * {
         box-sizing: border-box;
       }
-      
+
       html, body, #root {
         height: 100%;
         margin: 0;
         padding: 0;
       }
-      
+
       body {
-        background-color: #0a0f1a;
-        color: #e2e8f0;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
         font-family: 'Inter', system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* Light mode text color overrides */
+      .light .text-white {
+        color: #1e293b !important;
+      }
+
+      .light .text-slate-300 {
+        color: #475569 !important;
+      }
+
+      .light .text-slate-400 {
+        color: #64748b !important;
+      }
+
+      .light .text-slate-500 {
+        color: #94a3b8 !important;
+      }
+
+      .light .text-slate-600 {
+        color: #475569 !important;
+      }
+
+      .light .border-apex-700 {
+        border-color: #e2e8f0 !important;
+      }
+
+      .light .border-apex-800 {
+        border-color: #e2e8f0 !important;
       }
       
       /* Custom Scrollbar */
@@ -106,18 +164,18 @@
         width: 8px;
         height: 8px;
       }
-      
+
       ::-webkit-scrollbar-track {
-        background: #0a0f1a;
+        background: var(--scrollbar-track);
       }
-      
+
       ::-webkit-scrollbar-thumb {
-        background: #1f2937;
+        background: var(--scrollbar-thumb);
         border-radius: 4px;
       }
-      
+
       ::-webkit-scrollbar-thumb:hover {
-        background: #374151;
+        background: var(--scrollbar-thumb-hover);
       }
       
       /* Selection */
