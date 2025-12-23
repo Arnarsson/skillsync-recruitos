@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Candidate, FunnelStage, PRICING, ConfidenceLevel, formatPrice, getConfidenceColor } from '../types';
 import { SCORE_WEIGHTS } from '../constants';
 import { ConfidenceBadge, ShareModal, StepBadge, useToast } from './ui';
@@ -11,11 +11,22 @@ interface Props {
   onOpenOutreach: (c: Candidate) => void;
 }
 
+type MobileTab = 'score' | 'evidence' | 'interview' | 'outreach';
+
 const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, onClose, onOpenOutreach }) => {
   const { addToast } = useToast();
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showAlgorithm, setShowAlgorithm] = useState(false);
   const [shareModal, setShareModal] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>('score');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const indicators = candidate.indicators || [];
   const questions = candidate.interviewGuide || [];
@@ -144,11 +155,42 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
           </div>
         </header>
 
+        {/* Mobile Tab Navigation */}
+        {isMobile && (
+          <nav className="flex border-b border-apex-700 bg-apex-800/50 overflow-x-auto scrollbar-hide">
+            {[
+              { id: 'score' as MobileTab, label: 'Score', icon: 'fa-chart-simple' },
+              { id: 'evidence' as MobileTab, label: 'Evidence', icon: 'fa-microscope' },
+              { id: 'interview' as MobileTab, label: 'Interview', icon: 'fa-comments' },
+              { id: 'outreach' as MobileTab, label: 'Outreach', icon: 'fa-paper-plane' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setMobileTab(tab.id)}
+                className={`flex-1 min-w-[80px] py-3 px-2 text-center transition-all relative ${
+                  mobileTab === tab.id
+                    ? 'text-emerald-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <i className={`fa-solid ${tab.icon} text-sm mb-1 block`}></i>
+                <span className="text-[10px] font-bold uppercase">{tab.label}</span>
+                {mobileTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+                )}
+              </button>
+            ))}
+          </nav>
+        )}
+
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 md:space-y-6 custom-scrollbar">
-          
+
           {/* SECTION: Match Score (Step 2 Data) */}
-          <section aria-labelledby="match-score-heading">
+          <section
+            aria-labelledby="match-score-heading"
+            className={isMobile && mobileTab !== 'score' ? 'hidden' : ''}
+          >
             <div className="flex items-center justify-between mb-4">
               <StepBadge step={2} label="Match Score" color="emerald" />
               <span className="text-[10px] text-slate-500">INCLUDED</span>
@@ -248,7 +290,10 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
           </section>
 
           {/* SECTION: Evidence Report (Step 3 Data) */}
-          <section aria-labelledby="evidence-heading">
+          <section
+            aria-labelledby="evidence-heading"
+            className={isMobile && mobileTab !== 'evidence' ? 'hidden' : ''}
+          >
             <div className="flex items-center justify-between mb-4">
               <StepBadge step={3} label="Evidence Report" color="blue" />
             </div>
@@ -341,8 +386,8 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
                 </div>
               </div>
 
-              {/* Interview Guide */}
-              {questions.length > 0 && (
+              {/* Interview Guide - Desktop only (mobile shows in separate tab) */}
+              {!isMobile && questions.length > 0 && (
                 <div className="bg-apex-800/30 rounded-xl p-5 border border-apex-700">
                   <h4 className="text-xs font-bold text-slate-200 uppercase mb-4 flex items-center">
                     <i className="fa-solid fa-comments mr-2 text-cyan-400"></i> Interview Guide
@@ -368,8 +413,49 @@ const EvidenceReport: React.FC<Props> = ({ candidate, credits, onSpendCredits, o
             </div>
           </section>
 
+          {/* SECTION: Interview Guide (Mobile Tab) */}
+          <section
+            className={isMobile && mobileTab !== 'interview' ? 'hidden' : (isMobile ? '' : 'hidden')}
+          >
+            {questions.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-bold text-white flex items-center">
+                    <i className="fa-solid fa-comments mr-2 text-cyan-400"></i> Interview Guide
+                  </h3>
+                  <span className="text-[10px] text-slate-500">{questions.length} questions</span>
+                </div>
+                <ul className="space-y-4">
+                  {questions.map((q, i) => (
+                    <li key={i} className="bg-apex-800/30 rounded-xl p-4 border border-apex-700">
+                      <div className="flex items-start">
+                        <span className="w-8 h-8 flex items-center justify-center bg-cyan-900/30 rounded-full text-xs font-bold text-cyan-400 mr-3 flex-shrink-0 border border-cyan-900/50">
+                          {i + 1}
+                        </span>
+                        <div className="flex-1">
+                          <div className="text-sm text-slate-200 font-medium leading-relaxed">{q.question}</div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="text-[10px] bg-apex-800 text-slate-400 px-2 py-1 rounded border border-apex-700">{q.topic}</span>
+                            <span className="text-[10px] text-slate-500">{q.reason}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500">
+                <i className="fa-solid fa-comments text-3xl mb-3 opacity-50"></i>
+                <p className="text-sm">No interview questions generated yet</p>
+              </div>
+            )}
+          </section>
+
           {/* SECTION: Outreach Preview (Step 4) */}
-          <section className="pt-4 border-t border-apex-700/50">
+          <section
+            className={`${isMobile && mobileTab !== 'outreach' ? 'hidden' : ''} ${!isMobile ? 'pt-4 border-t border-apex-700/50' : ''}`}
+          >
             <div className="flex items-center justify-between mb-4">
               <StepBadge step={4} label="Outreach Protocol" color="slate" />
             </div>

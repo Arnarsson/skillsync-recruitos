@@ -1,12 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PRICING, CREDITS_TO_EUR, formatPrice } from '../types';
 import { useToast, StepBadge } from './ui';
 
+// Collapsible Section Component for mobile
+const CollapsibleSection: React.FC<{
+  title: string;
+  subtitle?: string;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  badge?: React.ReactNode;
+}> = ({ title, subtitle, icon, iconBg, iconColor, children, defaultOpen = true, badge }) => {
+  const [isMobile, setIsMobile] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Always open on desktop
+  const shouldBeOpen = !isMobile || isOpen;
+
+  return (
+    <section className="bg-apex-800 border border-apex-700 rounded-xl shadow-lg relative overflow-hidden">
+      <button
+        onClick={() => isMobile && setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between p-4 md:p-6 border-b border-apex-700 ${
+          isMobile ? 'cursor-pointer active:bg-apex-700/50' : 'cursor-default'
+        }`}
+        disabled={!isMobile}
+      >
+        <div className="flex items-center space-x-3">
+          <div className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
+            <i className={`fa-solid ${icon}`}></i>
+          </div>
+          <div className="text-left">
+            <h2 className="text-base md:text-lg font-bold text-white">{title}</h2>
+            {subtitle && (
+              <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{subtitle}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {badge}
+          {isMobile && (
+            <i className={`fa-solid fa-chevron-down text-slate-500 transition-transform duration-200 ${
+              isOpen ? 'rotate-180' : ''
+            }`}></i>
+          )}
+        </div>
+      </button>
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          shouldBeOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="p-4 md:p-6 pt-4">
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const JobIntake: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
-  
+
   const [jobDesc, setJobDesc] = useState('');
   const [companyUrl, setCompanyUrl] = useState('');
   const [managerUrl, setManagerUrl] = useState('');
@@ -101,17 +167,22 @@ What We Offer:
         <div className="flex-1 space-y-6 order-2 lg:order-1">
           
           {/* Social Context Card */}
-          <section className="bg-apex-800 border border-apex-700 rounded-xl p-6 shadow-lg relative overflow-hidden">
-            <div className="flex items-center space-x-3 mb-5 border-b border-apex-700 pb-4">
-              <div className="w-9 h-9 rounded-lg bg-blue-900/30 flex items-center justify-center text-blue-400">
-                <i className="fa-solid fa-users-line"></i>
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">Team Context</h2>
-                <p className="text-[10px] text-blue-400 uppercase tracking-wide font-bold">Critical for Culture Match</p>
-              </div>
-            </div>
-                   
+          <CollapsibleSection
+            title="Team Context"
+            subtitle="Critical for Culture Match"
+            icon="fa-users-line"
+            iconBg="bg-blue-900/30"
+            iconColor="text-blue-400"
+            defaultOpen={true}
+            badge={
+              <button
+                onClick={(e) => { e.stopPropagation(); handleMockFill(); }}
+                className="text-[10px] text-blue-400 hover:text-blue-300 font-mono transition-colors opacity-70 hover:opacity-100 flex items-center bg-blue-900/20 px-2 py-1 rounded border border-blue-900/30"
+              >
+                <i className="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Load Demo
+              </button>
+            }
+          >
             <div className="space-y-5">
               {/* Company URL */}
               <div>
@@ -120,12 +191,12 @@ What We Offer:
                 </label>
                 <div className="relative">
                   <i className="fa-brands fa-linkedin absolute left-3 top-3 text-slate-500"></i>
-                  <input 
+                  <input
                     id="companyUrl"
                     type="url"
                     className={`w-full bg-apex-900 border rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
-                      errors.companyUrl 
-                        ? 'border-red-500 focus:ring-red-500/50' 
+                      errors.companyUrl
+                        ? 'border-red-500 focus:ring-red-500/50'
                         : 'border-apex-700 focus:border-blue-500 focus:ring-blue-500/30'
                     }`}
                     placeholder="https://linkedin.com/company/..."
@@ -149,12 +220,12 @@ What We Offer:
                   </label>
                   <div className="relative">
                     <i className="fa-brands fa-linkedin absolute left-3 top-3 text-slate-500"></i>
-                    <input 
+                    <input
                       id="managerUrl"
                       type="url"
                       className={`w-full bg-apex-900 border rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
-                        errors.managerUrl 
-                          ? 'border-red-500 focus:ring-red-500/50' 
+                        errors.managerUrl
+                          ? 'border-red-500 focus:ring-red-500/50'
                           : 'border-apex-700 focus:border-blue-500 focus:ring-blue-500/30'
                       }`}
                       placeholder="https://linkedin.com/in/..."
@@ -174,7 +245,7 @@ What We Offer:
                   </label>
                   <div className="relative">
                     <i className="fa-brands fa-linkedin absolute left-3 top-3 text-slate-500"></i>
-                    <input 
+                    <input
                       id="benchmarkUrl"
                       type="url"
                       className="w-full bg-apex-900 border border-apex-700 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all"
@@ -186,43 +257,43 @@ What We Offer:
                 </div>
               </div>
             </div>
-                   
+
             {/* Info Box */}
             <div className="mt-5 p-3 bg-apex-900/50 rounded-lg border border-apex-700/50 flex items-start">
               <i className="fa-solid fa-circle-info text-blue-500 mt-0.5 mr-3 text-sm"></i>
               <p className="text-xs text-slate-400 leading-relaxed">
-                We analyze these profiles to calibrate for <strong className="text-slate-300">team culture</strong>, <strong className="text-slate-300">communication style</strong>, and <strong className="text-slate-300">educational background</strong>. 
+                We analyze these profiles to calibrate for <strong className="text-slate-300">team culture</strong>, <strong className="text-slate-300">communication style</strong>, and <strong className="text-slate-300">educational background</strong>.
                 This helps generate more accurate match scores.
               </p>
             </div>
-                   
-            {/* Demo Button */}
-            <button 
-              onClick={handleMockFill}
-              className="absolute top-6 right-6 text-[10px] text-blue-400 hover:text-blue-300 font-mono transition-colors opacity-70 hover:opacity-100 flex items-center bg-blue-900/20 px-2 py-1 rounded border border-blue-900/30"
-            >
-              <i className="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Load Demo
-            </button>
-          </section>
+          </CollapsibleSection>
 
           {/* Job Description Card */}
-          <section className="bg-apex-800 border border-apex-700 rounded-xl p-6 shadow-lg">
-            <div className="flex items-center space-x-3 mb-5 border-b border-apex-700 pb-4">
-              <div className="w-9 h-9 rounded-lg bg-emerald-900/30 flex items-center justify-center text-emerald-400">
-                <i className="fa-solid fa-file-lines"></i>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-white">Job Description</h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wide">Required for matching</p>
-              </div>
-            </div>
-                   
+          <CollapsibleSection
+            title="Job Description"
+            subtitle="Required for matching"
+            icon="fa-file-lines"
+            iconBg="bg-emerald-900/30"
+            iconColor="text-emerald-400"
+            defaultOpen={true}
+            badge={
+              charCount >= 100 ? (
+                <span className="text-[10px] text-emerald-500 bg-emerald-900/20 px-2 py-1 rounded border border-emerald-900/30">
+                  <i className="fa-solid fa-check mr-1"></i> Ready
+                </span>
+              ) : charCount > 0 ? (
+                <span className="text-[10px] text-slate-500 bg-apex-900 px-2 py-1 rounded border border-apex-700 font-mono">
+                  {charCount}/100
+                </span>
+              ) : null
+            }
+          >
             <div className="relative">
-              <textarea 
+              <textarea
                 id="jobDesc"
-                className={`w-full h-56 bg-apex-900 border rounded-lg p-4 text-sm text-slate-300 focus:outline-none focus:ring-2 font-mono leading-relaxed resize-none transition-all ${
-                  errors.jobDesc 
-                    ? 'border-red-500 focus:ring-red-500/50' 
+                className={`w-full h-48 md:h-56 bg-apex-900 border rounded-lg p-4 text-sm text-slate-300 focus:outline-none focus:ring-2 font-mono leading-relaxed resize-none transition-all ${
+                  errors.jobDesc
+                    ? 'border-red-500 focus:ring-red-500/50'
                     : 'border-apex-700 focus:border-emerald-500 focus:ring-emerald-500/30'
                 }`}
                 placeholder="Paste full job description here including role, requirements, nice-to-haves, and what you offer..."
@@ -230,7 +301,7 @@ What We Offer:
                 onChange={(e) => { setJobDesc(e.target.value); setErrors(prev => ({...prev, jobDesc: ''})); }}
                 aria-describedby="jobDesc-hint"
               ></textarea>
-              
+
               {/* Character count */}
               <div className={`absolute bottom-4 right-4 text-[10px] font-mono pointer-events-none flex items-center space-x-2 ${
                 !isValidLength && charCount > 0 ? 'text-red-400' : 'text-slate-600'
@@ -240,7 +311,7 @@ What We Offer:
                 <span>100-10,000</span>
               </div>
             </div>
-            
+
             {errors.jobDesc && (
               <p className="text-xs text-red-400 mt-2 flex items-center">
                 <i className="fa-solid fa-circle-exclamation mr-1"></i> {errors.jobDesc}
@@ -252,7 +323,7 @@ What We Offer:
 
             {/* Action Button */}
             <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-500 hidden sm:block">
                 {charCount >= 100 && (
                   <span className="text-emerald-500">
                     <i className="fa-solid fa-check mr-1"></i> Ready to proceed
@@ -282,7 +353,7 @@ What We Offer:
                 )}
               </button>
             </div>
-          </section>
+          </CollapsibleSection>
         </div>
 
         {/* Process Preview Sidebar */}
