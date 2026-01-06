@@ -30,11 +30,11 @@ const OutreachSuite: React.FC<Props> = ({ candidate, onClose }) => {
   }, [candidate]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-[800px] h-[600px] bg-apex-900 border border-apex-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm md:p-4">
+      <div className="w-full h-full md:w-[800px] md:h-[600px] bg-apex-900 border border-apex-700 md:rounded-xl shadow-2xl flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="p-4 border-b border-apex-800 flex justify-between items-center bg-apex-800">
+        <div className="p-4 border-b border-apex-800 flex justify-between items-center bg-apex-800 shrink-0">
             <div className="flex items-center space-x-3">
                 <span className="text-emerald-500 font-mono text-[10px] uppercase tracking-widest bg-emerald-900/20 px-2 py-0.5 rounded">Step 4 of 4</span>
                 <h3 className="text-lg font-bold text-white">Outreach Protocol</h3>
@@ -44,10 +44,10 @@ const OutreachSuite: React.FC<Props> = ({ candidate, onClose }) => {
             </button>
         </div>
 
-        <div className="flex-1 grid grid-cols-2">
+        <div className="flex-1 flex flex-col md:grid md:grid-cols-2 overflow-y-auto md:overflow-hidden">
             
             {/* Left: Strategy & Context */}
-            <div className="p-6 border-r border-apex-800 bg-apex-900/50">
+            <div className="p-4 md:p-6 border-b md:border-b-0 md:border-r border-apex-800 bg-apex-900/50 overflow-y-auto">
                 <div className="mb-6">
                     <h4 className="text-xs font-bold uppercase text-slate-500 mb-3">Connection Path</h4>
                     {candidate.connectionPath ? (
@@ -100,7 +100,7 @@ const OutreachSuite: React.FC<Props> = ({ candidate, onClose }) => {
             </div>
 
             {/* Right: The Draft */}
-            <div className="p-6 bg-apex-800/30 flex flex-col">
+            <div className="p-4 md:p-6 bg-apex-800/30 flex flex-col h-[500px] md:h-auto">
                 <div className="flex justify-between items-center mb-4">
                     <h4 className="text-xs font-bold uppercase text-slate-500">Generated Draft</h4>
                     <button onClick={() => {}} className="text-[10px] text-apex-accent hover:text-white">

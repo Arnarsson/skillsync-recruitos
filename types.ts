@@ -1,7 +1,7 @@
 export enum FunnelStage {
   INTAKE = 1,
   SHORTLIST = 2,
-  EVIDENCE_REPORT = 3, // Renamed from DEEP_PROFILE per Spec 16.1
+  DEEP_PROFILE = 3,
   OUTREACH = 4
 }
 
@@ -20,7 +20,7 @@ export interface Evidence {
 export interface WorkstyleIndicator {
   category: string; // 'TRAJECTORY' | 'SKILLS' | 'COMMUNICATION' | 'COLLABORATION'
   label: string;
-  observation: string;
+  observation: string; // "Structured & Technical"
   evidence: Evidence;
 }
 
@@ -52,22 +52,23 @@ export interface Candidate {
   location: string;
   yearsExperience: number;
   avatar: string;
-  linkedinUrl?: string;
   
-  // Step 2: Shortlist Data (renamed to "Match Score" per Spec 16.1)
-  matchScore: number; // 0-100, renamed from alignmentScore
-  scoreBreakdown?: ScoreBreakdown;
+  // Step 2: Shortlist Data
+  alignmentScore: number; // 0-100
+  scoreBreakdown?: ScoreBreakdown; // New field for Spec 12.5
   shortlistSummary: string;
   keyEvidence: string[];
   risks: string[];
-  confidence: ConfidenceLevel;
   unlockedSteps: FunnelStage[]; 
   
-  // Step 3: Evidence Report Data (renamed from Deep Profile)
+  // Step 3: Evidence Report Data 
   avgTenure?: string;
   progressionPace?: string;
+  
+  // New Fields for Deep Analysis & Company Match
   deepAnalysis?: string;
   cultureFit?: string;
+  
   trajectoryEvidence?: string;
   indicators?: WorkstyleIndicator[];
   interviewGuide?: InterviewQuestion[];
@@ -76,60 +77,39 @@ export interface Candidate {
   connectionPath?: string;
   sharedContext?: string[];
   outreachHook?: string;
-  outreachConfidence?: ConfidenceLevel; // Added per Spec 15.1
 }
 
 export interface JobContext {
-  id?: string;
   title: string;
   description: string;
-  companyUrl: string;
-  managerUrl: string;
-  benchmarkUrl: string;
   teamUrls: string[];
-  createdAt?: Date;
 }
 
-export interface ShareLink {
-  token: string;
-  url: string;
-  expiresAt: Date;
-  viewCount: number;
+// Spec 13: Audit Types
+export enum AuditEventType {
+  JOB_CREATED = 'job_created',
+  SCORE_GENERATED = 'score_generated',
+  PROFILE_ENRICHED = 'profile_enriched',
+  OUTREACH_GENERATED = 'outreach_generated',
+  CREDIT_PURCHASE = 'credit_purchase'
 }
 
-export interface Toast {
+export interface AuditEvent {
   id: string;
-  type: 'success' | 'error' | 'info' | 'warning';
-  message: string;
-  duration?: number;
+  type: AuditEventType;
+  timestamp: string;
+  description: string;
+  cost: number;
+  user: string;
+  metadata?: any; // JSON payload for EU AI Act compliance
 }
 
-// Pricing per Spec 11.1 & 11.2
-// 1 Credit = 4 DKK = ~€0.54
+// 1 Credit = ~0.54 EUR (Based on 5000 credits = 20,000 DKK)
 export const CREDITS_TO_EUR = 0.54;
-export const CREDITS_TO_DKK = 4;
 
 export const PRICING = {
-  SHORTLIST: 93,        // Step 2: ~€50
-  EVIDENCE_REPORT: 278, // Step 3: ~€150 (renamed from DEEP_PROFILE)
-  OUTREACH: 463,        // Step 4: ~€250
-  REFRESH: 1            // Spec 10.4
-};
-
-// Helper function for consistent price display (Spec 11.4)
-export const formatPrice = (credits: number): string => {
-  const eur = Math.round(credits * CREDITS_TO_EUR);
-  return `${credits} Credits (~€${eur})`;
-};
-
-// Confidence badge colors
-export const getConfidenceColor = (level: ConfidenceLevel): { bg: string; text: string; dot: string } => {
-  switch (level) {
-    case ConfidenceLevel.HIGH:
-      return { bg: 'bg-emerald-900/30', text: 'text-emerald-400', dot: 'bg-emerald-500' };
-    case ConfidenceLevel.MEDIUM:
-      return { bg: 'bg-yellow-900/30', text: 'text-yellow-400', dot: 'bg-yellow-500' };
-    case ConfidenceLevel.LOW:
-      return { bg: 'bg-red-900/30', text: 'text-red-400', dot: 'bg-red-500' };
-  }
+  SHORTLIST: 93,      // ~€50
+  DEEP_PROFILE: 278,  // ~€150
+  OUTREACH: 463,      // ~€250
+  REFRESH: 1          // Spec 10.4
 };

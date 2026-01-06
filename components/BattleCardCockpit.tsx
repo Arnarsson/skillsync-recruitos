@@ -5,7 +5,7 @@ import { generateDeepProfile } from '../services/geminiService';
 interface Props {
   candidate: Candidate | null;
   credits: number;
-  onSpendCredits: (amount: number) => void;
+  onSpendCredits: (amount: number, description?: string) => void;
   onClose: () => void;
   onOpenOutreach: (c: Candidate) => void;
 }
@@ -27,7 +27,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
         alert("Insufficient credits.");
         return;
     }
-    onSpendCredits(PRICING.OUTREACH);
+    onSpendCredits(PRICING.OUTREACH, `Unlocked Outreach Protocol: ${candidate.name}`);
     onOpenOutreach(candidate);
   };
 
@@ -37,22 +37,22 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
           return;
       }
       if(window.confirm(`Refresh data for 1 Credit (~€${(PRICING.REFRESH * CREDITS_TO_EUR).toFixed(2)})?`)) {
-          onSpendCredits(PRICING.REFRESH);
+          onSpendCredits(PRICING.REFRESH, `Manual Profile Refresh: ${candidate.name}`);
           alert("Profile data refreshed from source.");
       }
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[700px] bg-apex-900 border-l border-apex-700 shadow-2xl transform transition-transform duration-300 z-40 flex flex-col font-sans">
+    <div className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[700px] bg-apex-900 border-l border-apex-700 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col font-sans">
       
       {/* 1. Header Area */}
-      <div className="p-6 bg-apex-800 border-b border-apex-700 flex justify-between items-start">
-        <div className="flex items-center space-x-5">
-             <img src={candidate.avatar} alt="avatar" className="w-16 h-16 rounded-full border-2 border-emerald-500/50 shadow-lg" />
+      <div className="p-4 md:p-6 bg-apex-800 border-b border-apex-700 flex justify-between items-start">
+        <div className="flex items-center space-x-3 md:space-x-5">
+             <img src={candidate.avatar} alt="avatar" className="w-12 h-12 md:w-16 md:h-16 rounded-full border-2 border-emerald-500/50 shadow-lg" />
              <div>
-                <h2 className="text-2xl font-bold text-white mb-1">{candidate.name}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1">{candidate.name}</h2>
                 <div className="flex items-center text-xs text-slate-400 space-x-3">
-                    <span><i className="fa-solid fa-briefcase mr-1"></i> {candidate.yearsExperience} years exp</span>
+                    <span><i className="fa-solid fa-briefcase mr-1"></i> {candidate.yearsExperience}y exp</span>
                     <span><i className="fa-solid fa-location-dot mr-1"></i> {candidate.location}</span>
                 </div>
              </div>
@@ -61,21 +61,14 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
             <div className="flex items-center space-x-2">
                 <button 
                     onClick={handleRefresh}
-                    className="text-[10px] text-slate-400 hover:text-white flex items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors"
+                    className="hidden md:flex text-[10px] text-slate-400 hover:text-white items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors"
                     title="Refresh from LinkedIn (1 Credit)"
                 >
                     <i className="fa-solid fa-rotate mr-1"></i> Refresh
                 </button>
-                <button 
-                    className="text-[10px] text-slate-400 hover:text-red-400 flex items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors"
-                    title="Report incorrect data"
-                    onClick={() => alert("Report flagged. Support will review within 24 hours.")}
-                >
-                    <i className="fa-solid fa-flag mr-1"></i> Report
-                </button>
-                <button onClick={onClose} className="text-slate-500 hover:text-white p-1 ml-2"><i className="fa-solid fa-xmark text-lg"></i></button>
+                <button onClick={onClose} className="text-slate-500 hover:text-white p-1 ml-2"><i className="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 hidden md:flex">
                  <button className="text-[10px] text-slate-400 hover:text-white flex items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors">
                     <i className="fa-solid fa-share-nodes mr-1"></i> Share
                  </button>
@@ -87,7 +80,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
         
         {/* STEP 2: Alignment & Evidence */}
         <section>
@@ -95,17 +88,17 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
                 <div className="flex items-center space-x-2">
                     <span className="text-emerald-500 font-mono text-[10px] uppercase tracking-widest bg-emerald-900/20 px-2 py-0.5 rounded">Step 2: Match Score & Evidence</span>
                 </div>
-                <div className="text-xs text-slate-500">PAID ({PRICING.SHORTLIST} Cr / ~€{(PRICING.SHORTLIST * CREDITS_TO_EUR).toFixed(0)})</div>
+                <div className="text-xs text-slate-500">PAID ({PRICING.SHORTLIST} Cr)</div>
             </div>
 
-            <div className="bg-apex-800/50 rounded-xl p-6 border border-apex-700">
+            <div className="bg-apex-800/50 rounded-xl p-4 md:p-6 border border-apex-700">
                 {/* Score Bar */}
                 <div className="flex items-end justify-between mb-2">
-                    <div className="text-4xl font-bold text-emerald-400">{candidate.matchScore}%</div>
+                    <div className="text-4xl font-bold text-emerald-400">{candidate.alignmentScore}%</div>
                     <div className="text-xs text-slate-400 pb-1">Confidence: <span className="text-emerald-400 font-bold">High</span></div>
                 </div>
                 <div className="w-full bg-apex-900 rounded-full h-2 mb-4">
-                    <div className="bg-emerald-500 h-2 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{width: `${candidate.matchScore}%`}}></div>
+                    <div className="bg-emerald-500 h-2 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{width: `${candidate.alignmentScore}%`}}></div>
                 </div>
 
                 {/* Score Breakdown (Spec 12.5) */}
@@ -145,7 +138,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
                     )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <h4 className="text-xs font-bold text-emerald-400 uppercase mb-3"><i className="fa-regular fa-circle-check mr-1"></i> Key Evidence</h4>
                         <ul className="space-y-2">
@@ -225,7 +218,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
                 {/* Indicators - Updated to Spec 16.3 Citation Format */}
                 <div className="bg-apex-800/30 rounded-lg p-5 border border-apex-700">
                      <h4 className="text-xs font-bold text-slate-200 uppercase mb-4"><i className="fa-solid fa-fingerprint mr-2 text-purple-400"></i> Career & Workstyle Indicators</h4>
-                     <div className="grid grid-cols-2 gap-6">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {indicators.map((ind, i) => (
                             <div key={i}>
                                 <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">{ind.category}</div>
@@ -266,7 +259,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
         </section>
 
         {/* STEP 4 Preview / Unlock */}
-        <section className="pt-4 border-t border-apex-700/50">
+        <section className="pt-4 border-t border-apex-700/50 pb-8">
              <div className="flex items-center justify-between mb-4">
                  <div className="flex items-center space-x-2">
                     <span className="text-slate-400 font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded">Step 4: Outreach Protocol</span>
@@ -304,7 +297,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
                         onClick={handleUnlockOutreach}
                         className="px-6 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-600 transition-all"
                     >
-                        Unlock for {PRICING.OUTREACH} Credits (~€{(PRICING.OUTREACH * CREDITS_TO_EUR).toFixed(0)})
+                        Unlock for {PRICING.OUTREACH} Credits
                     </button>
                 </div>
             )}

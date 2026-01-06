@@ -1,8 +1,27 @@
-import { Candidate, FunnelStage, ConfidenceLevel } from './types';
+import { Candidate, FunnelStage, ConfidenceLevel, AuditEvent, AuditEventType } from './types';
 
 export const INITIAL_CREDITS = 5000; 
-export const PILOT_CREDITS = 5000;
-export const PILOT_PRICE_DKK = 20000;
+
+export const INITIAL_LOGS: AuditEvent[] = [
+    {
+        id: 'evt_init_001',
+        type: AuditEventType.CREDIT_PURCHASE,
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        description: 'Pilot Package Allocation (20,000 DKK)',
+        cost: 5000,
+        user: 'System Admin',
+        metadata: { invoice: 'INV-2025-001', plan: 'pilot_v1' }
+    },
+    {
+        id: 'evt_job_001',
+        type: AuditEventType.JOB_CREATED,
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        description: 'Job Created: Senior Frontend Engineer',
+        cost: 0,
+        user: 'Hiring Manager',
+        metadata: { job_id: 'job_fe_01', requirements_hash: 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+    }
+];
 
 export const MOCK_CANDIDATES: Candidate[] = [
   {
@@ -13,9 +32,7 @@ export const MOCK_CANDIDATES: Candidate[] = [
     location: 'Copenhagen Area',
     yearsExperience: 7,
     avatar: 'https://i.pravatar.cc/150?u=soren',
-    linkedinUrl: 'https://linkedin.com/in/soren-a-demo',
-    matchScore: 94, // Renamed from alignmentScore
-    confidence: ConfidenceLevel.HIGH,
+    alignmentScore: 94,
     scoreBreakdown: {
         skills: { value: 32, max: 35, percentage: 91 },
         experience: { value: 24, max: 25, percentage: 96 },
@@ -32,11 +49,14 @@ export const MOCK_CANDIDATES: Candidate[] = [
     risks: [
         'Salary expectation likely top of band based on current employer.'
     ],
-    unlockedSteps: [FunnelStage.SHORTLIST, FunnelStage.EVIDENCE_REPORT],
+    unlockedSteps: [FunnelStage.SHORTLIST, FunnelStage.DEEP_PROFILE],
     avgTenure: '3.5 Years',
     progressionPace: 'Fast',
+    
+    // New Analysis Data
     cultureFit: 'High Corporate Fit. Accustomed to regulated environments (Danske Bank) and matrix organizations. Likely to navigate our compliance processes well.',
     deepAnalysis: 'Søren represents a low-risk, high-competence hire. His trajectory shows loyalty (promoted internally) and steady progression within a similar corporate structure. The transition to our team would be culturally seamless given his background in banking compliance and legacy migration. His communication style suggests he can bridge the gap between technical and business stakeholders.',
+
     trajectoryEvidence: 'Promoted from Junior to Senior in 4 years at previous role. Consistently takes higher responsibility.',
     indicators: [
       {
@@ -50,18 +70,6 @@ export const MOCK_CANDIDATES: Candidate[] = [
         label: 'Mentorship-focused',
         observation: 'Active in team growth.',
         evidence: { text: 'Multiple endorsements for "Teaching" and "Code Reviews".', source: 'Skills & Endorsements', confidence: ConfidenceLevel.HIGH }
-      },
-      {
-        category: 'TRAJECTORY',
-        label: 'Upward Mobility',
-        observation: 'Consistent promotions within company.',
-        evidence: { text: 'Junior → Mid → Senior in 4 years at Danske Bank.', source: 'Experience Timeline', confidence: ConfidenceLevel.HIGH }
-      },
-      {
-        category: 'SKILLS',
-        label: 'Modern Stack Alignment',
-        observation: 'Tech stack matches requirements.',
-        evidence: { text: 'Listed: React, Next.js, TypeScript, Node.js. Matches 4/5 hard requirements.', source: 'Skills Section', confidence: ConfidenceLevel.HIGH }
       }
     ],
     interviewGuide: [
@@ -70,9 +78,8 @@ export const MOCK_CANDIDATES: Candidate[] = [
       { topic: 'Retention', question: 'Validate "Fast Progression" - was it due to turnover or merit?', reason: 'Check stability.' }
     ],
     connectionPath: 'Lars Jensen (VP Eng)',
-    sharedContext: ['Shared connection: Lars Jensen', 'Both worked at Danske Bank', 'Same university (DTU)'],
-    outreachHook: 'Lars mentioned your work on the MobilePay migration project.',
-    outreachConfidence: ConfidenceLevel.HIGH
+    sharedContext: ['Shared connection: Lars Jensen', 'Both worked at Danske Bank'],
+    outreachHook: 'Lars mentioned your work on the MobilePay migration project.'
   },
   {
     id: 'mette-k',
@@ -82,9 +89,7 @@ export const MOCK_CANDIDATES: Candidate[] = [
     location: 'Aarhus (Remote)',
     yearsExperience: 4,
     avatar: 'https://i.pravatar.cc/150?u=mette',
-    linkedinUrl: 'https://linkedin.com/in/mette-k-demo',
-    matchScore: 88,
-    confidence: ConfidenceLevel.HIGH,
+    alignmentScore: 88,
     scoreBreakdown: {
         skills: { value: 30, max: 35, percentage: 85 },
         experience: { value: 20, max: 25, percentage: 80 },
@@ -111,9 +116,7 @@ export const MOCK_CANDIDATES: Candidate[] = [
     location: 'Copenhagen',
     yearsExperience: 8,
     avatar: 'https://i.pravatar.cc/150?u=jens',
-    linkedinUrl: 'https://linkedin.com/in/jens-p-demo',
-    matchScore: 72,
-    confidence: ConfidenceLevel.MEDIUM,
+    alignmentScore: 72,
     scoreBreakdown: {
         skills: { value: 20, max: 35, percentage: 57 },
         experience: { value: 25, max: 25, percentage: 100 },
@@ -134,14 +137,12 @@ export const MOCK_CANDIDATES: Candidate[] = [
     location: 'Copenhagen',
     yearsExperience: 12,
     avatar: 'https://i.pravatar.cc/150?u=thomas',
-    linkedinUrl: 'https://linkedin.com/in/thomas-l-demo',
-    matchScore: 65,
-    confidence: ConfidenceLevel.LOW,
+    alignmentScore: 65,
     scoreBreakdown: {
         skills: { value: 35, max: 35, percentage: 100 },
-        experience: { value: 10, max: 25, percentage: 40 },
+        experience: { value: 10, max: 25, percentage: 40 }, // Penalized for overqualification logic
         industry: { value: 15, max: 15, percentage: 100 },
-        seniority: { value: 5, max: 15, percentage: 33 },
+        seniority: { value: 5, max: 15, percentage: 33 }, // Mismatch
         location: { value: 0, max: 10, percentage: 0 }
     },
     shortlistSummary: 'Technically overqualified. Might get bored with current scope.',
@@ -150,12 +151,3 @@ export const MOCK_CANDIDATES: Candidate[] = [
     unlockedSteps: [FunnelStage.SHORTLIST],
   }
 ];
-
-// Spec 12.2 - Algorithm weights for score explanation
-export const SCORE_WEIGHTS = {
-  skills: { weight: 35, label: 'Hard Skills Match', description: 'Required skills from job description' },
-  experience: { weight: 25, label: 'Experience Relevance', description: 'Years + domain match' },
-  industry: { weight: 15, label: 'Industry Alignment', description: 'Same/adjacent industry experience' },
-  seniority: { weight: 15, label: 'Seniority Fit', description: 'Title level appropriate for role' },
-  location: { weight: 10, label: 'Location Match', description: 'Geography compatibility' }
-};

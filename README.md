@@ -1,171 +1,47 @@
-# 6Degrees Recruiting OS - UI/UX Update v2.0
+# 6Degrees - Recruitment OS
 
-## Overview
-Complete UI/UX overhaul aligned with the Technical Specification (Sections 15-16) and Executive Summary requirements.
+6Degrees is an evidence-based decision support system designed for high-stakes internal recruitment. It functions as a specialized Operating System (OS) that guides recruiters through a structured funnel: **Intake -> Shortlist -> Deep Profile -> Outreach**.
 
----
+## Features
 
-## ✅ Changes Implemented
+### 1. Calibration Engine (Job Intake)
+*   **Context Extraction:** Automatically scrapes and parses job descriptions from URLs (via Firecrawl) or accepts manual input.
+*   **Social Context:** Calibrates for team culture by analyzing hiring manager and benchmark profiles.
 
-### 1. Terminology Updates (Spec 16.1)
+### 2. Talent Heatmap (Shortlist)
+*   **AI Alignment Scoring:** Scores candidates (0-100%) against specific job requirements using Gemini 2.5 Flash.
+*   **Live Import:** Paste raw resume text or LinkedIn profile data to generate instant analysis and scores for new candidates.
+*   **Visual Grid:** Responsive card/grid layout to manage the candidate pipeline.
 
-| Before | After | Reason |
-|--------|-------|--------|
-| `alignmentScore` | `matchScore` | User-friendly naming |
-| `DEEP_PROFILE` | `EVIDENCE_REPORT` | Clearer value proposition |
-| "Workstyle Indicators" | "Career & Workstyle Indicators" | Spec compliance |
-| "Unlock (€150)" | "Unlock (278 Credits ~€150)" | Pricing clarity (Spec 11.4) |
+### 3. Battle Card Cockpit (Deep Profile)
+*   **Evidence Reports:** Unlocks detailed analysis including "Culture Fit", "Trajectory Analysis", and "Workstyle Indicators".
+*   **Interview Guide:** Generates dynamic, hypothesis-driven interview questions based on candidate weak points.
+*   **Citation Mode:** AI cites specific text fragments from the profile as evidence for its claims.
 
-### 2. New Shared Components (`components/ui.tsx`)
+### 4. Network Pathfinder (Outreach)
+*   **Connection Paths:** Identifies warm introduction paths (simulated/mock data).
+*   **Smart Drafting:** Generates personalized outreach messages based on shared context and specific hooks found in the profile.
 
-- **ToastProvider** - Global notification system for user feedback
-- **ConfidenceBadge** - Consistent HIGH/MEDIUM/LOW display (Spec 12.4)
-- **ShareModal** - Functional share link generator (Spec 15.2)
-- **CreditDisplay** - Standardized credit + EUR format
-- **StepBadge** - Header badges for each funnel step
-- **EmptyState** - Placeholder for empty data views
-- **LoadingSpinner** - Consistent loading states
+### 5. Enterprise Grade
+*   **Audit Logging:** EU AI Act compliant logging for all high-risk profiling decisions.
+*   **Credit System:** Simulated currency system to track usage and ROI.
+*   **Responsive:** Fully mobile-optimized layout with a collapsible sidebar and touch-friendly interfaces.
 
-### 3. Step 1: Job Intake (`JobIntake.tsx`)
+## Configuration
 
-- ✅ Form validation with error messages (Spec 17.3)
-- ✅ Character count indicator (100-10,000 chars required)
-- ✅ Toast notifications on actions
-- ✅ Demo data button with instant feedback
-- ✅ Improved accessibility (labels, ARIA attributes)
-- ✅ Pricing info sidebar with pilot package details
+This application requires API keys for full functionality. These can be configured in the **Admin Settings** (click the User profile in the sidebar).
 
-### 4. Step 2: Shortlist Grid (`ShortlistGrid.tsx`)
+*   **Gemini API Key:** Required for all intelligence features (Scoring, Profiling, Outreach).
+*   **Firecrawl API Key:** Required for scraping Job Descriptions from URLs.
+*   **OpenRouter API Key:** (Optional) For alternative inference models.
 
-- ✅ Renamed from "Alignment" to "Match Score"
-- ✅ Confidence badges on every candidate row
-- ✅ Sort dropdown (by score or name)
-- ✅ Share button per candidate (functional modal)
-- ✅ Algorithm explainer footer
-- ✅ Better visual hierarchy with score colors
-- ✅ Keyboard navigation support
+## Tech Stack
 
-### 5. Step 3: Evidence Report (`EvidenceReport.tsx`)
+*   **Frontend:** React 19, TypeScript, Tailwind CSS
+*   **AI:** Google Gemini API (`gemini-2.5-flash`)
+*   **Scraping:** Firecrawl API
+*   **Icons:** FontAwesome 6
 
-- ✅ Full score breakdown with algorithm version (Spec 12.5)
-- ✅ "How we calculated this" expandable section
-- ✅ Share button with modal
-- ✅ PDF Export button (UI ready)
-- ✅ Refresh button (1 credit cost displayed)
-- ✅ Report incorrect data button
-- ✅ Citation format per Spec 16.3
-- ✅ **Mandatory disclaimer** (Spec 16.2):
-  > "Decision Support Notice: This analysis provides evidence-based indicators..."
-- ✅ Career & Workstyle Indicators with confidence per item
-- ✅ Interview Guide section
-- ✅ Step 4 preview/unlock section
+## License
 
-### 6. Step 4: Outreach Suite (`OutreachSuite.tsx`)
-
-- ✅ Channel selection (LinkedIn, Email, Warm Intro)
-- ✅ Confidence badge on connection path (Spec 15.1)
-- ✅ Shared context hooks display
-- ✅ **Mandatory disclaimer** (Spec 16.2):
-  > "Human Review Required: These outreach suggestions are starting points..."
-- ✅ Human approval checkbox required before action
-- ✅ Regenerate template button
-- ✅ Copy to clipboard with feedback
-- ✅ Share link button
-
-### 7. Layout & Navigation (`App.tsx`)
-
-- ✅ Improved sidebar with step status indicators
-- ✅ Credit balance with progress bar
-- ✅ ToastProvider wrapper for global notifications
-- ✅ Better state management for funnel flow
-
-### 8. Styling (`index.html`)
-
-- ✅ Inter + JetBrains Mono fonts
-- ✅ Custom animations (fadeIn, slideIn, scaleIn)
-- ✅ Improved scrollbar styling
-- ✅ Focus visible states for accessibility
-- ✅ Print styles
-- ✅ Selection highlight colors
-
----
-
-## 📋 Spec Compliance Checklist
-
-| Requirement | Section | Status |
-|-------------|---------|--------|
-| Share link on all outputs | 15.1 | ✅ |
-| Credit + EUR display | 15.1, 11.4 | ✅ |
-| Score breakdown expandable | 15.1, 12.5 | ✅ |
-| Error correction flag | 15.1 | ✅ |
-| Confidence on all outputs | 15.1, 12.4 | ✅ |
-| Profile refresh button | 15.1, 10.4 | ✅ |
-| Export to PDF | 15.1 | ✅ (UI) |
-| Step 3 disclaimer | 16.2 | ✅ |
-| Step 4 disclaimer | 16.2 | ✅ |
-| Evidence citation format | 16.3 | ✅ |
-| Input validation | 17.3 | ✅ |
-| WCAG 2.1 AA basics | 15.4 | ✅ |
-
----
-
-## 🚀 Running the Project
-
-```bash
-# Install dependencies
-npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-```
-
----
-
-## 📁 File Structure
-
-```
-6degrees-ui/
-├── App.tsx                    # Main layout & routing
-├── index.tsx                  # Entry point
-├── index.html                 # HTML template with styles
-├── types.ts                   # TypeScript types & pricing constants
-├── constants.ts               # Mock data & algorithm weights
-├── components/
-│   ├── ui.tsx                 # Shared UI components
-│   ├── JobIntake.tsx          # Step 1
-│   ├── ShortlistGrid.tsx      # Step 2
-│   ├── EvidenceReport.tsx     # Step 3
-│   └── OutreachSuite.tsx      # Step 4
-├── services/
-│   └── geminiService.ts       # AI service (mock)
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
----
-
-## 🔜 Remaining Items (Backend Required)
-
-1. **Actual share link generation** - needs API endpoint
-2. **PDF export** - needs server-side PDF generation
-3. **Audit log access** - needs Settings page + API
-4. **Real EnrichLayer integration** - needs backend proxy
-5. **Credit purchase flow** - needs Stripe integration
-
----
-
-## Design Decisions
-
-1. **No "personality" language anywhere** - Per Executive Summary, we use "Career & Workstyle Indicators" only
-2. **Human-in-the-loop emphasized** - Approval checkbox + disclaimers on Steps 3 & 4
-3. **Credits as primary currency** - EUR shown secondary in smaller text
-4. **Evidence-first display** - All scores show breakdown + confidence
-5. **Accessibility baseline** - Focus states, ARIA labels, keyboard navigation
-
----
-
-*Updated: December 2025*
+MIT

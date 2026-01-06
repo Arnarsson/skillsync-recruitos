@@ -1,17 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchJobContextFromUrl } from '../services/jobService';
 import { PRICING, CREDITS_TO_EUR } from '../types';
 
-const JobIntake: React.FC = () => {
+interface Props {
+  jobContext: string;
+  setJobContext: (ctx: string) => void;
+}
+
+const JobIntake: React.FC<Props> = ({ jobContext, setJobContext }) => {
   const navigate = useNavigate();
-  const [jobDesc, setJobDesc] = useState('');
+  // jobContext acts as the job description here
   const [companyUrl, setCompanyUrl] = useState('');
   const [managerUrl, setManagerUrl] = useState('');
   const [benchmarkUrl, setBenchmarkUrl] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isFetchingJob, setIsFetchingJob] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const handleMockFill = () => {
-    setJobDesc(`Role: Senior Frontend Engineer
+    setJobContext(`Role: Senior Frontend Engineer
 Location: Copenhagen (Hybrid)
 Requirements:
 - 5+ years with React, TypeScript and Next.js
@@ -22,10 +31,41 @@ Requirements:
     setCompanyUrl('https://linkedin.com/company/apex-financial-systems');
     setManagerUrl('https://linkedin.com/in/lars-jensen-vp-eng');
     setBenchmarkUrl('https://linkedin.com/in/sofie-nielsen-tech-lead');
+    setFetchError(null);
+  };
+
+  const handleFetchJob = async () => {
+    if (!jobUrl) return;
+    setIsFetchingJob(true);
+    setFetchError(null);
+    setJobContext(''); // Clear previous
+    
+    try {
+        const extractedContext = await fetchJobContextFromUrl(jobUrl);
+        setJobContext(extractedContext);
+    } catch (error: any) {
+        console.error(error);
+        setFetchError(error.message || "Failed to fetch job. Ensure Firecrawl key is set.");
+        // Fallback for demo if key is missing
+        if (error.message.includes("Missing Firecrawl")) {
+            setJobContext(`[System Error: Missing Firecrawl Key]
+Please add process.env.FIRECRAWL_API_KEY to use live scraping.
+
+Simulated Output for: ${jobUrl}
+Role: Software Engineer (Simulated)
+Location: Remote
+Requirements:
+- API Integration
+- React
+- TypeScript`);
+        }
+    } finally {
+        setIsFetchingJob(false);
+    }
   };
 
   const handleStart = () => {
-    if (!jobDesc.trim()) return;
+    if (!jobContext.trim()) return;
     setIsProcessing(true);
     setTimeout(() => {
         navigate('/shortlist');
@@ -33,24 +73,24 @@ Requirements:
   };
 
   return (
-    <div className="h-full flex flex-col p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
+    <div className="h-full flex flex-col p-4 md:p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
       
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <span className="text-emerald-400 font-mono text-[10px] uppercase tracking-widest bg-emerald-900/30 border border-emerald-900/50 px-3 py-1 rounded">Step 1: Free</span>
-        <h1 className="text-3xl font-bold text-white mt-3">Context & Job Intake</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white mt-3">Context & Job Intake</h1>
         <p className="text-slate-400 mt-1 text-sm">Provide the job context. This step establishes the baseline for AI alignment scoring.</p>
       </div>
 
-      <div className="flex gap-8 max-w-7xl">
+      <div className="flex flex-col lg:flex-row gap-6 md:gap-8 max-w-7xl">
           {/* Main Input Column */}
           <div className="flex-1 space-y-6">
               
               {/* Social Context Card */}
-              <div className="bg-apex-800 border border-apex-700 rounded-xl p-6 shadow-lg relative overflow-hidden group">
+              <div className="bg-apex-800 border border-apex-700 rounded-xl p-4 md:p-6 shadow-lg relative overflow-hidden group">
                    <div className="flex items-center space-x-3 mb-5 border-b border-apex-700 pb-4">
                         <div className="w-8 h-8 rounded bg-blue-900/20 flex items-center justify-center text-blue-400">
-                             <i className="fa-solid fa-people-group"></i>
+                             <i className="fa-solid fa-users-line"></i>
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-white">Social Context</h2>
@@ -69,10 +109,12 @@ Requirements:
                                     placeholder="https://linkedin.com/company/..."
                                     value={companyUrl}
                                     onChange={(e) => setCompanyUrl(e.target.value)}
+                                    autoCorrect="off"
+                                    autoCapitalize="off"
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Hiring Manager LinkedIn</label>
                                 <div className="relative">
@@ -83,6 +125,8 @@ Requirements:
                                         placeholder="https://linkedin.com/in/..."
                                         value={managerUrl}
                                         onChange={(e) => setManagerUrl(e.target.value)}
+                                        autoCorrect="off"
+                                        autoCapitalize="off"
                                     />
                                 </div>
                             </div>
@@ -96,6 +140,8 @@ Requirements:
                                         placeholder="https://linkedin.com/in/..."
                                         value={benchmarkUrl}
                                         onChange={(e) => setBenchmarkUrl(e.target.value)}
+                                        autoCorrect="off"
+                                        autoCapitalize="off"
                                     />
                                 </div>
                             </div>
@@ -113,49 +159,91 @@ Requirements:
                         onClick={handleMockFill}
                         className="absolute top-6 right-6 text-[10px] text-blue-500 hover:text-blue-400 font-mono transition-colors opacity-60 hover:opacity-100"
                     >
-                        <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto-Fill Demo
+                        <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Demo
                    </button>
               </div>
 
               {/* Hard Requirements Card */}
-              <div className="bg-apex-800 border border-apex-700 rounded-xl p-6 shadow-lg">
+              <div className="bg-apex-800 border border-apex-700 rounded-xl p-4 md:p-6 shadow-lg">
                    <div className="flex items-center space-x-3 mb-5 border-b border-apex-700 pb-4">
                         <div className="w-8 h-8 rounded bg-emerald-900/20 flex items-center justify-center text-emerald-400">
                             <i className="fa-solid fa-file-lines"></i>
                         </div>
-                        <h2 className="text-lg font-bold text-white">Hard Requirements</h2>
+                        <div>
+                            <h2 className="text-lg font-bold text-white">Job Requirements</h2>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Paste or Import from URL</p>
+                        </div>
                    </div>
                    
-                   <div className="relative">
+                   {/* URL Input */}
+                   <div className="mb-4">
+                       <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Import from Job Board URL</label>
+                       <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+                           <div className="relative flex-1">
+                                <i className="fa-solid fa-link absolute left-3 top-3 text-slate-500"></i>
+                                <input 
+                                    type="text"
+                                    className={`w-full bg-apex-900 border rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 transition-all ${fetchError ? 'border-red-500 focus:ring-red-500' : 'border-apex-700 focus:border-emerald-500 focus:ring-emerald-500'}`}
+                                    placeholder="https://boards.greenhouse.io/..."
+                                    value={jobUrl}
+                                    onChange={(e) => setJobUrl(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleFetchJob()}
+                                    autoCorrect="off"
+                                    autoCapitalize="off"
+                                />
+                           </div>
+                           <button 
+                                onClick={handleFetchJob}
+                                disabled={isFetchingJob || !jobUrl}
+                                className={`px-4 py-2.5 md:py-0 rounded-lg font-bold text-xs transition-all border border-apex-600 flex items-center justify-center whitespace-nowrap ${isFetchingJob || !jobUrl ? 'bg-apex-700 text-slate-500 cursor-not-allowed' : 'bg-apex-700 hover:bg-emerald-600 hover:text-white text-slate-300'}`}
+                           >
+                                {isFetchingJob ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-cloud-arrow-down mr-2"></i>}
+                                {isFetchingJob ? 'Scanning...' : 'Fetch Context'}
+                           </button>
+                       </div>
+                       {fetchError && (
+                           <div className="mt-2 text-[10px] text-red-400 flex items-center">
+                               <i className="fa-solid fa-circle-exclamation mr-1.5"></i> {fetchError}
+                           </div>
+                       )}
+                   </div>
+
+                    <div className="relative flex py-2 items-center">
+                        <div className="flex-grow border-t border-apex-700"></div>
+                        <span className="flex-shrink-0 mx-4 text-slate-500 text-[10px] uppercase font-bold">OR Paste Description</span>
+                        <div className="flex-grow border-t border-apex-700"></div>
+                    </div>
+
+                   <div className="relative mt-2">
                        <textarea 
                             className="w-full h-48 bg-apex-900 border border-apex-700 rounded-lg p-4 text-sm text-slate-300 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono leading-relaxed resize-none transition-all placeholder-slate-600"
                             placeholder="Paste Job Description here..."
-                            value={jobDesc}
-                            onChange={(e) => setJobDesc(e.target.value)}
+                            value={jobContext}
+                            onChange={(e) => setJobContext(e.target.value)}
                        ></textarea>
                        <div className="absolute bottom-4 right-4 text-[10px] text-slate-600 font-mono pointer-events-none">
-                           {jobDesc.length} chars
+                           {jobContext.length} chars
                        </div>
                    </div>
 
                    <div className="mt-6 flex justify-end">
                        <button 
                             onClick={handleStart}
-                            disabled={isProcessing || !jobDesc}
+                            disabled={isProcessing || !jobContext}
                             className={`
-                                relative px-8 py-3 rounded-lg font-bold text-sm uppercase tracking-wide transition-all shadow-lg 
-                                ${isProcessing || !jobDesc 
+                                w-full md:w-auto relative px-8 py-3 rounded-lg font-bold text-sm uppercase tracking-wide transition-all shadow-lg 
+                                ${isProcessing || !jobContext 
                                     ? 'bg-apex-700 text-slate-500 cursor-not-allowed' 
                                     : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5'
                                 }
                             `}
                         >
                             {isProcessing ? (
-                                <span className="flex items-center">
+                                <span className="flex items-center justify-center">
                                     <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Initializing...
                                 </span>
                             ) : (
-                                <span className="flex items-center">
+                                <span className="flex items-center justify-center">
                                     Initialize Shortlist <i className="fa-solid fa-arrow-right ml-2"></i>
                                 </span>
                             )}
@@ -165,8 +253,8 @@ Requirements:
           </div>
 
           {/* Process Preview Sidebar */}
-          <div className="w-80 space-y-4">
-               <div className="bg-apex-800 border border-apex-700 rounded-xl p-6 sticky top-8">
+          <div className="w-full lg:w-80 space-y-4 order-last lg:order-none">
+               <div className="bg-apex-800 border border-apex-700 rounded-xl p-6 lg:sticky lg:top-8">
                    <div className="flex items-center justify-between mb-6">
                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Process Preview</h3>
                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
