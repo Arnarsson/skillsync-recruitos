@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
+import { ToastType } from './ToastNotification';
 
 interface Props {
   onClose: () => void;
+  addToast: (type: ToastType, message: string) => void;
 }
 
-const AdminSettingsModal: React.FC<Props> = ({ onClose }) => {
+const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
   const [firecrawlKey, setFirecrawlKey] = useState('');
   const [openRouterKey, setOpenRouterKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
@@ -38,8 +41,12 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose }) => {
     if (geminiKey) localStorage.setItem('GEMINI_API_KEY', geminiKey);
     else localStorage.removeItem('GEMINI_API_KEY');
 
+    addToast('success', 'Settings Saved. Reloading...');
+    
     // Reload to apply new keys to service instances
-    window.location.reload();
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
   };
 
   const handleGeminiAuth = async () => {
@@ -47,8 +54,9 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose }) => {
           await (window as any).aistudio.openSelectKey();
           const hasKey = await (window as any).aistudio.hasSelectedApiKey();
           setHasGeminiAuth(hasKey);
+          if (hasKey) addToast('success', 'AI Studio Connected');
       } else {
-          alert("AI Studio Key selection not available. Please use the manual input below.");
+          addToast('warning', "AI Studio Key selection not available. Please use the manual input below.");
       }
   };
 

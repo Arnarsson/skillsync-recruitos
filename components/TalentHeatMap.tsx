@@ -1,20 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_CANDIDATES } from '../constants';
 import { Candidate, FunnelStage, PRICING, CREDITS_TO_EUR, Persona } from '../types';
-import { analyzeCandidateProfile, generatePersona } from '../services/geminiService';
+import { analyzeCandidateProfile, generatePersona, generateDeepProfile } from '../services/geminiService';
 import { scrapeUrlContent } from '../services/scrapingService';
-import { usePersistedState } from '../hooks/usePersistedState';
+import { candidateService } from '../services/candidateService';
+import { ToastType } from './ToastNotification';
 
 interface Props {
   jobContext: string;
   credits: number;
   onSpendCredits: (amount: number, description?: string) => void;
   onSelectCandidate: (candidate: Candidate) => void;
+  addToast: (type: ToastType, message: string) => void;
 }
 
-const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, onSelectCandidate }) => {
-  const [candidates, setCandidates] = usePersistedState<Candidate[]>('apex_candidates', MOCK_CANDIDATES);
+const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, onSelectCandidate, addToast }) => {
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sourcing'>('pipeline');
   
   // Sourcing State
@@ -27,29 +30,71 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
+  // Loading state for specific candidate actions
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  useEffect(() => {
+      loadCandidates();
+  }, []);
+
+  const loadCandidates = async () => {
+      setIsLoading(true);
+      try {
+          const data = await candidateService.fetchAll();
+          setCandidates(data);
+      } catch (e) {
+          console.error(e);
+          addToast('error', 'Failed to load candidates from Database.');
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
   const addToLog = (msg: string) => setSourcingLog(prev => [...prev, `> ${msg}`]);
 
-  const handleUnlockProfile = (e: React.MouseEvent, candidateId: string, candidateName: string) => {
+  const handleUnlockProfile = async (e: React.MouseEvent, candidateId: string, candidateName: string) => {
     e.stopPropagation();
     if (credits < PRICING.DEEP_PROFILE) {
-        alert("Insufficient credits for pilot.");
+        addToast('error', "Insufficient credits for pilot.");
         return;
     }
-    onSpendCredits(PRICING.DEEP_PROFILE, `Unlocked Evidence Report: ${candidateName}`);
-    
-    setCandidates(prev => prev.map(c => {
-        if (c.id === candidateId) {
-            const newSteps = [...c.unlockedSteps, FunnelStage.DEEP_PROFILE];
-            return { ...c, unlockedSteps: newSteps };
-        }
-        return c;
-    }));
+
+    const candidate = candidates.find(c => c.id === candidateId);
+    if (!candidate) return;
+
+    setProcessingId(candidateId);
+    addToast('info', `Generating Deep Profile for ${candidateName}...`);
+
+    try {
+        // CALL THE AI SERVICE (Crucial Step)
+        const deepProfileData = await generateDeepProfile(candidate, jobContext);
+        
+        onSpendCredits(PRICING.DEEP_PROFILE, `Unlocked Evidence Report: ${candidateName}`);
+        
+        // Update local and remote
+        const updatedCandidate = { 
+            ...candidate, 
+            unlockedSteps: [...candidate.unlockedSteps, FunnelStage.DEEP_PROFILE],
+            ...deepProfileData 
+        };
+
+        setCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
+        
+        await candidateService.update(updatedCandidate);
+        addToast('success', `Report Ready: ${candidateName}`);
+        
+    } catch (error: any) {
+        console.error(error);
+        addToast('error', error.message || "Failed to generate profile.");
+    } finally {
+        setProcessingId(null);
+    }
   };
 
   const handleSourcingRun = async () => {
     if (!sourcingUrl) return;
     if (credits < PRICING.SOURCING_SCAN) {
-        alert("Insufficient credits for sourcing scan.");
+        addToast('error', "Insufficient credits for sourcing scan.");
         return;
     }
 
@@ -57,9 +102,17 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
     setSourcingLog([]);
     addToLog(`Initializing Sourcing Agent for: ${sourcingUrl}`);
     
+    const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || process.env.FIRECRAWL_API_KEY;
+    if (!firecrawlKey) {
+        addToLog(`⚠️ API Key Missing: Firecrawl key required.`);
+        addToast('error', "Firecrawl Key Missing");
+        setIsSourcing(false);
+        return;
+    }
+    
     try {
         // 1. Scrape
-        addToLog(`Step 1: Ingesting public profile data via Firecrawl...`);
+        addToLog(`Step 1: Ingesting public profile data...`);
         const rawMarkdown = await scrapeUrlContent(sourcingUrl);
         addToLog(`✓ Data Ingested (${rawMarkdown.length} chars).`);
 
@@ -75,14 +128,20 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
         // Add URL for reference
         candidate.sourceUrl = sourcingUrl;
         
+        // Save to DB
+        addToLog(`Step 4: Persisting to Supabase...`);
+        await candidateService.create(candidate);
+
         setCandidates(prev => [candidate, ...prev]);
         addToLog(`✓ Candidate Added to Pipeline.`);
         onSpendCredits(PRICING.SOURCING_SCAN, `Sourcing Run: ${candidate.name}`);
+        addToast('success', "Candidate sourced successfully");
         setSourcingUrl(''); // Clear input
 
     } catch (error: any) {
         console.error(error);
         addToLog(`ERROR: ${error.message}`);
+        addToast('error', error.message || "Sourcing failed");
     } finally {
         setIsSourcing(false);
     }
@@ -91,19 +150,23 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
   const handleImport = async () => {
       if (!importText.trim()) return;
       if (!jobContext) {
-          alert("Please set a Job Context in Step 1 first.");
+          addToast('warning', "Please set a Job Context in Step 1 first.");
           return;
       }
       setIsImporting(true);
       try {
           const newCandidate = await analyzeCandidateProfile(importText, jobContext);
+          
+          await candidateService.create(newCandidate);
+
           setCandidates(prev => [newCandidate, ...prev]);
           setShowImport(false);
           setImportText('');
           onSpendCredits(10, `Imported Candidate: ${newCandidate.name}`); 
+          addToast('success', "Candidate Imported");
       } catch (e: any) {
           console.error(e);
-          alert(e.message || "Failed to analyze candidate. Ensure Gemini API key is active.");
+          addToast('error', e.message || "Failed to analyze candidate. Ensure Gemini API key is active.");
       } finally {
           setIsImporting(false);
       }
@@ -240,7 +303,11 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
 
       {/* List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3">
-        {candidates.length === 0 ? (
+        {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+                <i className="fa-solid fa-circle-notch fa-spin text-emerald-500 text-2xl"></i>
+            </div>
+        ) : candidates.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full opacity-60">
                 <div className="w-16 h-16 bg-apex-800 rounded-full flex items-center justify-center mb-4">
                     <i className="fa-solid fa-users-slash text-2xl text-slate-600"></i>
@@ -261,6 +328,7 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
         ) : (
             candidates.map((c) => {
                 const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE);
+                const isProcessingThis = processingId === c.id;
                 
                 return (
                     <div 
@@ -336,9 +404,20 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                             ) : (
                                 <button 
                                     onClick={(e) => handleUnlockProfile(e, c.id, c.name)}
-                                    className="w-full md:w-auto px-4 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-700 flex items-center justify-center transition-all shadow-sm hover:shadow-emerald-500/20"
+                                    disabled={isProcessingThis}
+                                    className={`
+                                        w-full md:w-auto px-4 py-2 text-xs font-bold rounded border flex items-center justify-center transition-all shadow-sm
+                                        ${isProcessingThis 
+                                            ? 'bg-apex-800 border-apex-700 text-slate-500 cursor-wait' 
+                                            : 'bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 border-slate-700 hover:shadow-emerald-500/20'
+                                        }
+                                    `}
                                 >
-                                    <i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr)
+                                    {isProcessingThis ? (
+                                        <><i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Unlocking...</>
+                                    ) : (
+                                        <><i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr)</>
+                                    )}
                                 </button>
                             )}
                         </div>

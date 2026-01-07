@@ -59,6 +59,13 @@ export interface Persona {
   reasoning: string;
 }
 
+export interface CompanyMatch {
+  score: number;
+  analysis: string;
+  strengths: string[];
+  potentialFriction: string[];
+}
+
 export interface Candidate {
   id: string;
   name: string;
@@ -86,7 +93,8 @@ export interface Candidate {
   
   // New Fields for Deep Analysis & Company Match
   deepAnalysis?: string;
-  cultureFit?: string;
+  cultureFit?: string; // Kept for backward compatibility or simple view
+  companyMatch?: CompanyMatch; // Detailed analysis
   
   trajectoryEvidence?: string;
   indicators?: WorkstyleIndicator[];

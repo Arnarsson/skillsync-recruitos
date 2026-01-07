@@ -1,3 +1,4 @@
+
 import { Candidate, FunnelStage, ConfidenceLevel, AuditEvent, AuditEventType } from './types';
 
 export const INITIAL_CREDITS = 5000; 

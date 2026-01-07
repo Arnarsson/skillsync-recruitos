@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import JobIntake from './components/CalibrationEngine'; 
@@ -6,6 +7,7 @@ import DeepProfile from './components/BattleCardCockpit';
 import OutreachSuite from './components/NetworkPathfinder';
 import AuditLogModal from './components/AuditLogModal';
 import AdminSettingsModal from './components/AdminSettingsModal';
+import ToastNotification, { Toast, ToastType } from './components/ToastNotification';
 import { Candidate, PRICING, FunnelStage, CREDITS_TO_EUR, AuditEvent, AuditEventType } from './types';
 import { INITIAL_CREDITS, INITIAL_LOGS } from './constants';
 import { usePersistedState } from './hooks/usePersistedState';
@@ -181,6 +183,21 @@ const App: React.FC = () => {
   const [showWallet, setShowWallet] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Toast State
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = (type: ToastType, message: string) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000); // Auto dismiss
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
   const logEvent = (type: AuditEventType, description: string, cost: number, metadata?: any) => {
     const newEvent: AuditEvent = {
         id: `evt_${Date.now()}`,
@@ -219,6 +236,7 @@ const App: React.FC = () => {
                     <JobIntake 
                         jobContext={jobContext} 
                         setJobContext={setJobContext} 
+                        addToast={addToast}
                     />
                 } 
             />
@@ -230,11 +248,15 @@ const App: React.FC = () => {
                         credits={credits}
                         onSpendCredits={(amt, desc) => handleSpendCredits(amt, desc || 'Deep Profile Unlock', AuditEventType.PROFILE_ENRICHED)}
                         onSelectCandidate={handleSelectCandidate}
+                        addToast={addToast}
                     />
                 } 
             />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+
+          {/* Global Toast Container */}
+          <ToastNotification toasts={toasts} removeToast={removeToast} />
 
           {/* Step 3: Evidence Report (Side Panel) */}
           {selectedCandidate && (
@@ -247,6 +269,7 @@ const App: React.FC = () => {
                       setSelectedCandidate(null); 
                       setOutreachCandidate(c); 
                   }}
+                  addToast={addToast}
               />
           )}
 
@@ -271,6 +294,7 @@ const App: React.FC = () => {
           {showSettings && (
               <AdminSettingsModal 
                 onClose={() => setShowSettings(false)}
+                addToast={addToast}
               />
           )}
       </Layout>

@@ -1,14 +1,17 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchJobContextFromUrl } from '../services/jobService';
 import { PRICING, CREDITS_TO_EUR } from '../types';
+import { ToastType } from './ToastNotification';
 
 interface Props {
   jobContext: string;
   setJobContext: (ctx: string) => void;
+  addToast: (type: ToastType, message: string) => void;
 }
 
-const JobIntake: React.FC<Props> = ({ jobContext, setJobContext }) => {
+const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => {
   const navigate = useNavigate();
   // jobContext acts as the job description here
   const [companyUrl, setCompanyUrl] = useState('');
@@ -28,9 +31,11 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext }) => {
     try {
         const extractedContext = await fetchJobContextFromUrl(jobUrl);
         setJobContext(extractedContext);
+        addToast('success', 'Job context extracted successfully');
     } catch (error: any) {
         console.error(error);
         setFetchError(error.message || "Failed to fetch job. Ensure Firecrawl key is set.");
+        addToast('error', error.message || "Failed to fetch job.");
         // No simulation fallback. Strictly error out if scraping fails.
     } finally {
         setIsFetchingJob(false);
@@ -40,6 +45,20 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext }) => {
   const handleStart = () => {
     if (!jobContext.trim()) return;
     setIsProcessing(true);
+    
+    // Enrich Context with Social Data if available
+    let enrichedContext = jobContext;
+    if (companyUrl || managerUrl || benchmarkUrl) {
+        enrichedContext += `\n\n=== SOCIAL & CULTURE CONTEXT ===\n`;
+        if (companyUrl) enrichedContext += `Target Company: ${companyUrl}\n`;
+        if (managerUrl) enrichedContext += `Hiring Manager Profile: ${managerUrl}\n`;
+        if (benchmarkUrl) enrichedContext += `Benchmark High Performer: ${benchmarkUrl}\n`;
+        enrichedContext += `(Use this social context to infer culture fit in later steps)\n`;
+    }
+
+    setJobContext(enrichedContext);
+    addToast('success', 'Context Calibrated. Initializing...');
+
     setTimeout(() => {
         navigate('/shortlist');
     }, 1500);

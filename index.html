@@ -23,6 +23,20 @@
             },
             fontFamily: {
               mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+            },
+            animation: {
+              fadeIn: 'fadeIn 0.3s ease-out',
+              slideInRight: 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'scale(0.95)' },
+                '100%': { opacity: '1', transform: 'scale(1)' },
+              },
+              slideInRight: {
+                '0%': { opacity: '0', transform: 'translateX(100%)' },
+                '100%': { opacity: '1', transform: 'translateX(0)' },
+              }
             }
           }
         }
@@ -58,7 +72,8 @@
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "react/": "https://aistudiocdn.com/react@^19.2.1/",
     "react": "https://aistudiocdn.com/react@^19.2.1",
-    "d3": "https://aistudiocdn.com/d3@^7.9.0"
+    "d3": "https://aistudiocdn.com/d3@^7.9.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.4"
   }
 }
 </script>

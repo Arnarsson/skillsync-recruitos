@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Candidate, InterviewQuestion, WorkstyleIndicator, ConfidenceLevel, FunnelStage, Persona } from '../types';
+import { Candidate, InterviewQuestion, WorkstyleIndicator, ConfidenceLevel, FunnelStage, Persona, CompanyMatch } from '../types';
 
 // Initialize with localStorage key if available, otherwise env
 const getAiClient = () => {
@@ -86,15 +86,15 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
         return {
             archetype: data.persona_archetype,
             psychometric: {
-                communicationStyle: data.psychometric_profile.communication_style,
-                primaryMotivator: data.psychometric_profile.primary_motivator,
-                riskTolerance: data.psychometric_profile.risk_tolerance,
-                leadershipPotential: data.psychometric_profile.leadership_potential
+                communicationStyle: data.psychometric_profile?.communication_style || "Unknown",
+                primaryMotivator: data.psychometric_profile?.primary_motivator || "Unknown",
+                riskTolerance: data.psychometric_profile?.risk_tolerance || "Unknown",
+                leadershipPotential: data.psychometric_profile?.leadership_potential || "Unknown"
             },
-            softSkills: data.soft_skills_analysis,
-            redFlags: data.red_flags,
-            greenFlags: data.green_flags,
-            reasoning: data.reasoning_evidence
+            softSkills: data.soft_skills_analysis || [],
+            redFlags: data.red_flags || [],
+            greenFlags: data.green_flags || [],
+            reasoning: data.reasoning_evidence || ""
         };
 
     } catch (error) {
@@ -177,8 +177,11 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
         const data = JSON.parse(response.text);
         const calculatedScore = calculateScore(data.scoreBreakdown);
 
+        // Generate UUID for Supabase compatibility
+        const uuid = crypto.randomUUID ? crypto.randomUUID() : `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
+
         return {
-            id: `cand_${Date.now()}`,
+            id: uuid,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'Candidate')}&background=random&color=fff`,
             alignmentScore: calculatedScore,
             unlockedSteps: [FunnelStage.SHORTLIST],
@@ -192,7 +195,7 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
 };
 
 // Step 3: Deep Profile Generation
-export const generateDeepProfile = async (candidate: Candidate, jobContext: string): Promise<{ indicators: WorkstyleIndicator[], questions: InterviewQuestion[], deepAnalysis: string, cultureFit: string }> => {
+export const generateDeepProfile = async (candidate: Candidate, jobContext: string): Promise<{ indicators: WorkstyleIndicator[], questions: InterviewQuestion[], deepAnalysis: string, cultureFit: string, companyMatch: CompanyMatch }> => {
   const ai = getAiClient();
   if (!ai) throw new Error("API Key missing.");
 
@@ -202,6 +205,7 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
     Archetype: ${candidate.persona.archetype}
     Communication: ${candidate.persona.psychometric.communicationStyle}
     Leadership: ${candidate.persona.psychometric.leadershipPotential}
+    Motivator: ${candidate.persona.psychometric.primaryMotivator}
   ` : '';
 
   const prompt = `
@@ -214,9 +218,15 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
     Task: Create a "Deep Profile" for internal decision support.
     
     1. Write a "Deep Analysis" summary (3-4 sentences).
-    2. Write a "Culture Fit" assessment (1-2 sentences).
+    2. Write a "Culture Fit" assessment (1-2 sentences) (Legacy).
     3. Identify 3 "Workstyle Indicators". 
     4. Generate 3 Interview Questions.
+    5. Perform a Detailed Company Match Analysis:
+       - Compare candidate persona against implied company culture in Job Context.
+       - Estimate a Match Score (0-100).
+       - Write a 2-sentence analysis.
+       - List key alignment strengths (e.g. "Direct communication style matches team").
+       - List potential friction points (e.g. "Used to big corporate, we are a startup").
     
     Output JSON.
   `;
@@ -232,6 +242,15 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
           properties: {
             deepAnalysis: { type: Type.STRING },
             cultureFit: { type: Type.STRING },
+            companyMatch: {
+                type: Type.OBJECT,
+                properties: {
+                    score: { type: Type.NUMBER },
+                    analysis: { type: Type.STRING },
+                    strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    potentialFriction: { type: Type.ARRAY, items: { type: Type.STRING } }
+                }
+            },
             indicators: {
               type: Type.ARRAY,
               items: {

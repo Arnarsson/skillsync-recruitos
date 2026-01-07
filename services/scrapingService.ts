@@ -10,13 +10,13 @@ interface FirecrawlResponse {
 
 /**
  * Generic scraper using Firecrawl.
- * Strictly fetches real data from the provided URL.
+ * STRICT MODE: Requires a valid API Key.
  */
 export const scrapeUrlContent = async (url: string): Promise<string> => {
   const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || process.env.FIRECRAWL_API_KEY;
   
   if (!firecrawlKey) {
-    throw new Error("Missing Firecrawl API Key. Please configure it in Admin Settings.");
+    throw new Error("Firecrawl API Key is missing. Please configure it in Settings.");
   }
 
   try {
@@ -36,7 +36,8 @@ export const scrapeUrlContent = async (url: string): Promise<string> => {
     });
 
     if (!scrapeResponse.ok) {
-        throw new Error(`Scraping API Error: ${scrapeResponse.statusText}`);
+        const errorText = await scrapeResponse.text();
+        throw new Error(`Firecrawl API Error (${scrapeResponse.status}): ${errorText}`);
     }
 
     const json: FirecrawlResponse = await scrapeResponse.json();
