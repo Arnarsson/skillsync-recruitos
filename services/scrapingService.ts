@@ -11,21 +11,33 @@ interface FirecrawlResponse {
 interface BrightDataProfile {
   name?: string;
   position?: string;
-  current_company?: { name?: string };
+  current_company?: { name?: string; title?: string };
+  current_company_name?: string;
   city?: string;
   country?: string;
+  location?: string;
   about?: string;
   experience?: Array<{
     title?: string;
+    company?: string;
     company_name?: string;
-    duration?: string;
+    start_date?: string;
+    end_date?: string;
     description?: string;
+    description_html?: string;
+    location?: string;
   }>;
   education?: Array<{
     title?: string;
-    subtitle?: string;
+    degree?: string;
+    field?: string;
+    start_year?: string;
+    end_year?: string;
+    description?: string;
   }>;
   skills?: string[];
+  followers?: number;
+  connections?: number;
 }
 
 // Helper to safely get env vars
@@ -66,52 +78,80 @@ const brightDataProfileToMarkdown = (profile: BrightDataProfile): string => {
   let markdown = '';
 
   if (profile.name) {
-    markdown += `${profile.name}\n`;
+    markdown += `# ${profile.name}\n`;
   }
   if (profile.position) {
-    markdown += `${profile.position}`;
-    if (profile.current_company?.name) {
-      markdown += ` at ${profile.current_company.name}`;
+    markdown += `**${profile.position}**`;
+    const companyName = profile.current_company?.name || profile.current_company_name;
+    if (companyName) {
+      markdown += ` at ${companyName}`;
     }
     markdown += '\n';
   }
-  if (profile.city || profile.country) {
-    markdown += `${[profile.city, profile.country].filter(Boolean).join(', ')}\n`;
+
+  // Location
+  const location = profile.city || profile.location;
+  if (location) {
+    markdown += `${location}\n`;
+  }
+
+  // Stats
+  if (profile.followers || profile.connections) {
+    const stats = [];
+    if (profile.followers) stats.push(`${profile.followers.toLocaleString()} followers`);
+    if (profile.connections) stats.push(`${profile.connections}+ connections`);
+    markdown += `${stats.join(' | ')}\n`;
   }
 
   if (profile.about) {
-    markdown += `\nAbout:\n${profile.about}\n`;
+    markdown += `\n## About\n${profile.about}\n`;
   }
 
   if (profile.experience && profile.experience.length > 0) {
-    markdown += `\nExperience:\n`;
+    markdown += `\n## Experience\n`;
     for (const exp of profile.experience) {
-      markdown += `• ${exp.title || 'Role'}`;
-      if (exp.company_name) markdown += `, ${exp.company_name}`;
-      if (exp.duration) markdown += ` (${exp.duration})`;
+      const company = exp.company || exp.company_name;
+      markdown += `### ${exp.title || 'Role'}`;
+      if (company) markdown += ` at ${company}`;
       markdown += '\n';
-      if (exp.description) markdown += `  ${exp.description}\n`;
+
+      // Date range
+      if (exp.start_date) {
+        markdown += `*${exp.start_date}`;
+        if (exp.end_date) markdown += ` - ${exp.end_date}`;
+        markdown += '*\n';
+      }
+
+      if (exp.location) markdown += `${exp.location}\n`;
+      if (exp.description) markdown += `${exp.description}\n`;
+      markdown += '\n';
     }
   }
 
   if (profile.education && profile.education.length > 0) {
-    markdown += `\nEducation:\n`;
+    markdown += `\n## Education\n`;
     for (const edu of profile.education) {
-      markdown += `• ${edu.title || 'Degree'}`;
-      if (edu.subtitle) markdown += ` - ${edu.subtitle}`;
+      markdown += `### ${edu.title || 'Institution'}\n`;
+      if (edu.degree || edu.field) {
+        markdown += `${[edu.degree, edu.field].filter(Boolean).join(' in ')}\n`;
+      }
+      if (edu.start_year || edu.end_year) {
+        markdown += `*${edu.start_year || ''} - ${edu.end_year || ''}*\n`;
+      }
+      if (edu.description) markdown += `${edu.description}\n`;
       markdown += '\n';
     }
   }
 
   if (profile.skills && profile.skills.length > 0) {
-    markdown += `\nSkills: ${profile.skills.join(', ')}\n`;
+    markdown += `\n## Skills\n${profile.skills.join(', ')}\n`;
   }
 
   return markdown || 'No profile data available';
 };
 
 /**
- * Scrape LinkedIn profile using BrightData API
+ * Scrape LinkedIn profile using BrightData API via server proxy (to avoid CORS)
  */
 const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
   const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
@@ -120,27 +160,26 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
     throw new Error("BrightData API Key is missing. Please configure it in Settings or use Quick Paste.");
   }
 
-  // LinkedIn People Profile dataset ID
-  const datasetId = 'gd_l1viktl72bvl7bjuj0';
+  // Use the Vercel API proxy to avoid CORS issues
+  const proxyBase = '/api/brightdata';
 
   try {
-    // Trigger the scrape
+    // Trigger the scrape via proxy
     const triggerResponse = await fetch(
-      `https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&format=json&type=discover_new&discover_by=url`,
+      `${proxyBase}?action=trigger&url=${encodeURIComponent(url)}`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${brightDataKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify([{ url }])
+          'Content-Type': 'application/json',
+          'X-BrightData-Key': brightDataKey
+        }
       }
     );
 
     if (!triggerResponse.ok) {
-      const errorText = await triggerResponse.text();
-      console.error('BrightData trigger error:', errorText);
-      throw new Error(`BrightData API Error: ${triggerResponse.status}. Use Quick Paste instead.`);
+      const errorData = await triggerResponse.json().catch(() => ({}));
+      console.error('BrightData trigger error:', errorData);
+      throw new Error(errorData.error || `BrightData API Error: ${triggerResponse.status}. Use Quick Paste instead.`);
     }
 
     const triggerResult = await triggerResponse.json();
@@ -158,10 +197,10 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
       await new Promise(resolve => setTimeout(resolve, pollInterval));
 
       const progressResponse = await fetch(
-        `https://api.brightdata.com/datasets/v3/progress/${snapshotId}`,
+        `${proxyBase}?action=progress&snapshot_id=${snapshotId}`,
         {
           headers: {
-            'Authorization': `Bearer ${brightDataKey}`
+            'X-BrightData-Key': brightDataKey
           }
         }
       );
@@ -171,12 +210,12 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
       const progress = await progressResponse.json();
 
       if (progress.status === 'ready') {
-        // Fetch the snapshot data
+        // Fetch the snapshot data via proxy
         const snapshotResponse = await fetch(
-          `https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`,
+          `${proxyBase}?action=snapshot&snapshot_id=${snapshotId}`,
           {
             headers: {
-              'Authorization': `Bearer ${brightDataKey}`
+              'X-BrightData-Key': brightDataKey
             }
           }
         );
