@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Candidate } from '../types';
+import { Candidate, FunnelStage } from '../types';
 
 // In-memory cache for candidates when Supabase is unavailable or schema differs
 let localCandidateCache: Candidate[] = [];
@@ -15,34 +15,37 @@ export const candidateService = {
     try {
       const { data, error } = await supabase
         .from('candidates')
-        .select('id, name, current_role, company, location, match_score, evidence_summary, persona, linkedin_url, created_at')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Supabase Fetch Error:', error);
-        // Use local cache as fallback
         return localCandidateCache;
       }
 
-      // Map DB rows to Candidate objects
+      // Map DB rows to Candidate objects using actual schema
       const candidates = data.map((row: any) => ({
         id: row.id,
         name: row.name || 'Unknown',
-        currentRole: row.current_role || 'Unknown',
+        currentRole: row.role_title || 'Unknown',
         company: row.company || 'Unknown',
         location: row.location || 'Unknown',
-        yearsExperience: 0,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || 'C')}&background=random`,
-        alignmentScore: row.match_score || 0,
-        shortlistSummary: row.evidence_summary || '',
-        keyEvidence: [],
-        risks: [],
-        unlockedSteps: [],
-        persona: row.persona ? (typeof row.persona === 'string' ? JSON.parse(row.persona) : row.persona) : undefined,
-        sourceUrl: row.linkedin_url || ''
+        yearsExperience: row.years_experience || 0,
+        avatar: row.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || 'C')}&background=random`,
+        alignmentScore: row.alignment_score || 0,
+        scoreBreakdown: row.score_breakdown || undefined,
+        shortlistSummary: row.shortlist_summary || '',
+        keyEvidence: row.key_evidence || [],
+        risks: row.risks || [],
+        deepAnalysis: row.deep_analysis || undefined,
+        cultureFit: row.culture_fit || undefined,
+        indicators: row.indicators || undefined,
+        interviewGuide: row.interview_guide || undefined,
+        unlockedSteps: row.unlocked_steps || [],
+        sourceUrl: row.source_url || '',
+        rawProfileText: row.raw_profile_text || ''
       } as Candidate));
 
-      // Update local cache
       localCandidateCache = candidates;
       return candidates;
     } catch (err) {
@@ -66,20 +69,24 @@ export const candidateService = {
         .insert([{
           id: candidate.id,
           name: candidate.name,
-          current_role: candidate.currentRole,
+          role_title: candidate.currentRole,
           company: candidate.company,
           location: candidate.location,
-          linkedin_url: candidate.sourceUrl || '',
-          match_score: candidate.alignmentScore,
-          evidence_summary: candidate.shortlistSummary,
-          persona: candidate.persona ? JSON.stringify(candidate.persona) : null,
-          status: 'new'
+          years_experience: candidate.yearsExperience || 0,
+          avatar_url: candidate.avatar,
+          source_type: 'sourcing',
+          source_url: candidate.sourceUrl || '',
+          alignment_score: candidate.alignmentScore,
+          score_breakdown: candidate.scoreBreakdown || null,
+          shortlist_summary: candidate.shortlistSummary,
+          key_evidence: candidate.keyEvidence || [],
+          risks: candidate.risks || [],
+          unlocked_steps: candidate.unlockedSteps || [FunnelStage.SHORTLIST]
         }])
         .select();
 
       if (error) {
         console.error('Supabase Create Error:', error);
-        // Still return the candidate since it's in local cache
         return [candidate];
       }
       return data;
@@ -102,13 +109,19 @@ export const candidateService = {
       const { error } = await supabase
         .from('candidates')
         .update({
-          current_role: candidate.currentRole,
+          role_title: candidate.currentRole,
           company: candidate.company,
           location: candidate.location,
-          match_score: candidate.alignmentScore,
-          evidence_summary: candidate.shortlistSummary,
-          persona: candidate.persona ? JSON.stringify(candidate.persona) : null,
-          status: 'processed'
+          alignment_score: candidate.alignmentScore,
+          score_breakdown: candidate.scoreBreakdown || null,
+          shortlist_summary: candidate.shortlistSummary,
+          key_evidence: candidate.keyEvidence || [],
+          risks: candidate.risks || [],
+          deep_analysis: candidate.deepAnalysis || null,
+          culture_fit: candidate.cultureFit || null,
+          indicators: candidate.indicators || null,
+          interview_guide: candidate.interviewGuide || null,
+          unlocked_steps: candidate.unlockedSteps || []
         })
         .eq('id', candidate.id);
 
