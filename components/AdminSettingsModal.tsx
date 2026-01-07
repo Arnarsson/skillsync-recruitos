@@ -9,6 +9,7 @@ interface Props {
 
 const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
   const [firecrawlKey, setFirecrawlKey] = useState('');
+  const [brightDataKey, setBrightDataKey] = useState('');
   const [openRouterKey, setOpenRouterKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [hasGeminiAuth, setHasGeminiAuth] = useState(false); // Tracks AI Studio / Env status
@@ -16,6 +17,7 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
   useEffect(() => {
     // Load keys from storage
     setFirecrawlKey(localStorage.getItem('FIRECRAWL_API_KEY') || '');
+    setBrightDataKey(localStorage.getItem('BRIGHTDATA_API_KEY') || '');
     setOpenRouterKey(localStorage.getItem('OPENROUTER_API_KEY') || '');
     setGeminiKey(localStorage.getItem('GEMINI_API_KEY') || '');
 
@@ -41,6 +43,9 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
   const handleSave = () => {
     if (firecrawlKey) localStorage.setItem('FIRECRAWL_API_KEY', firecrawlKey);
     else localStorage.removeItem('FIRECRAWL_API_KEY');
+
+    if (brightDataKey) localStorage.setItem('BRIGHTDATA_API_KEY', brightDataKey);
+    else localStorage.removeItem('BRIGHTDATA_API_KEY');
 
     if (openRouterKey) localStorage.setItem('OPENROUTER_API_KEY', openRouterKey);
     else localStorage.removeItem('OPENROUTER_API_KEY');
@@ -153,7 +158,7 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
                     <label className="text-xs font-bold text-slate-400">API Key</label>
                     <div className="relative">
                         <i className="fa-solid fa-spider absolute left-3 top-3 text-slate-600"></i>
-                        <input 
+                        <input
                             type="password"
                             value={firecrawlKey}
                             onChange={(e) => setFirecrawlKey(e.target.value)}
@@ -162,6 +167,32 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
                         />
                     </div>
                 </div>
+                <p className="text-[10px] text-slate-500 mt-2 px-1">
+                    Used for general website scraping (non-LinkedIn).
+                </p>
+            </div>
+
+            <div className="w-full h-px bg-apex-800"></div>
+
+            {/* BrightData Section */}
+            <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">LinkedIn Scraping (BrightData)</h3>
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400">API Key</label>
+                    <div className="relative">
+                        <i className="fa-brands fa-linkedin absolute left-3 top-3 text-slate-600"></i>
+                        <input
+                            type="password"
+                            value={brightDataKey}
+                            onChange={(e) => setBrightDataKey(e.target.value)}
+                            className="w-full bg-apex-800 border border-apex-700 rounded p-2.5 pl-10 text-sm text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
+                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        />
+                    </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2 px-1">
+                    Required for scraping LinkedIn profiles. Uses BrightData's People Dataset API.
+                </p>
             </div>
 
         </div>
