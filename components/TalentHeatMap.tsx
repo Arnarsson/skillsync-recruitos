@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MOCK_CANDIDATES } from '../constants';
 import { Candidate, FunnelStage, PRICING, CREDITS_TO_EUR } from '../types';
 import { analyzeCandidateProfile } from '../services/geminiService';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 interface Props {
   jobContext: string;
@@ -11,8 +12,10 @@ interface Props {
 }
 
 const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, onSelectCandidate }) => {
-  // Start with Mocks for demo, but allow adding real ones
-  const [candidates, setCandidates] = useState<Candidate[]>(MOCK_CANDIDATES);
+  // Use persisted state for Candidates list
+  // Default to MOCK_CANDIDATES which is now []
+  const [candidates, setCandidates] = usePersistedState<Candidate[]>('apex_candidates', MOCK_CANDIDATES);
+  
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -47,9 +50,9 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
           setShowImport(false);
           setImportText('');
           onSpendCredits(10, `Imported Candidate: ${newCandidate.name}`); // Nominal fee for import
-      } catch (e) {
+      } catch (e: any) {
           console.error(e);
-          alert("Failed to analyze candidate. Ensure Gemini API key is active.");
+          alert(e.message || "Failed to analyze candidate. Ensure Gemini API key is active.");
       } finally {
           setIsImporting(false);
       }
@@ -88,7 +91,9 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                       <button onClick={() => setShowImport(false)} className="text-slate-500 hover:text-white"><i className="fa-solid fa-xmark"></i></button>
                   </div>
                   <div className="p-4">
-                      <p className="text-xs text-slate-400 mb-2">Paste Resume text or LinkedIn profile data. Gemini will parse and score it against the Job Context.</p>
+                      <p className="text-xs text-slate-400 mb-2">
+                        <strong>Instructions:</strong> Go to a LinkedIn Profile → Press <code className="bg-apex-800 px-1 rounded border border-apex-700">Ctrl+A</code> then <code className="bg-apex-800 px-1 rounded border border-apex-700">Ctrl+C</code> → Paste here.
+                      </p>
                       <textarea 
                         className="w-full h-64 bg-apex-950 border border-apex-700 rounded p-3 text-sm text-slate-300 font-mono focus:border-emerald-500 outline-none"
                         placeholder="Paste text here..."
@@ -120,81 +125,99 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
 
       {/* List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3">
-        {candidates.map((c) => {
-            const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE);
-            
-            return (
-                <div 
-                    key={c.id} 
-                    onClick={() => isDeepProfileUnlocked ? onSelectCandidate(c) : null}
-                    className={`
-                        flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all items-start md:items-center relative
-                        ${isDeepProfileUnlocked 
-                            ? 'bg-apex-800/40 border-apex-700 hover:border-emerald-500/50 cursor-pointer group' 
-                            : 'bg-apex-900 border-apex-800 opacity-80'
-                        }
-                    `}
-                >
-                    {/* Candidate Info */}
-                    <div className="col-span-4 flex items-center w-full md:w-auto">
-                        <img src={c.avatar} className="w-10 h-10 rounded-full border border-slate-700 mr-3 grayscale group-hover:grayscale-0 transition-all" alt="avatar" />
-                        <div>
-                            <div className="text-sm font-bold text-slate-200">{c.name}</div>
-                            <div className="text-xs text-slate-500">{c.currentRole}</div>
-                            <div className="text-[10px] text-slate-600">at {c.company}</div>
-                        </div>
-                        {/* Mobile Score Badge */}
-                        <div className="ml-auto md:hidden bg-apex-800 rounded px-2 py-1 flex items-center border border-apex-700">
-                             <span className={`font-bold ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>{c.alignmentScore}%</span>
-                        </div>
-                    </div>
-
-                    {/* Match Score (Desktop) */}
-                    <div className="col-span-2 hidden md:flex flex-col items-center justify-center">
-                        <div className={`text-lg font-bold font-mono ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>
-                            {c.alignmentScore}%
-                        </div>
-                        <div className="w-16 h-1 bg-apex-700 rounded-full mt-1">
-                            <div 
-                                className={`h-full rounded-full ${c.alignmentScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`} 
-                                style={{width: `${c.alignmentScore}%`}}
-                            ></div>
-                        </div>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="col-span-4 w-full">
-                        <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-none">"{c.shortlistSummary}"</p>
-                        <div className="mt-2 flex space-x-2">
-                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded border border-slate-700">Confidence: High</span>
-                        </div>
-                    </div>
-
-                    {/* Action */}
-                    <div className="col-span-2 flex justify-end w-full md:w-auto mt-2 md:mt-0">
-                        {isDeepProfileUnlocked ? (
-                            <button className="w-full md:w-auto px-4 py-2 bg-apex-800 hover:bg-apex-700 text-emerald-400 text-xs font-bold rounded border border-emerald-900/30 flex items-center justify-center transition-colors">
-                                <i className="fa-solid fa-file-invoice mr-2"></i> View Report
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={(e) => handleUnlockProfile(e, c.id, c.name)}
-                                className="w-full md:w-auto px-4 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-700 flex items-center justify-center transition-all shadow-sm hover:shadow-emerald-500/20"
-                            >
-                                <i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr)
-                            </button>
-                        )}
-                    </div>
+        {candidates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full opacity-60">
+                <div className="w-16 h-16 bg-apex-800 rounded-full flex items-center justify-center mb-4">
+                    <i className="fa-solid fa-users-slash text-2xl text-slate-600"></i>
                 </div>
-            );
-        })}
+                <h3 className="text-white font-bold mb-2">No Candidates Found</h3>
+                <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">Your pipeline is empty. Import a profile from LinkedIn to generate a compatibility score.</p>
+                <button 
+                    onClick={() => setShowImport(true)}
+                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg transition-all"
+                >
+                    <i className="fa-solid fa-plus mr-2"></i> Import First Candidate
+                </button>
+            </div>
+        ) : (
+            candidates.map((c) => {
+                const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE);
+                
+                return (
+                    <div 
+                        key={c.id} 
+                        onClick={() => isDeepProfileUnlocked ? onSelectCandidate(c) : null}
+                        className={`
+                            flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all items-start md:items-center relative
+                            ${isDeepProfileUnlocked 
+                                ? 'bg-apex-800/40 border-apex-700 hover:border-emerald-500/50 cursor-pointer group' 
+                                : 'bg-apex-900 border-apex-800 opacity-80'
+                            }
+                        `}
+                    >
+                        {/* Candidate Info */}
+                        <div className="col-span-4 flex items-center w-full md:w-auto">
+                            <img src={c.avatar} className="w-10 h-10 rounded-full border border-slate-700 mr-3 grayscale group-hover:grayscale-0 transition-all" alt="avatar" />
+                            <div>
+                                <div className="text-sm font-bold text-slate-200">{c.name}</div>
+                                <div className="text-xs text-slate-500">{c.currentRole}</div>
+                                <div className="text-[10px] text-slate-600">at {c.company}</div>
+                            </div>
+                            {/* Mobile Score Badge */}
+                            <div className="ml-auto md:hidden bg-apex-800 rounded px-2 py-1 flex items-center border border-apex-700">
+                                <span className={`font-bold ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>{c.alignmentScore}%</span>
+                            </div>
+                        </div>
+
+                        {/* Match Score (Desktop) */}
+                        <div className="col-span-2 hidden md:flex flex-col items-center justify-center">
+                            <div className={`text-lg font-bold font-mono ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                {c.alignmentScore}%
+                            </div>
+                            <div className="w-16 h-1 bg-apex-700 rounded-full mt-1">
+                                <div 
+                                    className={`h-full rounded-full ${c.alignmentScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`} 
+                                    style={{width: `${c.alignmentScore}%`}}
+                                ></div>
+                            </div>
+                        </div>
+
+                        {/* Summary */}
+                        <div className="col-span-4 w-full">
+                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-none">"{c.shortlistSummary}"</p>
+                            <div className="mt-2 flex space-x-2">
+                                <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded border border-slate-700">Confidence: High</span>
+                            </div>
+                        </div>
+
+                        {/* Action */}
+                        <div className="col-span-2 flex justify-end w-full md:w-auto mt-2 md:mt-0">
+                            {isDeepProfileUnlocked ? (
+                                <button className="w-full md:w-auto px-4 py-2 bg-apex-800 hover:bg-apex-700 text-emerald-400 text-xs font-bold rounded border border-emerald-900/30 flex items-center justify-center transition-colors">
+                                    <i className="fa-solid fa-file-invoice mr-2"></i> View Report
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={(e) => handleUnlockProfile(e, c.id, c.name)}
+                                    className="w-full md:w-auto px-4 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-700 flex items-center justify-center transition-all shadow-sm hover:shadow-emerald-500/20"
+                                >
+                                    <i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr)
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            })
+        )}
         {/* Mobile Import Button at bottom */}
-         <button 
-            onClick={() => setShowImport(true)}
-            className="md:hidden w-full py-3 bg-apex-800 border border-dashed border-apex-700 text-slate-400 rounded-lg text-sm font-bold mt-4"
-        >
-            <i className="fa-solid fa-plus mr-2"></i> Import Candidate
-        </button>
+        {candidates.length > 0 && (
+             <button 
+                onClick={() => setShowImport(true)}
+                className="md:hidden w-full py-3 bg-apex-800 border border-dashed border-apex-700 text-slate-400 rounded-lg text-sm font-bold mt-4"
+            >
+                <i className="fa-solid fa-plus mr-2"></i> Import Candidate
+            </button>
+        )}
       </div>
     </div>
   );

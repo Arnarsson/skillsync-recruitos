@@ -2,20 +2,25 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Candidate, InterviewQuestion, WorkstyleIndicator, ConfidenceLevel, FunnelStage } from '../types';
 
 // Initialize with localStorage key if available, otherwise env
-const apiKey = localStorage.getItem('GEMINI_API_KEY') || process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+const getAiClient = () => {
+    const apiKey = localStorage.getItem('GEMINI_API_KEY') || process.env.API_KEY || '';
+    if (!apiKey) return null;
+    return new GoogleGenAI({ apiKey });
+};
 
 // Helper to calculate a rough score based on breakdown
 const calculateScore = (breakdown: any) => {
-    if (!breakdown) return 50;
+    if (!breakdown) return 0;
     const totalMax = breakdown.skills.max + breakdown.experience.max + breakdown.industry.max + breakdown.seniority.max + breakdown.location.max;
     const totalValue = breakdown.skills.value + breakdown.experience.value + breakdown.industry.value + breakdown.seniority.value + breakdown.location.value;
+    if (totalMax === 0) return 0;
     return Math.round((totalValue / totalMax) * 100);
 }
 
 // Step 2: Live Candidate Analysis
 export const analyzeCandidateProfile = async (resumeText: string, jobContext: string): Promise<Candidate> => {
-    if (!apiKey) throw new Error("API Key missing. Please configure it in Admin Settings.");
+    const ai = getAiClient();
+    if (!ai) throw new Error("API Key missing. Please configure it in Admin Settings.");
 
     const prompt = `
         You are a highly analytical Recruitment AI.
@@ -23,77 +28,76 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
         Job Context:
         ${jobContext}
         
-        Candidate Profile (Text/Resume):
-        ${resumeText.substring(0, 15000)}
+        Raw Input Text (Likely a copy-paste from LinkedIn or CV):
+        "${resumeText.substring(0, 20000)}"
 
         Task: 
-        1. Extract candidate details (Name, Role, Company, Location, Exp).
-        2. Analyze alignment with the Job Context strictly.
-        3. Generate a "Score Breakdown" (0-100 scale components).
-        4. Write a "Shortlist Summary" (2 sentences max).
-        5. Extract 2-3 "Key Evidence" points and 1-2 "Risks".
+        1. Ignore UI noise (e.g., "See connections", "Message", "Home", navigation labels).
+        2. Extract candidate details (Name, Role, Company, Location, Exp). 
+           - If Name is missing, infer from context or use "Candidate Detected".
+        3. Analyze alignment with the Job Context strictly.
+        4. Generate a "Score Breakdown" (0-100 scale components).
+        5. Write a "Shortlist Summary" (2 sentences max).
+        6. Extract 2-3 "Key Evidence" points and 1-2 "Risks".
 
         Output strictly matching the JSON schema.
-        For 'avatar', use a generic placeholder like 'https://i.pravatar.cc/150?u=generic'.
+        For 'avatar', use a generic placeholder like 'https://ui-avatars.com/api/?name=User'.
     `;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    name: { type: Type.STRING },
-                    currentRole: { type: Type.STRING },
-                    company: { type: Type.STRING },
-                    location: { type: Type.STRING },
-                    yearsExperience: { type: Type.NUMBER },
-                    shortlistSummary: { type: Type.STRING },
-                    keyEvidence: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    risks: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    scoreBreakdown: {
-                        type: Type.OBJECT,
-                        properties: {
-                            skills: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
-                            experience: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
-                            industry: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
-                            seniority: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
-                            location: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name: { type: Type.STRING },
+                        currentRole: { type: Type.STRING },
+                        company: { type: Type.STRING },
+                        location: { type: Type.STRING },
+                        yearsExperience: { type: Type.NUMBER },
+                        shortlistSummary: { type: Type.STRING },
+                        keyEvidence: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        risks: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        scoreBreakdown: {
+                            type: Type.OBJECT,
+                            properties: {
+                                skills: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
+                                experience: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
+                                industry: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
+                                seniority: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
+                                location: { type: Type.OBJECT, properties: { value: {type: Type.NUMBER}, max: {type: Type.NUMBER}, percentage: {type: Type.NUMBER} } },
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
 
-    const data = JSON.parse(response.text || '{}');
-    const calculatedScore = calculateScore(data.scoreBreakdown);
+        if (!response.text) throw new Error("No response from AI");
+        const data = JSON.parse(response.text);
+        const calculatedScore = calculateScore(data.scoreBreakdown);
 
-    return {
-        id: `cand_${Date.now()}`,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&color=fff`,
-        alignmentScore: calculatedScore,
-        unlockedSteps: [FunnelStage.SHORTLIST],
-        ...data
-    };
+        return {
+            id: `cand_${Date.now()}`,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'Candidate')}&background=random&color=fff`,
+            alignmentScore: calculatedScore,
+            unlockedSteps: [FunnelStage.SHORTLIST],
+            ...data
+        };
+    } catch (error) {
+        console.error("Analysis Error:", error);
+        throw new Error("Failed to analyze candidate. Verify API Key and Input Text.");
+    }
 };
 
 
 // Step 3: Deep Profile Generation
 export const generateDeepProfile = async (candidate: Candidate, jobContext: string): Promise<{ indicators: WorkstyleIndicator[], questions: InterviewQuestion[], deepAnalysis: string, cultureFit: string }> => {
-  if (!apiKey) {
-    return {
-        indicators: [
-            { category: 'TRAJECTORY', label: 'Simulation', observation: 'Simulated data: Tenure is stable.', evidence: { text: '3 years at current role', source: 'Mock Data', confidence: ConfidenceLevel.HIGH }},
-            { category: 'SKILLS', label: 'Gap Detected', observation: 'Missing explicit React Native experience.', evidence: { text: 'Not listed in skills', source: 'Skills Section', confidence: ConfidenceLevel.HIGH }}
-        ],
-        questions: [{ topic: 'Skills', question: 'Describe your experience with React Native.', reason: 'Verification needed.' }],
-        deepAnalysis: "Simulation: Candidate shows strong potential but requires verification of specific tech stack depth.",
-        cultureFit: "Simulation: Likely fits structured environments."
-    };
-  }
+  const ai = getAiClient();
+  if (!ai) throw new Error("API Key missing. Cannot generate Deep Profile.");
 
   const prompt = `
     Role Context: ${jobContext}
@@ -165,21 +169,26 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
     throw new Error("Empty response");
   } catch (error) {
     console.error("Deep Profile Gen Error", error);
-    return { indicators: [], questions: [], deepAnalysis: "Error generating analysis.", cultureFit: "Error generating fit." };
+    throw error;
   }
 };
 
 // Step 4: Outreach Generation
 export const generateOutreach = async (candidate: Candidate, context: string): Promise<string> => {
-    if (!apiKey) return "Hi [Name], I noticed we both worked in Fintech. We are looking for...";
+    const ai = getAiClient();
+    if (!ai) throw new Error("API Key missing.");
     
     const prompt = `
         Draft a personalized outreach message for a Recruiter to send to ${candidate.name}.
-        Context: ${context}.
-        Candidate Info: ${candidate.currentRole} at ${candidate.company}.
         
-        Style: Professional, concise, referencing specific shared context or skill match. 
-        Length: Under 75 words.
+        Shared Context/Connection: ${context}.
+        Candidate Current Role: ${candidate.currentRole} at ${candidate.company}.
+        
+        Constraints:
+        - Style: Professional, concise, referencing specific shared context or skill match.
+        - Tone: "Warm Intro" if context exists, otherwise "Highly Targeted Cold".
+        - Length: Under 75 words.
+        - Call to action: Coffee or 15m call.
     `;
     
     try {
@@ -189,6 +198,7 @@ export const generateOutreach = async (candidate: Candidate, context: string): P
         });
         return response.text || "Drafting error.";
     } catch (e) {
-        return "Drafting error.";
+        console.error(e);
+        return "Failed to generate draft. Check API Key.";
     }
 }

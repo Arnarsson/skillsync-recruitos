@@ -8,6 +8,7 @@ import AuditLogModal from './components/AuditLogModal';
 import AdminSettingsModal from './components/AdminSettingsModal';
 import { Candidate, PRICING, FunnelStage, CREDITS_TO_EUR, AuditEvent, AuditEventType } from './types';
 import { INITIAL_CREDITS, INITIAL_LOGS } from './constants';
+import { usePersistedState } from './hooks/usePersistedState';
 
 const SidebarLink: React.FC<{ 
     step: number, 
@@ -169,9 +170,12 @@ const Layout: React.FC<{
 }
 
 const App: React.FC = () => {
-  const [credits, setCredits] = useState(INITIAL_CREDITS);
-  const [logs, setLogs] = useState<AuditEvent[]>(INITIAL_LOGS);
-  const [jobContext, setJobContext] = useState(''); // Shared State
+  // Use persisted state for critical data
+  const [credits, setCredits] = usePersistedState('apex_credits', INITIAL_CREDITS);
+  const [logs, setLogs] = usePersistedState<AuditEvent[]>('apex_logs', INITIAL_LOGS);
+  const [jobContext, setJobContext] = usePersistedState('apex_job_context', ''); 
+
+  // UI State (Non-persistent)
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [outreachCandidate, setOutreachCandidate] = useState<Candidate | null>(null);
   const [showWallet, setShowWallet] = useState(false);

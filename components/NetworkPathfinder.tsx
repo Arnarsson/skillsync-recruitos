@@ -16,13 +16,6 @@ const OutreachSuite: React.FC<Props> = ({ candidate, onClose }) => {
     // Combine shared context if available
     const context = candidate.sharedContext?.join(', ') || "No direct overlap";
     
-    // Prefer the mock hook if available for demo
-    if (candidate.outreachHook) {
-         setTemplate(`Hi ${candidate.name.split(' ')[0]},\n\n${candidate.outreachHook} We are building a similar architecture here at Apex and your background in ${candidate.keyEvidence?.[0] || 'frontend'} looks like a great fit.\n\nWould you be open to a 15 min chat?\n\nBest,\n[Recruiter Name]`);
-         setLoading(false);
-         return;
-    }
-
     generateOutreach(candidate, context).then(t => {
         setTemplate(t);
         setLoading(false);
