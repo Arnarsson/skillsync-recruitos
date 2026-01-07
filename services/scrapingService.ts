@@ -210,6 +210,11 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
       const progress = await progressResponse.json();
 
       if (progress.status === 'ready') {
+        // Check if any records were found
+        if (progress.records === 0) {
+          throw new Error('LinkedIn profile is private or could not be accessed. Please use Quick Paste to manually enter the candidate information.');
+        }
+
         // Fetch the snapshot data via proxy
         const snapshotResponse = await fetch(
           `${proxyBase}?action=snapshot&snapshot_id=${snapshotId}`,
@@ -227,9 +232,14 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
         const profiles: BrightDataProfile[] = await snapshotResponse.json();
 
         if (profiles && profiles.length > 0) {
-          return brightDataProfileToMarkdown(profiles[0]);
+          const profile = profiles[0];
+          // Check if we actually got profile data (not just input metadata)
+          if (!profile.name && !profile.position && !profile.about && !profile.experience) {
+            throw new Error('LinkedIn profile is private or could not be accessed. Please use Quick Paste to manually enter the candidate information.');
+          }
+          return brightDataProfileToMarkdown(profile);
         }
-        throw new Error('No profile data returned from BrightData');
+        throw new Error('No profile data returned from BrightData. The profile may be private.');
       }
 
       if (progress.status === 'failed') {
