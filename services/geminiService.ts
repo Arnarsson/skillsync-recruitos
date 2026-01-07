@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { Candidate, InterviewQuestion, WorkstyleIndicator, ConfidenceLevel, FunnelStage } from '../types';
+import { Candidate, InterviewQuestion, WorkstyleIndicator, ConfidenceLevel, FunnelStage, Persona } from '../types';
 
 // Initialize with localStorage key if available, otherwise env
 const getAiClient = () => {
@@ -17,31 +18,127 @@ const calculateScore = (breakdown: any) => {
     return Math.round((totalValue / totalMax) * 100);
 }
 
-// Step 2: Live Candidate Analysis
-export const analyzeCandidateProfile = async (resumeText: string, jobContext: string): Promise<Candidate> => {
+// ---------------------------------------------------------
+// NEW: Persona Engine (Step 2.5)
+// ---------------------------------------------------------
+
+export const generatePersona = async (rawProfileText: string): Promise<Persona> => {
     const ai = getAiClient();
-    if (!ai) throw new Error("API Key missing. Please configure it in Admin Settings.");
+    if (!ai) throw new Error("API Key missing.");
+
+    const systemPrompt = `
+        Role: You are an expert Organizational Psychologist and Executive Recruiter.
+        Objective: Analyze raw public candidate data and construct a "Psychometric & Professional Persona". 
+        Do not summarize the resume. Infer behavioral traits, communication style, and career motivations.
+
+        Strict Constraints:
+        - No Hallucinations: If a trait is unknown, leave blank or infer "Unknown".
+        - Evidence-Based: Cite specific text snippets for your reasoning.
+        - Tone: Professional, objective, and analytical.
+
+        Analysis Instructions:
+        1. Determine the Archetype (e.g., "The Strategic Scaler", "The Hands-On Fixer").
+        2. Analyze Communication Style from "About" section (Data-driven? Visionary? Human-centric?).
+        3. Infer "Career Vector" (Motivation): Rapid growth vs Stability.
+        4. Soft Skills & Red/Green Flags.
+    `;
+
+    const prompt = `
+        ${systemPrompt}
+        
+        Raw Candidate Data:
+        "${rawProfileText.substring(0, 25000)}"
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        candidate_name: { type: Type.STRING },
+                        persona_archetype: { type: Type.STRING },
+                        psychometric_profile: {
+                            type: Type.OBJECT,
+                            properties: {
+                                communication_style: { type: Type.STRING },
+                                primary_motivator: { type: Type.STRING },
+                                risk_tolerance: { type: Type.STRING },
+                                leadership_potential: { type: Type.STRING }
+                            }
+                        },
+                        soft_skills_analysis: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        red_flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        green_flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        reasoning_evidence: { type: Type.STRING }
+                    }
+                }
+            }
+        });
+
+        if (!response.text) throw new Error("No response from AI");
+        const data = JSON.parse(response.text);
+
+        // Map to internal Persona interface
+        return {
+            archetype: data.persona_archetype,
+            psychometric: {
+                communicationStyle: data.psychometric_profile.communication_style,
+                primaryMotivator: data.psychometric_profile.primary_motivator,
+                riskTolerance: data.psychometric_profile.risk_tolerance,
+                leadershipPotential: data.psychometric_profile.leadership_potential
+            },
+            softSkills: data.soft_skills_analysis,
+            redFlags: data.red_flags,
+            greenFlags: data.green_flags,
+            reasoning: data.reasoning_evidence
+        };
+
+    } catch (error) {
+        console.error("Persona Gen Error:", error);
+        throw error;
+    }
+};
+
+// ---------------------------------------------------------
+// Existing Workflows
+// ---------------------------------------------------------
+
+// Step 2: Live Candidate Analysis (Standard Import)
+export const analyzeCandidateProfile = async (resumeText: string, jobContext: string, personaData?: Persona): Promise<Candidate> => {
+    const ai = getAiClient();
+    if (!ai) throw new Error("API Key missing.");
+
+    // If we already have a Persona, we inject it into the prompt to guide the score
+    const personaContext = personaData ? `
+        PRE-GENERATED PERSONA (Use this for "Soft Skill" and "Culture" evaluation):
+        Archetype: ${personaData.archetype}
+        Motivations: ${personaData.psychometric.primaryMotivator}
+        Risk Flags: ${personaData.redFlags.join(', ')}
+    ` : '';
 
     const prompt = `
         You are a highly analytical Recruitment AI.
         
         Job Context:
         ${jobContext}
+
+        ${personaContext}
         
-        Raw Input Text (Likely a copy-paste from LinkedIn or CV):
+        Raw Input Text:
         "${resumeText.substring(0, 20000)}"
 
         Task: 
-        1. Ignore UI noise (e.g., "See connections", "Message", "Home", navigation labels).
-        2. Extract candidate details (Name, Role, Company, Location, Exp). 
-           - If Name is missing, infer from context or use "Candidate Detected".
-        3. Analyze alignment with the Job Context strictly.
-        4. Generate a "Score Breakdown" (0-100 scale components).
-        5. Write a "Shortlist Summary" (2 sentences max).
-        6. Extract 2-3 "Key Evidence" points and 1-2 "Risks".
-
-        Output strictly matching the JSON schema.
-        For 'avatar', use a generic placeholder like 'https://ui-avatars.com/api/?name=User'.
+        1. Ignore UI noise.
+        2. Extract details.
+        3. Analyze alignment with Job Context strictly.
+        4. Generate Score Breakdown (0-100).
+        5. Write Shortlist Summary.
+        
+        Output JSON matching schema.
     `;
 
     try {
@@ -85,35 +182,41 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'Candidate')}&background=random&color=fff`,
             alignmentScore: calculatedScore,
             unlockedSteps: [FunnelStage.SHORTLIST],
+            persona: personaData, // Attach persona if it exists
             ...data
         };
     } catch (error) {
         console.error("Analysis Error:", error);
-        throw new Error("Failed to analyze candidate. Verify API Key and Input Text.");
+        throw new Error("Failed to analyze candidate. Verify API Key.");
     }
 };
-
 
 // Step 3: Deep Profile Generation
 export const generateDeepProfile = async (candidate: Candidate, jobContext: string): Promise<{ indicators: WorkstyleIndicator[], questions: InterviewQuestion[], deepAnalysis: string, cultureFit: string }> => {
   const ai = getAiClient();
-  if (!ai) throw new Error("API Key missing. Cannot generate Deep Profile.");
+  if (!ai) throw new Error("API Key missing.");
+
+  // If Persona exists, use it to enrich Deep Profile
+  const personaContext = candidate.persona ? `
+    PSYCHOMETRIC PERSONA:
+    Archetype: ${candidate.persona.archetype}
+    Communication: ${candidate.persona.psychometric.communicationStyle}
+    Leadership: ${candidate.persona.psychometric.leadershipPotential}
+  ` : '';
 
   const prompt = `
     Role Context: ${jobContext}
     Candidate: ${candidate.name}, ${candidate.currentRole} at ${candidate.company}.
     Score: ${candidate.alignmentScore}
+
+    ${personaContext}
     
     Task: Create a "Deep Profile" for internal decision support.
     
-    1. Write a "Deep Analysis" summary (3-4 sentences) evaluating the fit.
-    2. Write a "Culture Fit" assessment (1-2 sentences) specifically checking alignment with the described team/company environment.
-    3. Identify 3 "Workstyle Indicators" based on their profile text and career history. 
-       - Categories: TRAJECTORY, SKILLS, COMMUNICATION, COLLABORATION.
-       - Cite EVIDENCE (e.g., "Mentioned 'Led 10 person team' in 2021").
-       - Assign CONFIDENCE (HIGH/MEDIUM/LOW).
-       
-    4. Generate 3 Interview Questions to validate hypotheses or check missing skills.
+    1. Write a "Deep Analysis" summary (3-4 sentences).
+    2. Write a "Culture Fit" assessment (1-2 sentences).
+    3. Identify 3 "Workstyle Indicators". 
+    4. Generate 3 Interview Questions.
     
     Output JSON.
   `;
@@ -183,10 +286,11 @@ export const generateOutreach = async (candidate: Candidate, context: string): P
         
         Shared Context/Connection: ${context}.
         Candidate Current Role: ${candidate.currentRole} at ${candidate.company}.
+        Persona Archetype: ${candidate.persona?.archetype || 'Unknown'}
         
         Constraints:
-        - Style: Professional, concise, referencing specific shared context or skill match.
-        - Tone: "Warm Intro" if context exists, otherwise "Highly Targeted Cold".
+        - Style: Professional, concise.
+        - Tone: Adapt to Persona (if they are 'Direct', be brief. If 'Visionary', inspire).
         - Length: Under 75 words.
         - Call to action: Coffee or 15m call.
     `;

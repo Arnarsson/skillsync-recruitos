@@ -1,3 +1,4 @@
+
 export enum FunnelStage {
   INTAKE = 1,
   SHORTLIST = 2,
@@ -44,6 +45,20 @@ export interface ScoreBreakdown {
   location: ScoreComponent;
 }
 
+export interface Persona {
+  archetype: string;
+  psychometric: {
+    communicationStyle: string;
+    primaryMotivator: string;
+    riskTolerance: string;
+    leadershipPotential: string;
+  };
+  softSkills: string[];
+  redFlags: string[];
+  greenFlags: string[];
+  reasoning: string;
+}
+
 export interface Candidate {
   id: string;
   name: string;
@@ -55,11 +70,15 @@ export interface Candidate {
   
   // Step 2: Shortlist Data
   alignmentScore: number; // 0-100
-  scoreBreakdown?: ScoreBreakdown; // New field for Spec 12.5
+  scoreBreakdown?: ScoreBreakdown; 
   shortlistSummary: string;
   keyEvidence: string[];
   risks: string[];
   unlockedSteps: FunnelStage[]; 
+  
+  // New Sourcing / Persona Data
+  sourceUrl?: string;
+  persona?: Persona;
   
   // Step 3: Evidence Report Data 
   avgTenure?: string;
@@ -91,7 +110,8 @@ export enum AuditEventType {
   SCORE_GENERATED = 'score_generated',
   PROFILE_ENRICHED = 'profile_enriched',
   OUTREACH_GENERATED = 'outreach_generated',
-  CREDIT_PURCHASE = 'credit_purchase'
+  CREDIT_PURCHASE = 'credit_purchase',
+  SOURCING_RUN = 'sourcing_run'
 }
 
 export interface AuditEvent {
@@ -111,5 +131,6 @@ export const PRICING = {
   SHORTLIST: 93,      // ~€50
   DEEP_PROFILE: 278,  // ~€150
   OUTREACH: 463,      // ~€250
-  REFRESH: 1          // Spec 10.4
+  REFRESH: 1,         // Spec 10.4
+  SOURCING_SCAN: 25   // New sourcing cost
 };

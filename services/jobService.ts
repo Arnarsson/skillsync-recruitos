@@ -1,63 +1,21 @@
+
 import { GoogleGenAI } from "@google/genai";
+import { scrapeUrlContent } from "./scrapingService";
 
 // Initialize with localStorage key if available, otherwise env
-const apiKey = localStorage.getItem('GEMINI_API_KEY') || process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+const getAiClient = () => {
+    const apiKey = localStorage.getItem('GEMINI_API_KEY') || process.env.API_KEY || '';
+    if (!apiKey) return null;
+    return new GoogleGenAI({ apiKey });
+};
 
-interface FirecrawlResponse {
-  success: boolean;
-  data?: {
-    markdown: string;
-    metadata?: any;
-  };
-  error?: string;
-}
-
-/**
- * Orchestrates the scraping and parsing of a job URL.
- * 1. Scrapes raw markdown via Firecrawl.
- * 2. Cleans and structures data via Gemini.
- */
 export const fetchJobContextFromUrl = async (url: string): Promise<string> => {
-  // 1. Scrape with Firecrawl
-  // Prioritize LocalStorage (from Admin Settings) over Env var
-  const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || process.env.FIRECRAWL_API_KEY;
-  
-  if (!firecrawlKey) {
-    throw new Error("Missing Firecrawl API Key. Please configure it in Admin Settings.");
-  }
-
   try {
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firecrawlKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        url: url,
-        formats: ['markdown'],
-        // Optional: limit capabilities to speed up processing
-        pageOptions: {
-           onlyMainContent: true
-        }
-      })
-    });
+    const rawMarkdown = await scrapeUrlContent(url);
+    const ai = getAiClient();
+    
+    if (!ai) throw new Error("Missing Gemini API Key");
 
-    if (!scrapeResponse.ok) {
-        throw new Error(`Firecrawl API Error: ${scrapeResponse.statusText}`);
-    }
-
-    const json: FirecrawlResponse = await scrapeResponse.json();
-
-    if (!json.success || !json.data?.markdown) {
-        throw new Error(json.error || "Failed to retrieve content from URL");
-    }
-
-    const rawMarkdown = json.data.markdown;
-
-    // 2. Parse with Gemini
-    // We use Gemini to behave as a strict formatter/extractor
     const prompt = `
       You are an expert Data Extractor for a Recruitment OS.
       
@@ -78,7 +36,7 @@ export const fetchJobContextFromUrl = async (url: string): Promise<string> => {
       ... (Extract up to 8 key hard/soft requirements)
       
       Raw Input Markdown:
-      ${rawMarkdown.substring(0, 15000)} // Truncate to avoid token limits if page is massive
+      ${rawMarkdown.substring(0, 15000)}
     `;
 
     const result = await ai.models.generateContent({
@@ -90,6 +48,6 @@ export const fetchJobContextFromUrl = async (url: string): Promise<string> => {
 
   } catch (error) {
     console.error("Job Fetch Error:", error);
-    throw error; // Propagate to UI
+    throw error;
   }
 };

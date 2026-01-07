@@ -19,21 +19,6 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext }) => {
   const [isFetchingJob, setIsFetchingJob] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const handleMockFill = () => {
-    setJobContext(`Role: Senior Frontend Engineer
-Location: Copenhagen (Hybrid)
-Requirements:
-- 5+ years with React, TypeScript and Next.js
-- Experience with large-scale data visualization
-- Experience from regulated industries (Fintech/Pharma preferred)
-- Architecture ownership mindset
-- Mentorship of junior developers`);
-    setCompanyUrl('https://linkedin.com/company/apex-financial-systems');
-    setManagerUrl('https://linkedin.com/in/lars-jensen-vp-eng');
-    setBenchmarkUrl('https://linkedin.com/in/sofie-nielsen-tech-lead');
-    setFetchError(null);
-  };
-
   const handleFetchJob = async () => {
     if (!jobUrl) return;
     setIsFetchingJob(true);
@@ -46,19 +31,7 @@ Requirements:
     } catch (error: any) {
         console.error(error);
         setFetchError(error.message || "Failed to fetch job. Ensure Firecrawl key is set.");
-        // Fallback for demo if key is missing
-        if (error.message.includes("Missing Firecrawl")) {
-            setJobContext(`[System Error: Missing Firecrawl Key]
-Please add process.env.FIRECRAWL_API_KEY to use live scraping.
-
-Simulated Output for: ${jobUrl}
-Role: Software Engineer (Simulated)
-Location: Remote
-Requirements:
-- API Integration
-- React
-- TypeScript`);
-        }
+        // No simulation fallback. Strictly error out if scraping fails.
     } finally {
         setIsFetchingJob(false);
     }
@@ -154,13 +127,6 @@ Requirements:
                            We analyze these profiles to calibrate for <strong>team culture</strong>, <strong>communication style</strong>, and <strong>educational background</strong>.
                        </p>
                    </div>
-                   
-                   <button 
-                        onClick={handleMockFill}
-                        className="absolute top-6 right-6 text-[10px] text-blue-500 hover:text-blue-400 font-mono transition-colors opacity-60 hover:opacity-100"
-                    >
-                        <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Demo
-                   </button>
               </div>
 
               {/* Hard Requirements Card */}
