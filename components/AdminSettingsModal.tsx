@@ -24,8 +24,15 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
         if ((window as any).aistudio && (window as any).aistudio.hasSelectedApiKey) {
             const hasKey = await (window as any).aistudio.hasSelectedApiKey();
             setHasGeminiAuth(hasKey);
-        } else if (process.env.API_KEY) {
-            setHasGeminiAuth(true);
+        } else {
+            // Safely check process.env
+            try {
+                if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+                    setHasGeminiAuth(true);
+                }
+            } catch (e) {
+                // Ignore process error
+            }
         }
     };
     checkGemini();

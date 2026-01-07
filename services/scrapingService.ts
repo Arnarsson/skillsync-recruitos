@@ -8,12 +8,21 @@ interface FirecrawlResponse {
   error?: string;
 }
 
+// Helper to safely get env vars
+const getEnv = (key: string) => {
+  try {
+    return (typeof process !== 'undefined' && process.env) ? process.env[key] : undefined;
+  } catch (e) {
+    return undefined;
+  }
+};
+
 /**
  * Generic scraper using Firecrawl.
  * STRICT MODE: Requires a valid API Key.
  */
 export const scrapeUrlContent = async (url: string): Promise<string> => {
-  const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || process.env.FIRECRAWL_API_KEY;
+  const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || getEnv('FIRECRAWL_API_KEY');
   
   if (!firecrawlKey) {
     throw new Error("Firecrawl API Key is missing. Please configure it in Settings.");

@@ -2,9 +2,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { scrapeUrlContent } from "./scrapingService";
 
+// Helper to safely get env vars
+const getEnv = (key: string) => {
+  try {
+    return (typeof process !== 'undefined' && process.env) ? process.env[key] : undefined;
+  } catch (e) {
+    return undefined;
+  }
+};
+
 // Initialize with localStorage key if available, otherwise env
 const getAiClient = () => {
-    const apiKey = localStorage.getItem('GEMINI_API_KEY') || process.env.API_KEY || '';
+    const apiKey = localStorage.getItem('GEMINI_API_KEY') || getEnv('API_KEY') || '';
     if (!apiKey) return null;
     return new GoogleGenAI({ apiKey });
 };

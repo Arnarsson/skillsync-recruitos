@@ -102,7 +102,11 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
     setSourcingLog([]);
     addToLog(`Initializing Sourcing Agent for: ${sourcingUrl}`);
     
-    const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || process.env.FIRECRAWL_API_KEY;
+    // Safely get env key
+    let envFirecrawl = '';
+    try { if (typeof process !== 'undefined' && process.env) envFirecrawl = process.env.FIRECRAWL_API_KEY || ''; } catch(e) {}
+
+    const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || envFirecrawl;
     if (!firecrawlKey) {
         addToLog(`⚠️ API Key Missing: Firecrawl key required.`);
         addToast('error', "Firecrawl Key Missing");
@@ -335,9 +339,9 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                         key={c.id} 
                         onClick={() => isDeepProfileUnlocked ? onSelectCandidate(c) : null}
                         className={`
-                            flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all items-start md:items-center relative
+                            flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all duration-300 items-start md:items-center relative
                             ${isDeepProfileUnlocked 
-                                ? 'bg-apex-800/40 border-apex-700 hover:border-emerald-500/50 cursor-pointer group' 
+                                ? 'bg-apex-800/40 border-apex-700 hover:bg-apex-800 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-900/10 hover:-translate-y-0.5 cursor-pointer group' 
                                 : 'bg-apex-900 border-apex-800 opacity-80'
                             }
                         `}
@@ -354,19 +358,26 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                             
                             {/* Persona Badge (New) */}
                             {c.persona && (
-                                <div className="mt-2 flex items-center space-x-2">
+                                <div className="mt-2 flex items-center space-x-3">
                                     <span className="text-[9px] bg-purple-900/30 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
                                         <i className="fa-solid fa-fingerprint mr-1"></i> {c.persona.archetype}
                                     </span>
                                     {/* Flags */}
                                     {c.persona.redFlags?.length > 0 && (
-                                        <div className="relative group/flag">
-                                            <i className="fa-solid fa-flag text-red-500 text-xs cursor-help"></i>
-                                            <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black border border-red-900 rounded shadow-lg text-[10px] text-red-300 hidden group-hover/flag:block z-20">
-                                                <strong>Risks:</strong>
-                                                <ul className="list-disc list-inside mt-1">
-                                                    {c.persona.redFlags.slice(0, 2).map((flag, i) => <li key={i}>{flag}</li>)}
+                                        <div className="relative group/flag flex items-center cursor-help">
+                                            <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 transition-colors">
+                                                <i className="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                                                <span className="text-[9px] font-bold">{c.persona.redFlags.length} Risk{c.persona.redFlags.length > 1 ? 's' : ''}</span>
+                                            </div>
+                                            
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full left-0 mb-2 w-56 p-3 bg-apex-950 border border-red-900/50 rounded-lg shadow-xl text-[10px] text-red-200 hidden group-hover/flag:block z-30">
+                                                <div className="font-bold text-red-400 uppercase tracking-wider mb-1">Detected Risks</div>
+                                                <ul className="list-disc list-inside space-y-1 text-slate-300">
+                                                    {c.persona.redFlags.map((flag, i) => <li key={i} className="leading-tight">{flag}</li>)}
                                                 </ul>
+                                                {/* Tooltip Arrow */}
+                                                <div className="absolute top-full left-4 -mt-1 w-2 h-2 bg-apex-950 border-r border-b border-red-900/50 transform rotate-45"></div>
                                             </div>
                                         </div>
                                     )}
@@ -398,7 +409,7 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                         {/* Action */}
                         <div className="col-span-2 flex justify-end w-full md:w-auto mt-2 md:mt-0">
                             {isDeepProfileUnlocked ? (
-                                <button className="w-full md:w-auto px-4 py-2 bg-apex-800 hover:bg-apex-700 text-emerald-400 text-xs font-bold rounded border border-emerald-900/30 flex items-center justify-center transition-colors">
+                                <button className="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-900/20 border border-emerald-500/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 group-hover:shadow-emerald-500/40">
                                     <i className="fa-solid fa-file-invoice mr-2"></i> View Report
                                 </button>
                             ) : (
@@ -406,10 +417,10 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                                     onClick={(e) => handleUnlockProfile(e, c.id, c.name)}
                                     disabled={isProcessingThis}
                                     className={`
-                                        w-full md:w-auto px-4 py-2 text-xs font-bold rounded border flex items-center justify-center transition-all shadow-sm
+                                        w-full md:w-auto px-4 py-2 text-xs font-bold rounded-lg border flex items-center justify-center transition-all shadow-sm
                                         ${isProcessingThis 
                                             ? 'bg-apex-800 border-apex-700 text-slate-500 cursor-wait' 
-                                            : 'bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 border-slate-700 hover:shadow-emerald-500/20'
+                                            : 'bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 border-slate-700 hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5'
                                         }
                                     `}
                                 >

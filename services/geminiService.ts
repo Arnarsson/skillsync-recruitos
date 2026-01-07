@@ -2,9 +2,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Candidate, InterviewQuestion, WorkstyleIndicator, ConfidenceLevel, FunnelStage, Persona, CompanyMatch } from '../types';
 
+// Helper to safely get env vars
+const getEnv = (key: string) => {
+  try {
+    return (typeof process !== 'undefined' && process.env) ? process.env[key] : undefined;
+  } catch (e) {
+    return undefined;
+  }
+};
+
 // Initialize with localStorage key if available, otherwise env
 const getAiClient = () => {
-    const apiKey = localStorage.getItem('GEMINI_API_KEY') || process.env.API_KEY || '';
+    const apiKey = localStorage.getItem('GEMINI_API_KEY') || getEnv('API_KEY') || '';
     if (!apiKey) return null;
     return new GoogleGenAI({ apiKey });
 };
@@ -178,7 +187,7 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
         const calculatedScore = calculateScore(data.scoreBreakdown);
 
         // Generate UUID for Supabase compatibility
-        const uuid = crypto.randomUUID ? crypto.randomUUID() : `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
+        const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
 
         return {
             id: uuid,
