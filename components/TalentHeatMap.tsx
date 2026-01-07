@@ -15,20 +15,49 @@ interface Props {
   addToast: (type: ToastType, message: string) => void;
 }
 
+const DEMO_CANDIDATE_PROFILE = `Sarah Chen
+Senior Software Engineer at Stripe
+Copenhagen, Denmark
+
+About:
+Passionate about building scalable fintech solutions. Currently leading the European payments integration team at Stripe. Previously at Klarna where I helped scale their checkout platform to handle 2M+ daily transactions.
+
+Experience:
+• Senior Software Engineer, Stripe (2021 - Present)
+  - Lead engineer for European payment integrations
+  - Architected real-time fraud detection pipeline processing 500K events/sec
+  - Mentored 4 junior engineers, 2 promoted to mid-level
+
+• Software Engineer, Klarna (2018 - 2021)
+  - Core contributor to checkout platform (React, Node.js)
+  - Reduced payment latency by 40% through infrastructure optimization
+  - Led migration from monolith to microservices
+
+• Junior Developer, Danske Bank (2016 - 2018)
+  - Built internal tools for transaction monitoring
+  - First exposure to financial regulations and compliance
+
+Education:
+MSc Computer Science, Technical University of Denmark (DTU), 2016
+BSc Software Engineering, Aarhus University, 2014
+
+Skills: TypeScript, React, Node.js, Python, PostgreSQL, Redis, AWS, Kubernetes, Payment Systems`;
+
 const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, onSelectCandidate, addToast }) => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sourcing'>('pipeline');
-  
+
   // Sourcing State
   const [sourcingUrl, setSourcingUrl] = useState('');
   const [isSourcing, setIsSourcing] = useState(false);
   const [sourcingLog, setSourcingLog] = useState<string[]>([]);
-  
+
   // Import Modal State
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   // Loading state for specific candidate actions
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -160,19 +189,39 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
       setIsImporting(true);
       try {
           const newCandidate = await analyzeCandidateProfile(importText, jobContext);
-          
+
           await candidateService.create(newCandidate);
 
           setCandidates(prev => [newCandidate, ...prev]);
           setShowImport(false);
           setImportText('');
-          onSpendCredits(10, `Imported Candidate: ${newCandidate.name}`); 
+          onSpendCredits(10, `Imported Candidate: ${newCandidate.name}`);
           addToast('success', "Candidate Imported");
       } catch (e: any) {
           console.error(e);
           addToast('error', e.message || "Failed to analyze candidate. Ensure Gemini API key is active.");
       } finally {
           setIsImporting(false);
+      }
+  };
+
+  const handleLoadDemoCandidate = async () => {
+      if (!jobContext) {
+          addToast('warning', "Please set a Job Context in Step 1 first.");
+          return;
+      }
+      setIsDemoLoading(true);
+      addToast('info', 'Analyzing demo candidate with AI...');
+      try {
+          const newCandidate = await analyzeCandidateProfile(DEMO_CANDIDATE_PROFILE, jobContext);
+          await candidateService.create(newCandidate);
+          setCandidates(prev => [newCandidate, ...prev]);
+          addToast('success', "Demo candidate added to pipeline");
+      } catch (e: any) {
+          console.error(e);
+          addToast('error', e.message || "Failed to analyze demo candidate.");
+      } finally {
+          setIsDemoLoading(false);
       }
   };
 
@@ -206,8 +255,16 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
             </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-            <button 
+        <div className="flex items-center space-x-3">
+            <button
+                onClick={handleLoadDemoCandidate}
+                disabled={isDemoLoading}
+                className="hidden md:flex items-center px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 hover:text-white bg-apex-800 hover:bg-apex-700 border border-apex-700 hover:border-slate-600 rounded transition-all"
+            >
+                {isDemoLoading ? <i className="fa-solid fa-circle-notch fa-spin mr-1.5"></i> : <i className="fa-solid fa-flask mr-1.5 text-[9px]"></i>}
+                {isDemoLoading ? 'Loading...' : 'Demo'}
+            </button>
+            <button
                 onClick={() => setShowImport(true)}
                 className="hidden md:flex items-center px-4 py-2 bg-apex-800 border border-apex-600 hover:bg-apex-700 text-slate-300 text-xs font-bold rounded transition-all"
             >
