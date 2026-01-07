@@ -130,22 +130,45 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
     setIsSourcing(true);
     setSourcingLog([]);
     addToLog(`Initializing Sourcing Agent for: ${sourcingUrl}`);
-    
-    // Safely get env key
+
+    // Check for appropriate API key based on URL
+    const isLinkedIn = sourcingUrl.toLowerCase().includes('linkedin.com');
+
+    // Safely get env keys
     let envFirecrawl = '';
-    try { if (typeof process !== 'undefined' && process.env) envFirecrawl = process.env.FIRECRAWL_API_KEY || ''; } catch(e) {}
+    let envBrightData = '';
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        envFirecrawl = process.env.FIRECRAWL_API_KEY || '';
+        envBrightData = process.env.BRIGHTDATA_API_KEY || '';
+      }
+    } catch(e) {}
 
     const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || envFirecrawl;
-    if (!firecrawlKey) {
+    const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || envBrightData;
+
+    if (isLinkedIn && !brightDataKey) {
+        addToLog(`⚠️ API Key Missing: BrightData key required for LinkedIn profiles.`);
+        addToast('error', "BrightData API Key Missing. Configure it in Settings.");
+        setIsSourcing(false);
+        return;
+    }
+
+    if (!isLinkedIn && !firecrawlKey) {
         addToLog(`⚠️ API Key Missing: Firecrawl key required.`);
         addToast('error', "Firecrawl Key Missing");
         setIsSourcing(false);
         return;
     }
-    
+
     try {
         // 1. Scrape
-        addToLog(`Step 1: Ingesting public profile data...`);
+        if (isLinkedIn) {
+          addToLog(`Step 1: Scraping LinkedIn profile via BrightData...`);
+          addToLog(`(This may take 10-30 seconds)`);
+        } else {
+          addToLog(`Step 1: Ingesting public profile data...`);
+        }
         const rawMarkdown = await scrapeUrlContent(sourcingUrl);
         addToLog(`✓ Data Ingested (${rawMarkdown.length} chars).`);
 
