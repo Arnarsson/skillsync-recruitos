@@ -18,6 +18,37 @@ const getAiClient = () => {
     return new GoogleGenAI({ apiKey });
 };
 
+// Retry wrapper for transient errors (503, 429, etc.)
+const withRetry = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 2000
+): Promise<T> => {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      const errorMessage = error?.message || String(error);
+      const isRetryable = errorMessage.includes('503') ||
+                          errorMessage.includes('overloaded') ||
+                          errorMessage.includes('429') ||
+                          errorMessage.includes('rate limit') ||
+                          errorMessage.includes('UNAVAILABLE');
+
+      if (!isRetryable || attempt === maxRetries - 1) {
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Gemini API error (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+};
+
 // Helper to calculate a rough score based on breakdown
 const calculateScore = (breakdown: any) => {
     if (!breakdown) return 0;
@@ -60,7 +91,7 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -86,7 +117,7 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
                     }
                 }
             }
-        });
+        }));
 
         if (!response.text) throw new Error("No response from AI");
         const data = JSON.parse(response.text);
@@ -151,7 +182,7 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -180,7 +211,7 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
                     }
                 }
             }
-        });
+        }));
 
         if (!response.text) throw new Error("No response from AI");
         const data = JSON.parse(response.text);
@@ -197,8 +228,15 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
             persona: personaData, // Attach persona if it exists
             ...data
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Analysis Error:", error);
+        const errorMessage = error?.message || String(error);
+        if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+            throw new Error("Gemini API is temporarily overloaded. Please try again in a few seconds.");
+        }
+        if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+            throw new Error("API rate limit reached. Please wait a moment and try again.");
+        }
         throw new Error("Failed to analyze candidate. Verify API Key.");
     }
 };
@@ -241,7 +279,7 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await withRetry(() => ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
@@ -293,7 +331,7 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
           }
         }
       }
-    });
+    }));
 
     const text = response.text;
     if (text) return JSON.parse(text);
@@ -324,10 +362,10 @@ export const generateOutreach = async (candidate: Candidate, context: string): P
     `;
     
     try {
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt
-        });
+        }));
         return response.text || "Drafting error.";
     } catch (e) {
         console.error(e);
