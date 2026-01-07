@@ -11,6 +11,51 @@ interface Props {
   addToast: (type: ToastType, message: string) => void;
 }
 
+const DEMO_JOB_CONTEXT = `Role: Senior Full-Stack Engineer
+Location: Copenhagen, Denmark (Hybrid - 3 days onsite)
+Source: Demo Data
+
+Job Summary:
+We are seeking an experienced Senior Full-Stack Engineer to join our growing fintech team. You will be responsible for building scalable payment infrastructure, leading technical architecture decisions, and mentoring junior developers. This role offers significant ownership and the opportunity to shape our core platform.
+
+Requirements:
+- 5+ years of experience with TypeScript/JavaScript and React
+- Strong backend experience with Node.js, Python, or Go
+- Experience with PostgreSQL and Redis
+- Familiarity with cloud infrastructure (AWS/GCP)
+- Experience with payment systems or financial services (preferred)
+- Strong communication skills and ability to work cross-functionally
+- Experience leading technical projects and mentoring others
+- BS/MS in Computer Science or equivalent experience`;
+
+const DEMO_CANDIDATE_PROFILE = `Sarah Chen
+Senior Software Engineer at Stripe
+Copenhagen, Denmark
+
+About:
+Passionate about building scalable fintech solutions. Currently leading the European payments integration team at Stripe. Previously at Klarna where I helped scale their checkout platform to handle 2M+ daily transactions.
+
+Experience:
+• Senior Software Engineer, Stripe (2021 - Present)
+  - Lead engineer for European payment integrations
+  - Architected real-time fraud detection pipeline processing 500K events/sec
+  - Mentored 4 junior engineers, 2 promoted to mid-level
+
+• Software Engineer, Klarna (2018 - 2021)
+  - Core contributor to checkout platform (React, Node.js)
+  - Reduced payment latency by 40% through infrastructure optimization
+  - Led migration from monolith to microservices
+
+• Junior Developer, Danske Bank (2016 - 2018)
+  - Built internal tools for transaction monitoring
+  - First exposure to financial regulations and compliance
+
+Education:
+MSc Computer Science, Technical University of Denmark (DTU), 2016
+BSc Software Engineering, Aarhus University, 2014
+
+Skills: TypeScript, React, Node.js, Python, PostgreSQL, Redis, AWS, Kubernetes, Payment Systems`;
+
 const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => {
   const navigate = useNavigate();
   // jobContext acts as the job description here
@@ -21,6 +66,12 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFetchingJob, setIsFetchingJob] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const handleLoadDemo = () => {
+    setJobContext(DEMO_JOB_CONTEXT);
+    setCompanyUrl('https://linkedin.com/company/stripe');
+    addToast('info', 'Demo data loaded. Click Initialize to continue.');
+  };
 
   const handleFetchJob = async () => {
     if (!jobUrl) return;
@@ -68,10 +119,18 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => 
     <div className="h-full flex flex-col p-4 md:p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
       
       {/* Header */}
-      <div className="mb-6 md:mb-8">
-        <span className="text-emerald-400 font-mono text-[10px] uppercase tracking-widest bg-emerald-900/30 border border-emerald-900/50 px-3 py-1 rounded">Step 1: Free</span>
-        <h1 className="text-2xl md:text-3xl font-bold text-white mt-3">Context & Job Intake</h1>
-        <p className="text-slate-400 mt-1 text-sm">Provide the job context. This step establishes the baseline for AI alignment scoring.</p>
+      <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <span className="text-emerald-400 font-mono text-[10px] uppercase tracking-widest bg-emerald-900/30 border border-emerald-900/50 px-3 py-1 rounded">Step 1: Free</span>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mt-3">Context & Job Intake</h1>
+          <p className="text-slate-400 mt-1 text-sm">Provide the job context. This step establishes the baseline for AI alignment scoring.</p>
+        </div>
+        <button
+          onClick={handleLoadDemo}
+          className="self-start px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 hover:text-white bg-apex-800 hover:bg-apex-700 border border-apex-700 hover:border-slate-600 rounded transition-all flex items-center gap-1.5"
+        >
+          <i className="fa-solid fa-flask text-[9px]"></i> Load Demo
+        </button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 md:gap-8 max-w-7xl">

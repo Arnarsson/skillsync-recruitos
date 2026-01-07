@@ -2,99 +2,121 @@
 import { supabase } from './supabase';
 import { Candidate } from '../types';
 
+// In-memory cache for candidates when Supabase is unavailable or schema differs
+let localCandidateCache: Candidate[] = [];
+
 export const candidateService = {
   async fetchAll(): Promise<Candidate[]> {
     if (!supabase) {
-      console.warn('Supabase not connected. Returning empty list.');
-      return [];
+      console.warn('Supabase not connected. Using local cache.');
+      return localCandidateCache;
     }
 
-    const { data, error } = await supabase
-      .from('candidates')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Supabase Fetch Error:', error);
-      // Fallback to empty list instead of crashing app on initial load
-      return [];
+    try {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('id, name, current_role, company, location, match_score, evidence_summary, persona, linkedin_url, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase Fetch Error:', error);
+        // Use local cache as fallback
+        return localCandidateCache;
+      }
+
+      // Map DB rows to Candidate objects
+      const candidates = data.map((row: any) => ({
+        id: row.id,
+        name: row.name || 'Unknown',
+        currentRole: row.current_role || 'Unknown',
+        company: row.company || 'Unknown',
+        location: row.location || 'Unknown',
+        yearsExperience: 0,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || 'C')}&background=random`,
+        alignmentScore: row.match_score || 0,
+        shortlistSummary: row.evidence_summary || '',
+        keyEvidence: [],
+        risks: [],
+        unlockedSteps: [],
+        persona: row.persona ? (typeof row.persona === 'string' ? JSON.parse(row.persona) : row.persona) : undefined,
+        sourceUrl: row.linkedin_url || ''
+      } as Candidate));
+
+      // Update local cache
+      localCandidateCache = candidates;
+      return candidates;
+    } catch (err) {
+      console.error('Supabase connection error:', err);
+      return localCandidateCache;
     }
-    
-    // Map DB rows to Candidate objects
-    return data.map((row: any) => {
-        // If 'data' column exists and has content, use it as the source of truth for the object
-        if (row.data && typeof row.data === 'object') {
-            return { ...row.data, id: row.id };
-        }
-        
-        // Fallback for rows created without the 'data' blob (legacy)
-        return {
-            id: row.id,
-            name: row.name,
-            currentRole: row.current_role || 'Unknown',
-            company: row.company || 'Unknown',
-            location: row.location || 'Unknown',
-            yearsExperience: 0,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || 'C')}&background=random`,
-            alignmentScore: row.match_score || 0,
-            shortlistSummary: row.evidence_summary || '',
-            keyEvidence: [],
-            risks: [],
-            unlockedSteps: [],
-            persona: row.persona,
-            // Add other defaults as necessary to satisfy Candidate interface
-            ...row
-        } as Candidate;
-    });
   },
 
   async create(candidate: Candidate) {
+    // Always add to local cache first
+    localCandidateCache = [candidate, ...localCandidateCache.filter(c => c.id !== candidate.id)];
+
     if (!supabase) {
-        throw new Error("Database configuration missing. Cannot save candidate.");
+      console.warn("Database not configured. Candidate saved locally only.");
+      return [candidate];
     }
 
-    // Ensure ID is UUID if possible, but let's assume the client generated a UUID or we let DB handle it.
-    // However, we are sending the ID.
-    const { data, error } = await supabase
-      .from('candidates')
-      .insert([{
-        id: candidate.id, 
-        name: candidate.name,
-        linkedin_url: candidate.sourceUrl || '',
-        match_score: candidate.alignmentScore,
-        evidence_summary: candidate.shortlistSummary,
-        persona: candidate.persona,
-        status: 'new',
-        data: candidate // Store full object for full fidelity
-      }])
-      .select();
+    try {
+      const { data, error } = await supabase
+        .from('candidates')
+        .insert([{
+          id: candidate.id,
+          name: candidate.name,
+          current_role: candidate.currentRole,
+          company: candidate.company,
+          location: candidate.location,
+          linkedin_url: candidate.sourceUrl || '',
+          match_score: candidate.alignmentScore,
+          evidence_summary: candidate.shortlistSummary,
+          persona: candidate.persona ? JSON.stringify(candidate.persona) : null,
+          status: 'new'
+        }])
+        .select();
 
-    if (error) {
-       console.error('Supabase Create Error:', error);
-       throw error;
+      if (error) {
+        console.error('Supabase Create Error:', error);
+        // Still return the candidate since it's in local cache
+        return [candidate];
+      }
+      return data;
+    } catch (err) {
+      console.error('Supabase connection error:', err);
+      return [candidate];
     }
-    return data;
   },
 
   async update(candidate: Candidate) {
-     if (!supabase) {
-        throw new Error("Database configuration missing. Cannot update candidate.");
-     }
+    // Update local cache first
+    localCandidateCache = localCandidateCache.map(c => c.id === candidate.id ? candidate : c);
 
-     const { error } = await supabase
-       .from('candidates')
-       .update({
-         match_score: candidate.alignmentScore,
-         evidence_summary: candidate.shortlistSummary,
-         persona: candidate.persona,
-         data: candidate,
-         status: 'processed'
-       })
-       .eq('id', candidate.id);
-     
-     if (error) {
-         console.error('Supabase Update Error:', error);
-         throw error;
-     }
+    if (!supabase) {
+      console.warn("Database not configured. Candidate updated locally only.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('candidates')
+        .update({
+          current_role: candidate.currentRole,
+          company: candidate.company,
+          location: candidate.location,
+          match_score: candidate.alignmentScore,
+          evidence_summary: candidate.shortlistSummary,
+          persona: candidate.persona ? JSON.stringify(candidate.persona) : null,
+          status: 'processed'
+        })
+        .eq('id', candidate.id);
+
+      if (error) {
+        console.error('Supabase Update Error:', error);
+      }
+    } catch (err) {
+      console.error('Supabase connection error:', err);
+    }
   }
 };
