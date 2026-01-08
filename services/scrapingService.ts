@@ -647,7 +647,7 @@ const scrapeSingleLinkedInUrl = async (url: string, brightDataKey: string): Prom
  * Tries: main URL → /details/experience/ → /details/skills/
  */
 const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
-  const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
+  const brightDataKey = getEnv('VITE_BRIGHTDATA_API_KEY') || localStorage.getItem('BRIGHTDATA_API_KEY');
 
   if (!brightDataKey) {
     throw new Error("BrightData API Key is missing. Please configure it in Settings or use Quick Paste.");
@@ -1042,7 +1042,7 @@ export const scrapeUrlContent = async (url: string): Promise<string> => {
   }
 
   // Use Firecrawl for non-LinkedIn URLs
-  const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || getEnv('FIRECRAWL_API_KEY');
+  const firecrawlKey = getEnv('VITE_FIRECRAWL_API_KEY') || localStorage.getItem('FIRECRAWL_API_KEY');
 
   if (!firecrawlKey) {
     throw new Error("Firecrawl API Key is missing. Please configure it in Settings.");

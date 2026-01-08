@@ -400,8 +400,8 @@ export const enrichSparseProfile = async (candidate: {
 }): Promise<EnrichedProfile | null> => {
 
   // Get API keys (check localStorage first, then env vars)
-  const serpApiKey = localStorage.getItem('SERP_API_KEY') || getEnv('SERP_API_KEY');
-  const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
+  const serpApiKey = getEnv('VITE_SERP_API_KEY') || localStorage.getItem('SERP_API_KEY');
+  const brightDataKey = getEnv('VITE_BRIGHTDATA_API_KEY') || localStorage.getItem('BRIGHTDATA_API_KEY');
 
   try {
     log.debug('===== PROFILE ENRICHMENT PIPELINE =====', {
