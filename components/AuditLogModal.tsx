@@ -120,7 +120,7 @@ const AuditLogModal: React.FC<Props> = ({ credits, logs, onClose }) => {
                                             <span className="text-sm font-bold text-white">{log.description}</span>
                                         </div>
                                         <i className={`fa-solid fa-chevron-down text-slate-500 transition-transform ${expandedLog === log.id ? 'rotate-180' : ''}`}></i>
-                                    </div>
+                                    </button>
 
                                     {expandedLog === log.id && (
                                         <div className="p-4 bg-black/30 border-t border-apex-700 font-mono text-xs text-emerald-400/80 overflow-x-auto">
