@@ -1,15 +1,44 @@
 
 import { supabase } from './supabase';
 import { Candidate, FunnelStage } from '../types';
+import { log } from './logger';
 
-// In-memory cache for candidates when Supabase is unavailable or schema differs
-let localCandidateCache: Candidate[] = [];
+// LocalStorage key for candidates when Supabase is unavailable
+const CANDIDATES_STORAGE_KEY = 'apex_candidates';
+
+// Helper functions for localStorage persistence
+const loadFromLocalStorage = (): Candidate[] => {
+  try {
+    const stored = localStorage.getItem(CANDIDATES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (err: unknown) {
+    log.error('Failed to load candidates from localStorage', err, {
+      service: 'candidateService',
+      operation: 'loadFromLocalStorage'
+    });
+    return [];
+  }
+};
+
+const saveToLocalStorage = (candidates: Candidate[]): void => {
+  try {
+    localStorage.setItem(CANDIDATES_STORAGE_KEY, JSON.stringify(candidates));
+  } catch (err: unknown) {
+    log.error('Failed to save candidates to localStorage', err, {
+      service: 'candidateService',
+      operation: 'saveToLocalStorage'
+    });
+  }
+};
 
 export const candidateService = {
   async fetchAll(): Promise<Candidate[]> {
     if (!supabase) {
-      console.warn('Supabase not connected. Using local cache.');
-      return localCandidateCache;
+      log.warn('Supabase not connected. Using localStorage persistence.', {
+        service: 'candidateService',
+        operation: 'fetchAll'
+      });
+      return loadFromLocalStorage();
     }
 
     try {
@@ -19,12 +48,37 @@ export const candidateService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase Fetch Error:', error);
-        return localCandidateCache;
+        log.db('SELECT', 'candidates', false, error);
+        return loadFromLocalStorage();
       }
 
       // Map DB rows to Candidate objects using actual schema
-      const candidates = data.map((row: any) => ({
+      const candidates = data.map((row: {
+        id: string;
+        name: string | null;
+        role_title: string | null;
+        company: string | null;
+        location: string | null;
+        years_experience: number | null;
+        avatar_url: string | null;
+        alignment_score: number | null;
+        score_breakdown: unknown;
+        shortlist_summary: string | null;
+        key_evidence: string[] | null;
+        risks: string[] | null;
+        deep_analysis: string | null;
+        culture_fit: string | null;
+        company_match: unknown;
+        indicators: unknown;
+        interview_guide: unknown;
+        unlocked_steps: FunnelStage[] | null;
+        source_url: string | null;
+        raw_profile_text: string | null;
+        persona: unknown;
+        score_confidence: string | null;
+        score_drivers: string[] | null;
+        score_drags: string[] | null;
+      }) => ({
         id: row.id,
         name: row.name || 'Unknown',
         currentRole: row.role_title || 'Unknown',
@@ -39,27 +93,40 @@ export const candidateService = {
         risks: row.risks || [],
         deepAnalysis: row.deep_analysis || undefined,
         cultureFit: row.culture_fit || undefined,
+        companyMatch: row.company_match || undefined,
         indicators: row.indicators || undefined,
         interviewGuide: row.interview_guide || undefined,
         unlockedSteps: row.unlocked_steps || [],
         sourceUrl: row.source_url || '',
-        rawProfileText: row.raw_profile_text || ''
+        rawProfileText: row.raw_profile_text || '',
+        persona: row.persona || undefined,
+        scoreConfidence: (row.score_confidence as 'high' | 'moderate' | 'low') || undefined,
+        scoreDrivers: row.score_drivers || undefined,
+        scoreDrags: row.score_drags || undefined
       } as Candidate));
 
-      localCandidateCache = candidates;
+      saveToLocalStorage(candidates);
       return candidates;
-    } catch (err) {
-      console.error('Supabase connection error:', err);
-      return localCandidateCache;
+    } catch (err: unknown) {
+      log.error('Supabase connection error', err, {
+        service: 'candidateService',
+        operation: 'fetchAll'
+      });
+      return loadFromLocalStorage();
     }
   },
 
   async create(candidate: Candidate) {
     // Always add to local cache first
-    localCandidateCache = [candidate, ...localCandidateCache.filter(c => c.id !== candidate.id)];
+    const cachedCandidates = loadFromLocalStorage();
+    const updatedCandidates = [candidate, ...cachedCandidates.filter(c => c.id !== candidate.id)];
+    saveToLocalStorage(updatedCandidates);
 
     if (!supabase) {
-      console.warn("Database not configured. Candidate saved locally only.");
+      log.warn('Database not configured. Candidate saved locally only.', {
+        service: 'candidateService',
+        operation: 'create'
+      });
       return [candidate];
     }
 
@@ -81,27 +148,43 @@ export const candidateService = {
           shortlist_summary: candidate.shortlistSummary,
           key_evidence: candidate.keyEvidence || [],
           risks: candidate.risks || [],
-          unlocked_steps: candidate.unlockedSteps || [FunnelStage.SHORTLIST]
+          unlocked_steps: candidate.unlockedSteps || [FunnelStage.SHORTLIST],
+          // Enhanced scoring fields
+          score_confidence: candidate.scoreConfidence || null,
+          score_drivers: candidate.scoreDrivers || null,
+          score_drags: candidate.scoreDrags || null,
+          // Persona and company match
+          persona: candidate.persona || null,
+          company_match: candidate.companyMatch || null,
+          raw_profile_text: candidate.rawProfileText || null
         }])
         .select();
 
       if (error) {
-        console.error('Supabase Create Error:', error);
+        log.db('INSERT', 'candidates', false, error);
         return [candidate];
       }
       return data;
-    } catch (err) {
-      console.error('Supabase connection error:', err);
+    } catch (err: unknown) {
+      log.error('Supabase connection error', err, {
+        service: 'candidateService',
+        operation: 'create'
+      });
       return [candidate];
     }
   },
 
   async update(candidate: Candidate) {
     // Update local cache first
-    localCandidateCache = localCandidateCache.map(c => c.id === candidate.id ? candidate : c);
+    const cachedCandidates = loadFromLocalStorage();
+    const updatedCandidates = cachedCandidates.map(c => c.id === candidate.id ? candidate : c);
+    saveToLocalStorage(updatedCandidates);
 
     if (!supabase) {
-      console.warn("Database not configured. Candidate updated locally only.");
+      log.warn('Database not configured. Candidate updated locally only.', {
+        service: 'candidateService',
+        operation: 'update'
+      });
       return;
     }
 
@@ -121,15 +204,57 @@ export const candidateService = {
           culture_fit: candidate.cultureFit || null,
           indicators: candidate.indicators || null,
           interview_guide: candidate.interviewGuide || null,
-          unlocked_steps: candidate.unlockedSteps || []
+          unlocked_steps: candidate.unlockedSteps || [],
+          // Enhanced scoring fields
+          score_confidence: candidate.scoreConfidence || null,
+          score_drivers: candidate.scoreDrivers || null,
+          score_drags: candidate.scoreDrags || null,
+          // Persona and company match
+          persona: candidate.persona || null,
+          company_match: candidate.companyMatch || null,
+          raw_profile_text: candidate.rawProfileText || null
         })
         .eq('id', candidate.id);
 
       if (error) {
-        console.error('Supabase Update Error:', error);
+        log.db('UPDATE', 'candidates', false, error);
       }
-    } catch (err) {
-      console.error('Supabase connection error:', err);
+    } catch (err: unknown) {
+      log.error('Supabase connection error', err, {
+        service: 'candidateService',
+        operation: 'update'
+      });
+    }
+  },
+
+  async delete(candidateId: string) {
+    // Remove from local cache first
+    const cachedCandidates = loadFromLocalStorage();
+    const updatedCandidates = cachedCandidates.filter(c => c.id !== candidateId);
+    saveToLocalStorage(updatedCandidates);
+
+    if (!supabase) {
+      log.warn('Database not configured. Candidate deleted locally only.', {
+        service: 'candidateService',
+        operation: 'delete'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('candidates')
+        .delete()
+        .eq('id', candidateId);
+
+      if (error) {
+        log.db('DELETE', 'candidates', false, error);
+      }
+    } catch (err: unknown) {
+      log.error('Supabase connection error', err, {
+        service: 'candidateService',
+        operation: 'delete'
+      });
     }
   }
 };

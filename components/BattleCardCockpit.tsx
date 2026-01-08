@@ -1,359 +1,1039 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip } from 'recharts';
-import { Candidate, FunnelStage, WorkstyleIndicator, InterviewQuestion, PRICING, ConfidenceLevel, CREDITS_TO_EUR } from '../types';
+import { Candidate, FunnelStage, PRICING, CREDITS_TO_EUR } from '../types';
 import { ToastType } from './ToastNotification';
+import { PersonaIntelligencePanel } from './visualizations/PersonaIntelligencePanel';
+import { NetworkDossierPanel } from './visualizations/NetworkDossierPanel';
+import {
+  getArchetypeIcon,
+  getArchetypeInfo,
+  getMatchLevel,
+  formatSalaryBand,
+  calculatePromotionFrequency,
+  getRiskLevelColor
+} from '../utils/archetypes';
 
 interface Props {
-  candidate: Candidate | null;
-  credits: number;
-  onSpendCredits: (amount: number, description?: string) => void;
-  onClose: () => void;
-  onOpenOutreach: (c: Candidate) => void;
-  addToast: (type: ToastType, message: string) => void;
+    candidate: Candidate | null;
+    credits: number;
+    onSpendCredits: (amount: number, description?: string) => void;
+    onClose: () => void;
+    onOpenOutreach: (c: Candidate) => void;
+    addToast: (type: ToastType, message: string) => void;
 }
 
 const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onClose, onOpenOutreach, addToast }) => {
-  const [showBreakdown, setShowBreakdown] = useState(true);
-  
-  // Use mock data from candidate object or fallbacks
-  const indicators = candidate?.indicators || [];
-  const questions = candidate?.interviewGuide || [];
+    const [showBreakdown, setShowBreakdown] = useState(true);
+    const [activeTab, setActiveTab] = useState<'evidence' | 'persona' | 'company' | 'network'>('evidence');
 
-  if (!candidate) return null;
+    const handleToggleBreakdown = useCallback(() => {
+        setShowBreakdown(prev => !prev);
+    }, []);
 
-  const isOutreachUnlocked = candidate.unlockedSteps.includes(FunnelStage.OUTREACH);
+    const handleSetActiveTab = useCallback((tab: 'evidence' | 'persona' | 'company' | 'network') => {
+        setActiveTab(tab);
+    }, []);
 
-  const handleUnlockOutreach = () => {
-    if (credits < PRICING.OUTREACH) {
-        addToast('error', "Insufficient credits.");
-        return;
-    }
-    onSpendCredits(PRICING.OUTREACH, `Unlocked Outreach Protocol: ${candidate.name}`);
-    addToast('success', "Outreach Protocol Unlocked");
-    onOpenOutreach(candidate);
-  };
+    // Use mock data from candidate object or fallbacks
+    const indicators = candidate?.indicators || [];
+    const questions = candidate?.interviewGuide || [];
 
-  const handleRefresh = () => {
-      if (credits < PRICING.REFRESH) {
-          addToast('error', "Insufficient credits.");
-          return;
-      }
-      if(window.confirm(`Refresh data for 1 Credit (~€${(PRICING.REFRESH * CREDITS_TO_EUR).toFixed(2)})?`)) {
-          onSpendCredits(PRICING.REFRESH, `Manual Profile Refresh: ${candidate.name}`);
-          addToast('success', "Profile refreshed");
-      }
-  };
+    const isOutreachUnlocked = candidate?.unlockedSteps.includes(FunnelStage.OUTREACH) || false;
 
-  // Prepare Data for Radar Chart with fallbacks
-  const radarData = candidate.scoreBreakdown ? [
-      { subject: 'Skills', A: candidate.scoreBreakdown.skills?.percentage || 0, fullMark: 100 },
-      { subject: 'Exp.', A: candidate.scoreBreakdown.experience?.percentage || 0, fullMark: 100 },
-      { subject: 'Industry', A: candidate.scoreBreakdown.industry?.percentage || 0, fullMark: 100 },
-      { subject: 'Seniority', A: candidate.scoreBreakdown.seniority?.percentage || 0, fullMark: 100 },
-      { subject: 'Location', A: candidate.scoreBreakdown.location?.percentage || 0, fullMark: 100 },
-  ] : [];
+    const handleUnlockOutreach = useCallback(() => {
+        if (!candidate) return;
+        if (credits < PRICING.OUTREACH) {
+            addToast('error', "Insufficient credits.");
+            return;
+        }
+        onSpendCredits(PRICING.OUTREACH, `Unlocked Outreach Protocol: ${candidate.name}`);
+        addToast('success', "Outreach Protocol Unlocked");
+        onOpenOutreach(candidate);
+    }, [credits, candidate, onSpendCredits, addToast, onOpenOutreach]);
 
-  return (
-    <div className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[700px] bg-apex-900 border-l border-apex-700 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col font-sans">
-      
-      {/* 1. Header Area */}
-      <div className="p-4 md:p-6 bg-apex-800 border-b border-apex-700 flex justify-between items-start">
-        <div className="flex items-center space-x-3 md:space-x-5">
-             <img src={candidate.avatar} alt="avatar" className="w-12 h-12 md:w-16 md:h-16 rounded-full border-2 border-emerald-500/50 shadow-lg" />
-             <div>
-                <h2 className="text-xl md:text-2xl font-bold text-white mb-1">{candidate.name}</h2>
-                <div className="flex items-center text-xs text-slate-400 space-x-3">
-                    <span><i className="fa-solid fa-briefcase mr-1"></i> {candidate.yearsExperience}y exp</span>
-                    <span><i className="fa-solid fa-location-dot mr-1"></i> {candidate.location}</span>
-                </div>
-             </div>
+    const handleRefresh = useCallback(() => {
+        if (!candidate) return;
+        if (credits < PRICING.REFRESH) {
+            addToast('error', "Insufficient credits.");
+            return;
+        }
+        if (window.confirm(`Refresh data for 1 Credit (~€${(PRICING.REFRESH * CREDITS_TO_EUR).toFixed(2)})?`)) {
+            onSpendCredits(PRICING.REFRESH, `Manual Profile Refresh: ${candidate.name}`);
+            addToast('success', "Profile refreshed");
+        }
+    }, [credits, candidate, onSpendCredits, addToast]);
+
+    const handleShare = useCallback(async () => {
+        if (!candidate) return;
+
+        const shareText = `
+📋 CANDIDATE PROFILE: ${candidate.name}
+
+🎯 ALIGNMENT SCORE: ${candidate.alignmentScore}%
+💼 CURRENT ROLE: ${candidate.currentRole || 'N/A'} at ${candidate.company || 'N/A'}
+📍 LOCATION: ${candidate.location || 'N/A'}
+📊 EXPERIENCE: ${candidate.yearsExperience || 0} years
+
+${candidate.shortlistSummary ? `📝 SUMMARY:\n${candidate.shortlistSummary}\n` : ''}
+${candidate.keyEvidence && candidate.keyEvidence.length > 0 ? `\n✅ KEY STRENGTHS:\n${candidate.keyEvidence.map(e => `• ${e}`).join('\n')}\n` : ''}
+${candidate.risks && candidate.risks.length > 0 ? `\n⚠️ CONSIDERATIONS:\n${candidate.risks.map(r => `• ${r}`).join('\n')}\n` : ''}
+${candidate.deepAnalysis ? `\n🔍 DEEP ANALYSIS:\n${candidate.deepAnalysis}\n` : ''}
+---
+Generated by 6Degrees Recruitment OS
+        `.trim();
+
+        try {
+            // Try Web Share API first (mobile-friendly)
+            if (navigator.share) {
+                await navigator.share({
+                    title: `Profile: ${candidate.name}`,
+                    text: shareText
+                });
+                addToast('success', 'Profile shared successfully');
+            } else {
+                // Fallback to clipboard
+                await navigator.clipboard.writeText(shareText);
+                addToast('success', 'Profile copied to clipboard');
+            }
+        } catch (error) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Share error:', error);
+            }
+            addToast('error', 'Failed to share profile');
+        }
+    }, [candidate, addToast]);
+
+    const handleDownloadPDF = useCallback(() => {
+        if (!candidate) return;
+
+        // Create printable HTML content
+        const printContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>${candidate.name} - Profile</title>
+    <style>
+        @media print {
+            @page { margin: 2cm; }
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            border-bottom: 3px solid #059669;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #059669;
+            margin: 0 0 10px 0;
+        }
+        .score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #059669;
+            margin: 20px 0;
+        }
+        .section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+        }
+        .section h2 {
+            color: #059669;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .meta-item {
+            padding: 10px;
+            background: #f9fafb;
+            border-left: 3px solid #059669;
+        }
+        .meta-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .meta-value {
+            font-size: 14px;
+            color: #111827;
+            margin-top: 4px;
+        }
+        .list-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        .indicator {
+            background: #f0fdf4;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #059669;
+        }
+        .question {
+            background: #fef3c7;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${candidate.name}</h1>
+        <div class="score">${candidate.alignmentScore}% Match</div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Profile Overview</h2>
+        <div class="meta">
+            <div class="meta-item">
+                <div class="meta-label">Current Role</div>
+                <div class="meta-value">${candidate.currentRole || 'Not specified'}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Company</div>
+                <div class="meta-value">${candidate.company || 'Not specified'}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Location</div>
+                <div class="meta-value">${candidate.location || 'Not specified'}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Experience</div>
+                <div class="meta-value">${candidate.yearsExperience || 0} years</div>
+            </div>
         </div>
-        <div className="flex flex-col items-end space-y-2">
-            <div className="flex items-center space-x-2">
-                <button 
-                    onClick={handleRefresh}
-                    className="hidden md:flex text-[10px] text-slate-400 hover:text-white items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors"
-                    title="Refresh from LinkedIn (1 Credit)"
+    </div>
+
+    ${candidate.shortlistSummary ? `
+    <div class="section">
+        <h2>📝 Executive Summary</h2>
+        <p>${candidate.shortlistSummary}</p>
+    </div>
+    ` : ''}
+
+    ${candidate.keyEvidence && candidate.keyEvidence.length > 0 ? `
+    <div class="section">
+        <h2>✅ Key Strengths</h2>
+        ${candidate.keyEvidence.map(e => `<div class="list-item">• ${e}</div>`).join('')}
+    </div>
+    ` : ''}
+
+    ${candidate.risks && candidate.risks.length > 0 ? `
+    <div class="section">
+        <h2>⚠️ Considerations</h2>
+        ${candidate.risks.map(r => `<div class="list-item">• ${r}</div>`).join('')}
+    </div>
+    ` : ''}
+
+    ${candidate.deepAnalysis ? `
+    <div class="section">
+        <h2>🔍 Deep Analysis</h2>
+        <p>${candidate.deepAnalysis}</p>
+    </div>
+    ` : ''}
+
+    ${candidate.indicators && candidate.indicators.length > 0 ? `
+    <div class="section">
+        <h2>💡 Workstyle Indicators</h2>
+        ${candidate.indicators.map(ind => `
+            <div class="indicator">
+                <strong>${ind.label}</strong>
+                <p style="margin: 8px 0 0 0; color: #374151;">${ind.observation}</p>
+            </div>
+        `).join('')}
+    </div>
+    ` : ''}
+
+    ${candidate.interviewGuide && candidate.interviewGuide.length > 0 ? `
+    <div class="section">
+        <h2>❓ Interview Guide</h2>
+        ${candidate.interviewGuide.map(q => `
+            <div class="question">
+                <strong>${q.topic}</strong>
+                <p style="margin: 8px 0 0 0; color: #374151;">${q.question}</p>
+                <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 13px;"><em>${q.reason}</em></p>
+            </div>
+        `).join('')}
+    </div>
+    ` : ''}
+
+    <div class="footer">
+        <p>Generated by 6Degrees Recruitment OS</p>
+        <p>Report generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+</body>
+</html>
+        `;
+
+        // Create a blob and download
+        const blob = new Blob([printContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${candidate.name.replace(/\s+/g, '_')}_Profile.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        addToast('success', 'Profile downloaded - open in browser to print as PDF');
+    }, [candidate, addToast]);
+
+    // Prepare Data for Radar Chart with ideal candidate overlay
+    const radarData = useMemo(() => candidate?.scoreBreakdown ? [
+        {
+            subject: 'Skills',
+            candidate: candidate.scoreBreakdown.skills?.percentage || 0,
+            ideal: 100,
+            fullMark: 100
+        },
+        {
+            subject: 'Exp.',
+            candidate: candidate.scoreBreakdown.experience?.percentage || 0,
+            ideal: 100,
+            fullMark: 100
+        },
+        {
+            subject: 'Industry',
+            candidate: candidate.scoreBreakdown.industry?.percentage || 0,
+            ideal: 100,
+            fullMark: 100
+        },
+        {
+            subject: 'Seniority',
+            candidate: candidate.scoreBreakdown.seniority?.percentage || 0,
+            ideal: 100,
+            fullMark: 100
+        },
+        {
+            subject: 'Location',
+            candidate: candidate.scoreBreakdown.location?.percentage || 0,
+            ideal: 100,
+            fullMark: 100
+        },
+    ] : [], [candidate?.scoreBreakdown]);
+
+    if (!candidate) return null;
+
+    return (
+        <div className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[700px] bg-white border-l border-gray-200 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col font-sans">
+
+            {/* 1. Hero Header - Linear/Notion Style */}
+            <div className="bg-white p-8 md:p-12 relative border-b border-gray-200">
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors"
+                    aria-label="Close profile"
                 >
-                    <i className="fa-solid fa-rotate mr-1"></i> Refresh
+                    <i className="fa-solid fa-xmark text-lg"></i>
                 </button>
-                <button onClick={onClose} className="text-slate-500 hover:text-white p-1 ml-2"><i className="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div className="flex items-center space-x-2 hidden md:flex">
-                 <button className="text-[10px] text-slate-400 hover:text-white flex items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors">
-                    <i className="fa-solid fa-share-nodes mr-1"></i> Share
-                 </button>
-                 <button className="text-[10px] text-slate-400 hover:text-white flex items-center bg-apex-900 px-2 py-1 rounded border border-apex-700 transition-colors">
-                    <i className="fa-solid fa-file-pdf mr-1"></i> PDF
-                 </button>
-            </div>
-        </div>
-      </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
-        
-        {/* STEP 2: Alignment & Evidence */}
-        <section>
-            <div className="flex items-center justify-between mb-4 border-b border-apex-700 pb-2">
-                <div className="flex items-center space-x-2">
-                    <span className="text-emerald-500 font-mono text-[10px] uppercase tracking-widest bg-emerald-900/20 px-2 py-0.5 rounded">Step 2: Match Score & Evidence</span>
-                </div>
-                <div className="text-xs text-slate-500">PAID ({PRICING.SHORTLIST} Cr)</div>
-            </div>
-
-            <div className="bg-apex-800/50 rounded-xl p-4 md:p-6 border border-apex-700">
-                <div className="flex flex-col md:flex-row gap-6">
-                    {/* Visual Score (Radar) */}
-                    <div className="w-full md:w-1/2 flex flex-col items-center">
-                        <div className="relative w-full h-48">
-                            {radarData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                                        <PolarGrid stroke="#334155" />
-                                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} />
-                                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                        <Radar name={candidate.name} dataKey="A" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
-                                        <Tooltip 
-                                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', fontSize: '12px', color: '#fff' }} 
-                                            itemStyle={{ color: '#10b981' }}
-                                        />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-xs text-slate-500">No score data</div>
-                            )}
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                                <div className="text-2xl font-bold text-white">{candidate.alignmentScore}%</div>
-                                <div className="text-[9px] uppercase text-emerald-500 font-bold">Fit Score</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Evidence List */}
-                    <div className="w-full md:w-1/2 space-y-4">
-                         <div>
-                            <h4 className="text-xs font-bold text-emerald-400 uppercase mb-2"><i className="fa-regular fa-circle-check mr-1"></i> Key Evidence</h4>
-                            <ul className="space-y-2">
-                                {candidate.keyEvidence?.slice(0,3).map((item, i) => (
-                                    <li key={i} className="text-xs text-slate-300 leading-tight flex items-start">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 mt-1 mr-2 flex-shrink-0"></span>
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                         <div>
-                            <h4 className="text-xs font-bold text-red-400 uppercase mb-2"><i className="fa-solid fa-triangle-exclamation mr-1"></i> Risks</h4>
-                            <ul className="space-y-2">
-                                {candidate.risks?.slice(0,3).map((item, i) => (
-                                    <li key={i} className="text-xs text-slate-300 leading-tight flex items-start">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500/50 mt-1 mr-2 flex-shrink-0"></span>
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-apex-700/50 text-[10px] text-slate-500 flex justify-between items-center">
-                     <span>Score Algorithm v2.3</span>
-                     <button onClick={() => setShowBreakdown(!showBreakdown)} className="hover:text-emerald-400">
-                         {showBreakdown ? 'Hide Breakdown' : 'Show Details'}
-                     </button>
-                </div>
-            </div>
-        </section>
-
-        {/* STEP 3: Evidence Report */}
-        <section>
-            <div className="flex items-center justify-between mb-4 border-b border-apex-700 pb-2">
-                 <div className="flex items-center space-x-2">
-                    <span className="text-blue-500 font-mono text-[10px] uppercase tracking-widest bg-blue-900/20 px-2 py-0.5 rounded">Step 3: Candidate Evidence Report</span>
-                </div>
-            </div>
-
-            <div className="space-y-6">
-                
-                {/* Deep Profile Analysis */}
-                {candidate.deepAnalysis && (
-                    <div className="bg-gradient-to-br from-apex-800 to-apex-800/50 rounded-lg p-5 border border-apex-700 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <i className="fa-solid fa-brain text-4xl text-blue-500"></i>
-                        </div>
-                        
-                        <h4 className="text-xs font-bold text-blue-400 uppercase mb-3"><i className="fa-solid fa-magnifying-glass-chart mr-2"></i> Deep Profile Analysis</h4>
-                        <p className="text-sm text-slate-300 leading-relaxed font-light">
-                            {candidate.deepAnalysis}
-                        </p>
-                    </div>
-                )}
-                
-                {/* Company Match Analysis (Improved Visuals) */}
-                {candidate.companyMatch && (
-                    <div className="bg-apex-800/30 rounded-lg border border-apex-700 overflow-hidden">
-                        <div className="bg-apex-800/50 px-5 py-3 border-b border-apex-700 flex justify-between items-center">
-                             <h4 className="text-xs font-bold text-purple-400 uppercase"><i className="fa-solid fa-handshake-simple mr-2"></i> Company Match</h4>
-                             <div className="text-[10px] font-mono text-slate-500">Score: {candidate.companyMatch.score}/100</div>
-                        </div>
-
-                        <div className="p-5">
-                            <p className="text-sm text-slate-300 leading-relaxed mb-6 italic border-l-2 border-purple-500/30 pl-3">
-                                "{candidate.companyMatch.analysis}"
-                            </p>
-
-                            <div className="flex flex-col md:flex-row gap-0 md:gap-px bg-apex-700/50 rounded-lg overflow-hidden border border-apex-700">
-                                {/* Strengths */}
-                                <div className="flex-1 bg-apex-800/50 p-4">
-                                    <div className="flex items-center mb-3">
-                                        <div className="w-6 h-6 rounded-full bg-emerald-900/40 text-emerald-400 flex items-center justify-center mr-2 border border-emerald-500/20">
-                                            <i className="fa-solid fa-thumbs-up text-[10px]"></i>
-                                        </div>
-                                        <h5 className="text-[10px] font-bold text-emerald-400 uppercase">Alignment Signals</h5>
-                                    </div>
-                                    <ul className="space-y-2">
-                                        {candidate.companyMatch.strengths.map((str, i) => (
-                                            <li key={i} className="text-xs text-slate-400 flex items-start">
-                                                <i className="fa-solid fa-plus text-emerald-500/50 mt-1 mr-2 text-[8px]"></i>
-                                                {str}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                
-                                {/* Friction */}
-                                <div className="flex-1 bg-apex-800/50 p-4">
-                                    <div className="flex items-center mb-3">
-                                        <div className="w-6 h-6 rounded-full bg-amber-900/40 text-amber-400 flex items-center justify-center mr-2 border border-amber-500/20">
-                                            <i className="fa-solid fa-hand-paper text-[10px]"></i>
-                                        </div>
-                                        <h5 className="text-[10px] font-bold text-amber-400 uppercase">Friction Points</h5>
-                                    </div>
-                                    <ul className="space-y-2">
-                                        {candidate.companyMatch.potentialFriction.map((fric, i) => (
-                                            <li key={i} className="text-xs text-slate-400 flex items-start">
-                                                <i className="fa-solid fa-minus text-amber-500/50 mt-1 mr-2 text-[8px]"></i>
-                                                {fric}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Trajectory & Indicators Side-by-Side */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {/* Trajectory */}
-                    <div className="bg-apex-800/30 rounded-lg p-5 border border-apex-700">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-4"><i className="fa-solid fa-arrow-trend-up mr-2 text-blue-400"></i> Trajectory</h4>
-                        <div className="flex justify-between mb-4 text-center">
-                            <div>
-                                <div className="text-[9px] text-slate-600 uppercase font-bold">Avg Tenure</div>
-                                <div className="text-sm font-bold text-white mt-1">{candidate.avgTenure || 'N/A'}</div>
-                            </div>
-                            <div>
-                                <div className="text-[9px] text-slate-600 uppercase font-bold">Pace</div>
-                                <div className="text-sm font-bold text-white mt-1">{candidate.progressionPace || 'N/A'}</div>
-                            </div>
-                        </div>
-                        <div className="text-[10px] text-slate-400 italic">
-                            "{candidate.trajectoryEvidence}"
-                        </div>
-                    </div>
-
-                    {/* Indicators */}
-                    <div className="bg-apex-800/30 rounded-lg p-5 border border-apex-700">
-                         <h4 className="text-xs font-bold text-slate-400 uppercase mb-4"><i className="fa-solid fa-fingerprint mr-2 text-purple-400"></i> Key Indicator</h4>
-                         {indicators.slice(0,1).map((ind, i) => (
-                            <div key={i}>
-                                <div className="text-[10px] font-bold text-purple-400 uppercase mb-1">{ind.category}</div>
-                                <div className="text-sm font-bold text-white mb-2">{ind.label}</div>
-                                <div className="text-[10px] text-slate-400 font-mono border-l border-slate-700 pl-2">
-                                    "{ind.evidence.text}"
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Spec Compliant Disclaimer */}
-                <div className="bg-yellow-900/10 border border-yellow-900/30 p-3 rounded flex items-start">
-                    <i className="fa-solid fa-triangle-exclamation text-yellow-500 mt-0.5 mr-3 text-xs"></i>
-                    <p className="text-[10px] text-yellow-600/80 leading-relaxed font-mono">
-                        <strong>⚠️ Decision Support Notice:</strong> This analysis provides evidence-based indicators from public professional history. It is not a diagnostic assessment and should be verified during the interview process. Final hiring decisions must involve human judgment.
+                {/* Main Header Content */}
+                <div className="mb-12">
+                    <h1 className="text-3xl font-semibold text-gray-900 mb-2 tracking-tight">{candidate.name}</h1>
+                    <p className="text-lg text-gray-600 mb-4">
+                        {candidate.currentRole} · {candidate.company}
                     </p>
-                </div>
-
-                {/* Interview Guide */}
-                <div className="mt-6">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Interview Guide</h4>
-                    <ul className="space-y-2">
-                        {questions.map((q, i) => (
-                            <li key={i} className="flex items-start text-xs text-slate-300">
-                                <span className="w-5 h-5 flex items-center justify-center bg-apex-800 rounded-full text-[10px] font-bold text-slate-500 mr-3 flex-shrink-0">{i+1}</span>
-                                <span>
-                                    {q.question} <span className="text-slate-500 block mt-0.5 text-[10px]">Reason: {q.reason}</span>
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-            </div>
-        </section>
-
-        {/* STEP 4 Preview / Unlock */}
-        <section className="pt-4 border-t border-apex-700/50 pb-8">
-             <div className="flex items-center justify-between mb-4">
-                 <div className="flex items-center space-x-2">
-                    <span className="text-slate-400 font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded">Step 4: Outreach Protocol</span>
-                </div>
-            </div>
-
-            {isOutreachUnlocked ? (
-                 <div className="bg-apex-800/30 border border-apex-700 rounded-lg p-5">
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="text-[10px] bg-emerald-900 text-emerald-400 px-2 py-1 rounded font-bold uppercase">Recommended: Warm Intro</span>
+                    <div className="flex items-center gap-6 text-sm text-gray-500">
+                        <span>{candidate.location}</span>
+                        <span>{candidate.yearsExperience} years experience</span>
                     </div>
-                    <div className="space-y-4">
-                        <div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">The Hook</div>
-                            <div className="p-3 bg-apex-900 border border-apex-800 rounded text-sm text-slate-300">
-                                Shared connection: {candidate.connectionPath || 'Network check required'}
-                            </div>
+                </div>
+
+                {/* Alignment Score - Minimal */}
+                <div className="mb-8">
+                    <div className="flex items-baseline justify-between mb-4">
+                        <div className="text-sm font-medium text-gray-500">
+                            Alignment Score
                         </div>
-                        <button 
-                            onClick={() => onOpenOutreach(candidate)}
-                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded shadow-lg shadow-emerald-900/20 transition-all"
-                        >
-                            Open Outreach Suite <i className="fa-solid fa-arrow-up-right-from-square ml-2"></i>
-                        </button>
+                        <div className="flex items-baseline gap-2">
+                            <div className="text-5xl font-semibold text-gray-900 tabular-nums">
+                                {candidate.alignmentScore}
+                            </div>
+                            <div className="text-xl text-gray-400 mb-2">/100</div>
+                        </div>
                     </div>
-                 </div>
-            ) : (
-                <div className="bg-apex-800/20 border border-dashed border-apex-700 rounded-lg p-8 text-center">
-                    <div className="w-12 h-12 bg-apex-800 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-600">
-                        <i className="fa-solid fa-lock"></i>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-gray-900 transition-all duration-700 ease-out"
+                            style={{ width: `${candidate.alignmentScore}%` }}
+                        />
                     </div>
-                    <h3 className="text-sm font-bold text-slate-300 mb-1">Unlock Outreach Protocol</h3>
-                    <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto">Reveal connection paths, shared context hooks, and AI-drafted messages.</p>
-                    <button 
-                        onClick={handleUnlockOutreach}
-                        className="px-6 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-600 transition-all"
+                </div>
+
+                {/* Archetype - Minimal */}
+                {candidate.persona?.archetype && (
+                    <div className="border-t border-gray-200 pt-8">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                            Leadership Profile
+                        </div>
+                        <div className="text-xl font-medium text-gray-900 mb-3">
+                            {candidate.persona.archetype}
+                        </div>
+                        <div className="text-base text-gray-600 leading-relaxed">
+                            {candidate.persona.reasoning?.substring(0, 200)}
+                            {candidate.persona.reasoning && candidate.persona.reasoning.length > 200 ? '...' : ''}
+                        </div>
+                    </div>
+                )}
+
+                {/* Action Buttons - Minimal */}
+                <div className="flex items-center gap-3 mt-8">
+                    <button
+                        onClick={handleRefresh}
+                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
+                        title="Refresh from LinkedIn (1 Credit)"
                     >
-                        Unlock for {PRICING.OUTREACH} Credits
+                        <i className="fa-solid fa-rotate text-xs"></i>
+                        Refresh
+                    </button>
+                    <button
+                        onClick={handleShare}
+                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
+                        title="Share profile"
+                    >
+                        <i className="fa-solid fa-share-nodes text-xs"></i>
+                        Share
+                    </button>
+                    <button
+                        onClick={handleDownloadPDF}
+                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
+                        title="Download as PDF"
+                    >
+                        <i className="fa-solid fa-file-pdf text-xs"></i>
+                        PDF
                     </button>
                 </div>
-            )}
-        </section>
+            </div>
 
-      </div>
-    </div>
-  );
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-8 md:p-12 space-y-12 bg-gray-50 custom-scrollbar">
+
+                {/* INSIGHTS GRID - Linear/Notion Style */}
+                {candidate.persona && (
+                    <section>
+                        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-6">Intelligence Overview</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Career Trajectory */}
+                            <div className="bg-white border border-gray-200 p-6 rounded-lg">
+                                <h3 className="text-base font-semibold text-gray-900 mb-5">Career Trajectory</h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Growth</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.careerTrajectory?.growthVelocity || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Promotions</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.careerTrajectory?.promotionFrequency || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Pattern</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.careerTrajectory?.roleProgression || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-gray-600">Avg Tenure</span>
+                                        <span className="font-medium text-gray-900">
+                                            {candidate.persona.careerTrajectory?.averageTenure || 'Unknown'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Technical Profile */}
+                            <div className="bg-white border border-gray-200 p-6 rounded-lg">
+                                <h3 className="text-base font-semibold text-gray-900 mb-5">Technical Profile</h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Depth</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.skillProfile?.depthVsBreadth || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Core Skills</span>
+                                        <span className="font-medium text-gray-900">
+                                            {candidate.persona.skillProfile?.coreSkills?.length || 0} expert
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Emerging</span>
+                                        <span className="font-medium text-gray-900">
+                                            {candidate.persona.skillProfile?.emergingSkills?.length || 0} learning
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-gray-600">Gaps</span>
+                                        <span className="font-medium text-gray-900">
+                                            {candidate.persona.skillProfile?.skillGaps?.length || 0} identified
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Risk Assessment */}
+                            <div className="bg-white border border-gray-200 p-6 rounded-lg">
+                                <h3 className="text-base font-semibold text-gray-900 mb-5">Risk Assessment</h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Attrition</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.riskAssessment?.attritionRisk || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Flight Risk</span>
+                                        <span className="font-medium text-gray-900">
+                                            {candidate.persona.riskAssessment?.flightRiskFactors?.length || 0} factors
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Tenure Pattern</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.careerTrajectory?.tenurePattern || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-gray-600">Skill Risk</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.riskAssessment?.skillObsolescenceRisk || 'Unknown'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Compensation */}
+                            <div className="bg-white border border-gray-200 p-6 rounded-lg">
+                                <h3 className="text-base font-semibold text-gray-900 mb-5">Compensation</h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Band</span>
+                                        <span className="font-medium text-gray-900">
+                                            {formatSalaryBand(candidate.persona.compensationIntelligence?.impliedSalaryBand)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Growth Rate</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.compensationIntelligence?.compensationGrowthRate || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-600">Equity</span>
+                                        <span className="font-medium text-gray-900">
+                                            {candidate.persona.compensationIntelligence?.equityIndicators ? 'Expected' : 'Optional'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-gray-600">Comp Risk</span>
+                                        <span className="font-medium text-gray-900 capitalize">
+                                            {candidate.persona.riskAssessment?.compensationRiskLevel || 'Unknown'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* STEP 2: Alignment & Evidence */}
+                <section>
+                    <div className="flex items-center justify-between mb-4 border-b border-apex-700 pb-2">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-emerald-500 font-mono text-xs uppercase tracking-widest bg-emerald-900/20 px-2 py-0.5 rounded">Step 2: Match Score & Evidence</span>
+                        </div>
+                        <div className="text-xs text-slate-500">PAID ({PRICING.SHORTLIST} Cr)</div>
+                    </div>
+
+                    <div className="bg-apex-800/50 rounded-xl p-4 md:p-6 border border-apex-700">
+                        <div className="flex flex-col md:flex-row gap-6">
+                            {/* Visual Score (Radar) */}
+                            <div className="w-full md:w-1/2 flex flex-col items-center">
+                                <div className="relative w-full h-48">
+                                    {radarData.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                                                <PolarGrid stroke="#334155" />
+                                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} />
+                                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                                {/* Ideal Candidate Ghost Layer */}
+                                                <Radar
+                                                    name="Ideal Candidate"
+                                                    dataKey="ideal"
+                                                    stroke="#64748b"
+                                                    fill="#64748b"
+                                                    fillOpacity={0.05}
+                                                    strokeWidth={2}
+                                                    strokeDasharray="5 5"
+                                                />
+                                                {/* Actual Candidate */}
+                                                <Radar
+                                                    name={candidate.name}
+                                                    dataKey="candidate"
+                                                    stroke="#10b981"
+                                                    fill="#10b981"
+                                                    fillOpacity={0.3}
+                                                    strokeWidth={2}
+                                                />
+                                                <Tooltip
+                                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', fontSize: '12px', color: '#fff' }}
+                                                    formatter={(value: number, name: string) => [`${value}%`, name]}
+                                                />
+                                            </RadarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-xs text-slate-500">No score data</div>
+                                    )}
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                                        <div className="text-2xl font-bold text-white">{candidate.alignmentScore}%</div>
+                                        <div className="text-[9px] uppercase text-emerald-500 font-bold">Fit Score</div>
+                                    </div>
+                                </div>
+                                {/* Radar Chart Legend */}
+                                <div className="flex items-center justify-center gap-4 mt-3 text-xs">
+                                    <div className="flex items-center">
+                                        <div className="w-4 h-0.5 bg-emerald-500 mr-2"></div>
+                                        <span className="text-slate-400">{candidate.name}</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <div className="w-4 h-0.5 border-t-2 border-dashed border-slate-500 mr-2"></div>
+                                        <span className="text-slate-500">Ideal Profile</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Evidence List */}
+                            <div className="w-full md:w-1/2 space-y-4">
+                                <div>
+                                    <h4 className="text-xs font-bold text-emerald-400 uppercase mb-2"><i className="fa-regular fa-circle-check mr-1"></i> Key Evidence</h4>
+                                    <ul className="space-y-2">
+                                        {candidate.keyEvidence?.slice(0, 3).map((item, i) => (
+                                            <li key={i} className="text-xs text-slate-300 leading-tight flex items-start">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 mt-1 mr-2 flex-shrink-0"></span>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-red-400 uppercase mb-2"><i className="fa-solid fa-triangle-exclamation mr-1"></i> Risks</h4>
+                                    <ul className="space-y-2">
+                                        {candidate.risks?.slice(0, 3).map((item, i) => (
+                                            <li key={i} className="text-xs text-slate-300 leading-tight flex items-start">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500/50 mt-1 mr-2 flex-shrink-0"></span>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-apex-700/50 text-xs text-slate-500 flex justify-between items-center">
+                            <span>Score Algorithm v2.3</span>
+                            <button onClick={handleToggleBreakdown} className="hover:text-emerald-400">
+                                <i className={`fa-solid fa-chevron-${showBreakdown ? 'up' : 'down'} mr-1`}></i>
+                                {showBreakdown ? 'Hide Breakdown' : 'Show Details'}
+                            </button>
+                        </div>
+
+                        {/* Score Breakdown with Reasoning */}
+                        {showBreakdown && candidate.scoreBreakdown && (
+                            <div className="mt-4 space-y-2">
+                                <div className="text-xs font-bold text-slate-400 uppercase mb-3">Component Breakdown</div>
+                                {[
+                                    { key: 'skills', label: 'Skills', icon: 'fa-code' },
+                                    { key: 'experience', label: 'Experience', icon: 'fa-briefcase' },
+                                    { key: 'industry', label: 'Industry', icon: 'fa-building' },
+                                    { key: 'seniority', label: 'Seniority', icon: 'fa-star' },
+                                    { key: 'location', label: 'Location', icon: 'fa-location-dot' }
+                                ].map(({ key, label, icon }) => {
+                                    const component = candidate.scoreBreakdown?.[key as keyof typeof candidate.scoreBreakdown];
+                                    if (!component) return null;
+
+                                    return (
+                                        <div key={key} className="bg-apex-800/30 rounded p-3 border border-apex-700/50 hover:border-apex-600/50 transition-colors group">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center space-x-2">
+                                                    <i className={`fa-solid ${icon} text-emerald-500 text-xs`}></i>
+                                                    <span className="text-xs font-semibold text-slate-300">{label}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-xs text-slate-500">{component.value}/{component.max}</span>
+                                                    <span className={`text-sm font-bold font-mono ${
+                                                        component.percentage >= 80 ? 'text-emerald-400' :
+                                                        component.percentage >= 50 ? 'text-yellow-400' :
+                                                        'text-red-400'
+                                                    }`}>{component.percentage}%</span>
+                                                </div>
+                                            </div>
+                                            <div className="w-full bg-apex-900 rounded-full h-1.5 mb-2">
+                                                <div
+                                                    className={`h-1.5 rounded-full transition-all ${
+                                                        component.percentage >= 80 ? 'bg-emerald-500' :
+                                                        component.percentage >= 50 ? 'bg-yellow-500' :
+                                                        'bg-red-500'
+                                                    }`}
+                                                    style={{ width: `${component.percentage}%` }}
+                                                ></div>
+                                            </div>
+                                            {component.reasoning && (
+                                                <div className="text-[11px] text-slate-400 leading-relaxed mt-2 pl-5 border-l-2 border-apex-700 group-hover:border-emerald-500/50 transition-colors">
+                                                    {component.reasoning}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Score Drivers & Drags */}
+                                {(candidate.scoreDrivers || candidate.scoreDrags) && (
+                                    <div className="mt-4 pt-3 border-t border-apex-700/30 grid grid-cols-2 gap-3">
+                                        {candidate.scoreDrivers && candidate.scoreDrivers.length > 0 && (
+                                            <div>
+                                                <div className="text-xs font-bold text-emerald-400 uppercase mb-2 flex items-center">
+                                                    <i className="fa-solid fa-arrow-trend-up mr-1"></i> Strengths
+                                                </div>
+                                                <ul className="space-y-1">
+                                                    {candidate.scoreDrivers.map((driver, i) => (
+                                                        <li key={i} className="text-[11px] text-emerald-300 flex items-center">
+                                                            <span className="w-1 h-1 rounded-full bg-emerald-500 mr-2"></span>
+                                                            {driver.charAt(0).toUpperCase() + driver.slice(1)}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        {candidate.scoreDrags && candidate.scoreDrags.length > 0 && (
+                                            <div>
+                                                <div className="text-xs font-bold text-red-400 uppercase mb-2 flex items-center">
+                                                    <i className="fa-solid fa-arrow-trend-down mr-1"></i> Gaps
+                                                </div>
+                                                <ul className="space-y-1">
+                                                    {candidate.scoreDrags.map((drag, i) => (
+                                                        <li key={i} className="text-[11px] text-red-300 flex items-center">
+                                                            <span className="w-1 h-1 rounded-full bg-red-500 mr-2"></span>
+                                                            {drag.charAt(0).toUpperCase() + drag.slice(1)}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* STEP 3: Tabs Header */}
+                <section>
+                    <div className="flex items-center justify-between mb-4 border-b border-apex-700 pb-2">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-blue-500 font-mono text-xs uppercase tracking-widest bg-blue-900/20 px-2 py-0.5 rounded">Step 3: Candidate Intelligence</span>
+                        </div>
+                    </div>
+
+                    {/* Tab Navigation */}
+                    <div className="flex space-x-2 mb-6 border-b border-apex-700/50 pb-3">
+                        <button
+                            onClick={() => handleSetActiveTab('evidence')}
+                            className={`px-4 py-2 rounded-t text-xs font-bold transition-all ${
+                                activeTab === 'evidence'
+                                    ? 'bg-blue-900/30 text-blue-400 border-b-2 border-blue-500'
+                                    : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            <i className="fa-solid fa-magnifying-glass-chart mr-2"></i>
+                            Evidence Report
+                        </button>
+                        <button
+                            onClick={() => handleSetActiveTab('persona')}
+                            className={`px-4 py-2 rounded-t text-xs font-bold transition-all ${
+                                activeTab === 'persona'
+                                    ? 'bg-purple-900/30 text-purple-400 border-b-2 border-purple-500'
+                                    : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            <i className="fa-solid fa-fingerprint mr-2"></i>
+                            Persona Intelligence
+                            {candidate?.persona?.careerTrajectory && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-[9px] rounded text-white">Enhanced</span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => handleSetActiveTab('company')}
+                            className={`px-4 py-2 rounded-t text-xs font-bold transition-all ${
+                                activeTab === 'company'
+                                    ? 'bg-green-900/30 text-green-400 border-b-2 border-green-500'
+                                    : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            <i className="fa-solid fa-handshake-simple mr-2"></i>
+                            Company Match
+                        </button>
+                        <button
+                            onClick={() => handleSetActiveTab('network')}
+                            className={`px-4 py-2 rounded-t text-xs font-bold transition-all ${
+                                activeTab === 'network'
+                                    ? 'bg-orange-900/30 text-orange-400 border-b-2 border-orange-500'
+                                    : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            <i className="fa-solid fa-network-wired mr-2"></i>
+                            Network Dossier
+                            {candidate?.networkDossier && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-orange-600 text-[9px] rounded text-white">Strategic</span>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="space-y-6">
+
+                        {/* Evidence Report Tab */}
+                        {activeTab === 'evidence' && (
+                            <>
+                                {/* Deep Profile Analysis */}
+                                {candidate.deepAnalysis && (
+                                    <div className="bg-gradient-to-br from-apex-800 to-apex-800/50 rounded-lg p-5 border border-apex-700 relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <i className="fa-solid fa-brain text-4xl text-blue-500"></i>
+                                        </div>
+
+                                        <h4 className="text-xs font-bold text-blue-400 uppercase mb-3"><i className="fa-solid fa-magnifying-glass-chart mr-2"></i> Deep Profile Analysis</h4>
+                                        <p className="text-sm text-slate-300 leading-relaxed font-light">
+                                            {candidate.deepAnalysis}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Trajectory & Indicators Side-by-Side */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Trajectory */}
+                                    <div className="bg-apex-800/30 rounded-lg p-5 border border-apex-700">
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-4"><i className="fa-solid fa-arrow-trend-up mr-2 text-blue-400"></i> Career Trajectory</h4>
+                                        {candidate.persona?.careerTrajectory ? (
+                                            <>
+                                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-600 uppercase font-bold">Avg Tenure</div>
+                                                        <div className="text-xs font-bold text-white mt-1">{candidate.persona.careerTrajectory.averageTenure}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-600 uppercase font-bold">Pattern</div>
+                                                        <div className="text-xs font-bold text-white mt-1 capitalize">{candidate.persona.careerTrajectory.tenurePattern.replace('-', ' ')}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-600 uppercase font-bold">Growth</div>
+                                                        <div className="text-xs font-bold text-emerald-400 mt-1 capitalize">{candidate.persona.careerTrajectory.growthVelocity}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-600 uppercase font-bold">Promotions</div>
+                                                        <div className="text-xs font-bold text-purple-400 mt-1 capitalize">{candidate.persona.careerTrajectory.promotionFrequency}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs text-slate-500 italic pt-2 border-t border-apex-700">
+                                                    Role Progression: <span className="text-slate-400 capitalize">{candidate.persona.careerTrajectory.roleProgression}</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-xs text-slate-500 italic py-4">
+                                                <i className="fa-solid fa-circle-info mr-2 text-yellow-500"></i>
+                                                Career trajectory data unavailable. Run sourcing workflow with persona generation.
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Indicators */}
+                                    <div className="bg-apex-800/30 rounded-lg p-5 border border-apex-700">
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-4"><i className="fa-solid fa-fingerprint mr-2 text-purple-400"></i> Key Indicator</h4>
+                                        {indicators.slice(0, 1).map((ind, i) => (
+                                            <div key={i}>
+                                                <div className="text-xs font-bold text-purple-400 uppercase mb-1">{ind.category}</div>
+                                                <div className="text-sm font-bold text-white mb-2">{ind.label}</div>
+                                                <div className="text-xs text-slate-400 font-mono border-l border-slate-700 pl-2">
+                                                    &quot;{ind.evidence.text}&quot;
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Spec Compliant Disclaimer */}
+                                <div className="bg-yellow-900/10 border border-yellow-900/30 p-3 rounded flex items-start">
+                                    <i className="fa-solid fa-triangle-exclamation text-yellow-500 mt-0.5 mr-3 text-xs"></i>
+                                    <p className="text-xs text-yellow-600/80 leading-relaxed font-mono">
+                                        <strong>⚠️ Decision Support Notice:</strong> This analysis provides evidence-based indicators from public professional history. It is not a diagnostic assessment and should be verified during the interview process. Final hiring decisions must involve human judgment.
+                                    </p>
+                                </div>
+
+                                {/* Interview Guide */}
+                                <div className="mt-6">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Interview Guide</h4>
+                                    <ul className="space-y-2">
+                                        {questions.map((q, i) => (
+                                            <li key={i} className="flex items-start text-xs text-slate-300">
+                                                <span className="w-5 h-5 flex items-center justify-center bg-apex-800 rounded-full text-xs font-bold text-slate-500 mr-3 flex-shrink-0">{i + 1}</span>
+                                                <span>
+                                                    {q.question} <span className="text-slate-500 block mt-0.5 text-xs">Reason: {q.reason}</span>
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Persona Intelligence Tab */}
+                        {activeTab === 'persona' && candidate.persona && (
+                            <PersonaIntelligencePanel persona={candidate.persona} />
+                        )}
+
+                        {/* Company Match Tab */}
+                        {activeTab === 'company' && candidate.companyMatch && (
+                            <div className="bg-apex-800/30 rounded-lg border border-apex-700 overflow-hidden">
+                                <div className="bg-apex-800/50 px-5 py-3 border-b border-apex-700 flex justify-between items-center">
+                                    <h4 className="text-xs font-bold text-purple-400 uppercase"><i className="fa-solid fa-handshake-simple mr-2"></i> Company Match</h4>
+                                    <div className="text-xs font-mono text-slate-500">Score: {candidate.companyMatch.score}/100</div>
+                                </div>
+
+                                <div className="p-5">
+                                    <p className="text-sm text-slate-300 leading-relaxed mb-6 italic border-l-2 border-purple-500/30 pl-3">
+                                        &quot;{candidate.companyMatch.analysis}&quot;
+                                    </p>
+
+                                    <div className="flex flex-col md:flex-row gap-0 md:gap-px bg-apex-700/50 rounded-lg overflow-hidden border border-apex-700">
+                                        {/* Strengths */}
+                                        <div className="flex-1 bg-apex-800/50 p-4">
+                                            <div className="flex items-center mb-3">
+                                                <div className="w-6 h-6 rounded-full bg-emerald-900/40 text-emerald-400 flex items-center justify-center mr-2 border border-emerald-500/20">
+                                                    <i className="fa-solid fa-thumbs-up text-xs"></i>
+                                                </div>
+                                                <h5 className="text-xs font-bold text-emerald-400 uppercase">Alignment Signals</h5>
+                                            </div>
+                                            <ul className="space-y-2">
+                                                {candidate.companyMatch.strengths.map((str, i) => (
+                                                    <li key={i} className="text-xs text-slate-400 flex items-start">
+                                                        <i className="fa-solid fa-plus text-emerald-500/50 mt-1 mr-2 text-[8px]"></i>
+                                                        {str}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {/* Friction */}
+                                        <div className="flex-1 bg-apex-800/50 p-4">
+                                            <div className="flex items-center mb-3">
+                                                <div className="w-6 h-6 rounded-full bg-amber-900/40 text-amber-400 flex items-center justify-center mr-2 border border-amber-500/20">
+                                                    <i className="fa-solid fa-hand-paper text-xs"></i>
+                                                </div>
+                                                <h5 className="text-xs font-bold text-amber-400 uppercase">Friction Points</h5>
+                                            </div>
+                                            <ul className="space-y-2">
+                                                {candidate.companyMatch.potentialFriction.map((fric, i) => (
+                                                    <li key={i} className="text-xs text-slate-400 flex items-start">
+                                                        <i className="fa-solid fa-minus text-amber-500/50 mt-1 mr-2 text-[8px]"></i>
+                                                        {fric}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Network Dossier Tab */}
+                        {activeTab === 'network' && (
+                            <NetworkDossierPanel dossier={candidate.networkDossier} />
+                        )}
+
+                    </div>
+                </section>
+
+                {/* STEP 4 Preview / Unlock */}
+                <section className="pt-4 border-t border-apex-700/50 pb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-slate-400 font-mono text-xs uppercase tracking-widest px-2 py-0.5 rounded">Step 4: Outreach Protocol</span>
+                        </div>
+                    </div>
+
+                    {isOutreachUnlocked ? (
+                        <div className="bg-apex-800/30 border border-apex-700 rounded-lg p-5">
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-xs bg-emerald-900 text-emerald-400 px-2 py-1 rounded font-bold uppercase">Recommended: Warm Intro</span>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="text-xs font-bold text-slate-500 uppercase mb-1">The Hook</div>
+                                    <div className="p-3 bg-apex-900 border border-apex-800 rounded text-sm text-slate-300">
+                                        Shared connection: {candidate.connectionPath || 'Network check required'}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onOpenOutreach(candidate)}
+                                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded shadow-lg shadow-emerald-900/20 transition-all"
+                                >
+                                    Open Outreach Suite <i className="fa-solid fa-arrow-up-right-from-square ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-apex-800/20 border border-dashed border-apex-700 rounded-lg p-8 text-center">
+                            <div className="w-12 h-12 bg-apex-800 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-600">
+                                <i className="fa-solid fa-lock"></i>
+                            </div>
+                            <h3 className="text-sm font-bold text-slate-300 mb-1">Unlock Outreach Protocol</h3>
+                            <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto">Reveal connection paths, shared context hooks, and AI-drafted messages.</p>
+                            <button
+                                onClick={handleUnlockOutreach}
+                                className="px-6 py-2 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold rounded border border-slate-600 transition-all"
+                            >
+                                Unlock for {PRICING.OUTREACH} Credits
+                            </button>
+                        </div>
+                    )}
+                </section>
+
+            </div>
+        </div>
+    );
 };
 
-export default DeepProfile;
+export default React.memo(DeepProfile);

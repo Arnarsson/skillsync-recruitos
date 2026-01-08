@@ -1,18 +1,22 @@
 
-import React, { useState, useEffect } from 'react';
-import { MOCK_CANDIDATES } from '../constants';
-import { Candidate, FunnelStage, PRICING, CREDITS_TO_EUR, Persona } from '../types';
-import { analyzeCandidateProfile, generatePersona, generateDeepProfile } from '../services/geminiService';
-import { scrapeUrlContent } from '../services/scrapingService';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Candidate, FunnelStage, PRICING } from '../types';
+import { generateDeepProfile, generateNetworkDossier, analyzeCandidateProfile } from '../services/geminiService';
 import { candidateService } from '../services/candidateService';
 import { ToastType } from './ToastNotification';
+import { ScoreDistributionChart } from './visualizations/ScoreDistributionChart';
+import { CandidateCardSkeleton } from './visualizations/CandidateCardSkeleton';
+import { CandidateComparisonView } from './visualizations/CandidateComparisonView';
+import { useCandidateSourcing } from '../hooks/useCandidateSourcing';
+import { CandidateGridRow } from './TalentHeatMap/CandidateGridRow';
+import { ImportModal } from './TalentHeatMap/ImportModal';
 
 interface Props {
-  jobContext: string;
-  credits: number;
-  onSpendCredits: (amount: number, description?: string) => void;
-  onSelectCandidate: (candidate: Candidate) => void;
-  addToast: (type: ToastType, message: string) => void;
+    jobContext: string;
+    credits: number;
+    onSpendCredits: (amount: number, description?: string) => void;
+    onSelectCandidate: (candidate: Candidate) => void;
+    addToast: (type: ToastType, message: string) => void;
 }
 
 const DEMO_CANDIDATE_PROFILE = `Sarah Chen
@@ -44,490 +48,606 @@ BSc Software Engineering, Aarhus University, 2014
 Skills: TypeScript, React, Node.js, Python, PostgreSQL, Redis, AWS, Kubernetes, Payment Systems`;
 
 const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, onSelectCandidate, addToast }) => {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'sourcing'>('pipeline');
+    const [candidates, setCandidates] = useState<Candidate[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'pipeline' | 'sourcing'>('pipeline');
 
-  // Sourcing State
-  const [sourcingUrl, setSourcingUrl] = useState('');
-  const [isSourcing, setIsSourcing] = useState(false);
-  const [sourcingLog, setSourcingLog] = useState<string[]>([]);
+    // Import Modal State
+    const [showImport, setShowImport] = useState(false);
+    const [importText, setImportText] = useState('');
+    const [isImporting, setIsImporting] = useState(false);
+    const [isDemoLoading, setIsDemoLoading] = useState(false);
 
-  // Import Modal State
-  const [showImport, setShowImport] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
+    // Loading state for specific candidate actions
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Loading state for specific candidate actions
-  const [processingId, setProcessingId] = useState<string | null>(null);
+    // Sorting & Filtering State (Phase 4)
+    const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'>('score-desc');
+    const [filterScore, setFilterScore] = useState<'high' | 'medium' | 'low' | null>(null);
 
-  useEffect(() => {
-      loadCandidates();
-  }, []);
+    // Multi-Select & Comparison State (Phase 4)
+    const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+    const [isComparisonMode, setIsComparisonMode] = useState(false);
 
-  const loadCandidates = async () => {
-      setIsLoading(true);
-      try {
-          const data = await candidateService.fetchAll();
-          setCandidates(data);
-      } catch (e) {
-          console.error(e);
-          addToast('error', 'Failed to load candidates from Database.');
-      } finally {
-          setIsLoading(false);
-      }
-  };
-
-  const addToLog = (msg: string) => setSourcingLog(prev => [...prev, `> ${msg}`]);
-
-  const handleUnlockProfile = async (e: React.MouseEvent, candidateId: string, candidateName: string) => {
-    e.stopPropagation();
-    if (credits < PRICING.DEEP_PROFILE) {
-        addToast('error', "Insufficient credits for pilot.");
-        return;
-    }
-
-    const candidate = candidates.find(c => c.id === candidateId);
-    if (!candidate) return;
-
-    setProcessingId(candidateId);
-    addToast('info', `Generating Deep Profile for ${candidateName}...`);
-
-    try {
-        // CALL THE AI SERVICE (Crucial Step)
-        const deepProfileData = await generateDeepProfile(candidate, jobContext);
-        
-        onSpendCredits(PRICING.DEEP_PROFILE, `Unlocked Evidence Report: ${candidateName}`);
-        
-        // Update local and remote
-        const updatedCandidate = { 
-            ...candidate, 
-            unlockedSteps: [...candidate.unlockedSteps, FunnelStage.DEEP_PROFILE],
-            ...deepProfileData 
-        };
-
-        setCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
-        
-        await candidateService.update(updatedCandidate);
-        addToast('success', `Report Ready: ${candidateName}`);
-        
-    } catch (error: any) {
-        console.error(error);
-        addToast('error', error.message || "Failed to generate profile.");
-    } finally {
-        setProcessingId(null);
-    }
-  };
-
-  const handleSourcingRun = async () => {
-    if (!sourcingUrl) return;
-    if (credits < PRICING.SOURCING_SCAN) {
-        addToast('error', "Insufficient credits for sourcing scan.");
-        return;
-    }
-
-    setIsSourcing(true);
-    setSourcingLog([]);
-    addToLog(`Initializing Sourcing Agent for: ${sourcingUrl}`);
-
-    // Check for appropriate API key based on URL
-    const isLinkedIn = sourcingUrl.toLowerCase().includes('linkedin.com');
-
-    // Safely get env keys
-    let envFirecrawl = '';
-    let envBrightData = '';
-    try {
-      if (typeof process !== 'undefined' && process.env) {
-        envFirecrawl = process.env.FIRECRAWL_API_KEY || '';
-        envBrightData = process.env.BRIGHTDATA_API_KEY || '';
-      }
-    } catch(e) {}
-
-    const firecrawlKey = localStorage.getItem('FIRECRAWL_API_KEY') || envFirecrawl;
-    const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || envBrightData;
-
-    if (isLinkedIn && !brightDataKey) {
-        addToLog(`⚠️ API Key Missing: BrightData key required for LinkedIn profiles.`);
-        addToast('error', "BrightData API Key Missing. Configure it in Settings.");
-        setIsSourcing(false);
-        return;
-    }
-
-    if (!isLinkedIn && !firecrawlKey) {
-        addToLog(`⚠️ API Key Missing: Firecrawl key required.`);
-        addToast('error', "Firecrawl Key Missing");
-        setIsSourcing(false);
-        return;
-    }
-
-    try {
-        // 1. Scrape
-        if (isLinkedIn) {
-          addToLog(`Step 1: Scraping LinkedIn profile via BrightData...`);
-          addToLog(`(This may take 10-30 seconds)`);
-        } else {
-          addToLog(`Step 1: Ingesting public profile data...`);
-        }
-        const rawMarkdown = await scrapeUrlContent(sourcingUrl);
-        addToLog(`✓ Data Ingested (${rawMarkdown.length} chars).`);
-
-        // 2. Persona Engine
-        addToLog(`Step 2: Constructing Psychometric Persona...`);
-        const persona = await generatePersona(rawMarkdown);
-        addToLog(`✓ Persona Identified: ${persona.archetype}`);
-
-        // 3. Fit Analysis
-        addToLog(`Step 3: Calculating Job Fit & Scoring...`);
-        const candidate = await analyzeCandidateProfile(rawMarkdown, jobContext, persona);
-        
-        // Add URL for reference
-        candidate.sourceUrl = sourcingUrl;
-        
-        // Save to DB
-        addToLog(`Step 4: Persisting to Supabase...`);
-        await candidateService.create(candidate);
-
+    // Sourcing Hook - handles URL-based candidate sourcing workflow
+    const onCandidateCreated = useCallback((candidate: Candidate) => {
         setCandidates(prev => [candidate, ...prev]);
-        addToLog(`✓ Candidate Added to Pipeline.`);
-        onSpendCredits(PRICING.SOURCING_SCAN, `Sourcing Run: ${candidate.name}`);
-        addToast('success', "Candidate sourced successfully");
-        setSourcingUrl(''); // Clear input
+    }, []);
 
-    } catch (error: any) {
-        console.error(error);
-        addToLog(`ERROR: ${error.message}`);
-        addToast('error', error.message || "Sourcing failed");
-    } finally {
-        setIsSourcing(false);
-    }
-  };
+    const {
+        sourcingUrl,
+        setSourcingUrl,
+        isSourcing,
+        sourcingLog,
+        handleSourcingRun
+    } = useCandidateSourcing({
+        jobContext,
+        credits,
+        onSpendCredits,
+        addToast,
+        onCandidateCreated
+    });
 
-  const handleImport = async () => {
-      if (!importText.trim()) return;
-      if (!jobContext) {
-          addToast('warning', "Please set a Job Context in Step 1 first.");
-          return;
-      }
-      setIsImporting(true);
-      try {
-          const newCandidate = await analyzeCandidateProfile(importText, jobContext);
+    const loadCandidates = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const data = await candidateService.fetchAll();
+            setCandidates(data);
+        } catch (error: unknown) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error(error);
+            }
+            addToast('error', 'Failed to load candidates from Database.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [addToast]);
 
-          await candidateService.create(newCandidate);
+    useEffect(() => {
+        loadCandidates();
+    }, [loadCandidates]);
 
-          setCandidates(prev => [newCandidate, ...prev]);
-          setShowImport(false);
-          setImportText('');
-          onSpendCredits(10, `Imported Candidate: ${newCandidate.name}`);
-          addToast('success', "Candidate Imported");
-      } catch (e: any) {
-          console.error(e);
-          addToast('error', e.message || "Failed to analyze candidate. Ensure Gemini API key is active.");
-      } finally {
-          setIsImporting(false);
-      }
-  };
+    const handleUnlockProfile = useCallback(async (e: React.MouseEvent, candidateId: string, candidateName: string) => {
+        e.stopPropagation();
+        if (credits < PRICING.DEEP_PROFILE) {
+            addToast('error', "Insufficient credits for pilot.");
+            return;
+        }
 
-  const handleLoadDemoCandidate = async () => {
-      if (!jobContext) {
-          addToast('warning', "Please set a Job Context in Step 1 first.");
-          return;
-      }
-      setIsDemoLoading(true);
-      addToast('info', 'Analyzing demo candidate with AI...');
-      try {
-          const newCandidate = await analyzeCandidateProfile(DEMO_CANDIDATE_PROFILE, jobContext);
-          await candidateService.create(newCandidate);
-          setCandidates(prev => [newCandidate, ...prev]);
-          addToast('success', "Demo candidate added to pipeline");
-      } catch (e: any) {
-          console.error(e);
-          addToast('error', e.message || "Failed to analyze demo candidate.");
-      } finally {
-          setIsDemoLoading(false);
-      }
-  };
+        const candidate = candidates.find(c => c.id === candidateId);
+        if (!candidate) return;
 
-  return (
-    <div className="h-full flex flex-col bg-apex-900 relative">
-      {/* Header */}
-      <div className="p-4 md:p-6 border-b border-apex-800 flex justify-between items-center bg-apex-800/30">
-        <div className="flex items-center space-x-6">
-            <div>
-                <div className="flex items-center space-x-2">
-                    <span className="text-emerald-500 font-mono text-xs uppercase tracking-widest bg-emerald-900/20 px-2 py-0.5 rounded">Step 2 of 4</span>
-                    <h2 className="text-lg md:text-xl font-bold text-white">Talent Engine</h2>
+        setProcessingId(candidateId);
+        addToast('info', `Generating Strategic Intelligence Package for ${candidateName}...`);
+
+        try {
+            // Generate both Deep Profile AND Network Dossier (Strategic Intelligence Package)
+            const [deepProfileData, networkDossier] = await Promise.all([
+                generateDeepProfile(candidate, jobContext),
+                generateNetworkDossier(candidate, jobContext)
+            ]);
+
+            onSpendCredits(PRICING.DEEP_PROFILE, `Unlocked Strategic Intelligence Package: ${candidateName}`);
+
+            // Update local and remote
+            const updatedCandidate = {
+                ...candidate,
+                unlockedSteps: [...candidate.unlockedSteps, FunnelStage.DEEP_PROFILE],
+                ...deepProfileData,
+                networkDossier
+            };
+
+            setCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
+
+            await candidateService.update(updatedCandidate);
+            addToast('success', `Strategic Intelligence Ready: ${candidateName}`);
+
+        } catch (error: unknown) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error(error);
+            }
+            const errorMessage = error instanceof Error ? error.message : "Failed to generate profile.";
+            addToast('error', errorMessage);
+        } finally {
+            setProcessingId(null);
+        }
+    }, [credits, candidates, jobContext, onSpendCredits, addToast]);
+
+    const handleDelete = useCallback(async (candidateId: string, candidateName: string) => {
+        try {
+            await candidateService.delete(candidateId);
+            setCandidates(prev => prev.filter(candidate => candidate.id !== candidateId));
+            addToast('success', `${candidateName} deleted`);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to delete candidate';
+            addToast('error', errorMessage);
+        }
+    }, [addToast]);
+
+    const handleImport = useCallback(async () => {
+        if (!importText.trim()) return;
+        if (!jobContext) {
+            addToast('warning', "Please set a Job Context in Step 1 first.");
+            return;
+        }
+        setIsImporting(true);
+        try {
+            const newCandidate = await analyzeCandidateProfile(importText, jobContext);
+
+            await candidateService.create(newCandidate);
+
+            setCandidates(prev => [newCandidate, ...prev]);
+            setShowImport(false);
+            setImportText('');
+            onSpendCredits(10, `Imported Candidate: ${newCandidate.name}`);
+            addToast('success', "Candidate Imported");
+        } catch (error: unknown) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error(error);
+            }
+            const errorMessage = error instanceof Error ? error.message : "Failed to analyze candidate. Ensure Gemini API key is active.";
+            addToast('error', errorMessage);
+        } finally {
+            setIsImporting(false);
+        }
+    }, [importText, jobContext, onSpendCredits, addToast]);
+
+    const handleLoadDemoCandidate = useCallback(async () => {
+        if (!jobContext) {
+            addToast('warning', "Please set a Job Context in Step 1 first.");
+            return;
+        }
+        setIsDemoLoading(true);
+        addToast('info', 'Analyzing demo candidate with AI...');
+        try {
+            const newCandidate = await analyzeCandidateProfile(DEMO_CANDIDATE_PROFILE, jobContext);
+            await candidateService.create(newCandidate);
+            setCandidates(prev => [newCandidate, ...prev]);
+            addToast('success', "Demo candidate added to pipeline");
+        } catch (error: unknown) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error(error);
+            }
+            const errorMessage = error instanceof Error ? error.message : "Failed to analyze demo candidate.";
+            addToast('error', errorMessage);
+        } finally {
+            setIsDemoLoading(false);
+        }
+    }, [jobContext, addToast]);
+
+    // Memoized tab handlers
+    const handleSetActiveTab = useCallback((tab: 'pipeline' | 'sourcing') => {
+        setActiveTab(tab);
+    }, []);
+
+    const handleSetShowImport = useCallback((show: boolean) => {
+        setShowImport(show);
+    }, []);
+
+    const handleSetSourcingUrl = useCallback((url: string) => {
+        setSourcingUrl(url);
+    }, []);
+
+    const handleSetImportText = useCallback((text: string) => {
+        setImportText(text);
+    }, []);
+
+    // Multi-select handlers (Phase 4)
+    const toggleCandidateSelection = useCallback((candidateId: string) => {
+        setSelectedCandidateIds(prev => {
+            if (prev.includes(candidateId)) {
+                return prev.filter(id => id !== candidateId);
+            } else {
+                // Limit to 3 candidates for comparison
+                if (prev.length >= 3) {
+                    addToast('warning', 'Maximum 3 candidates can be compared at once');
+                    return prev;
+                }
+                return [...prev, candidateId];
+            }
+        });
+    }, [addToast]);
+
+    const clearSelection = useCallback(() => {
+        setSelectedCandidateIds([]);
+    }, []);
+
+    const openComparison = useCallback(() => {
+        if (selectedCandidateIds.length < 2) {
+            addToast('warning', 'Select at least 2 candidates to compare');
+            return;
+        }
+        setIsComparisonMode(true);
+    }, [selectedCandidateIds.length, addToast]);
+
+    const closeComparison = useCallback(() => {
+        setIsComparisonMode(false);
+    }, []);
+
+    // Memoized computed values
+    const candidateCount = useMemo(() => candidates.length, [candidates.length]);
+
+    const hasNoCandidates = useMemo(() => candidates.length === 0, [candidates.length]);
+
+    // DEBUG: Log chart rendering conditions
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[TalentHeatMap] Chart render check:', {
+                activeTab,
+                hasNoCandidates,
+                candidatesLength: candidates.length,
+                shouldRenderChart: activeTab === 'pipeline' && !hasNoCandidates
+            });
+        }
+    }, [activeTab, hasNoCandidates, candidates.length]);
+
+    // Helper function to calculate data quality score
+    const calculateDataQuality = useCallback((candidate: Candidate): { score: number; label: 'Complete' | 'Partial' | 'Minimal'; color: string } => {
+        let score = 0;
+
+        // Check presence of key fields
+        if (candidate.currentRole && candidate.currentRole !== 'N/A') score += 20;
+        if (candidate.yearsExperience && candidate.yearsExperience > 0) score += 20;
+        if (candidate.persona?.careerTrajectory) score += 20;
+        if (candidate.persona?.skillProfile?.coreSkills && candidate.persona.skillProfile.coreSkills.length > 0) score += 20;
+        if (candidate.scoreConfidence === 'high') score += 20;
+
+        return {
+            score,
+            label: score >= 70 ? 'Complete' : score >= 40 ? 'Partial' : 'Minimal',
+            color: score >= 70 ? 'emerald' : score >= 40 ? 'yellow' : 'red'
+        };
+    }, []);
+
+    // Sorting logic (Phase 4)
+    const sortedCandidates = useMemo(() => {
+        const sorted = [...candidates];
+
+        switch (sortBy) {
+            case 'score-desc':
+                return sorted.sort((a, b) => b.alignmentScore - a.alignmentScore);
+            case 'score-asc':
+                return sorted.sort((a, b) => a.alignmentScore - b.alignmentScore);
+            case 'date-desc':
+                return sorted; // Most recent first (default order from DB)
+            case 'date-asc':
+                return sorted.reverse(); // Oldest first
+            case 'name-asc':
+                return sorted.sort((a, b) => a.name.localeCompare(b.name));
+            case 'name-desc':
+                return sorted.sort((a, b) => b.name.localeCompare(a.name));
+            default:
+                return sorted;
+        }
+    }, [candidates, sortBy]);
+
+    // Filtering logic (Phase 4)
+    const filteredCandidates = useMemo(() => {
+        if (!filterScore) return sortedCandidates;
+
+        switch (filterScore) {
+            case 'high':
+                return sortedCandidates.filter(c => c.alignmentScore >= 80);
+            case 'medium':
+                return sortedCandidates.filter(c => c.alignmentScore >= 50 && c.alignmentScore < 80);
+            case 'low':
+                return sortedCandidates.filter(c => c.alignmentScore < 50);
+            default:
+                return sortedCandidates;
+        }
+    }, [sortedCandidates, filterScore]);
+
+    // Memoized candidate list rendering data
+    const renderedCandidates = useMemo(() => {
+        return filteredCandidates.map((c) => {
+            const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE);
+            const dataQuality = calculateDataQuality(c);
+            return {
+                candidate: c,
+                isDeepProfileUnlocked,
+                isProcessingThis: processingId === c.id,
+                dataQuality
+            };
+        });
+    }, [filteredCandidates, processingId, calculateDataQuality]);
+
+    return (
+        <div className="h-full flex flex-col bg-apex-900 relative">
+            {/* Header */}
+            <div className="p-4 md:p-6 border-b border-apex-800 flex justify-between items-center bg-apex-800/30">
+                <div className="flex items-center space-x-6">
+                    <div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-emerald-500 font-mono text-xs uppercase tracking-widest bg-emerald-900/20 px-2 py-0.5 rounded">Step 2 of 4</span>
+                            <h2 className="text-lg md:text-xl font-bold text-white">Talent Engine</h2>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1 hidden md:block">Source, score, and shortlist candidates.</p>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex bg-apex-900 p-1 rounded-lg border border-apex-700">
+                        <button
+                            onClick={() => handleSetActiveTab('pipeline')}
+                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'pipeline' ? 'bg-apex-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Pipeline
+                        </button>
+                        <button
+                            onClick={() => handleSetActiveTab('sourcing')}
+                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'sourcing' ? 'bg-apex-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Auto-Sourcing <span className="ml-1 px-1 bg-emerald-600 text-[9px] rounded text-white">NEW</span>
+                        </button>
+                    </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 hidden md:block">Source, score, and shortlist candidates.</p>
-            </div>
-            
-            {/* Tabs */}
-            <div className="hidden md:flex bg-apex-900 p-1 rounded-lg border border-apex-700">
-                <button 
-                    onClick={() => setActiveTab('pipeline')}
-                    className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'pipeline' ? 'bg-apex-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                    Pipeline
-                </button>
-                <button 
-                    onClick={() => setActiveTab('sourcing')}
-                    className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'sourcing' ? 'bg-apex-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                    Auto-Sourcing <span className="ml-1 px-1 bg-emerald-600 text-[9px] rounded text-white">NEW</span>
-                </button>
-            </div>
-        </div>
 
-        <div className="flex items-center space-x-3">
-            <button
-                onClick={handleLoadDemoCandidate}
-                disabled={isDemoLoading}
-                className="hidden md:flex items-center px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 hover:text-white bg-apex-800 hover:bg-apex-700 border border-apex-700 hover:border-slate-600 rounded transition-all"
-            >
-                {isDemoLoading ? <i className="fa-solid fa-circle-notch fa-spin mr-1.5"></i> : <i className="fa-solid fa-flask mr-1.5 text-[9px]"></i>}
-                {isDemoLoading ? 'Loading...' : 'Demo'}
-            </button>
-            <button
-                onClick={() => setShowImport(true)}
-                className="hidden md:flex items-center px-4 py-2 bg-apex-800 border border-apex-600 hover:bg-apex-700 text-slate-300 text-xs font-bold rounded transition-all"
-            >
-                <i className="fa-solid fa-file-import mr-2"></i> Quick Paste
-            </button>
-            <div className="text-xs text-slate-500">
-                {candidates.length} Candidates
-            </div>
-        </div>
-      </div>
-
-      {/* Sourcing Console */}
-      {activeTab === 'sourcing' && (
-          <div className="p-6 bg-apex-800/20 border-b border-apex-700 animate-fadeIn">
-              <div className="max-w-4xl mx-auto">
-                  <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-8 h-8 rounded bg-purple-900/20 flex items-center justify-center text-purple-400 border border-purple-500/30">
-                          <i className="fa-solid fa-robot"></i>
-                      </div>
-                      <div>
-                          <h3 className="text-sm font-bold text-white">Sourcing Agent (Beta)</h3>
-                          <p className="text-xs text-slate-400">Enter a public profile URL (LinkedIn, GitHub, Portfolio). The Agent will scrape, build a persona, and check fit.</p>
-                      </div>
-                  </div>
-
-                  <div className="flex space-x-2">
-                      <div className="flex-1 relative">
-                          <i className="fa-solid fa-link absolute left-3 top-3 text-slate-500"></i>
-                          <input 
-                              type="text" 
-                              value={sourcingUrl}
-                              onChange={(e) => setSourcingUrl(e.target.value)}
-                              placeholder="https://linkedin.com/in/..."
-                              className="w-full bg-apex-900 border border-apex-700 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none placeholder-slate-600"
-                          />
-                      </div>
-                      <button 
-                        onClick={handleSourcingRun}
-                        disabled={isSourcing || !sourcingUrl}
-                        className={`px-6 rounded-lg font-bold text-xs flex items-center transition-all ${isSourcing ? 'bg-apex-700 text-slate-500' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/20'}`}
-                      >
-                          {isSourcing ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-bolt mr-2"></i>}
-                          {isSourcing ? 'Processing...' : 'Run Analysis'}
-                      </button>
-                  </div>
-
-                  {/* Console Log */}
-                  {sourcingLog.length > 0 && (
-                      <div className="mt-4 bg-black/50 rounded-lg p-3 font-mono text-[10px] text-emerald-400 border border-apex-700/50 max-h-32 overflow-y-auto">
-                          {sourcingLog.map((line, i) => <div key={i}>{line}</div>)}
-                      </div>
-                  )}
-              </div>
-          </div>
-      )}
-
-      {/* Import Modal */}
-      {showImport && (
-          <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-2xl bg-apex-900 border border-apex-700 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn">
-                  <div className="p-4 border-b border-apex-700 bg-apex-800 flex justify-between items-center">
-                      <h3 className="text-white font-bold">Import Candidate Data</h3>
-                      <button onClick={() => setShowImport(false)} className="text-slate-500 hover:text-white"><i className="fa-solid fa-xmark"></i></button>
-                  </div>
-                  <div className="p-4">
-                      <p className="text-xs text-slate-400 mb-2">
-                        <strong>Instructions:</strong> Go to a LinkedIn Profile → Press <code className="bg-apex-800 px-1 rounded border border-apex-700">Ctrl+A</code> then <code className="bg-apex-800 px-1 rounded border border-apex-700">Ctrl+C</code> → Paste here.
-                      </p>
-                      <textarea 
-                        className="w-full h-64 bg-apex-950 border border-apex-700 rounded p-3 text-sm text-slate-300 font-mono focus:border-emerald-500 outline-none"
-                        placeholder="Paste text here..."
-                        value={importText}
-                        onChange={(e) => setImportText(e.target.value)}
-                      ></textarea>
-                  </div>
-                  <div className="p-4 border-t border-apex-800 flex justify-end">
-                      <button 
-                        onClick={handleImport}
-                        disabled={isImporting}
-                        className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded flex items-center"
-                      >
-                          {isImporting ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-bolt mr-2"></i>}
-                          {isImporting ? 'Analyzing...' : 'Analyze & Add'}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* Grid Header (Desktop Only) */}
-      <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-apex-800 border-b border-apex-700 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
-        <div className="col-span-4">Candidate & Persona</div>
-        <div className="col-span-2 text-center">Match Score</div>
-        <div className="col-span-4">Evidence Summary</div>
-        <div className="col-span-2 text-right">Action</div>
-      </div>
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3">
-        {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-                <i className="fa-solid fa-circle-notch fa-spin text-emerald-500 text-2xl"></i>
-            </div>
-        ) : candidates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full opacity-60">
-                <div className="w-16 h-16 bg-apex-800 rounded-full flex items-center justify-center mb-4">
-                    <i className="fa-solid fa-users-slash text-2xl text-slate-600"></i>
-                </div>
-                <h3 className="text-white font-bold mb-2">Pipeline Empty</h3>
-                <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">
-                    {activeTab === 'sourcing' ? 'Use the Sourcing Agent above to find candidates.' : 'Import a profile to start.'}
-                </p>
-                {activeTab !== 'sourcing' && (
-                    <button 
-                        onClick={() => setShowImport(true)}
-                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg transition-all"
+                <div className="flex items-center space-x-3">
+                    <button
+                        onClick={handleLoadDemoCandidate}
+                        disabled={isDemoLoading}
+                        className="hidden md:flex items-center px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-400 hover:text-white bg-apex-800 hover:bg-apex-700 border border-apex-700 hover:border-slate-600 rounded transition-all"
                     >
-                        <i className="fa-solid fa-plus mr-2"></i> Import First Candidate
+                        {isDemoLoading ? <i className="fa-solid fa-circle-notch fa-spin mr-1.5"></i> : <i className="fa-solid fa-flask mr-1.5 text-[9px]"></i>}
+                        {isDemoLoading ? 'Loading...' : 'Demo'}
+                    </button>
+                    <button
+                        onClick={() => handleSetShowImport(true)}
+                        className="hidden md:flex items-center px-4 py-2 bg-apex-800 border border-apex-600 hover:bg-apex-700 text-slate-300 text-xs font-bold rounded transition-all"
+                    >
+                        <i className="fa-solid fa-file-import mr-2"></i> Quick Paste
+                    </button>
+                    <div className="text-xs text-slate-500">
+                        {candidateCount} Candidates
+                    </div>
+                </div>
+            </div>
+
+            {/* Sourcing Console */}
+            {activeTab === 'sourcing' && (
+                <div className="p-6 bg-apex-800/20 border-b border-apex-700 animate-fadeIn">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="flex items-center space-x-3 mb-4">
+                            <div className="w-8 h-8 rounded bg-purple-900/20 flex items-center justify-center text-purple-400 border border-purple-500/30">
+                                <i className="fa-solid fa-robot"></i>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white">Sourcing Agent (Beta)</h3>
+                                <p className="text-xs text-slate-400">Enter a public profile URL (LinkedIn, GitHub, Portfolio). The Agent will scrape, build a persona, and check fit.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex space-x-2">
+                            <div className="flex-1 relative">
+                                <i className="fa-solid fa-link absolute left-3 top-3 text-slate-500"></i>
+                                <input
+                                    type="text"
+                                    value={sourcingUrl}
+                                    onChange={(e) => handleSetSourcingUrl(e.target.value)}
+                                    placeholder="https://linkedin.com/in/..."
+                                    className="w-full bg-apex-900 border border-apex-700 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none placeholder-slate-600"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSourcingRun}
+                                disabled={isSourcing || !sourcingUrl}
+                                className={`px-6 rounded-lg font-bold text-xs flex items-center transition-all ${isSourcing ? 'bg-apex-700 text-slate-500' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/20'}`}
+                            >
+                                {isSourcing ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-bolt mr-2"></i>}
+                                {isSourcing ? 'Processing...' : 'Run Analysis'}
+                            </button>
+                        </div>
+
+                        {/* Console Log */}
+                        {sourcingLog.length > 0 && (
+                            <div className="mt-4 bg-black/50 rounded-lg p-3 font-mono text-xs text-emerald-400 border border-apex-700/50 max-h-32 overflow-y-auto">
+                                {sourcingLog.map((line, i) => <div key={i}>{line}</div>)}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Import Modal */}
+            <ImportModal
+                isOpen={showImport}
+                importText={importText}
+                isImporting={isImporting}
+                onClose={() => handleSetShowImport(false)}
+                onImportTextChange={handleSetImportText}
+                onImport={handleImport}
+            />
+
+            {/* Score Distribution Chart (Pipeline tab only, when candidates exist) */}
+            {activeTab === 'pipeline' && !hasNoCandidates && (
+                <div className="px-6 py-4 bg-apex-800/20 border-b border-apex-700" style={{ minHeight: '240px' }}>
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">Pipeline Distribution</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">Score distribution across all candidates</p>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                            <span className="inline-block w-3 h-3 bg-emerald-600 rounded mr-1.5"></span>
+                            Selected candidate
+                        </div>
+                    </div>
+                    <ScoreDistributionChart
+                        candidates={candidates}
+                        height={180}
+                    />
+                </div>
+            )}
+
+            {/* Sorting & Filtering Controls (Pipeline tab only, when candidates exist) */}
+            {activeTab === 'pipeline' && !hasNoCandidates && (
+                <div className="px-6 py-3 bg-apex-800/30 border-b border-apex-700">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                        {/* Sorting Controls */}
+                        <div className="flex items-center space-x-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Sort:</label>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                                className="bg-apex-900 border border-apex-700 rounded px-3 py-1.5 text-xs text-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                            >
+                                <option value="score-desc">Highest Score First</option>
+                                <option value="score-asc">Lowest Score First</option>
+                                <option value="date-desc">Most Recent</option>
+                                <option value="date-asc">Oldest First</option>
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                            </select>
+                        </div>
+
+                        {/* Filtering Controls */}
+                        <div className="flex items-center space-x-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Filter:</label>
+                            <div className="flex space-x-1">
+                                <button
+                                    onClick={() => setFilterScore(filterScore === 'high' ? null : 'high')}
+                                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
+                                        filterScore === 'high'
+                                            ? 'bg-emerald-600 text-white shadow-lg'
+                                            : 'bg-apex-900 border border-apex-700 text-slate-400 hover:text-slate-300 hover:border-apex-600'
+                                    }`}
+                                >
+                                    High (80-100)
+                                </button>
+                                <button
+                                    onClick={() => setFilterScore(filterScore === 'medium' ? null : 'medium')}
+                                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
+                                        filterScore === 'medium'
+                                            ? 'bg-yellow-600 text-white shadow-lg'
+                                            : 'bg-apex-900 border border-apex-700 text-slate-400 hover:text-slate-300 hover:border-apex-600'
+                                    }`}
+                                >
+                                    Medium (50-79)
+                                </button>
+                                <button
+                                    onClick={() => setFilterScore(filterScore === 'low' ? null : 'low')}
+                                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
+                                        filterScore === 'low'
+                                            ? 'bg-red-600 text-white shadow-lg'
+                                            : 'bg-apex-900 border border-apex-700 text-slate-400 hover:text-slate-300 hover:border-apex-600'
+                                    }`}
+                                >
+                                    Low (0-49)
+                                </button>
+                                {filterScore && (
+                                    <button
+                                        onClick={() => setFilterScore(null)}
+                                        className="px-3 py-1.5 rounded text-xs font-bold bg-apex-900 border border-apex-700 text-slate-400 hover:text-white hover:border-emerald-500 transition-all"
+                                    >
+                                        <i className="fa-solid fa-xmark mr-1"></i> Clear
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Results Counter & Compare Button */}
+                        <div className="flex items-center space-x-3">
+                            {selectedCandidateIds.length >= 2 && (
+                                <button
+                                    onClick={openComparison}
+                                    className="px-4 py-1.5 rounded text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-all flex items-center space-x-2"
+                                >
+                                    <i className="fa-solid fa-code-compare"></i>
+                                    <span>Compare {selectedCandidateIds.length} Candidates</span>
+                                </button>
+                            )}
+                            {selectedCandidateIds.length > 0 && (
+                                <button
+                                    onClick={clearSelection}
+                                    className="px-3 py-1.5 rounded text-xs font-bold bg-apex-900 border border-apex-700 text-slate-400 hover:text-white hover:border-red-500 transition-all"
+                                >
+                                    <i className="fa-solid fa-xmark mr-1"></i> Clear Selection
+                                </button>
+                            )}
+                            <div className="text-xs text-slate-500">
+                                Showing <span className="font-bold text-emerald-400">{renderedCandidates.length}</span> of <span className="font-bold text-slate-400">{candidates.length}</span> candidates
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Grid Header (Desktop Only) */}
+            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-apex-800 border-b border-apex-700 text-xs font-bold uppercase text-slate-500 tracking-wider">
+                <div className="col-span-4">Candidate & Persona</div>
+                <div className="col-span-2 text-center">Match Score</div>
+                <div className="col-span-4">Evidence Summary</div>
+                <div className="col-span-2 text-right">Action</div>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3">
+                {isLoading ? (
+                    <div className="space-y-3">
+                        <CandidateCardSkeleton />
+                        <CandidateCardSkeleton />
+                        <CandidateCardSkeleton />
+                    </div>
+                ) : hasNoCandidates ? (
+                    <div className="flex flex-col items-center justify-center h-full opacity-60">
+                        <div className="w-16 h-16 bg-apex-800 rounded-full flex items-center justify-center mb-4">
+                            <i className="fa-solid fa-users-slash text-2xl text-slate-600"></i>
+                        </div>
+                        <h3 className="text-white font-bold mb-2">Pipeline Empty</h3>
+                        <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">
+                            {activeTab === 'sourcing' ? 'Use the Sourcing Agent above to find candidates.' : 'Import a profile to start.'}
+                        </p>
+                        {activeTab !== 'sourcing' && (
+                            <button
+                                onClick={() => handleSetShowImport(true)}
+                                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg transition-all"
+                            >
+                                <i className="fa-solid fa-plus mr-2"></i> Import First Candidate
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        {/* Show skeleton loader during AI processing */}
+                        {(isSourcing || isImporting) && <CandidateCardSkeleton />}
+
+                        {renderedCandidates.map(({ candidate: c, isDeepProfileUnlocked, isProcessingThis, dataQuality }) => {
+                            const isSelected = selectedCandidateIds.includes(c.id);
+                            return (
+                                <CandidateGridRow
+                                    key={c.id}
+                                    candidate={c}
+                                    isSelected={isSelected}
+                                    isDeepProfileUnlocked={isDeepProfileUnlocked}
+                                    isProcessing={isProcessingThis}
+                                    dataQuality={dataQuality}
+                                    onSelectCandidate={onSelectCandidate}
+                                    onToggleSelection={toggleCandidateSelection}
+                                    onDelete={handleDelete}
+                                    onUnlockProfile={handleUnlockProfile}
+                                />
+                            );
+                        })}
+                    </>
+                )}
+                {/* Mobile Import Button at bottom */}
+                {!hasNoCandidates && activeTab !== 'sourcing' && (
+                    <button
+                        onClick={() => handleSetShowImport(true)}
+                        className="md:hidden w-full py-3 bg-apex-800 border border-dashed border-apex-700 text-slate-400 rounded-lg text-sm font-bold mt-4"
+                    >
+                        <i className="fa-solid fa-plus mr-2"></i> Import Candidate
                     </button>
                 )}
             </div>
-        ) : (
-            candidates.map((c) => {
-                const isDeepProfileUnlocked = c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE);
-                const isProcessingThis = processingId === c.id;
-                
-                return (
-                    <div 
-                        key={c.id} 
-                        onClick={() => isDeepProfileUnlocked ? onSelectCandidate(c) : null}
-                        className={`
-                            flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all duration-300 items-start md:items-center relative
-                            ${isDeepProfileUnlocked 
-                                ? 'bg-apex-800/40 border-apex-700 hover:bg-apex-800 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-900/10 hover:-translate-y-0.5 cursor-pointer group' 
-                                : 'bg-apex-900 border-apex-800 opacity-80'
-                            }
-                        `}
-                    >
-                        {/* Candidate Info + Persona */}
-                        <div className="col-span-4 w-full md:w-auto">
-                            <div className="flex items-center mb-1">
-                                <img src={c.avatar} className="w-10 h-10 rounded-full border border-slate-700 mr-3 grayscale group-hover:grayscale-0 transition-all" alt="avatar" />
-                                <div>
-                                    <div className="text-sm font-bold text-slate-200">{c.name}</div>
-                                    <div className="text-xs text-slate-500">{c.currentRole}</div>
-                                </div>
-                            </div>
-                            
-                            {/* Persona Badge (New) */}
-                            {c.persona && (
-                                <div className="mt-2 flex items-center space-x-3">
-                                    <span className="text-[9px] bg-purple-900/30 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
-                                        <i className="fa-solid fa-fingerprint mr-1"></i> {c.persona.archetype}
-                                    </span>
-                                    {/* Flags */}
-                                    {c.persona.redFlags?.length > 0 && (
-                                        <div className="relative group/flag flex items-center cursor-help">
-                                            <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 transition-colors">
-                                                <i className="fa-solid fa-triangle-exclamation text-[10px]"></i>
-                                                <span className="text-[9px] font-bold">{c.persona.redFlags.length} Risk{c.persona.redFlags.length > 1 ? 's' : ''}</span>
-                                            </div>
-                                            
-                                            {/* Tooltip */}
-                                            <div className="absolute bottom-full left-0 mb-2 w-56 p-3 bg-apex-950 border border-red-900/50 rounded-lg shadow-xl text-[10px] text-red-200 hidden group-hover/flag:block z-30">
-                                                <div className="font-bold text-red-400 uppercase tracking-wider mb-1">Detected Risks</div>
-                                                <ul className="list-disc list-inside space-y-1 text-slate-300">
-                                                    {c.persona.redFlags.map((flag, i) => <li key={i} className="leading-tight">{flag}</li>)}
-                                                </ul>
-                                                {/* Tooltip Arrow */}
-                                                <div className="absolute top-full left-4 -mt-1 w-2 h-2 bg-apex-950 border-r border-b border-red-900/50 transform rotate-45"></div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Match Score (Desktop) */}
-                        <div className="col-span-2 hidden md:flex flex-col items-center justify-center">
-                            <div className={`text-lg font-bold font-mono ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>
-                                {c.alignmentScore}%
-                            </div>
-                            <div className="w-16 h-1 bg-apex-700 rounded-full mt-1">
-                                <div 
-                                    className={`h-full rounded-full ${c.alignmentScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`} 
-                                    style={{width: `${c.alignmentScore}%`}}
-                                ></div>
-                            </div>
-                        </div>
-
-                        {/* Summary */}
-                        <div className="col-span-4 w-full">
-                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-none">"{c.shortlistSummary}"</p>
-                            <div className="mt-2 flex space-x-2">
-                                <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded border border-slate-700">Confidence: High</span>
-                            </div>
-                        </div>
-
-                        {/* Action */}
-                        <div className="col-span-2 flex justify-end w-full md:w-auto mt-2 md:mt-0">
-                            {isDeepProfileUnlocked ? (
-                                <button className="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-900/20 border border-emerald-500/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 group-hover:shadow-emerald-500/40">
-                                    <i className="fa-solid fa-file-invoice mr-2"></i> View Report
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={(e) => handleUnlockProfile(e, c.id, c.name)}
-                                    disabled={isProcessingThis}
-                                    className={`
-                                        w-full md:w-auto px-4 py-2 text-xs font-bold rounded-lg border flex items-center justify-center transition-all shadow-sm
-                                        ${isProcessingThis 
-                                            ? 'bg-apex-800 border-apex-700 text-slate-500 cursor-wait' 
-                                            : 'bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 border-slate-700 hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5'
-                                        }
-                                    `}
-                                >
-                                    {isProcessingThis ? (
-                                        <><i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Unlocking...</>
-                                    ) : (
-                                        <><i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr)</>
-                                    )}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                );
-            })
-        )}
-        {/* Mobile Import Button at bottom */}
-        {candidates.length > 0 && activeTab !== 'sourcing' && (
-             <button 
-                onClick={() => setShowImport(true)}
-                className="md:hidden w-full py-3 bg-apex-800 border border-dashed border-apex-700 text-slate-400 rounded-lg text-sm font-bold mt-4"
-            >
-                <i className="fa-solid fa-plus mr-2"></i> Import Candidate
-            </button>
-        )}
-      </div>
-    </div>
-  );
+            {/* Comparison View Modal (Phase 4) */}
+            {isComparisonMode && (
+                <CandidateComparisonView
+                    candidates={candidates.filter(c => selectedCandidateIds.includes(c.id))}
+                    onClose={closeComparison}
+                />
+            )}
+        </div>
+    );
 };
 
-export default ShortlistGrid;
+export default React.memo(ShortlistGrid);

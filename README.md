@@ -31,6 +31,58 @@ The system replaces intuition with evidence-based intelligence, utilizing **Goog
 *   **Privacy First**: No backend storage. All API keys and candidate data persist securely in the browser (`localStorage`).
 *   **Responsive Design**: Fully optimized for desktop and mobile workflows.
 
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 20.x or later
+- npm 9.x or later
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone <your-repo-url>
+cd RecruitOS-main
+```
+
+2. **Install dependencies**
+```bash
+npm install
+```
+
+3. **Configure environment variables**
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your API keys:
+- **Google Gemini API**: Get your key at [https://aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+- **Firecrawl API**: Get your key at [https://firecrawl.dev](https://firecrawl.dev)
+- **Supabase** (Optional): Get credentials at [https://supabase.com](https://supabase.com)
+
+4. **Start the development server**
+```bash
+npm run dev
+```
+
+5. **Open your browser**
+Navigate to [http://localhost:3000](http://localhost:3000)
+
+### Development Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm test             # Run tests
+npm run test:watch   # Run tests in watch mode
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint errors
+npm run format       # Format code with Prettier
+npm run type-check   # Run TypeScript type checking
+npm run validate     # Run all checks (types, lint, tests)
+```
+
 ## ⚙️ Configuration
 
 To unlock the full intelligence of the OS, configure your API keys in the **Admin Settings** (click the user avatar in the sidebar).
@@ -39,9 +91,17 @@ To unlock the full intelligence of the OS, configure your API keys in the **Admi
 | :--- | :--- | :--- |
 | **Google Gemini API** | Scoring, Profiling, Drafting | ✅ Yes |
 | **Firecrawl API** | Job Description Scraping | ✅ Yes |
+| **Supabase** | Persistent Storage | ❌ Optional |
+| **BrightData API** | LinkedIn Profile Extraction | ❌ Optional |
 | **OpenRouter API** | Alternative Inference Models | ❌ Optional |
 
-*Note: Keys are stored locally in your browser and are never sent to a backend server.*
+### ⚠️ Security Warning
+**IMPORTANT:** API keys are stored unencrypted in browser localStorage. For production use:
+- Use environment variables instead of localStorage
+- Implement a backend API proxy for sensitive calls
+- Rotate keys regularly
+- Never share your browser profile or allow untrusted extensions
+- See [SECURITY.md](./SECURITY.md) for detailed security guidelines
 
 ## 💻 Tech Stack
 

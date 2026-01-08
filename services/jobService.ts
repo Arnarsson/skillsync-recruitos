@@ -1,6 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { scrapeUrlContent } from "./scrapingService";
+import { AI_MODELS } from '../constants';
 
 // Helper to safely get env vars
 const getEnv = (key: string) => {
@@ -13,16 +14,16 @@ const getEnv = (key: string) => {
 
 // Initialize with localStorage key if available, otherwise env
 const getAiClient = () => {
-    const apiKey = localStorage.getItem('GEMINI_API_KEY') || getEnv('API_KEY') || '';
-    if (!apiKey) return null;
-    return new GoogleGenAI({ apiKey });
+  const apiKey = localStorage.getItem('GEMINI_API_KEY') || getEnv('API_KEY') || '';
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
 };
 
 export const fetchJobContextFromUrl = async (url: string): Promise<string> => {
   try {
     const rawMarkdown = await scrapeUrlContent(url);
     const ai = getAiClient();
-    
+
     if (!ai) throw new Error("Missing Gemini API Key");
 
     const prompt = `
@@ -49,7 +50,7 @@ export const fetchJobContextFromUrl = async (url: string): Promise<string> => {
     `;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: AI_MODELS.JOB_PARSING,
       contents: prompt
     });
 

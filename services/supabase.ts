@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Helper to safely access process.env in browser environments
-const getEnv = (key: string) => {
+const getEnv = (key: string): string | undefined => {
   try {
     return (typeof process !== 'undefined' && process.env) ? process.env[key] : undefined;
   } catch (e) {
@@ -10,12 +10,13 @@ const getEnv = (key: string) => {
   }
 };
 
-// Use provided keys as fallback if process.env is empty or undefined
-const supabaseUrl = getEnv('SUPABASE_URL') || 'https://ghkcooixmhxvqoaqirbi.supabase.co';
-const supabaseKey = getEnv('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdoa2Nvb2l4bWh4dnFvYXFpcmJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODM4ODgsImV4cCI6MjA4MzI1OTg4OH0.dh_zhuFyLpN8L7v84WNjsythJJDmDToxLQ08_dX6rw0';
+// SECURITY: Credentials must be provided via environment variables
+// No hardcoded fallbacks to prevent credential exposure
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseKey = getEnv('SUPABASE_ANON_KEY');
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase URL or Key missing. Database features will be disabled.');
+  console.info('Supabase credentials not configured. Database features will be disabled. Running in local-only mode.');
 }
 
 // Create client with explicit values
