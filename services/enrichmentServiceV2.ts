@@ -41,7 +41,7 @@ const getEnv = (key: string) => {
  */
 async function collectEvidence(input: EnrichmentInput): Promise<EvidenceSource[]> {
   const evidence: EvidenceSource[] = [];
-  const brightDataKey = getEnv('VITE_BRIGHTDATA_API_KEY') || localStorage.getItem('BRIGHTDATA_API_KEY');
+  const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
 
   if (process.env.NODE_ENV === 'development') {
     console.log('[Enrichment] ===== EVIDENCE COLLECTION =====');

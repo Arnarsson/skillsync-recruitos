@@ -14,7 +14,7 @@ interface Props {
   removeToast: (id: string) => void;
 }
 
-const ToastNotification: React.FC<Props> = React.memo(({ toasts, removeToast }) => {
+const ToastNotification: React.FC<Props> = ({ toasts, removeToast }) => {
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col space-y-3 pointer-events-none">
       {toasts.map((t) => (
@@ -48,8 +48,6 @@ const ToastNotification: React.FC<Props> = React.memo(({ toasts, removeToast }) 
       ))}
     </div>
   );
-});
-
-ToastNotification.displayName = 'ToastNotification';
+};
 
 export default ToastNotification;

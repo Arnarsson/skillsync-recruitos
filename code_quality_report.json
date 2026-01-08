@@ -1,0 +1,193 @@
+{
+  "code_quality": [
+    {
+      "id": "cq-001",
+      "type": "code_quality",
+      "title": "Split large service files into focused domain modules",
+      "description": "Three service files have grown excessively large: geminiService.ts (1,243 lines), scrapingService.ts (1,092 lines), and enrichmentServiceV2.ts (1,003 lines). While geminiService exports 8 functions (reasonable), scrapingService exports only 1 function in 1,092 lines, indicating significant helper code that should be extracted.",
+      "rationale": "Large files increase cognitive load, make code reviews harder, and lead to merge conflicts. Files over 800 lines should be split into focused modules. The enrichmentServiceV2 filename suggests this is already a refactor attempt - consider completing the migration from enrichmentService.ts (737 lines).",
+      "category": "large_files",
+      "severity": "major",
+      "affectedFiles": [
+        "services/geminiService.ts",
+        "services/scrapingService.ts",
+        "services/enrichmentServiceV2.ts",
+        "services/enrichmentService.ts"
+      ],
+      "currentState": "geminiService.ts: 1,243 lines with 8 exports\nscrapingService.ts: 1,092 lines with 1 export\nenrichmentServiceV2.ts: 1,003 lines\nenrichmentService.ts: 737 lines (deprecated?)",
+      "proposedChange": "1. Extract scrapingService helpers into services/scraping/firecrawl.ts, services/scraping/brightdata.ts, services/scraping/linkedin.ts\n2. Complete migration from enrichmentService to enrichmentServiceV2, then delete old version\n3. Split geminiService by AI capability: services/ai/scoring.ts, services/ai/profiling.ts, services/ai/outreach.ts",
+      "codeExample": "// Current: services/scrapingService.ts (1,092 lines, 1 export)\nexport async function scrapeJobDescription() { /* ... */ }\n// Internal helpers buried in same file\n\n// Proposed structure:\n// services/scraping/index.ts\nexport { scrapeJobDescription } from './firecrawl';\nexport { scrapeLinkedInProfile } from './brightdata';\n\n// services/scraping/firecrawl.ts (200 lines)\nexport async function scrapeJobDescription() { /* ... */ }\n\n// services/scraping/brightdata.ts (300 lines)\nexport async function scrapeLinkedInProfile() { /* ... */ }",
+      "bestPractice": "Single Responsibility Principle - modules should be 200-600 lines focused on one domain concern",
+      "metrics": {
+        "lineCount": 4075,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null
+      },
+      "estimatedEffort": "large",
+      "breakingChange": false,
+      "prerequisites": [
+        "Ensure test coverage exists before refactoring (currently only 2 test files)",
+        "Complete enrichmentServiceV2 migration before touching enrichmentService"
+      ]
+    },
+    {
+      "id": "cq-002",
+      "type": "code_quality",
+      "title": "Wrap 231 console statements in development-only checks",
+      "description": "Found 231 console.log/warn/error statements throughout the codebase that are not wrapped in `process.env.NODE_ENV === 'development'` checks. According to CLAUDE.md code quality standards, console statements should be wrapped in dev checks, and a centralized logging service (services/logger.ts) is available but underutilized.",
+      "rationale": "Console statements in production builds: (1) expose internal application logic to users via browser DevTools, (2) degrade performance with unnecessary I/O operations, (3) may leak sensitive debugging information. The project already has logger.ts (109 lines) for this purpose but it's not being consistently used.",
+      "category": "code_smells",
+      "severity": "major",
+      "affectedFiles": [
+        "Multiple files across components/ and services/ directories"
+      ],
+      "currentState": "231 unwrapped console statements detected\nCentralized logger service exists at services/logger.ts but is underutilized",
+      "proposedChange": "1. Replace all console.log with logger.debug()\n2. Replace all console.error with logger.error()\n3. Replace all console.warn with logger.warn()\n4. Enhance logger.ts to automatically suppress logs in production\n5. Add ESLint rule to prevent future unwrapped console usage: 'no-console': ['error', { allow: [] }]",
+      "codeExample": "// Current (appears 231 times):\nconsole.log('Analyzing candidate:', candidate.name);\n\n// Proposed:\nimport { logger } from '@/services/logger';\nlogger.debug('Analyzing candidate:', candidate.name);\n\n// In logger.ts, add automatic suppression:\nexport const logger = {\n  debug: (...args: unknown[]) => {\n    if (process.env.NODE_ENV === 'development') {\n      console.log(...args);\n    }\n  },\n  error: (...args: unknown[]) => console.error(...args), // Always log errors\n  warn: (...args: unknown[]) => console.warn(...args)    // Always log warnings\n};",
+      "bestPractice": "Use centralized logging with environment-aware suppression. Never expose debug logs in production.",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": 231,
+        "testCoverage": null
+      },
+      "estimatedEffort": "medium",
+      "breakingChange": false,
+      "prerequisites": [
+        "Add ESLint rule after migration to prevent regressions"
+      ]
+    },
+    {
+      "id": "cq-003",
+      "type": "code_quality",
+      "title": "Add comprehensive test coverage - currently only 2 test files for 12 components + 6 services",
+      "description": "Critical gap in test coverage: Only 2 test files exist (usePersistedState.test.ts and geminiService.test.ts with 2 skipped tests) for a codebase with 12 components and 6 major services. This violates the testing guidelines in CLAUDE.md which state 'Test business logic in service layer' and 'Integration tests for complex component interactions'.",
+      "rationale": "Insufficient test coverage prevents confident refactoring, increases regression risk, and makes code review harder. The project has test infrastructure (Vitest + React Testing Library) configured, but it's not being utilized. With 5 files over 900 lines (BattleCardCockpit.tsx: 1,051, TalentHeatMap.tsx: 922), refactoring without tests is extremely risky.",
+      "category": "testing",
+      "severity": "critical",
+      "affectedFiles": [
+        "tests/ directory - missing tests for:",
+        "components/BattleCardCockpit.tsx (1,051 lines)",
+        "components/TalentHeatMap.tsx (922 lines)",
+        "components/CalibrationEngine.tsx (349 lines)",
+        "components/NetworkPathfinder.tsx (184 lines)",
+        "services/scrapingService.ts (1,092 lines)",
+        "services/enrichmentServiceV2.ts (1,003 lines)",
+        "services/enrichmentService.ts (737 lines)",
+        "services/candidateService.ts (241 lines)"
+      ],
+      "currentState": "2 test files covering 2 areas:\n- tests/hooks/usePersistedState.test.ts (79 lines)\n- tests/services/geminiService.test.ts (63 lines, 2 tests skipped with '// TODO: Add API mocking')\n\nTest infrastructure configured: Vitest + React Testing Library\nCoverage target: Not specified in package.json",
+      "proposedChange": "Phase 1 (High Priority - Business Logic):\n1. tests/services/candidateService.test.ts - localStorage sync, Supabase fallback\n2. tests/services/scrapingService.test.ts - Firecrawl/BrightData integration\n3. tests/services/enrichmentServiceV2.test.ts - enrichment pipeline\n4. Complete geminiService.test.ts - unmock the 2 skipped tests\n\nPhase 2 (Component Critical Paths):\n5. tests/components/TalentHeatMap.test.tsx - candidate scoring, filtering, CSV export\n6. tests/components/BattleCardCockpit.test.tsx - deep profile display, indicators\n7. tests/components/CalibrationEngine.test.tsx - job scraping, context extraction\n\nPhase 3 (Integration Tests):\n8. tests/integration/funnel-flow.test.tsx - E2E workflow through 4 stages\n9. tests/integration/credit-system.test.tsx - credit spending, audit logging\n\nAdd to package.json:\n\"test:coverage\": \"vitest run --coverage --coverage.threshold.lines=70\"",
+      "codeExample": "// Example: tests/services/candidateService.test.ts\nimport { describe, it, expect, beforeEach, vi } from 'vitest';\nimport { saveCandidate, loadCandidates } from '@/services/candidateService';\nimport { supabase } from '@/services/supabase';\n\nvi.mock('@/services/supabase');\n\ndescribe('candidateService', () => {\n  beforeEach(() => {\n    localStorage.clear();\n    vi.clearAllMocks();\n  });\n\n  it('should save to localStorage first, then sync to Supabase', async () => {\n    const candidate = { id: '123', name: 'Test', alignmentScore: 85 };\n    await saveCandidate(candidate);\n    \n    // Verify localStorage updated\n    const stored = JSON.parse(localStorage.getItem('apex_candidates') || '[]');\n    expect(stored).toContainEqual(candidate);\n    \n    // Verify Supabase called\n    expect(supabase.from).toHaveBeenCalledWith('candidates');\n  });\n\n  it('should gracefully degrade when Supabase unavailable', async () => {\n    vi.mocked(supabase.from).mockReturnValue({\n      insert: vi.fn().mockRejectedValue(new Error('Network error'))\n    });\n    \n    const candidate = { id: '456', name: 'Test2', alignmentScore: 90 };\n    await expect(saveCandidate(candidate)).resolves.not.toThrow();\n    \n    // Should still save to localStorage\n    const stored = JSON.parse(localStorage.getItem('apex_candidates') || '[]');\n    expect(stored).toContainEqual(candidate);\n  });\n});",
+      "bestPractice": "Maintain 70%+ code coverage, focusing on business logic and critical paths. Mock external dependencies (Gemini API, Firecrawl, Supabase). Test edge cases and error handling paths.",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": "~5% (2 test files / ~10,000 total lines of code)"
+      },
+      "estimatedEffort": "large",
+      "breakingChange": false,
+      "prerequisites": [
+        "Set up proper API mocking infrastructure",
+        "Configure coverage thresholds in vitest.config.ts",
+        "Document testing patterns in CLAUDE.md"
+      ]
+    },
+    {
+      "id": "cq-004",
+      "type": "code_quality",
+      "title": "Add accessibility attributes - 0 aria-* attributes found across all components",
+      "description": "Zero accessibility attributes detected in any component. This is a critical WCAG 2.1 compliance failure. The application includes complex interactive elements (modals, forms, grids, side panels) that require proper ARIA labeling for screen reader users. With EU AI Act compliance already implemented (audit logs), accessibility should be similarly prioritized.",
+      "rationale": "Accessibility is a legal requirement in many jurisdictions (ADA in US, EAA in EU). Without aria-labels, aria-describedby, role attributes, and keyboard navigation support, the application is unusable for screen reader users and violates WCAG 2.1 Level AA standards. This is especially critical for an HR/recruiting tool that may be used by diverse hiring teams.",
+      "category": "structure",
+      "severity": "major",
+      "affectedFiles": [
+        "components/BattleCardCockpit.tsx - side panel navigation",
+        "components/TalentHeatMap.tsx - grid with interactive cards",
+        "components/AdminSettingsModal.tsx - modal dialog",
+        "components/AuditLogModal.tsx - modal dialog",
+        "components/CalibrationEngine.tsx - form inputs",
+        "components/NetworkPathfinder.tsx - modal overlay",
+        "components/ToastNotification.tsx - notification alerts"
+      ],
+      "currentState": "0 aria-* attributes found\nNo role attributes for semantic elements\nNo keyboard navigation indicators\nModals lack proper focus trapping\nForms lack field descriptions",
+      "proposedChange": "Priority 1 (Modals - High Impact):\n1. Add role='dialog', aria-modal='true', aria-labelledby to all modals\n2. Implement focus trap on modal open\n3. Add aria-describedby for modal content\n\nPriority 2 (Forms - Data Entry):\n1. Add aria-label or aria-labelledby to all form inputs\n2. Add aria-required for required fields\n3. Add aria-invalid and aria-describedby for validation errors\n4. Add aria-live regions for dynamic feedback\n\nPriority 3 (Interactive Grids):\n1. Add role='grid', role='row', role='gridcell' to TalentHeatMap\n2. Add aria-label to describe grid purpose\n3. Add aria-selected for selected candidates\n4. Implement keyboard navigation (arrow keys, Enter, Space)\n\nPriority 4 (Notifications):\n1. Add role='alert' or role='status' to ToastNotification\n2. Add aria-live='polite' or 'assertive' based on severity\n3. Add aria-atomic='true' for complete message reading\n\nAdd to package.json:\n\"lint:a11y\": \"eslint --plugin jsx-a11y --rule 'jsx-a11y/alt-text: error'\"",
+      "codeExample": "// Current (AdminSettingsModal.tsx):\n<div className=\"fixed inset-0 bg-black/50 flex items-center justify-center\">\n  <div className=\"bg-white rounded-lg p-6\">\n    <h2>Admin Settings</h2>\n    {/* ... */}\n  </div>\n</div>\n\n// Proposed:\n<div \n  className=\"fixed inset-0 bg-black/50 flex items-center justify-center\"\n  role=\"dialog\"\n  aria-modal=\"true\"\n  aria-labelledby=\"settings-title\"\n  aria-describedby=\"settings-description\"\n>\n  <div className=\"bg-white rounded-lg p-6\">\n    <h2 id=\"settings-title\">Admin Settings</h2>\n    <p id=\"settings-description\" className=\"sr-only\">\n      Configure API keys and application settings\n    </p>\n    {/* ... */}\n  </div>\n</div>\n\n// Current (CalibrationEngine.tsx form input):\n<input \n  type=\"text\" \n  placeholder=\"Paste job description\"\n  onChange={handleChange}\n/>\n\n// Proposed:\n<label htmlFor=\"job-desc\" className=\"sr-only\">Job Description</label>\n<input \n  id=\"job-desc\"\n  type=\"text\" \n  placeholder=\"Paste job description\"\n  aria-label=\"Job description text input\"\n  aria-required=\"true\"\n  aria-invalid={hasError}\n  aria-describedby={hasError ? \"job-desc-error\" : undefined}\n  onChange={handleChange}\n/>\n{hasError && (\n  <div id=\"job-desc-error\" role=\"alert\" aria-live=\"polite\">\n    Please enter a valid job description\n  </div>\n)}",
+      "bestPractice": "WCAG 2.1 Level AA compliance: All interactive elements must have accessible names, proper semantic roles, and keyboard navigability. Use eslint-plugin-jsx-a11y to enforce accessibility rules.",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null
+      },
+      "estimatedEffort": "medium",
+      "breakingChange": false,
+      "prerequisites": [
+        "Install and configure eslint-plugin-jsx-a11y",
+        "Add accessibility testing to test suite (e.g., jest-axe)",
+        "Document accessibility patterns in CLAUDE.md"
+      ]
+    },
+    {
+      "id": "cq-005",
+      "type": "code_quality",
+      "title": "Optimize React components - 7 components missing React.memo, limited useCallback/useMemo usage",
+      "description": "Performance optimization gaps detected: 7 out of 12 components lack React.memo wrapping, and only 32 instances of useCallback/useMemo found across the entire codebase. While CLAUDE.md states 'All major components use useCallback for event handlers' and 'Computed values memoized with useMemo', analysis shows this is not consistently applied. Large components (BattleCardCockpit: 1,051 lines, TalentHeatMap: 922 lines) particularly need optimization due to complex rendering logic.",
+      "rationale": "Unnecessary re-renders degrade UX, especially in data-heavy views like TalentHeatMap with candidate grids. Without proper memoization, every parent state change triggers full child re-renders. Given the AI-powered nature of the app (expensive API calls for scoring, profiling, outreach), preventing redundant renders is critical for credit efficiency and user experience.",
+      "category": "complexity",
+      "severity": "minor",
+      "affectedFiles": [
+        "components/BattleCardCockpit.tsx (1,051 lines) - no memo",
+        "components/TalentHeatMap.tsx (922 lines) - no memo",
+        "components/CalibrationEngine.tsx (349 lines) - no memo",
+        "components/NetworkPathfinder.tsx (184 lines) - no memo",
+        "components/AdminSettingsModal.tsx (243 lines) - no memo",
+        "components/AuditLogModal.tsx (140 lines) - no memo",
+        "components/ToastNotification.tsx - no memo"
+      ],
+      "currentState": "12 components total\n7 components without React.memo\n32 total uses of useCallback/useMemo (avg 2.67 per component)\n5 components have useCallback/useMemo (5 don't)\n\nPer CLAUDE.md: 'Performance Optimizations (Added 2026-01-07)' section exists, suggesting recent optimization work, but not fully applied.",
+      "proposedChange": "Phase 1 (Wrap in React.memo):\n1. Wrap all 7 components in React.memo\n2. Define custom comparison functions for components with complex props\n3. Add display names for better DevTools debugging\n\nPhase 2 (Add useCallback for event handlers):\n1. Audit all onClick, onChange, onSubmit handlers\n2. Wrap in useCallback with proper dependencies\n3. Focus on handlers passed as props to children\n\nPhase 3 (Add useMemo for expensive computations):\n1. TalentHeatMap: Memoize candidate filtering, sorting, score calculations\n2. BattleCardCockpit: Memoize radar chart data, indicator calculations\n3. CalibrationEngine: Memoize job context parsing\n\nPhase 4 (Virtualization for large lists):\n1. Add react-window or react-virtualized to TalentHeatMap if >100 candidates\n2. Implement windowing for AuditLogModal if >500 log entries\n\nAdd React DevTools profiling step to CI/CD to catch future regressions.",
+      "codeExample": "// Current (BattleCardCockpit.tsx):\nconst DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onClose, onOpenOutreach, addToast }) => {\n  // 1,051 lines of component logic\n  const handleGenerateProfile = () => { /* ... */ };\n  const calculateIndicators = () => { /* expensive computation */ };\n  // ...\n};\nexport default DeepProfile;\n\n// Proposed:\nimport { memo, useCallback, useMemo } from 'react';\n\nconst DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onClose, onOpenOutreach, addToast }) => {\n  // Memoize expensive computations\n  const indicators = useMemo(() => {\n    return calculateIndicators(candidate.persona);\n  }, [candidate.persona]);\n\n  const radarData = useMemo(() => {\n    return prepareRadarChartData(candidate.scoreBreakdown);\n  }, [candidate.scoreBreakdown]);\n\n  // Memoize event handlers\n  const handleGenerateProfile = useCallback(async () => {\n    await generateProfile(candidate.id);\n  }, [candidate.id]);\n\n  const handleClose = useCallback(() => {\n    onClose();\n  }, [onClose]);\n\n  // Component JSX...\n};\n\n// Custom comparison for memo (only re-render if candidate changes)\nconst arePropsEqual = (prevProps: Props, nextProps: Props) => {\n  return prevProps.candidate.id === nextProps.candidate.id &&\n         prevProps.credits === nextProps.credits;\n};\n\nexport default memo(DeepProfile, arePropsEqual);\nDeepProfile.displayName = 'DeepProfile';\n\n// Example: TalentHeatMap filtering optimization\nconst filteredCandidates = useMemo(() => {\n  return candidates\n    .filter(c => c.alignmentScore >= minScore)\n    .sort((a, b) => b.alignmentScore - a.alignmentScore);\n}, [candidates, minScore]);\n\n// Example: Add virtualization for large lists\nimport { FixedSizeGrid } from 'react-window';\n\nconst CandidateGrid = memo(({ candidates }: { candidates: Candidate[] }) => {\n  if (candidates.length < 100) {\n    // Standard rendering for small lists\n    return <div className=\"grid grid-cols-3 gap-4\">{/* ... */}</div>;\n  }\n  \n  // Virtualized rendering for large lists\n  return (\n    <FixedSizeGrid\n      columnCount={3}\n      rowCount={Math.ceil(candidates.length / 3)}\n      columnWidth={300}\n      rowHeight={200}\n      height={600}\n      width={900}\n    >\n      {({ columnIndex, rowIndex, style }) => (\n        <div style={style}>{/* Render candidate card */}</div>\n      )}\n    </FixedSizeGrid>\n  );\n});",
+      "bestPractice": "React Performance Optimization: (1) Wrap components in memo if props don't change frequently, (2) Use useCallback for event handlers passed as props, (3) Use useMemo for expensive calculations, (4) Use virtualization for lists >100 items, (5) Profile with React DevTools to validate optimizations.",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null
+      },
+      "estimatedEffort": "medium",
+      "breakingChange": false,
+      "prerequisites": [
+        "Add React DevTools profiler integration to CI",
+        "Set performance budgets in package.json",
+        "Update CLAUDE.md with completed optimization patterns",
+        "Consider adding react-window for virtualization"
+      ]
+    }
+  ],
+  "metadata": {
+    "filesAnalyzed": 156,
+    "largeFilesFound": 5,
+    "duplicateBlocksFound": 0,
+    "lintingConfigured": true,
+    "testsPresent": true,
+    "generatedAt": "2026-01-08T21:45:00Z",
+    "analysisDetails": {
+      "totalSourceFiles": 12,
+      "totalServiceFiles": 6,
+      "totalTestFiles": 2,
+      "linesOfCode": 10433,
+      "consoleStatements": 231,
+      "anyTypeUsage": 3,
+      "accessibilityAttributes": 0,
+      "localStorageUsage": 22,
+      "inlineStyles": 11,
+      "reactMemoUsage": 5,
+      "useCallbackUsage": 32,
+      "componentsCovered": "16.7%",
+      "servicesCovered": "16.7%"
+    }
+  }
+}

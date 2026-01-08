@@ -24,13 +24,13 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
   // If we have no meaningful data at all, show helpful empty state
   const hasNoData = !hasCareerData && !hasSkillData && !hasCompensationData;
 
-  // Helper function to get velocity color
-  const getVelocityColor = (velocity: string) => {
+  // Helper function to get velocity icon
+  const getVelocityIcon = (velocity: string) => {
     switch (velocity) {
-      case 'rapid': return 'text-emerald-400';
-      case 'steady': return 'text-blue-400';
-      case 'slow': return 'text-slate-400';
-      default: return 'text-slate-400';
+      case 'rapid': return '⚡';
+      case 'steady': return '📊';
+      case 'slow': return '🐌';
+      default: return '➡️';
     }
   };
 
@@ -47,19 +47,22 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
   const archetypeInfo = getArchetypeInfo(persona.archetype);
 
   return (
-    <div className="space-y-6 p-6 bg-apex-900/30 rounded-lg border border-apex-800/50">
-      {/* Refined Executive Header */}
-      <div className="border-b border-apex-700/30 pb-6">
+    <div className="space-y-6 p-6 bg-apex-900/30 rounded-lg">
+      {/* Enhanced Archetype Header */}
+      <div className="border-b border-apex-700/50 pb-6">
         <div className="flex items-start gap-4 mb-4">
-          <div className="w-12 h-12 flex-shrink-0 rounded-lg bg-slate-800/50 border border-slate-700 flex items-center justify-center">
-            <i className="fa-solid fa-user-tie text-slate-400 text-lg"></i>
+          <div className="text-5xl flex-shrink-0">
+            {getArchetypeIcon(persona.archetype)}
           </div>
           <div className="flex-1">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Leadership Archetype</div>
-            <h3 className="text-lg font-medium text-white mb-3">{persona.archetype}</h3>
-            <p className="text-sm text-slate-400 leading-relaxed font-light">
+            <h3 className="text-xl font-bold text-white mb-2">{persona.archetype}</h3>
+            <p className="text-sm text-slate-300 leading-relaxed mb-3">
               {persona.reasoning}
             </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-900/20 border border-purple-500/30 rounded-full">
+              <i className="fa-solid fa-fingerprint text-purple-400 text-xs"></i>
+              <span className="text-xs font-semibold text-purple-400">Psychometric & Professional Intelligence</span>
+            </div>
           </div>
         </div>
 
@@ -181,8 +184,9 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-apex-800/50 rounded p-3 border border-apex-700/50">
               <div className="text-xs text-slate-500 uppercase mb-1">Growth Velocity</div>
-              <div className={`text-sm font-semibold capitalize ${getVelocityColor(careerTrajectory.growthVelocity)}`}>
-                {careerTrajectory.growthVelocity}
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">{getVelocityIcon(careerTrajectory.growthVelocity)}</span>
+                <span className="text-sm font-bold text-white capitalize">{careerTrajectory.growthVelocity}</span>
               </div>
             </div>
 

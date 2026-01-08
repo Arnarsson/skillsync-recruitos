@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchJobContextFromUrl } from '../services/jobService';
 import { CREDITS_TO_EUR } from '../types';
@@ -40,13 +40,13 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => 
     const [isFetchingJob, setIsFetchingJob] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    const handleLoadDemo = useCallback(() => {
+    const handleLoadDemo = () => {
         setJobContext(DEMO_JOB_CONTEXT);
         setCompanyUrl('https://linkedin.com/company/stripe');
         addToast('info', 'Demo data loaded. Click Initialize to continue.');
-    }, [setJobContext, addToast]);
+    };
 
-    const handleFetchJob = useCallback(async () => {
+    const handleFetchJob = async () => {
         if (!jobUrl) return;
         setIsFetchingJob(true);
         setFetchError(null);
@@ -65,9 +65,9 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => 
         } finally {
             setIsFetchingJob(false);
         }
-    }, [jobUrl, setJobContext, addToast]);
+    };
 
-    const handleStart = useCallback(() => {
+    const handleStart = () => {
         if (!jobContext.trim()) return;
         setIsProcessing(true);
 
@@ -87,7 +87,7 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => 
         setTimeout(() => {
             navigate('/shortlist');
         }, 1500);
-    }, [jobContext, companyUrl, managerUrl, benchmarkUrl, setJobContext, addToast, navigate]);
+    };
 
     return (
         <div className="h-full flex flex-col p-4 md:p-8 bg-apex-900 overflow-y-auto custom-scrollbar">
@@ -346,4 +346,4 @@ const JobIntake: React.FC<Props> = ({ jobContext, setJobContext, addToast }) => 
     );
 };
 
-export default React.memo(JobIntake);
+export default JobIntake;

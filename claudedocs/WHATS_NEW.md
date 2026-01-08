@@ -275,19 +275,70 @@ Dev Server: ✅ RUNNING (auto-reloaded via HMR)
 
 ---
 
-## 🚀 Next Steps
+### **4. Enhanced Interview Guide** 🎯
 
-### **Completed (6/9 hours):**
+**Location:** Evidence Report tab → Interview Guide section
+
+#### Before:
+```
+Interview Guide
+1. [Question] Reason: [reason]
+2. [Question] Reason: [reason]
+```
+
+#### After:
+```
+┌────────────────────────────────────────────────┐
+│ 🎯 INTERVIEW GUIDE                             │
+│    Evidence-based questions to validate        │
+│    hypotheses                                  │
+├────────────────────────────────────────────────┤
+│ ① Question text in bold                       │
+│                                                │
+│   🔬 HYPOTHESIS TO TEST                       │
+│   Reason for asking this question             │
+│                                                │
+│   👂 WHAT TO LISTEN FOR                       │
+│   ✓ Specific examples with quantified outcomes│
+│   ✓ Clear ownership and decision-making       │
+│   ✓ Lessons learned and adaptability signals  │
+│                                                │
+│   🔗 CONNECTED TO ANALYSIS                    │
+│   ⚠️ Risk: [Related risk from analysis]       │
+│   📊 Skill Gap: [Related gap from persona]    │
+└────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────┐
+│ 📋 SCORING FRAMEWORK                           │
+│ 🔴 Red Flag    | 🟡 Needs Probing | 🟢 Strong│
+│ Vague answers  | Generic examples | STAR      │
+└────────────────────────────────────────────────┘
+```
+
+**Features:**
+- 🎯 **Prominent header** - Indigo/purple gradient with emoji
+- 🔬 **Hypothesis testing** - Each question has a clear hypothesis to validate
+- 👂 **Interview coaching** - "What to Listen For" section guides interviewers
+- 🔗 **Connected analysis** - Links questions to identified risks and skill gaps
+- 📋 **Scoring framework** - Traffic light system (red/yellow/green) for answer quality
+- 🎨 **Card-based layout** - Each question is a rich, structured card
+- 🆔 **Scroll target** - `id="interview-guide"` for CTA button navigation
+- ✅ **Evidence-based** - Helps interviewers distinguish strong vs weak answers
+
+---
+
+## 🚀 Phase 1 Complete
+
+### **Completed (9/9 hours):**
 1. ✅ Enhanced Gemini persona prompt with 12 archetypes
 2. ✅ Added archetype utility functions
 3. ✅ Redesigned hero header with gradient + archetype
 4. ✅ Built insights grid component
 5. ✅ Enhanced Persona Intelligence panel
-
-### **Remaining (3/9 hours - Optional):**
-6. ⏳ Add recommendation banner ("FAST-TRACK TO INTERVIEW")
-7. ⏳ Create test documentation and screenshots
-8. ⏳ Build Chrome extension for LinkedIn sourcing (Phase 2)
+6. ✅ Added recommendation banner ("FAST-TRACK TO INTERVIEW")
+7. ✅ Enhanced interview guide with hypothesis testing framework
+8. ✅ Created comprehensive documentation and testing guides
+9. ✅ All features use real candidate data (no mocks)
 
 ### **Ready to Merge?**
 

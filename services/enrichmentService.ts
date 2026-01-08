@@ -14,7 +14,6 @@
 
 import { getAiClient, AI_MODELS } from './geminiService';
 import { Type } from '@google/genai';
-import { log } from './logger';
 
 export interface EnrichedExperience {
   title: string;
@@ -78,7 +77,7 @@ const filterPromisingSources = (results: SERPResult[]): string[] => {
   for (const result of results) {
     const url = result.url.toLowerCase();
     const title = result.title.toLowerCase();
-    const _snippet = result.snippet.toLowerCase();
+    const snippet = result.snippet.toLowerCase();
 
     // Skip bad patterns
     if (badPatterns.some(pattern => pattern.test(url))) {
@@ -102,10 +101,9 @@ const filterPromisingSources = (results: SERPResult[]): string[] => {
 const deepEnrichWithAI = async (snippets: Array<{ url: string; text: string }>): Promise<EnrichedProfile | null> => {
   const ai = getAiClient();
   if (!ai) {
-    log.warn('Gemini client not available for AI enrichment', {
-      service: 'enrichmentService',
-      operation: 'deepEnrichWithAI'
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Enrichment] Gemini client not available for AI enrichment');
+    }
     return null;
   }
 
@@ -116,14 +114,10 @@ const deepEnrichWithAI = async (snippets: Array<{ url: string; text: string }>):
       .join('\n\n---\n\n')
       .substring(0, 15000); // Limit total input
 
-    log.debug('Calling Gemini to structure text snippets', {
-      service: 'enrichmentService',
-      operation: 'deepEnrichWithAI',
-      metadata: {
-        snippetCount: snippets.length,
-        combinedTextLength: combinedText.length
-      }
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] Calling Gemini to structure', snippets.length, 'text snippets');
+      console.log('[Enrichment] Combined text length:', combinedText.length, 'chars');
+    }
 
     const prompt = `
 You are an expert sourcing agent. Given web snippets about a candidate, extract a structured profile.
@@ -193,16 +187,14 @@ Extract structured profile data. Be conservative - only include info you can dir
 
     const structuredData = JSON.parse(response.text || '{}');
 
-    log.debug('Gemini extracted structured data', {
-      service: 'enrichmentService',
-      operation: 'deepEnrichWithAI',
-      metadata: {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] Gemini extracted:', {
         name: structuredData.name,
         currentRole: structuredData.current_role?.title,
-        pastRolesCount: structuredData.past_roles?.length || 0,
-        skillsCount: structuredData.skills?.length || 0
-      }
-    });
+        pastRoles: structuredData.past_roles?.length || 0,
+        skills: structuredData.skills?.length || 0
+      });
+    }
 
     // Convert Gemini output to EnrichedProfile format
     const enriched: EnrichedProfile = {
@@ -240,29 +232,22 @@ Extract structured profile data. Be conservative - only include info you can dir
     const hasUsableData = enriched.experiences.length > 0 || enriched.skills.length >= 3;
 
     if (!hasUsableData) {
-      log.debug('Gemini found insufficient data in snippets', {
-        service: 'enrichmentService',
-        operation: 'deepEnrichWithAI',
-        metadata: {
-          experiencesCount: enriched.experiences.length,
-          skillsCount: enriched.skills.length
-        }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] Gemini found insufficient data in snippets');
+      }
       return null;
     }
 
-    log.debug('AI enrichment successful', {
-      service: 'enrichmentService',
-      operation: 'deepEnrichWithAI'
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] ✅ AI enrichment successful');
+    }
 
     return enriched;
 
-  } catch (error: unknown) {
-    log.error('AI enrichment failed', error, {
-      service: 'enrichmentService',
-      operation: 'deepEnrichWithAI'
-    });
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[Enrichment] AI enrichment failed:', error);
+    }
     return null;
   }
 };
@@ -362,15 +347,11 @@ const extractDataFromScrapedContent = (content: string, sourceUrl: string): Part
       if (regex.test(text)) {
         extracted.skills?.push(skill);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       // Silently skip invalid regex patterns
-      log.warn(`Skipping skill pattern "${skill}"`, {
-        service: 'enrichmentService',
-        operation: 'extractDataFromScrapedContent',
-        metadata: {
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[Enrichment] Skipping skill pattern "${skill}":`, error instanceof Error ? error.message : String(error));
+      }
     }
   }
 
@@ -400,20 +381,17 @@ export const enrichSparseProfile = async (candidate: {
 }): Promise<EnrichedProfile | null> => {
 
   // Get API keys (check localStorage first, then env vars)
-  const serpApiKey = getEnv('VITE_SERP_API_KEY') || localStorage.getItem('SERP_API_KEY');
-  const brightDataKey = getEnv('VITE_BRIGHTDATA_API_KEY') || localStorage.getItem('BRIGHTDATA_API_KEY');
+  const serpApiKey = localStorage.getItem('SERP_API_KEY') || getEnv('SERP_API_KEY');
+  const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
 
   try {
-    log.debug('===== PROFILE ENRICHMENT PIPELINE =====', {
-      service: 'enrichmentService',
-      operation: 'enrichSparseProfile',
-      metadata: {
-        target: candidate.fullName,
-        companyHint: candidate.currentCompany || 'none',
-        serpApiAvailable: !!serpApiKey,
-        brightDataApiAvailable: !!brightDataKey
-      }
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] ===== PROFILE ENRICHMENT PIPELINE =====');
+      console.log('[Enrichment] Target:', candidate.fullName);
+      console.log('[Enrichment] Company hint:', candidate.currentCompany || 'none');
+      console.log('[Enrichment] SERP API available:', !!serpApiKey);
+      console.log('[Enrichment] BrightData API available:', !!brightDataKey);
+    }
 
     // ==== STEP 0: Try common profile URLs directly (no SERP needed) ====
     const promisingUrls: string[] = [];
@@ -434,13 +412,9 @@ export const enrichSparseProfile = async (candidate: {
       candidate.currentCompany ? `https://${candidate.currentCompany.toLowerCase().replace(/\s+/g, '')}.com/about` : null,
     ].filter(Boolean) as string[];
 
-    log.debug('Trying common URL patterns', {
-      service: 'enrichmentService',
-      operation: 'enrichSparseProfile',
-      metadata: {
-        urlCount: commonUrls.length
-      }
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] Trying common URL patterns:', commonUrls.length);
+    }
 
     promisingUrls.push(...commonUrls);
 
@@ -468,13 +442,9 @@ export const enrichSparseProfile = async (candidate: {
     for (const query of queries) {
       if (!query) continue;
 
-      log.debug('SERP query', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile',
-        metadata: {
-          query
-        }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] SERP query:', query);
+      }
 
       try {
         // Use Bright Data SERP API (datasets format, not simple GET)
@@ -539,14 +509,9 @@ export const enrichSparseProfile = async (candidate: {
                       }
                     }
 
-                    log.debug('Found SERP results', {
-                      service: 'enrichmentService',
-                      operation: 'enrichSparseProfile',
-                      metadata: {
-                        resultsCount: allResults.length,
-                        query
-                      }
-                    });
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('[Enrichment] Found', allResults.length, 'SERP results for:', query);
+                    }
                   }
                   break;
                 } else if (progress.status === 'failed') {
@@ -556,14 +521,10 @@ export const enrichSparseProfile = async (candidate: {
             }
           }
         }
-      } catch (error: unknown) {
-        log.warn('SERP query failed', {
-          service: 'enrichmentService',
-          operation: 'enrichSparseProfile',
-          metadata: {
-            error: error instanceof Error ? error.message : String(error)
-          }
-        });
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[Enrichment] SERP query failed:', error);
+        }
       }
     }
 
@@ -573,39 +534,29 @@ export const enrichSparseProfile = async (candidate: {
       const serpUrls = filterPromisingSources(allResults);
       promisingUrls.push(...serpUrls);
 
-      log.debug('Added promising URLs from SERP', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile',
-        metadata: {
-          serpUrlsCount: serpUrls.length
-        }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] Added', serpUrls.length, 'promising URLs from SERP');
+      }
     }
 
     } else {
       // No SERP API - rely on common URL patterns
-      log.debug('No SERP API - using common URL patterns only', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] No SERP API - using common URL patterns only');
+      }
     }
 
     if (promisingUrls.length === 0) {
-      log.debug('No promising URLs to try', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] No promising URLs to try');
+      }
       return null;
     }
 
-    log.debug('Total promising URLs to try', {
-      service: 'enrichmentService',
-      operation: 'enrichSparseProfile',
-      metadata: {
-        promisingUrlsCount: promisingUrls.length,
-        urls: promisingUrls
-      }
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] Total promising URLs to try:', promisingUrls.length);
+      console.log('[Enrichment] URLs:', promisingUrls);
+    }
 
     // ==== STEP 3: Scrape promising URLs (Data Acquisition) ====
 
@@ -613,13 +564,9 @@ export const enrichSparseProfile = async (candidate: {
 
     for (const url of promisingUrls) {
       try {
-        log.debug('Scraping URL', {
-          service: 'enrichmentService',
-          operation: 'enrichSparseProfile',
-          metadata: {
-            url
-          }
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Enrichment] Scraping:', url);
+        }
 
         // Use Web Scraper API (generic scraper)
         let content = '';
@@ -673,43 +620,28 @@ export const enrichSparseProfile = async (candidate: {
             text: textOnly
           });
 
-          log.debug('Scraped content from URL', {
-            service: 'enrichmentService',
-            operation: 'enrichSparseProfile',
-            metadata: {
-              url,
-              textLength: textOnly.length
-            }
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Enrichment] Scraped', textOnly.length, 'chars from:', url);
+          }
         }
 
-      } catch (error: unknown) {
-        log.warn('Failed to scrape URL', {
-          service: 'enrichmentService',
-          operation: 'enrichSparseProfile',
-          metadata: {
-            url,
-            error: error instanceof Error ? error.message : String(error)
-          }
-        });
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[Enrichment] Failed to scrape', url, ':', error);
+        }
       }
     }
 
     if (scrapedSnippets.length === 0) {
-      log.debug('No content scraped from any URL', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] No content scraped from any URL');
+      }
       return null;
     }
 
-    log.debug('Successfully scraped sources', {
-      service: 'enrichmentService',
-      operation: 'enrichSparseProfile',
-      metadata: {
-        scrapedSourcesCount: scrapedSnippets.length
-      }
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] Successfully scraped', scrapedSnippets.length, 'sources');
+    }
 
     // ==== STEP 4: AI Reasoning Layer - Structure messy text ====
 
@@ -717,18 +649,16 @@ export const enrichSparseProfile = async (candidate: {
     const aiEnriched = await deepEnrichWithAI(scrapedSnippets);
 
     if (aiEnriched) {
-      log.debug('Using AI-structured profile', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] ✅ Using AI-structured profile');
+      }
       return aiEnriched;
     }
 
     // Fallback: Regex extraction if AI unavailable
-    log.debug('AI enrichment unavailable, falling back to regex extraction', {
-      service: 'enrichmentService',
-      operation: 'enrichSparseProfile'
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] AI enrichment unavailable, falling back to regex extraction');
+    }
 
     const enriched: EnrichedProfile = {
       experiences: [],
@@ -783,30 +713,25 @@ export const enrichSparseProfile = async (candidate: {
     const hasUsefulData = enriched.experiences.length > 0 || enriched.skills.length > 0;
 
     if (hasUsefulData) {
-      log.debug('SUCCESS - Enriched profile', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile',
-        metadata: {
-          experiencesCount: enriched.experiences.length,
-          skillsCount: enriched.skills.length,
-          sources: enriched.enrichmentSources.join(', ')
-        }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] ✅ SUCCESS - Enriched profile:');
+        console.log('[Enrichment] - Experiences:', enriched.experiences.length);
+        console.log('[Enrichment] - Skills:', enriched.skills.length);
+        console.log('[Enrichment] - Sources:', enriched.enrichmentSources.join(', '));
+      }
 
       return enriched;
     } else {
-      log.debug('No useful data found from web sources', {
-        service: 'enrichmentService',
-        operation: 'enrichSparseProfile'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Enrichment] ❌ No useful data found from web sources');
+      }
       return null;
     }
 
-  } catch (error: unknown) {
-    log.error('Pipeline error', error, {
-      service: 'enrichmentService',
-      operation: 'enrichSparseProfile'
-    });
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[Enrichment] Pipeline error:', error);
+    }
     return null;
   }
 };

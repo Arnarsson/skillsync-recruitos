@@ -8,8 +8,6 @@ import { ScoreDistributionChart } from './visualizations/ScoreDistributionChart'
 import { CandidateCardSkeleton } from './visualizations/CandidateCardSkeleton';
 import { CandidateComparisonView } from './visualizations/CandidateComparisonView';
 import { useCandidateSourcing } from '../hooks/useCandidateSourcing';
-import { CandidateGridRow } from './TalentHeatMap/CandidateGridRow';
-import { ImportModal } from './TalentHeatMap/ImportModal';
 
 interface Props {
     jobContext: string;
@@ -152,17 +150,6 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
             setProcessingId(null);
         }
     }, [credits, candidates, jobContext, onSpendCredits, addToast]);
-
-    const handleDelete = useCallback(async (candidateId: string, candidateName: string) => {
-        try {
-            await candidateService.delete(candidateId);
-            setCandidates(prev => prev.filter(candidate => candidate.id !== candidateId));
-            addToast('success', `${candidateName} deleted`);
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to delete candidate';
-            addToast('error', errorMessage);
-        }
-    }, [addToast]);
 
     const handleImport = useCallback(async () => {
         if (!importText.trim()) return;
@@ -365,7 +352,7 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex bg-apex-900 p-1 rounded-lg border border-apex-700">
+                    <div className="hidden md:flex bg-apex-900 p-1 rounded-lg border border-apex-700">
                         <button
                             onClick={() => handleSetActiveTab('pipeline')}
                             className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'pipeline' ? 'bg-apex-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
@@ -448,14 +435,126 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
             )}
 
             {/* Import Modal */}
-            <ImportModal
-                isOpen={showImport}
-                importText={importText}
-                isImporting={isImporting}
-                onClose={() => handleSetShowImport(false)}
-                onImportTextChange={handleSetImportText}
-                onImport={handleImport}
-            />
+            {showImport && (
+                <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="w-full max-w-3xl bg-apex-900 border border-apex-700 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn">
+                        <div className="p-4 border-b border-apex-700 bg-apex-800 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-white font-bold flex items-center">
+                                    <i className="fa-solid fa-paste mr-2 text-emerald-500"></i>
+                                    Quick Paste - Manual Import
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-1">Get 100% data accuracy - Copy full LinkedIn profile</p>
+                            </div>
+                            <button onClick={() => handleSetShowImport(false)} className="text-slate-500 hover:text-white"><i className="fa-solid fa-xmark"></i></button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {/* Enhanced Instructions */}
+                            <div className="bg-blue-950/30 border border-blue-800/50 rounded-lg p-4">
+                                <h4 className="text-blue-400 font-bold text-sm mb-3 flex items-center">
+                                    <i className="fa-solid fa-circle-info mr-2"></i>
+                                    Step-by-Step Instructions
+                                </h4>
+                                <ol className="text-xs text-slate-300 space-y-2">
+                                    <li className="flex items-start">
+                                        <span className="bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">1</span>
+                                        <span>Open the LinkedIn profile in your browser</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">2</span>
+                                        <span>Press <code className="bg-apex-800 px-1.5 py-0.5 rounded border border-apex-700 mx-1 font-mono">Ctrl+A</code> (or <code className="bg-apex-800 px-1.5 py-0.5 rounded border border-apex-700 mx-1 font-mono">⌘+A</code> on Mac) to select all</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">3</span>
+                                        <span>Press <code className="bg-apex-800 px-1.5 py-0.5 rounded border border-apex-700 mx-1 font-mono">Ctrl+C</code> (or <code className="bg-apex-800 px-1.5 py-0.5 rounded border border-apex-700 mx-1 font-mono">⌘+C</code> on Mac) to copy</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">4</span>
+                                        <span>Click in the text area below and press <code className="bg-apex-800 px-1.5 py-0.5 rounded border border-apex-700 mx-1 font-mono">Ctrl+V</code> to paste</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">5</span>
+                                        <span>Click &quot;Analyze & Add&quot; - AI will extract experience, skills, education automatically</span>
+                                    </li>
+                                </ol>
+                            </div>
+
+                            {/* What to Include */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-emerald-950/30 border border-emerald-800/50 rounded-lg p-3">
+                                    <h5 className="text-emerald-400 font-bold text-xs mb-2 flex items-center">
+                                        <i className="fa-solid fa-check-circle mr-1.5"></i>
+                                        Best Results With:
+                                    </h5>
+                                    <ul className="text-[11px] text-slate-300 space-y-1">
+                                        <li>✓ Full LinkedIn profile page</li>
+                                        <li>✓ Experience section visible</li>
+                                        <li>✓ Skills section expanded</li>
+                                        <li>✓ Education section visible</li>
+                                    </ul>
+                                </div>
+                                <div className="bg-amber-950/30 border border-amber-800/50 rounded-lg p-3">
+                                    <h5 className="text-amber-400 font-bold text-xs mb-2 flex items-center">
+                                        <i className="fa-solid fa-lightbulb mr-1.5"></i>
+                                        Pro Tips:
+                                    </h5>
+                                    <ul className="text-[11px] text-slate-300 space-y-1">
+                                        <li>💡 Works with any text format</li>
+                                        <li>💡 Paste resume/CV text directly</li>
+                                        <li>💡 AI extracts relevant info</li>
+                                        <li>💡 100% data accuracy</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Textarea with character count */}
+                            <div className="relative">
+                                <textarea
+                                    className="w-full h-64 bg-apex-950 border border-apex-700 rounded-lg p-4 text-sm text-slate-300 font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
+                                    placeholder="Paste LinkedIn profile text here...
+
+Example:
+John Smith
+Senior Full-Stack Engineer at TechCorp
+San Francisco, CA
+3,500 followers | 500+ connections
+
+About
+Passionate software engineer with 8+ years building scalable web applications...
+
+Experience
+Senior Full-Stack Engineer - TechCorp
+2020 - Present
+- Led development of payment infrastructure
+- Built React/Node.js applications
+..."
+                                    value={importText}
+                                    onChange={(e) => handleSetImportText(e.target.value)}
+                                ></textarea>
+                                <div className="absolute bottom-3 right-3 text-xs text-slate-500 bg-apex-900/80 px-2 py-1 rounded">
+                                    {importText.length} characters
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-apex-800 flex justify-between items-center bg-apex-900/50">
+                            <div className="text-xs text-slate-500">
+                                <i className="fa-solid fa-shield-halved mr-1 text-emerald-600"></i>
+                                Data stays local - AI extracts info directly
+                            </div>
+                            <button
+                                onClick={handleImport}
+                                disabled={isImporting || !importText.trim()}
+                                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg flex items-center transition-all shadow-lg hover:shadow-emerald-500/20"
+                            >
+                                {isImporting ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-bolt mr-2"></i>}
+                                {isImporting ? 'Analyzing with AI...' : 'Analyze & Add'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Score Distribution Chart (Pipeline tab only, when candidates exist) */}
             {activeTab === 'pipeline' && !hasNoCandidates && (
@@ -612,19 +711,189 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                         {renderedCandidates.map(({ candidate: c, isDeepProfileUnlocked, isProcessingThis, dataQuality }) => {
                             const isSelected = selectedCandidateIds.includes(c.id);
                             return (
-                                <CandidateGridRow
-                                    key={c.id}
-                                    candidate={c}
-                                    isSelected={isSelected}
-                                    isDeepProfileUnlocked={isDeepProfileUnlocked}
-                                    isProcessing={isProcessingThis}
-                                    dataQuality={dataQuality}
-                                    onSelectCandidate={onSelectCandidate}
-                                    onToggleSelection={toggleCandidateSelection}
-                                    onDelete={handleDelete}
-                                    onUnlockProfile={handleUnlockProfile}
-                                />
-                            );
+                            <div
+                                key={c.id}
+                                onClick={() => isDeepProfileUnlocked ? onSelectCandidate(c) : null}
+                                className={`
+                            flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all duration-300 items-start md:items-center relative
+                            ${isSelected ? 'ring-2 ring-blue-500 bg-blue-900/10 border-blue-500' : ''}
+                            ${isDeepProfileUnlocked && !isSelected
+                                        ? 'bg-apex-800/40 border-apex-700 hover:bg-apex-800 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-900/10 hover:-translate-y-0.5 cursor-pointer group'
+                                        : !isSelected && 'bg-apex-900 border-apex-800 opacity-80'
+                                    }
+                        `}
+                            >
+                                {/* Multi-select Checkbox (Phase 4) */}
+                                <div className="absolute top-3 left-3 z-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                            e.stopPropagation();
+                                            toggleCandidateSelection(c.id);
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-4 h-4 rounded border-2 border-apex-600 bg-apex-900 checked:bg-blue-600 checked:border-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
+                                    />
+                                </div>
+
+                                {/* Delete Button */}
+                                <div className="absolute top-3 right-3 z-10">
+                                    <button
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm(`Delete ${c.name} from the pipeline?`)) {
+                                                try {
+                                                    await candidateService.delete(c.id);
+                                                    setCandidates(prev => prev.filter(candidate => candidate.id !== c.id));
+                                                    addToast('success', `${c.name} deleted`);
+                                                } catch (error: unknown) {
+                                                    const errorMessage = error instanceof Error ? error.message : 'Failed to delete candidate';
+                                                    addToast('error', errorMessage);
+                                                }
+                                            }
+                                        }}
+                                        className="w-8 h-8 rounded-full bg-apex-900/80 hover:bg-red-900/80 border border-apex-700 hover:border-red-600 text-slate-400 hover:text-red-400 transition-all flex items-center justify-center group/delete"
+                                        title="Delete candidate"
+                                    >
+                                        <i className="fa-solid fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+
+                                {/* Candidate Info + Persona */}
+                                <div className="col-span-4 w-full md:w-auto pl-6 md:pl-0">
+                                    <div className="flex items-center mb-1">
+                                        <img src={c.avatar} className="w-10 h-10 rounded-full border border-slate-700 mr-3 grayscale group-hover:grayscale-0 transition-all" alt="avatar" />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-200">{c.name}</div>
+                                            <div className="text-xs text-slate-500">
+                                                {c.currentRole && c.currentRole !== 'N/A' ? c.currentRole : 'Role Not Listed'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Persona Badge & Data Quality */}
+                                    <div className="mt-2 flex items-center flex-wrap gap-2">
+                                        {/* Data Quality Badge */}
+                                        <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${
+                                            dataQuality.label === 'Complete'
+                                                ? 'bg-emerald-900/20 text-emerald-400 border border-emerald-800/50'
+                                                : dataQuality.label === 'Partial'
+                                                ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-800/50'
+                                                : 'bg-red-900/20 text-red-400 border border-red-800/50'
+                                        }`}>
+                                            <i className={`fa-solid ${dataQuality.label === 'Complete' ? 'fa-check-circle' : dataQuality.label === 'Partial' ? 'fa-circle-half-stroke' : 'fa-circle-exclamation'} mr-1`}></i>
+                                            {dataQuality.label} Profile
+                                        </span>
+
+                                        {/* Persona Archetype */}
+                                        {c.persona && (
+                                            <span className="text-[9px] bg-purple-900/30 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
+                                                <i className="fa-solid fa-fingerprint mr-1"></i> {c.persona.archetype}
+                                            </span>
+                                        )}
+
+                                        {/* Flags */}
+                                        {c.persona?.redFlags && c.persona.redFlags.length > 0 && (
+                                            <div className="relative group/flag flex items-center cursor-help">
+                                                <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 transition-colors">
+                                                    <i className="fa-solid fa-triangle-exclamation text-xs"></i>
+                                                    <span className="text-[9px] font-bold">{c.persona.redFlags.length} Risk{c.persona.redFlags.length > 1 ? 's' : ''}</span>
+                                                </div>
+
+                                                {/* Tooltip */}
+                                                <div className="absolute bottom-full left-0 mb-2 w-56 p-3 bg-apex-950 border border-red-900/50 rounded-lg shadow-xl text-xs text-red-200 hidden group-hover/flag:block z-30">
+                                                    <div className="font-bold text-red-400 uppercase tracking-wider mb-1">Detected Risks</div>
+                                                    <ul className="list-disc list-inside space-y-1 text-slate-300">
+                                                        {c.persona.redFlags.map((flag, i) => <li key={i} className="leading-tight">{flag}</li>)}
+                                                    </ul>
+                                                    {/* Tooltip Arrow */}
+                                                    <div className="absolute top-full left-4 -mt-1 w-2 h-2 bg-apex-950 border-r border-b border-red-900/50 transform rotate-45"></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Match Score (Desktop) */}
+                                <div className="col-span-2 hidden md:flex flex-col items-center justify-center">
+                                    <div className={`text-lg font-bold font-mono ${c.alignmentScore > 80 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                        {c.alignmentScore}%
+                                    </div>
+                                    <div className="w-16 h-1 bg-apex-700 rounded-full mt-1">
+                                        <div
+                                            className={`h-full rounded-full ${c.alignmentScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`}
+                                            style={{ width: `${c.alignmentScore}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                {/* Summary */}
+                                <div className="col-span-4 w-full">
+                                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-none">&quot;{c.shortlistSummary}&quot;</p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {/* Dynamic Confidence Badge */}
+                                        {c.scoreConfidence && (
+                                            <span className={`text-xs px-1.5 py-0.5 rounded border ${
+                                                c.scoreConfidence === 'high'
+                                                    ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/50'
+                                                    : c.scoreConfidence === 'moderate'
+                                                    ? 'bg-yellow-950/50 text-yellow-400 border-yellow-800/50'
+                                                    : 'bg-slate-800 text-slate-500 border-slate-700'
+                                            }`}>
+                                                <i className={`fa-solid ${
+                                                    c.scoreConfidence === 'high' ? 'fa-check-circle' :
+                                                    c.scoreConfidence === 'moderate' ? 'fa-circle-half-stroke' :
+                                                    'fa-circle'
+                                                } mr-1`}></i>
+                                                {c.scoreConfidence.charAt(0).toUpperCase() + c.scoreConfidence.slice(1)} Confidence
+                                            </span>
+                                        )}
+                                        {/* Score Drivers */}
+                                        {c.scoreDrivers && c.scoreDrivers.length > 0 && (
+                                            <span className="text-xs bg-emerald-950/30 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-800/50" title={`Strengths: ${c.scoreDrivers.join(', ')}`}>
+                                                <i className="fa-solid fa-arrow-trend-up mr-1"></i>
+                                                {c.scoreDrivers.length} {c.scoreDrivers.length === 1 ? 'Driver' : 'Drivers'}
+                                            </span>
+                                        )}
+                                        {/* Score Drags */}
+                                        {c.scoreDrags && c.scoreDrags.length > 0 && (
+                                            <span className="text-xs bg-red-950/30 text-red-400 px-1.5 py-0.5 rounded border border-red-800/50" title={`Gaps: ${c.scoreDrags.join(', ')}`}>
+                                                <i className="fa-solid fa-arrow-trend-down mr-1"></i>
+                                                {c.scoreDrags.length} {c.scoreDrags.length === 1 ? 'Gap' : 'Gaps'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Action */}
+                                <div className="col-span-2 flex justify-end w-full md:w-auto mt-2 md:mt-0">
+                                    {isDeepProfileUnlocked ? (
+                                        <button className="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-900/20 border border-emerald-500/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 group-hover:shadow-emerald-500/40">
+                                            <i className="fa-solid fa-file-invoice mr-2"></i> View Report
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => handleUnlockProfile(e, c.id, c.name)}
+                                            disabled={isProcessingThis}
+                                            className={`
+                                        w-full md:w-auto px-4 py-2 text-xs font-bold rounded-lg border flex items-center justify-center transition-all shadow-sm
+                                        ${isProcessingThis
+                                                    ? 'bg-apex-800 border-apex-700 text-slate-500 cursor-wait'
+                                                    : 'bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 border-slate-700 hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5'
+                                                }
+                                    `}
+                                        >
+                                            {isProcessingThis ? (
+                                                <><i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Unlocking...</>
+                                            ) : (
+                                                <><i className="fa-solid fa-lock mr-2"></i> Unlock ({PRICING.DEEP_PROFILE} Cr)</>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
                         })}
                     </>
                 )}
@@ -650,4 +919,4 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
     );
 };
 
-export default React.memo(ShortlistGrid);
+export default ShortlistGrid;

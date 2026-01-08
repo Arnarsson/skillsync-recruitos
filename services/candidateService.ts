@@ -1,7 +1,6 @@
 
 import { supabase } from './supabase';
 import { Candidate, FunnelStage } from '../types';
-import { log } from './logger';
 
 // LocalStorage key for candidates when Supabase is unavailable
 const CANDIDATES_STORAGE_KEY = 'apex_candidates';
@@ -12,10 +11,9 @@ const loadFromLocalStorage = (): Candidate[] => {
     const stored = localStorage.getItem(CANDIDATES_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch (err: unknown) {
-    log.error('Failed to load candidates from localStorage', err, {
-      service: 'candidateService',
-      operation: 'loadFromLocalStorage'
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to load candidates from localStorage:', err);
+    }
     return [];
   }
 };
@@ -24,20 +22,16 @@ const saveToLocalStorage = (candidates: Candidate[]): void => {
   try {
     localStorage.setItem(CANDIDATES_STORAGE_KEY, JSON.stringify(candidates));
   } catch (err: unknown) {
-    log.error('Failed to save candidates to localStorage', err, {
-      service: 'candidateService',
-      operation: 'saveToLocalStorage'
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to save candidates to localStorage:', err);
+    }
   }
 };
 
 export const candidateService = {
   async fetchAll(): Promise<Candidate[]> {
     if (!supabase) {
-      log.warn('Supabase not connected. Using localStorage persistence.', {
-        service: 'candidateService',
-        operation: 'fetchAll'
-      });
+      console.warn('Supabase not connected. Using localStorage persistence.');
       return loadFromLocalStorage();
     }
 
@@ -48,7 +42,7 @@ export const candidateService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        log.db('SELECT', 'candidates', false, error);
+        console.error('Supabase Fetch Error:', error);
         return loadFromLocalStorage();
       }
 
@@ -108,10 +102,9 @@ export const candidateService = {
       saveToLocalStorage(candidates);
       return candidates;
     } catch (err: unknown) {
-      log.error('Supabase connection error', err, {
-        service: 'candidateService',
-        operation: 'fetchAll'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Supabase connection error:', err);
+      }
       return loadFromLocalStorage();
     }
   },
@@ -123,10 +116,7 @@ export const candidateService = {
     saveToLocalStorage(updatedCandidates);
 
     if (!supabase) {
-      log.warn('Database not configured. Candidate saved locally only.', {
-        service: 'candidateService',
-        operation: 'create'
-      });
+      console.warn("Database not configured. Candidate saved locally only.");
       return [candidate];
     }
 
@@ -161,15 +151,14 @@ export const candidateService = {
         .select();
 
       if (error) {
-        log.db('INSERT', 'candidates', false, error);
+        console.error('Supabase Create Error:', error);
         return [candidate];
       }
       return data;
     } catch (err: unknown) {
-      log.error('Supabase connection error', err, {
-        service: 'candidateService',
-        operation: 'create'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Supabase connection error:', err);
+      }
       return [candidate];
     }
   },
@@ -181,10 +170,7 @@ export const candidateService = {
     saveToLocalStorage(updatedCandidates);
 
     if (!supabase) {
-      log.warn('Database not configured. Candidate updated locally only.', {
-        service: 'candidateService',
-        operation: 'update'
-      });
+      console.warn("Database not configured. Candidate updated locally only.");
       return;
     }
 
@@ -217,13 +203,12 @@ export const candidateService = {
         .eq('id', candidate.id);
 
       if (error) {
-        log.db('UPDATE', 'candidates', false, error);
+        console.error('Supabase Update Error:', error);
       }
     } catch (err: unknown) {
-      log.error('Supabase connection error', err, {
-        service: 'candidateService',
-        operation: 'update'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Supabase connection error:', err);
+      }
     }
   },
 
@@ -234,10 +219,7 @@ export const candidateService = {
     saveToLocalStorage(updatedCandidates);
 
     if (!supabase) {
-      log.warn('Database not configured. Candidate deleted locally only.', {
-        service: 'candidateService',
-        operation: 'delete'
-      });
+      console.warn("Database not configured. Candidate deleted locally only.");
       return;
     }
 
@@ -248,13 +230,12 @@ export const candidateService = {
         .eq('id', candidateId);
 
       if (error) {
-        log.db('DELETE', 'candidates', false, error);
+        console.error('Supabase Delete Error:', error);
       }
     } catch (err: unknown) {
-      log.error('Supabase connection error', err, {
-        service: 'candidateService',
-        operation: 'delete'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Supabase connection error:', err);
+      }
     }
   }
 };

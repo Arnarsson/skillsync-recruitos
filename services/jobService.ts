@@ -14,7 +14,7 @@ const getEnv = (key: string) => {
 
 // Initialize with localStorage key if available, otherwise env
 const getAiClient = () => {
-  const apiKey = getEnv('VITE_GEMINI_API_KEY') || localStorage.getItem('GEMINI_API_KEY') || '';
+  const apiKey = localStorage.getItem('GEMINI_API_KEY') || getEnv('API_KEY') || '';
   if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
 };
