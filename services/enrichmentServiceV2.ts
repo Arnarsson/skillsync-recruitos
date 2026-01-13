@@ -952,6 +952,18 @@ export async function enrichCandidatePersona(
     }
   }
 
+  // Safety check: persona should never be null here due to control flow above,
+  // but TypeScript can't track this. Add explicit guard.
+  if (!persona) {
+    const metadata = calculateMetadata(evidence, null, true, wasAIInferred);
+    return {
+      status: 'manual_required',
+      reason: 'insufficient_public_data',
+      message: 'Unable to build candidate profile from available data.',
+      metadata
+    };
+  }
+
   // STEP 4: Compute alignment score
   const alignment = await computeAlignmentScore(persona, input.jobContext);
 

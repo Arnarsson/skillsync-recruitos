@@ -148,7 +148,7 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
           <i className="fa-solid fa-circle-info text-yellow-500 text-3xl mb-4"></i>
           <h3 className="text-sm font-bold text-yellow-400 mb-3">Limited Professional Data Available</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed mb-4">
-            This candidate's profile has minimal work experience or career history data.
+            This candidate&apos;s profile has minimal work experience or career history data.
             This commonly occurs with:
           </p>
           <ul className="text-xs text-slate-400 space-y-2 text-left max-w-sm mx-auto mb-4">

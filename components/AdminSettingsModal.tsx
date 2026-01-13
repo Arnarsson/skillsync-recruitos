@@ -23,10 +23,8 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
 
         // Check Gemini Key status (AI Studio or Env)
         const checkGemini = async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if ((window as any).aistudio && (window as any).aistudio.hasSelectedApiKey) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+            if (window.aistudio?.hasSelectedApiKey) {
+                const hasKey = await window.aistudio.hasSelectedApiKey();
                 setHasGeminiAuth(hasKey);
             } else {
                 // Safely check process.env
@@ -64,12 +62,9 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
     };
 
     const handleGeminiAuth = async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((window as any).aistudio && (window as any).aistudio.openSelectKey) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (window as any).aistudio.openSelectKey();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+        if (window.aistudio?.openSelectKey) {
+            await window.aistudio.openSelectKey();
+            const hasKey = await window.aistudio.hasSelectedApiKey();
             setHasGeminiAuth(hasKey);
             if (hasKey) addToast('success', 'AI Studio Connected');
         } else {

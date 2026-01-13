@@ -148,16 +148,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Safely parse req.body (might be string in Vercel)
-      let body: any = req.body;
-      if (typeof body === 'string') {
+      let parsedBody: { url?: string };
+      if (typeof req.body === 'string') {
         try {
-          body = JSON.parse(body);
+          parsedBody = JSON.parse(req.body);
         } catch {
           return res.status(400).json({ error: 'Invalid JSON body' });
         }
+      } else {
+        parsedBody = req.body as { url?: string };
       }
 
-      const targetUrl = body?.url;
+      const targetUrl = parsedBody?.url;
       if (!targetUrl || typeof targetUrl !== 'string') {
         return res.status(400).json({ error: 'URL is required for scrape action' });
       }
