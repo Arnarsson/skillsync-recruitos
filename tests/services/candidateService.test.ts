@@ -22,6 +22,13 @@ vi.mock('../../services/supabase', () => ({
   }
 }));
 
+// Helper to get mocked supabase client (non-null since we mock it above)
+async function getMockedSupabase() {
+  const { supabase } = await import('../../services/supabase');
+  // We know supabase is not null because we mocked it above
+  return supabase!;
+}
+
 const CANDIDATES_STORAGE_KEY = 'apex_candidates';
 
 describe('candidateService', () => {
@@ -65,12 +72,12 @@ describe('candidateService', () => {
 
   describe('fetchAll', () => {
     it('should return empty array when localStorage is empty', async () => {
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({ data: [], error: null }))
         }))
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       const candidates = await candidateService.fetchAll();
       expect(candidates).toEqual([]);
@@ -80,7 +87,7 @@ describe('candidateService', () => {
       // Seed localStorage
       localStorage.setItem(CANDIDATES_STORAGE_KEY, JSON.stringify([mockCandidate]));
 
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({
@@ -88,7 +95,7 @@ describe('candidateService', () => {
             error: { message: 'Network error' }
           }))
         }))
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       const candidates = await candidateService.fetchAll();
       expect(candidates).toHaveLength(1);
@@ -124,12 +131,12 @@ describe('candidateService', () => {
         score_drags: []
       };
 
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({ data: [dbRow], error: null }))
         }))
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       const candidates = await candidateService.fetchAll();
       expect(candidates).toHaveLength(1);
@@ -171,12 +178,12 @@ describe('candidateService', () => {
         score_drags: null
       };
 
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({ data: [dbRow], error: null }))
         }))
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       await candidateService.fetchAll();
 
@@ -213,13 +220,13 @@ describe('candidateService', () => {
     });
 
     it('should call Supabase insert with correct field mapping', async () => {
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       const insertMock = vi.fn(() => ({
         select: vi.fn(() => Promise.resolve({ data: [mockCandidate], error: null }))
       }));
       vi.mocked(supabase.from).mockReturnValue({
         insert: insertMock
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       await candidateService.create(mockCandidate);
 
@@ -235,7 +242,7 @@ describe('candidateService', () => {
     });
 
     it('should gracefully handle Supabase errors and still save locally', async () => {
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       vi.mocked(supabase.from).mockReturnValue({
         insert: vi.fn(() => ({
           select: vi.fn(() => Promise.resolve({
@@ -243,7 +250,7 @@ describe('candidateService', () => {
             error: { message: 'Insert failed' }
           }))
         }))
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       const result = await candidateService.create(mockCandidate);
 
@@ -278,12 +285,12 @@ describe('candidateService', () => {
     });
 
     it('should call Supabase update with correct ID filter', async () => {
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       const eqMock = vi.fn(() => Promise.resolve({ error: null }));
       const updateMock = vi.fn(() => ({ eq: eqMock }));
       vi.mocked(supabase.from).mockReturnValue({
         update: updateMock
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       await candidateService.update(mockCandidate);
 
@@ -332,12 +339,12 @@ describe('candidateService', () => {
     });
 
     it('should call Supabase delete with correct ID', async () => {
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       const eqMock = vi.fn(() => Promise.resolve({ error: null }));
       const deleteMock = vi.fn(() => ({ eq: eqMock }));
       vi.mocked(supabase.from).mockReturnValue({
         delete: deleteMock
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       await candidateService.delete('test-123');
 
@@ -391,12 +398,12 @@ describe('candidateService', () => {
     it('should handle malformed JSON in localStorage', async () => {
       localStorage.setItem(CANDIDATES_STORAGE_KEY, 'invalid json {{{');
 
-      const { supabase } = await import('../../services/supabase');
+      const supabase = await getMockedSupabase();
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({ data: [], error: null }))
         }))
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       const candidates = await candidateService.fetchAll();
       // Should return empty array instead of throwing
