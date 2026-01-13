@@ -1,5 +1,5 @@
 
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 import { Candidate, FunnelStage } from '../types';
 
 // LocalStorage key for candidates when Supabase is unavailable
@@ -30,6 +30,7 @@ const saveToLocalStorage = (candidates: Candidate[]): void => {
 
 export const candidateService = {
   async fetchAll(): Promise<Candidate[]> {
+    const supabase = getSupabase();
     if (!supabase) {
       console.warn('Supabase not connected. Using localStorage persistence.');
       return loadFromLocalStorage();
@@ -115,6 +116,7 @@ export const candidateService = {
     const updatedCandidates = [candidate, ...cachedCandidates.filter(c => c.id !== candidate.id)];
     saveToLocalStorage(updatedCandidates);
 
+    const supabase = getSupabase();
     if (!supabase) {
       console.warn("Database not configured. Candidate saved locally only.");
       return [candidate];
@@ -169,6 +171,7 @@ export const candidateService = {
     const updatedCandidates = cachedCandidates.map(c => c.id === candidate.id ? candidate : c);
     saveToLocalStorage(updatedCandidates);
 
+    const supabase = getSupabase();
     if (!supabase) {
       console.warn("Database not configured. Candidate updated locally only.");
       return;
@@ -218,6 +221,7 @@ export const candidateService = {
     const updatedCandidates = cachedCandidates.filter(c => c.id !== candidateId);
     saveToLocalStorage(updatedCandidates);
 
+    const supabase = getSupabase();
     if (!supabase) {
       console.warn("Database not configured. Candidate deleted locally only.");
       return;

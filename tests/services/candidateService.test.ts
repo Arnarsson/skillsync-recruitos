@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { candidateService } from '../../services/candidateService';
 import { Candidate, FunnelStage } from '../../types';
 
-// Mock supabase module
-vi.mock('../../services/supabase', () => ({
-  supabase: {
+// Mock supabase module - define mock inline to avoid hoisting issues
+vi.mock('../../services/supabase', () => {
+  const createMockClient = () => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         order: vi.fn(() => Promise.resolve({ data: [], error: null }))
@@ -19,14 +19,22 @@ vi.mock('../../services/supabase', () => ({
         eq: vi.fn(() => Promise.resolve({ error: null }))
       }))
     }))
-  }
-}));
+  });
+
+  const mockClient = createMockClient();
+
+  return {
+    supabase: mockClient,
+    getSupabase: vi.fn(() => mockClient),
+    resetSupabase: vi.fn()
+  };
+});
 
 // Helper to get mocked supabase client (non-null since we mock it above)
 async function getMockedSupabase() {
-  const { supabase } = await import('../../services/supabase');
-  // We know supabase is not null because we mocked it above
-  return supabase!;
+  const { getSupabase } = await import('../../services/supabase');
+  // We know getSupabase returns non-null because we mocked it above
+  return getSupabase()!;
 }
 
 const CANDIDATES_STORAGE_KEY = 'apex_candidates';
