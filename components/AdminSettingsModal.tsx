@@ -12,6 +12,8 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
     const [brightDataKey, setBrightDataKey] = useState('');
     const [openRouterKey, setOpenRouterKey] = useState('');
     const [geminiKey, setGeminiKey] = useState('');
+    const [supabaseUrl, setSupabaseUrl] = useState('');
+    const [supabaseKey, setSupabaseKey] = useState('');
     const [hasGeminiAuth, setHasGeminiAuth] = useState(false); // Tracks AI Studio / Env status
 
     useEffect(() => {
@@ -20,6 +22,8 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
         setBrightDataKey(localStorage.getItem('BRIGHTDATA_API_KEY') || '');
         setOpenRouterKey(localStorage.getItem('OPENROUTER_API_KEY') || '');
         setGeminiKey(localStorage.getItem('GEMINI_API_KEY') || '');
+        setSupabaseUrl(localStorage.getItem('SUPABASE_URL') || '');
+        setSupabaseKey(localStorage.getItem('SUPABASE_ANON_KEY') || '');
 
         // Check Gemini Key status (AI Studio or Env)
         const checkGemini = async () => {
@@ -52,6 +56,12 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
 
         if (geminiKey) localStorage.setItem('GEMINI_API_KEY', geminiKey);
         else localStorage.removeItem('GEMINI_API_KEY');
+
+        if (supabaseUrl) localStorage.setItem('SUPABASE_URL', supabaseUrl);
+        else localStorage.removeItem('SUPABASE_URL');
+
+        if (supabaseKey) localStorage.setItem('SUPABASE_ANON_KEY', supabaseKey);
+        else localStorage.removeItem('SUPABASE_ANON_KEY');
 
         addToast('success', 'Settings Saved. Reloading...');
 
@@ -215,6 +225,44 @@ const AdminSettingsModal: React.FC<Props> = ({ onClose, addToast }) => {
                         </div>
                         <p className="text-xs text-slate-500 mt-2 px-1">
                             Required for scraping LinkedIn profiles. Uses BrightData&apos;s People Dataset API.
+                        </p>
+                    </div>
+
+                    <div className="w-full h-px bg-apex-800"></div>
+
+                    {/* Supabase Section */}
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Database Storage (Supabase)</h3>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-400">Project URL</label>
+                                <div className="relative">
+                                    <i className="fa-solid fa-database absolute left-3 top-3 text-slate-600"></i>
+                                    <input
+                                        type="text"
+                                        value={supabaseUrl}
+                                        onChange={(e) => setSupabaseUrl(e.target.value)}
+                                        className="w-full bg-apex-800 border border-apex-700 rounded p-2.5 pl-10 text-sm text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
+                                        placeholder="https://your-project.supabase.co"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-400">Anon Key</label>
+                                <div className="relative">
+                                    <i className="fa-solid fa-key absolute left-3 top-3 text-slate-600"></i>
+                                    <input
+                                        type="password"
+                                        value={supabaseKey}
+                                        onChange={(e) => setSupabaseKey(e.target.value)}
+                                        className="w-full bg-apex-800 border border-apex-700 rounded p-2.5 pl-10 text-sm text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
+                                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2 px-1">
+                            Optional. Enables persistent cloud storage for candidates. Without this, data is stored locally in browser.
                         </p>
                     </div>
 
