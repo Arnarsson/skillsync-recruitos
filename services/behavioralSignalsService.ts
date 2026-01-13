@@ -279,7 +279,7 @@ async function searchSpeakingEngagements(
             if (isConference && result.url) {
               // Extract event details from snippet
               const dateMatch = (result.snippet || '').match(
-                /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})|([A-Z][a-z]+ \d{1,2},? \d{4})/
+                /(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|([A-Z][a-z]+ \d{1,2},? \d{4})/
               );
 
               speakingEvents.push({
@@ -492,7 +492,7 @@ async function searchContentActivity(name: string): Promise<ContentActivity[]> {
           for (const result of item.organic_results.slice(0, 5)) {
             // Extract date if available
             const dateMatch = (result.snippet || '').match(
-              /([A-Z][a-z]+ \d{1,2},? \d{4})|(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/
+              /([A-Z][a-z]+ \d{1,2},? \d{4})|(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/
             );
 
             activities.push({

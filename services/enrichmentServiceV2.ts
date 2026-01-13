@@ -23,9 +23,11 @@ import type {
   AlignmentScore,
   EnrichmentResult,
   EnrichmentOutcome,
-  EnrichmentMetadata
+  EnrichmentMetadata,
+  AdvancedCandidateProfile
 } from '../types';
 import { PRICING } from '../types';
+import { buildAdvancedProfile, quickEnrichment } from './advancedEnrichmentService';
 
 // Helper to safely get env vars
 const getEnv = (key: string) => {
@@ -1012,4 +1014,114 @@ export async function enrichCandidatePersona(
     rawEvidence: evidence,
     metadata
   };
+}
+
+/**
+ * Extended enrichment options for advanced profile building
+ */
+export interface ExtendedEnrichmentOptions {
+  includeAdvanced?: boolean;
+  quickMode?: boolean;
+  githubUrl?: string;
+  teamLinkedInUrls?: string[];
+}
+
+/**
+ * Extended result type that includes advanced profile
+ */
+export type ExtendedEnrichmentResult = EnrichmentResult & {
+  advancedProfile?: AdvancedCandidateProfile;
+};
+
+/**
+ * ENHANCED ENRICHMENT: Basic enrichment + Advanced profile building
+ *
+ * This function runs the basic enrichment pipeline and optionally
+ * builds an advanced profile with network analysis, behavioral signals,
+ * and cited evidence.
+ */
+export async function enrichCandidateWithAdvanced(
+  input: EnrichmentInput,
+  candidateId: string,
+  options: ExtendedEnrichmentOptions = {}
+): Promise<ExtendedEnrichmentResult> {
+  const {
+    includeAdvanced = true,
+    quickMode = false,
+    githubUrl,
+    teamLinkedInUrls = []
+  } = options;
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Enrichment] ===== EXTENDED ENRICHMENT PIPELINE =====');
+    console.log('[Enrichment] Include advanced:', includeAdvanced);
+    console.log('[Enrichment] Quick mode:', quickMode);
+  }
+
+  // Run basic enrichment first
+  const basicResult = await enrichCandidatePersona(input);
+
+  // If basic enrichment failed or advanced is not requested, return early
+  if (basicResult.status !== 'ok' || !includeAdvanced) {
+    return basicResult;
+  }
+
+  // Build advanced profile
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] Starting advanced profile enrichment...');
+    }
+
+    const advancedProfile = quickMode
+      ? await quickEnrichment({
+          candidateId,
+          candidateName: input.fullName,
+          linkedinUrl: input.linkedinUrl,
+          githubUrl,
+          resumeText: input.resumeText,
+          evidenceSources: basicResult.rawEvidence,
+          teamLinkedInUrls,
+          previousProfileData: basicResult.persona.currentRole ? {
+            title: basicResult.persona.currentRole.title ?? undefined,
+            company: basicResult.persona.currentRole.company ?? undefined,
+            location: basicResult.persona.currentRole.location ?? undefined,
+          } : undefined
+        })
+      : await buildAdvancedProfile({
+          candidateId,
+          candidateName: input.fullName,
+          linkedinUrl: input.linkedinUrl,
+          githubUrl,
+          resumeText: input.resumeText,
+          evidenceSources: basicResult.rawEvidence,
+          teamLinkedInUrls,
+          previousProfileData: basicResult.persona.currentRole ? {
+            title: basicResult.persona.currentRole.title ?? undefined,
+            company: basicResult.persona.currentRole.company ?? undefined,
+            location: basicResult.persona.currentRole.location ?? undefined,
+          } : undefined
+        });
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Enrichment] ✅ Advanced profile complete:', {
+        hasNetwork: !!advancedProfile.networkGraph,
+        hasBehavioral: !!advancedProfile.behavioralSignals,
+        hasCited: !!advancedProfile.citedProfile,
+        overallConfidence: advancedProfile.overallConfidence
+      });
+    }
+
+    return {
+      ...basicResult,
+      advancedProfile
+    };
+
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[Enrichment] Advanced enrichment failed:', error);
+    }
+
+    // Return basic result even if advanced fails
+    return basicResult;
+  }
 }
