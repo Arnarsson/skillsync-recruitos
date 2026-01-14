@@ -12,8 +12,7 @@
  * - Gemini = Reasoning layer (turn messy text into structured profile)
  */
 
-import { getAiClient, AI_MODELS } from './geminiService';
-import { Type } from '@google/genai';
+import { callOpenRouter } from './geminiService';
 
 export interface EnrichedExperience {
   title: string;
@@ -95,14 +94,17 @@ const filterPromisingSources = (results: SERPResult[]): string[] => {
 };
 
 /**
- * REASONING LAYER: Use Gemini to structure messy web snippets into clean profile
+ * REASONING LAYER: Use OpenRouter to structure messy web snippets into clean profile
  * This is where AI adds value - not hallucinating, but organizing real data
  */
 const deepEnrichWithAI = async (snippets: Array<{ url: string; text: string }>): Promise<EnrichedProfile | null> => {
-  const ai = getAiClient();
-  if (!ai) {
+  // Check for OpenRouter API key
+  const openRouterKey = localStorage.getItem('OPENROUTER_API_KEY') ||
+    (typeof process !== 'undefined' && process.env ? process.env.OPENROUTER_API_KEY : undefined);
+
+  if (!openRouterKey) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn('[Enrichment] Gemini client not available for AI enrichment');
+      console.warn('[Enrichment] OpenRouter API key not available for AI enrichment');
     }
     return null;
   }
@@ -115,7 +117,7 @@ const deepEnrichWithAI = async (snippets: Array<{ url: string; text: string }>):
       .substring(0, 15000); // Limit total input
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Enrichment] Calling Gemini to structure', snippets.length, 'text snippets');
+      console.log('[Enrichment] Calling OpenRouter to structure', snippets.length, 'text snippets');
       console.log('[Enrichment] Combined text length:', combinedText.length, 'chars');
     }
 
@@ -133,62 +135,45 @@ ${combinedText}
 
 **Your task:**
 Extract structured profile data. Be conservative - only include info you can directly cite.
+
+Return ONLY valid JSON in this exact format (no markdown, no explanations):
+{
+  "name": "string or null",
+  "current_role": {
+    "title": "string or null",
+    "company": "string or null",
+    "start_year": number or null,
+    "location": "string or null"
+  },
+  "past_roles": [
+    {
+      "title": "string",
+      "company": "string",
+      "start_year": number or null,
+      "end_year": number or null
+    }
+  ],
+  "skills": ["array of skill strings"],
+  "seniority": "string or null"
+}
     `;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.DEFAULT,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            current_role: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                company: { type: Type.STRING },
-                start_year: { type: Type.NUMBER },
-                location: { type: Type.STRING }
-              }
-            },
-            past_roles: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  company: { type: Type.STRING },
-                  start_year: { type: Type.NUMBER },
-                  end_year: { type: Type.NUMBER }
-                }
-              }
-            },
-            skills: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            seniority: { type: Type.STRING },
-            evidence: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  source_url: { type: Type.STRING },
-                  snippet: { type: Type.STRING }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const responseText = await callOpenRouter(prompt);
 
-    const structuredData = JSON.parse(response.text || '{}');
+    // Parse JSON from response (handle potential markdown wrapping)
+    let structuredData;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      structuredData = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText);
+    } catch (parseError) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Enrichment] Failed to parse OpenRouter response:', parseError);
+      }
+      return null;
+    }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Enrichment] Gemini extracted:', {
+      console.log('[Enrichment] OpenRouter extracted:', {
         name: structuredData.name,
         currentRole: structuredData.current_role?.title,
         pastRoles: structuredData.past_roles?.length || 0,
@@ -196,12 +181,12 @@ Extract structured profile data. Be conservative - only include info you can dir
       });
     }
 
-    // Convert Gemini output to EnrichedProfile format
+    // Convert OpenRouter output to EnrichedProfile format
     const enriched: EnrichedProfile = {
       experiences: [],
       skills: structuredData.skills || [],
       evidenceUrls: snippets.map(s => s.url),
-      enrichmentSources: ['AI-structured from web sources']
+      enrichmentSources: ['AI-structured from web sources (OpenRouter)']
     };
 
     // Add current role
@@ -233,13 +218,13 @@ Extract structured profile data. Be conservative - only include info you can dir
 
     if (!hasUsableData) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] Gemini found insufficient data in snippets');
+        console.log('[Enrichment] OpenRouter found insufficient data in snippets');
       }
       return null;
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Enrichment] ✅ AI enrichment successful');
+      console.log('[Enrichment] ✅ AI enrichment successful via OpenRouter');
     }
 
     return enriched;

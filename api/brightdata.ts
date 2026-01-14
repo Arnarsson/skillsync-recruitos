@@ -143,10 +143,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } else if (action === 'scrape') {
       // Generic web scraper for enrichment pipeline
-      if (!apiKey) {
-        return res.status(400).json({ error: 'BrightData API key is required for scrape action' });
-      }
-
       // Safely parse req.body (might be string in Vercel)
       let parsedBody: { url?: string };
       if (typeof req.body === 'string') {
@@ -166,42 +162,96 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log('[BrightData API] Scraping URL:', targetUrl);
 
-      // Use Bright Data Web Unlocker API (correct endpoint)
-      // Docs: https://docs.brightdata.com/scraping-automation/web-unlocker/overview
-      const scrapeUrl = `https://api.brightdata.com/request`;
+      // Try multiple scraping methods in order of preference
+      let content = '';
+      let success = false;
 
-      const requestBody = {
-        url: targetUrl,
-        zone: 'web_unlocker',
-        format: 'raw'
-      };
+      // Method 1: Try BrightData SERP API for common sites
+      if (apiKey && !success) {
+        try {
+          // Use datasets API with web_data_extraction dataset for generic scraping
+          const scrapeDatasetId = 'gd_lwdb5fft2sxbj0ioiy'; // Generic web scraper dataset
+          const triggerUrl = `${BRIGHTDATA_API_BASE}/trigger?dataset_id=${scrapeDatasetId}&format=json`;
 
-      console.log('[BrightData API] Request body:', JSON.stringify(requestBody));
+          const response = await fetch(triggerUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([{ url: targetUrl }]),
+          });
 
-      const response = await fetch(scrapeUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+          if (response.ok) {
+            const triggerData = await response.json();
+            const snapshotId = triggerData.snapshot_id;
 
-      console.log('[BrightData API] Response status:', response.status);
+            if (snapshotId) {
+              // Poll for results (max 20 seconds)
+              for (let i = 0; i < 10; i++) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[BrightData API] Error response:', errorText);
-        return res.status(response.status).json({ error: `Web scraper failed: ${errorText}` });
+                const progressResponse = await fetch(
+                  `${BRIGHTDATA_API_BASE}/progress/${snapshotId}`,
+                  { headers: { 'Authorization': `Bearer ${apiKey}` } }
+                );
+
+                if (progressResponse.ok) {
+                  const progress = await progressResponse.json();
+                  if (progress.status === 'ready') {
+                    const snapshotResponse = await fetch(
+                      `${BRIGHTDATA_API_BASE}/snapshot/${snapshotId}?format=json`,
+                      { headers: { 'Authorization': `Bearer ${apiKey}` } }
+                    );
+
+                    if (snapshotResponse.ok) {
+                      const snapshotData = await snapshotResponse.json();
+                      if (Array.isArray(snapshotData) && snapshotData.length > 0) {
+                        content = snapshotData[0].content || snapshotData[0].text || JSON.stringify(snapshotData[0]);
+                        success = true;
+                        console.log('[BrightData API] Method 1 (datasets) success, content length:', content.length);
+                      }
+                    }
+                    break;
+                  } else if (progress.status === 'failed') {
+                    console.log('[BrightData API] Method 1 failed, trying fallback');
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.log('[BrightData API] Method 1 error:', error);
+        }
       }
 
-      const data = await response.json();
-      // Web Unlocker returns { body: "...", status_code: 200, ... }
-      const html = data.body || data.content || '';
+      // Method 2: Direct fetch (for public pages)
+      if (!success) {
+        try {
+          console.log('[BrightData API] Trying direct fetch for:', targetUrl);
+          const response = await fetch(targetUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            },
+          });
 
-      console.log('[BrightData API] Success, content length:', html.length);
+          if (response.ok) {
+            content = await response.text();
+            success = true;
+            console.log('[BrightData API] Method 2 (direct fetch) success, content length:', content.length);
+          }
+        } catch (error) {
+          console.log('[BrightData API] Method 2 error:', error);
+        }
+      }
 
-      return res.status(200).json({ content: html, statusCode: data.status_code });
+      if (success && content) {
+        return res.status(200).json({ content, statusCode: 200 });
+      }
+
+      return res.status(404).json({ error: 'Failed to scrape URL - no content retrieved' });
 
     } else {
       return res.status(400).json({
