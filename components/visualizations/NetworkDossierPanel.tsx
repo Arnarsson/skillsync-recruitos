@@ -19,14 +19,13 @@ export const NetworkDossierPanel: React.FC<NetworkDossierPanelProps> = ({ dossie
 
   if (isLoading) {
     return (
-      <div className="space-y-4 animate-pulse">
+      <div className="space-y-6 animate-pulse">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-apex-800/40 border border-apex-700 rounded-lg p-4">
-            <div className="h-5 bg-apex-700 rounded w-1/3 mb-3"></div>
-            <div className="space-y-2">
-              <div className="h-3 bg-apex-700/60 rounded w-full"></div>
-              <div className="h-3 bg-apex-700/60 rounded w-5/6"></div>
-              <div className="h-3 bg-apex-700/60 rounded w-4/6"></div>
+          <div key={i} className="bg-slate-900/10 border border-slate-900 rounded-lg p-6">
+            <div className="h-4 bg-slate-900 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              <div className="h-2 bg-slate-900/50 rounded w-full"></div>
+              <div className="h-2 bg-slate-900/50 rounded w-5/6"></div>
             </div>
           </div>
         ))}
@@ -36,45 +35,39 @@ export const NetworkDossierPanel: React.FC<NetworkDossierPanelProps> = ({ dossie
 
   if (!dossier) {
     return (
-      <div className="bg-apex-800/30 border border-apex-700 rounded-lg p-8 text-center">
-        <i className="fa-solid fa-network-wired text-slate-600 text-4xl mb-4"></i>
-        <h3 className="text-sm font-bold text-slate-400 mb-2">Network Dossier Not Generated</h3>
-        <p className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
-          Strategic intelligence is automatically generated when you unlock Deep Profile analysis.
+      <div className="bg-slate-900/10 border border-dashed border-slate-900 rounded-lg p-12 text-center">
+        <h3 className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-widest">Network Data Unavailable</h3>
+        <p className="text-[11px] text-slate-600 leading-relaxed max-w-xs mx-auto italic">
+          Strategic network intelligence is synthesized upon deep analysis activation.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Section 1: Strategic Context */}
       <AccordionSection
-        icon="fa-chess"
-        title="Strategic Context"
-        subtitle="Industry & Market Positioning"
+        title="Market Dynamics"
+        subtitle="Sourcing Context & Industry Vector"
         isExpanded={expandedSection === 'strategic'}
         onToggle={() => toggleSection('strategic')}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <DataCard
-            icon="fa-building"
             label="Industry Position"
             content={dossier.strategyContext.industryPosition}
           />
           <DataCard
-            icon="fa-chart-line"
-            label="Company Dynamics"
+            label="Company Status"
             content={dossier.strategyContext.companyDynamics}
           />
           <DataCard
-            icon="fa-clock"
-            label="Market Timing"
+            label="Timing Vector"
             content={dossier.strategyContext.marketTiming}
           />
           <DataCard
-            icon="fa-shield-halved"
-            label="Competitive Intelligence"
+            label="Competitor Pulse"
             content={dossier.strategyContext.competitiveIntel}
           />
         </div>
@@ -82,109 +75,91 @@ export const NetworkDossierPanel: React.FC<NetworkDossierPanelProps> = ({ dossie
 
       {/* Section 2: Network Intelligence */}
       <AccordionSection
-        icon="fa-diagram-project"
-        title="Network Intelligence"
-        subtitle="Connection Pathways & Introduction Strategies"
+        title="Network Vectors"
+        subtitle="Graph Proximity & Access Strategy"
         isExpanded={expandedSection === 'network'}
         onToggle={() => toggleSection('network')}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <ListCard
-            icon="fa-users"
-            label="Inferred Connections"
+            label="Inferred Nodes"
             items={dossier.networkIntelligence.inferredConnections}
-            emptyMessage="No mutual connections identified"
+            emptyMessage="No direct proxies identified"
           />
           <ListCard
-            icon="fa-route"
-            label="Introduction Paths"
+            label="Access Channels"
             items={dossier.networkIntelligence.introductionPaths}
-            emptyMessage="Direct outreach recommended"
+            emptyMessage="Open protocol required"
           />
           <ListCard
-            icon="fa-people-group"
-            label="Professional Communities"
+            label="Ecosystem Presence"
             items={dossier.networkIntelligence.professionalCommunities}
-            emptyMessage="No community affiliations identified"
+            emptyMessage="Peripheral presence only"
           />
           <DataCard
-            icon="fa-microphone"
-            label="Thought Leadership"
+            label="Domain Voice"
             content={dossier.networkIntelligence.thoughtLeadership}
           />
         </div>
       </AccordionSection>
 
-      {/* Section 3: Cultural Fit */}
+      {/* Section 3: Culture Mapping */}
       <AccordionSection
-        icon="fa-palette"
-        title="Cultural Fit Analysis"
-        subtitle="Values, Adaptation & Motivation"
+        title="Culture Vector"
+        subtitle="Alignment Proof & Friction Risks"
         isExpanded={expandedSection === 'culture'}
         onToggle={() => toggleSection('culture')}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <DataCard
-            icon="fa-building-user"
-            label="Current Culture Profile"
+            label="Origin DNA"
             content={dossier.culturalFit.currentCultureProfile}
           />
           <DataCard
-            icon="fa-handshake"
-            label="Target Culture Match"
+            label="Alignment Theory"
             content={dossier.culturalFit.targetCultureMatch}
           />
           <ListCard
-            icon="fa-triangle-exclamation"
-            label="Adaptation Challenges"
+            label="Friction Hazards"
             items={dossier.culturalFit.adaptationChallenges}
-            emptyMessage="No significant friction points anticipated"
-            variant="warning"
+            emptyMessage="Synergy likely"
           />
           <ListCard
-            icon="fa-bullseye"
-            label="Motivational Drivers"
+            label="Core Intent"
             items={dossier.culturalFit.motivationalDrivers}
-            emptyMessage="Motivators not identified"
-            variant="success"
+            emptyMessage="Ambiguous intent"
           />
         </div>
       </AccordionSection>
 
-      {/* Section 4: Engagement Playbook */}
+      {/* Section 4: Protocol Playbook */}
       <AccordionSection
-        icon="fa-book"
-        title="Engagement Playbook"
-        subtitle="Tactical Execution Strategy"
+        title="Engagement Protocol"
+        subtitle="Execution Strategy & Objection Handling"
         isExpanded={expandedSection === 'playbook'}
         onToggle={() => toggleSection('playbook')}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <DataCard
-            icon="fa-bullhorn"
-            label="Primary Approach"
+            label="Target Approach"
             content={dossier.engagementPlaybook.primaryApproach}
             variant="highlight"
           />
           <ListCard
-            icon="fa-comments"
-            label="Conversation Starters"
+            label="Openers"
             items={dossier.engagementPlaybook.conversationStarters}
-            emptyMessage="No conversation starters available"
+            emptyMessage="Procedural outreach recommended"
           />
           <DataCard
-            icon="fa-calendar-check"
-            label="Timing Considerations"
+            label="Temporal Context"
             content={dossier.engagementPlaybook.timingConsiderations}
           />
           <ObjectionHandlingTable objections={dossier.engagementPlaybook.objectionHandling} />
         </div>
       </AccordionSection>
 
-      {/* Generation Timestamp */}
-      <div className="text-xs text-slate-600 text-center pt-2">
-        <i className="fa-solid fa-clock mr-2"></i>
-        Generated {new Date(dossier.generatedAt).toLocaleString()}
+      <div className="text-[10px] text-slate-700 text-center pt-6 uppercase tracking-widest italic">
+        Snapshot: {new Date(dossier.generatedAt).toLocaleDateString()}
       </div>
     </div>
   );
@@ -195,7 +170,6 @@ export const NetworkDossierPanel: React.FC<NetworkDossierPanelProps> = ({ dossie
 // ============================================================================
 
 interface AccordionSectionProps {
-  icon: string;
   title: string;
   subtitle: string;
   isExpanded: boolean;
@@ -204,7 +178,6 @@ interface AccordionSectionProps {
 }
 
 const AccordionSection: React.FC<AccordionSectionProps> = ({
-  icon,
   title,
   subtitle,
   isExpanded,
@@ -212,27 +185,22 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
   children
 }) => {
   return (
-    <div className="bg-apex-800/40 border border-apex-700 rounded-lg overflow-hidden">
+    <div className="bg-slate-900/10 border border-slate-900 rounded-lg overflow-hidden">
       {/* Header */}
       <button
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-apex-800/60 transition-colors"
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-900/20 transition-colors"
       >
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-            <i className={`fa-solid ${icon} text-emerald-400 text-sm`}></i>
-          </div>
-          <div className="text-left">
-            <h3 className="text-sm font-bold text-white">{title}</h3>
-            <p className="text-xs text-slate-500">{subtitle}</p>
-          </div>
+        <div className="text-left">
+          <h3 className="text-[11px] font-bold text-slate-200 uppercase tracking-widest">{title}</h3>
+          <p className="text-[10px] text-slate-600 uppercase tracking-tight mt-1">{subtitle}</p>
         </div>
-        <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-slate-500 text-xs`}></i>
+        <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-slate-700 text-[10px]`}></i>
       </button>
 
       {/* Content */}
       {isExpanded && (
-        <div className="px-4 py-4 border-t border-apex-700">
+        <div className="px-5 py-6 border-t border-slate-900 bg-slate-950/20">
           {children}
         </div>
       )}
@@ -241,86 +209,46 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
 };
 
 interface DataCardProps {
-  icon: string;
   label: string;
   content: string;
   variant?: 'default' | 'highlight';
 }
 
-const DataCard: React.FC<DataCardProps> = ({ icon, label, content, variant = 'default' }) => {
-  const bgColor = variant === 'highlight' ? 'bg-emerald-900/20' : 'bg-apex-900/40';
-  const borderColor = variant === 'highlight' ? 'border-emerald-800/50' : 'border-apex-700';
+const DataCard: React.FC<DataCardProps> = ({ label, content, variant = 'default' }) => {
+  const bgColor = variant === 'highlight' ? 'bg-slate-900/40' : 'bg-transparent';
+  const borderColor = variant === 'highlight' ? 'border-slate-800' : 'border-slate-900/50';
 
   return (
-    <div className={`${bgColor} border ${borderColor} rounded-lg p-3`}>
-      <div className="flex items-start space-x-3">
-        <i className={`fa-solid ${icon} text-slate-500 text-sm mt-0.5`}></i>
-        <div className="flex-1">
-          <div className="text-xs font-bold text-slate-400 uppercase mb-1">{label}</div>
-          <p className="text-xs text-slate-300 leading-relaxed">{content}</p>
-        </div>
-      </div>
+    <div className={`${bgColor} border ${borderColor} rounded p-4`}>
+      <div className="text-[9px] font-bold text-slate-600 uppercase mb-2 tracking-widest">{label}</div>
+      <p className="text-xs text-slate-400 leading-relaxed italic">&ldquo;{content}&rdquo;</p>
     </div>
   );
 };
 
 interface ListCardProps {
-  icon: string;
   label: string;
   items: string[];
   emptyMessage: string;
   variant?: 'default' | 'warning' | 'success';
 }
 
-const ListCard: React.FC<ListCardProps> = ({ icon, label, items, emptyMessage, variant = 'default' }) => {
-  const getVariantStyles = () => {
-    switch (variant) {
-      case 'warning':
-        return {
-          bg: 'bg-yellow-900/10',
-          border: 'border-yellow-800/30',
-          iconColor: 'text-yellow-500',
-          bulletColor: 'text-yellow-500'
-        };
-      case 'success':
-        return {
-          bg: 'bg-emerald-900/10',
-          border: 'border-emerald-800/30',
-          iconColor: 'text-emerald-500',
-          bulletColor: 'text-emerald-500'
-        };
-      default:
-        return {
-          bg: 'bg-apex-900/40',
-          border: 'border-apex-700',
-          iconColor: 'text-slate-500',
-          bulletColor: 'text-slate-600'
-        };
-    }
-  };
-
-  const styles = getVariantStyles();
-
+const ListCard: React.FC<ListCardProps> = ({ label, items, emptyMessage }) => {
   return (
-    <div className={`${styles.bg} border ${styles.border} rounded-lg p-3`}>
-      <div className="flex items-start space-x-3">
-        <i className={`fa-solid ${icon} ${styles.iconColor} text-sm mt-0.5`}></i>
-        <div className="flex-1">
-          <div className="text-xs font-bold text-slate-400 uppercase mb-2">{label}</div>
-          {items.length > 0 ? (
-            <ul className="space-y-1.5">
-              {items.map((item, index) => (
-                <li key={index} className="flex items-start space-x-2">
-                  <i className={`fa-solid fa-circle text-[6px] ${styles.bulletColor} mt-1.5`}></i>
-                  <span className="text-xs text-slate-300 leading-relaxed flex-1">{item}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-slate-500 italic">{emptyMessage}</p>
-          )}
-        </div>
-      </div>
+    <div className="bg-transparent border border-slate-900/50 rounded p-4">
+      <div className="text-[9px] font-bold text-slate-600 uppercase mb-3 tracking-widest">{label}</div>
+      {items.length > 0 ? (
+        <ul className="space-y-2">
+          {items.map((item, index) => (
+            <li key={index} className="flex items-start space-x-3">
+              <span className="w-1 h-1 rounded-full bg-slate-700 mt-1.5 flex-shrink-0"></span>
+              <span className="text-xs text-slate-400 leading-relaxed">{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[10px] text-slate-600 italic tracking-tight">{emptyMessage}</p>
+      )}
     </div>
   );
 };
@@ -332,37 +260,27 @@ interface ObjectionHandlingTableProps {
 const ObjectionHandlingTable: React.FC<ObjectionHandlingTableProps> = ({ objections }) => {
   if (!objections || objections.length === 0) {
     return (
-      <div className="bg-apex-900/40 border border-apex-700 rounded-lg p-4 text-center">
-        <p className="text-xs text-slate-500 italic">No objections identified</p>
+      <div className="bg-transparent border border-dashed border-slate-900 rounded p-4 text-center">
+        <p className="text-[10px] text-slate-600 italic uppercase">No anticipated objections</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-apex-900/40 border border-apex-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 bg-apex-800/60 border-b border-apex-700">
-        <div className="flex items-center space-x-2">
-          <i className="fa-solid fa-comments-question text-slate-500 text-sm"></i>
-          <h4 className="text-xs font-bold text-slate-400 uppercase">Objection Handling</h4>
-        </div>
+    <div className="bg-slate-950/30 border border-slate-900 rounded overflow-hidden">
+      <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-900">
+        <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Objection Matrix</h4>
       </div>
-      <div className="divide-y divide-apex-700">
+      <div className="divide-y divide-slate-900">
         {objections.map((obj, index) => (
-          <div key={index} className="p-3">
-            <div className="flex items-start space-x-3 mb-2">
-              <div className="w-6 h-6 rounded bg-red-900/20 border border-red-800/50 flex items-center justify-center flex-shrink-0">
-                <i className="fa-solid fa-exclamation text-red-400 text-xs"></i>
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-slate-300 mb-1">Objection:</div>
-                <p className="text-xs text-slate-400 italic">&ldquo;{obj.objection}&rdquo;</p>
-              </div>
+          <div key={index} className="p-4">
+            <div className="mb-3">
+              <div className="text-[9px] font-bold text-slate-600 uppercase mb-1 tracking-tighter">Signal</div>
+              <p className="text-xs text-slate-400 italic">&ldquo;{obj.objection}&rdquo;</p>
             </div>
-            <div className="flex items-start space-x-3 ml-9">
-              <div className="flex-1">
-                <div className="text-xs font-bold text-emerald-400 mb-1">Response:</div>
-                <p className="text-xs text-slate-300 leading-relaxed">{obj.response}</p>
-              </div>
+            <div>
+              <div className="text-[9px] font-bold text-slate-600 uppercase mb-1 tracking-tighter">Protocol Response</div>
+              <p className="text-xs text-slate-300 leading-relaxed">{obj.response}</p>
             </div>
           </div>
         ))}

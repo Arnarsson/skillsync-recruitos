@@ -1,12 +1,15 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import JobIntake from './components/CalibrationEngine';
-import ShortlistGrid from './components/TalentHeatMap';
-import DeepProfile from './components/BattleCardCockpit';
-import OutreachSuite from './components/NetworkPathfinder';
-import AuditLogModal from './components/AuditLogModal';
-import AdminSettingsModal from './components/AdminSettingsModal';
+
+// Lazy load components
+const JobIntake = lazy(() => import('./components/CalibrationEngine'));
+const ShortlistGrid = lazy(() => import('./components/TalentHeatMap'));
+const DeepProfile = lazy(() => import('./components/BattleCardCockpit'));
+const OutreachSuite = lazy(() => import('./components/NetworkPathfinder'));
+const AuditLogModal = lazy(() => import('./components/AuditLogModal'));
+const AdminSettingsModal = lazy(() => import('./components/AdminSettingsModal'));
+
 import ToastNotification, { Toast, ToastType } from './components/ToastNotification';
 import { Candidate, CREDITS_TO_EUR, AuditEvent, AuditEventType } from './types';
 import { INITIAL_CREDITS, INITIAL_LOGS } from './constants';
@@ -241,75 +244,80 @@ const App: React.FC = () => {
                 onOpenWallet={() => setShowWallet(true)}
                 onOpenSettings={() => setShowSettings(true)}
             >
-                <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <JobIntake
-                                jobContext={jobContext}
-                                setJobContext={setJobContext}
-                                addToast={addToast}
-                            />
-                        }
-                    />
-                    <Route
-                        path="/shortlist"
-                        element={
-                            <ShortlistGrid
-                                jobContext={jobContext}
-                                credits={credits}
-                                onSpendCredits={(amt, desc) => handleSpendCredits(amt, desc || 'Deep Profile Unlock', AuditEventType.PROFILE_ENRICHED)}
-                                onSelectCandidate={handleSelectCandidate}
-                                addToast={addToast}
-                            />
-                        }
-                    />
-                    <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
+                <Suspense fallback={
+                    <div className="flex h-full items-center justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+                    </div>
+                }>
+                    <Routes>
+                        <Route
+                            path="/"
+                            element={
+                                <JobIntake
+                                    jobContext={jobContext}
+                                    setJobContext={setJobContext}
+                                    addToast={addToast}
+                                />
+                            }
+                        />
+                        <Route
+                            path="/shortlist"
+                            element={
+                                <ShortlistGrid
+                                    jobContext={jobContext}
+                                    credits={credits}
+                                    onSpendCredits={(amt, desc) => handleSpendCredits(amt, desc || 'Deep Profile Unlock', AuditEventType.PROFILE_ENRICHED)}
+                                    onSelectCandidate={handleSelectCandidate}
+                                    addToast={addToast}
+                                />
+                            }
+                        />
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+
+                    {/* Step 3: Evidence Report (Side Panel) */}
+                    {selectedCandidate && (
+                        <DeepProfile
+                            candidate={selectedCandidate}
+                            credits={credits}
+                            onSpendCredits={(amt, desc) => handleSpendCredits(amt, desc || 'Action', AuditEventType.SCORE_GENERATED)}
+                            onClose={() => setSelectedCandidate(null)}
+                            onOpenOutreach={(c) => {
+                                setSelectedCandidate(null);
+                                setOutreachCandidate(c);
+                            }}
+                            addToast={addToast}
+                        />
+                    )}
+
+                    {/* Step 4: Outreach (Modal) */}
+                    {outreachCandidate && (
+                        <OutreachSuite
+                            candidate={outreachCandidate}
+                            jobContext={jobContext}
+                            onClose={() => setOutreachCandidate(null)}
+                        />
+                    )}
+
+                    {/* Wallet / Audit Modal / Settings Modal */}
+                    {showWallet && (
+                        <AuditLogModal
+                            credits={credits}
+                            logs={logs}
+                            onClose={() => setShowWallet(false)}
+                        />
+                    )}
+
+                    {showSettings && (
+                        <AdminSettingsModal
+                            onClose={() => setShowSettings(false)}
+                            addToast={addToast}
+                        />
+                    )}
+                </Suspense>
 
                 {/* Global Toast Container */}
                 <ToastNotification toasts={toasts} removeToast={removeToast} />
-
-                {/* Step 3: Evidence Report (Side Panel) */}
-                {selectedCandidate && (
-                    <DeepProfile
-                        candidate={selectedCandidate}
-                        credits={credits}
-                        onSpendCredits={(amt, desc) => handleSpendCredits(amt, desc || 'Action', AuditEventType.SCORE_GENERATED)}
-                        onClose={() => setSelectedCandidate(null)}
-                        onOpenOutreach={(c) => {
-                            setSelectedCandidate(null);
-                            setOutreachCandidate(c);
-                        }}
-                        addToast={addToast}
-                    />
-                )}
-
-                {/* Step 4: Outreach (Modal) */}
-                {outreachCandidate && (
-                    <OutreachSuite
-                        candidate={outreachCandidate}
-                        jobContext={jobContext}
-                        onClose={() => setOutreachCandidate(null)}
-                    />
-                )}
-
-                {/* Wallet / Audit Modal */}
-                {showWallet && (
-                    <AuditLogModal
-                        credits={credits}
-                        logs={logs}
-                        onClose={() => setShowWallet(false)}
-                    />
-                )}
-
-                {/* Admin Settings Modal */}
-                {showSettings && (
-                    <AdminSettingsModal
-                        onClose={() => setShowSettings(false)}
-                        addToast={addToast}
-                    />
-                )}
             </Layout>
         </HashRouter>
     );

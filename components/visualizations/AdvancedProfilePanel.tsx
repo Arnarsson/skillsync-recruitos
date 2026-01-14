@@ -47,36 +47,33 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
   const hasCited = !!advancedProfile.citedProfile;
 
   return (
-    <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
+    <div className="bg-slate-950 rounded-lg border border-slate-900 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-800/50 px-4 py-3 border-b border-slate-700">
+      <div className="bg-slate-950 px-6 py-5 border-b border-slate-900">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <i className="fa-solid fa-brain text-emerald-400 mr-2"></i>
-            <h2 className="text-sm font-semibold text-white">Advanced Intelligence</h2>
-            <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
-              advancedProfile.overallConfidence >= 70 ? 'bg-emerald-500/20 text-emerald-400' :
-              advancedProfile.overallConfidence >= 40 ? 'bg-amber-500/20 text-amber-400' :
-              'bg-red-500/20 text-red-400'
-            }`}>
-              {advancedProfile.overallConfidence}% confidence
+            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Advanced Intelligence</h2>
+            <span className={`ml-3 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded border ${advancedProfile.overallConfidence >= 70 ? 'border-emerald-500/20 text-emerald-500/60' :
+                advancedProfile.overallConfidence >= 40 ? 'border-slate-800 text-slate-500' :
+                  'border-red-500/20 text-red-500/60'
+              }`}>
+              {advancedProfile.overallConfidence}% Confidence
             </span>
           </div>
           {onRefresh && (
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+              className="text-[10px] uppercase font-bold text-slate-600 hover:text-slate-400 transition-colors disabled:opacity-50 tracking-widest"
             >
-              <i className={`fa-solid fa-sync ${isRefreshing ? 'fa-spin' : ''} mr-1`}></i>
-              Refresh
+              Sync Vector
             </button>
           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-700 bg-slate-800/50">
+      <div className="flex border-b border-slate-900 bg-slate-950">
         {TABS.map((tab) => {
           // Check if tab has data
           const hasData =
@@ -90,21 +87,19 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               disabled={!hasData}
-              className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors relative ${
-                activeTab === tab.id
-                  ? 'text-emerald-400'
+              className={`flex-1 px-4 py-3 text-[10px] uppercase font-bold tracking-widest transition-colors relative ${activeTab === tab.id
+                  ? 'text-slate-100'
                   : hasData
-                  ? 'text-slate-400 hover:text-white'
-                  : 'text-slate-600 cursor-not-allowed'
-              }`}
+                    ? 'text-slate-600 hover:text-slate-400'
+                    : 'text-slate-800 cursor-not-allowed'
+                }`}
             >
-              <i className={`fa-solid ${tab.icon} mr-1.5`}></i>
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-300" />
               )}
               {!hasData && tab.id !== 'overview' && (
-                <span className="ml-1 text-[10px] opacity-50">(no data)</span>
+                <span className="ml-1 text-[8px] opacity-40">Locked</span>
               )}
             </button>
           );
@@ -112,7 +107,7 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
       </div>
 
       {/* Content */}
-      <div className="p-4 max-h-[600px] overflow-y-auto">
+      <div className="p-6 max-h-[600px] overflow-y-auto">
         {activeTab === 'overview' && (
           <OverviewTab
             advancedProfile={advancedProfile}
@@ -144,13 +139,12 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 bg-slate-800/30 border-t border-slate-700 flex items-center justify-between text-xs text-slate-500">
+      <div className="px-6 py-3 bg-slate-950 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-700 uppercase tracking-widest italic">
         <span>
-          <i className="fa-solid fa-clock mr-1"></i>
-          Last updated: {new Date(advancedProfile.lastUpdated).toLocaleString()}
+          Vector: {new Date(advancedProfile.lastUpdated).toLocaleDateString()}
         </span>
         <span>
-          Next refresh: {new Date(advancedProfile.nextRefreshRecommended).toLocaleDateString()}
+          Next Sync: {new Date(advancedProfile.nextRefreshRecommended).toLocaleDateString()}
         </span>
       </div>
     </div>
@@ -169,22 +163,20 @@ const OverviewTab: React.FC<{
     <div className="space-y-6">
       {/* Approach Readiness - Most Important */}
       {advancedProfile.behavioralSignals && (
-        <div className={`rounded-lg p-4 border ${
-          advancedProfile.behavioralSignals.approachReadiness === 'ready'
+        <div className={`rounded-lg p-4 border ${advancedProfile.behavioralSignals.approachReadiness === 'ready'
             ? 'bg-emerald-500/10 border-emerald-500/30'
             : advancedProfile.behavioralSignals.approachReadiness === 'not_ready'
-            ? 'bg-red-500/10 border-red-500/30'
-            : 'bg-amber-500/10 border-amber-500/30'
-        }`}>
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-amber-500/10 border-amber-500/30'
+          }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <i className={`fa-solid ${
-                advancedProfile.behavioralSignals.approachReadiness === 'ready'
+              <i className={`fa-solid ${advancedProfile.behavioralSignals.approachReadiness === 'ready'
                   ? 'fa-check-circle text-emerald-400'
                   : advancedProfile.behavioralSignals.approachReadiness === 'not_ready'
-                  ? 'fa-times-circle text-red-400'
-                  : 'fa-minus-circle text-amber-400'
-              } text-2xl mr-3`}></i>
+                    ? 'fa-times-circle text-red-400'
+                    : 'fa-minus-circle text-amber-400'
+                } text-2xl mr-3`}></i>
               <div>
                 <div className="text-sm font-semibold text-white capitalize">
                   {advancedProfile.behavioralSignals.approachReadiness.replace('_', ' ')} Approach Readiness
@@ -357,23 +349,21 @@ const CompletenessBar: React.FC<{
         <i className={`fa-solid ${icon} mr-2 text-slate-400`}></i>
         {label}
       </div>
-      <span className={`text-xs ${
-        value >= 70 ? 'text-emerald-400' :
-        value >= 40 ? 'text-amber-400' :
-        value > 0 ? 'text-red-400' :
-        'text-slate-500'
-      }`}>
+      <span className={`text-xs ${value >= 70 ? 'text-emerald-400' :
+          value >= 40 ? 'text-amber-400' :
+            value > 0 ? 'text-red-400' :
+              'text-slate-500'
+        }`}>
         {value}%
       </span>
     </div>
     <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
       <div
-        className={`h-full transition-all duration-500 ${
-          value >= 70 ? 'bg-emerald-500' :
-          value >= 40 ? 'bg-amber-500' :
-          value > 0 ? 'bg-red-500' :
-          'bg-slate-600'
-        }`}
+        className={`h-full transition-all duration-500 ${value >= 70 ? 'bg-emerald-500' :
+            value >= 40 ? 'bg-amber-500' :
+              value > 0 ? 'bg-red-500' :
+                'bg-slate-600'
+          }`}
         style={{ width: `${value}%` }}
       />
     </div>
@@ -388,9 +378,8 @@ const InsightCard: React.FC<{
   onClick?: () => void;
 }> = ({ title, icon, color, children, onClick }) => (
   <div
-    className={`bg-slate-800/50 rounded-lg p-4 border border-slate-700 ${
-      onClick ? 'cursor-pointer hover:bg-slate-700/30 transition-colors' : ''
-    }`}
+    className={`bg-slate-800/50 rounded-lg p-4 border border-slate-700 ${onClick ? 'cursor-pointer hover:bg-slate-700/30 transition-colors' : ''
+      }`}
     onClick={onClick}
   >
     <h4 className={`text-xs font-semibold ${color} mb-3 flex items-center`}>

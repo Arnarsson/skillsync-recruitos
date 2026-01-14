@@ -5,6 +5,28 @@
 **Goal:** Reduce complexity in 3 large files by 40-45% through systematic component and module extraction
 
 ---
+---
+
+## UI/UX Standards
+
+All new and refactored components must adhere to the **Professional Minimalism** standards provided by the `ui-ux-pro-max-skill`.
+
+- **Style:** **Subtle Minimalism**
+  - **Surfaces:** Flat or ultra-subtle depth using `bg-apex-800/20` and `border-white/5`.
+  - **Dividers:** Clean, thin lines using `border-slate-800`.
+  - **Negative Space:** Increased padding for a more spacious, breathable layout.
+- **Color Palette:** **Muted & Neutral**
+  - **Primary Accents:** Use low-opacity colors (e.g., `bg-emerald-500/10` for success states).
+  - **Text:** `slate-100` (Primary), `slate-400` (Secondary), `slate-500` (Muted).
+- **Typography:** **Refined Professional**
+  - **Headings:** `Poppins` (Sans-serif, light/medium weight) -> [Import Link](https://fonts.google.com/share?selection.family=Poppins:wght@400;500;600)
+  - **Body:** `Open Sans` -> [Import Link](https://fonts.google.com/share?selection.family=Open+Sans:wght@300;400;500;600)
+- **Guidelines:** 
+  - **Micro-interactions:** Limit to subtle opacity/border transitions. No multi-color glows.
+  - **Spill Control:** Avoid heavy drop shadows; use thin, crisp borders instead.
+  - **Standardized Icons:** Strictly FontAwesome 6 (Regular weight). No emojis.
+
+---
 
 ## Current State
 
@@ -156,7 +178,7 @@
 ## Implementation Order
 
 1. ✅ Analysis complete
-2. ⬜ Phase 1.1: Extract CandidateGridRow
+2. ✅ Phase 1.1: Extract & Upgrade CandidateListElement (UI Skills Applied)
 3. ⬜ Phase 1.2: Extract ImportModal
 4. ⬜ Phase 1.3: Extract Prompt Templates
 5. ⬜ Phase 1.4: Create AI Fallover Pattern

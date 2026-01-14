@@ -7,6 +7,7 @@ interface PersonaIntelligencePanelProps {
 }
 
 export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> = ({ persona }) => {
+  if (!persona) return null;
   const { careerTrajectory, skillProfile, riskAssessment, compensationIntelligence } = persona;
 
   // Data quality detection - check if we have meaningful career data
@@ -27,10 +28,10 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
   // Helper function to get velocity icon
   const getVelocityIcon = (velocity: string) => {
     switch (velocity) {
-      case 'rapid': return '⚡';
-      case 'steady': return '📊';
-      case 'slow': return '🐌';
-      default: return '➡️';
+      case 'rapid': return '';
+      case 'steady': return '';
+      case 'slow': return '';
+      default: return '';
     }
   };
 
@@ -47,55 +48,47 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
   const archetypeInfo = getArchetypeInfo(persona.archetype);
 
   return (
-    <div className="space-y-6 p-6 bg-apex-900/30 rounded-lg">
+    <div className="space-y-10 p-2">
       {/* Enhanced Archetype Header */}
-      <div className="border-b border-apex-700/50 pb-6">
-        <div className="flex items-start gap-4 mb-4">
-          <div className="text-5xl flex-shrink-0">
-            {getArchetypeIcon(persona.archetype)}
-          </div>
+      <div className="border-b border-slate-900 pb-10">
+        <div className="flex items-start gap-6">
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-white mb-2">{persona.archetype}</h3>
-            <p className="text-sm text-slate-300 leading-relaxed mb-3">
+            <h3 className="text-xl font-semibold text-slate-100 mb-2 tracking-tight">{persona.archetype}</h3>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4 max-w-2xl">
               {persona.reasoning}
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-900/20 border border-purple-500/30 rounded-full">
-              <i className="fa-solid fa-fingerprint text-purple-400 text-xs"></i>
-              <span className="text-xs font-semibold text-purple-400">Psychometric & Professional Intelligence</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 border border-slate-800 rounded-full bg-slate-900/40">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Professional Intelligence Vector</span>
             </div>
           </div>
         </div>
 
         {/* Psychometric Profile Quick View */}
         {persona.psychometric && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-            <div className="bg-apex-800/50 rounded-lg p-3 border border-apex-700/50">
-              <div className="text-xs text-slate-500 uppercase mb-1 flex items-center gap-1">
-                <i className="fa-solid fa-comments text-blue-400 text-xs"></i>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div className="bg-slate-900/20 rounded p-3 border border-slate-900/50">
+              <div className="text-[10px] text-slate-600 uppercase mb-2 tracking-widest font-bold">
                 Communication
               </div>
-              <div className="text-xs font-semibold text-white">{persona.psychometric.communicationStyle}</div>
+              <div className="text-xs font-medium text-slate-300">{persona.psychometric.communicationStyle}</div>
             </div>
-            <div className="bg-apex-800/50 rounded-lg p-3 border border-apex-700/50">
-              <div className="text-xs text-slate-500 uppercase mb-1 flex items-center gap-1">
-                <i className="fa-solid fa-bullseye text-emerald-400 text-xs"></i>
+            <div className="bg-slate-900/20 rounded p-3 border border-slate-900/50">
+              <div className="text-[10px] text-slate-600 uppercase mb-2 tracking-widest font-bold">
                 Motivator
               </div>
-              <div className="text-xs font-semibold text-white">{persona.psychometric.primaryMotivator}</div>
+              <div className="text-xs font-medium text-slate-300">{persona.psychometric.primaryMotivator}</div>
             </div>
-            <div className="bg-apex-800/50 rounded-lg p-3 border border-apex-700/50">
-              <div className="text-xs text-slate-500 uppercase mb-1 flex items-center gap-1">
-                <i className="fa-solid fa-chart-simple text-amber-400 text-xs"></i>
+            <div className="bg-slate-900/20 rounded p-3 border border-slate-900/50">
+              <div className="text-[10px] text-slate-600 uppercase mb-2 tracking-widest font-bold">
                 Risk Tolerance
               </div>
-              <div className="text-xs font-semibold text-white">{persona.psychometric.riskTolerance}</div>
+              <div className="text-xs font-medium text-slate-300">{persona.psychometric.riskTolerance}</div>
             </div>
-            <div className="bg-apex-800/50 rounded-lg p-3 border border-apex-700/50">
-              <div className="text-xs text-slate-500 uppercase mb-1 flex items-center gap-1">
-                <i className="fa-solid fa-crown text-purple-400 text-xs"></i>
+            <div className="bg-slate-900/20 rounded p-3 border border-slate-900/50">
+              <div className="text-[10px] text-slate-600 uppercase mb-2 tracking-widest font-bold">
                 Leadership
               </div>
-              <div className="text-xs font-semibold text-white">{persona.psychometric.leadershipPotential}</div>
+              <div className="text-xs font-medium text-slate-300">{persona.psychometric.leadershipPotential}</div>
             </div>
           </div>
         )}
@@ -244,11 +237,10 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
                         <span className="text-xs font-semibold text-slate-300">{skill.name}</span>
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-slate-500">{skill.yearsActive} years</span>
-                          <span className={`text-xs font-bold capitalize ${
-                            skill.proficiency === 'expert' ? 'text-emerald-400' :
+                          <span className={`text-xs font-bold capitalize ${skill.proficiency === 'expert' ? 'text-emerald-400' :
                             skill.proficiency === 'advanced' ? 'text-blue-400' :
-                            'text-yellow-400'
-                          }`}>{skill.proficiency}</span>
+                              'text-yellow-400'
+                            }`}>{skill.proficiency}</span>
                         </div>
                       </div>
                       <div className="w-full bg-apex-900 rounded-full h-1.5">
@@ -411,33 +403,33 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
                 <div className="text-xs text-slate-400">{compensationIntelligence.impliedSalaryBand.currency}</div>
               </div>
 
-            <div className="border-t border-yellow-500/20 pt-3 grid grid-cols-3 gap-3 text-center">
-              <div>
-                <div className="text-xs text-slate-500 uppercase mb-1">Expected</div>
-                <div className="text-sm font-bold text-yellow-400">
-                  {compensationIntelligence.likelySalaryExpectation.toLocaleString()}
+              <div className="border-t border-yellow-500/20 pt-3 grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="text-xs text-slate-500 uppercase mb-1">Expected</div>
+                  <div className="text-sm font-bold text-yellow-400">
+                    {compensationIntelligence.likelySalaryExpectation.toLocaleString()}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="text-xs text-slate-500 uppercase mb-1">Growth Rate</div>
-                <div className="text-sm font-bold text-white capitalize">
-                  {compensationIntelligence.compensationGrowthRate}
+                <div>
+                  <div className="text-xs text-slate-500 uppercase mb-1">Growth Rate</div>
+                  <div className="text-sm font-bold text-white capitalize">
+                    {compensationIntelligence.compensationGrowthRate}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="text-xs text-slate-500 uppercase mb-1">Equity</div>
-                <div className="text-sm font-bold">
-                  {compensationIntelligence.equityIndicators ? (
-                    <span className="text-emerald-400">Expected</span>
-                  ) : (
-                    <span className="text-slate-500">Not Expected</span>
-                  )}
+                <div>
+                  <div className="text-xs text-slate-500 uppercase mb-1">Equity</div>
+                  <div className="text-sm font-bold">
+                    {compensationIntelligence.equityIndicators ? (
+                      <span className="text-emerald-400">Expected</span>
+                    ) : (
+                      <span className="text-slate-500">Not Expected</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           ) : (
             <div className="bg-apex-800/30 border border-apex-700 rounded-lg p-6 text-center">
               <i className="fa-solid fa-chart-simple text-slate-600 text-2xl mb-3"></i>
