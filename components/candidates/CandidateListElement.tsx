@@ -23,19 +23,30 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
     onSelect,
     onUnlock
 }) => {
+    // Score color helper
+    const getScoreColor = (score: number) => {
+        if (score >= 80) return 'text-emerald-400';
+        if (score >= 50) return 'text-amber-400';
+        return 'text-red-400';
+    };
+
+    const getScoreBarColor = (score: number) => {
+        if (score >= 80) return 'bg-emerald-500';
+        if (score >= 50) return 'bg-amber-500';
+        return 'bg-red-500';
+    };
+
     return (
         <div
             data-testid={`candidate-card-${c.id}`}
             onClick={() => isDeepProfileUnlocked ? onSelect(c) : null}
             className={`
-                flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all duration-200 ease-linear items-start md:items-center relative
+                flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-lg border transition-colors items-start md:items-center relative
                 ${isSelected
-                    ? 'bg-slate-800/20 border-blue-500/40'
-                    : ''
-                }
-                ${isDeepProfileUnlocked && !isSelected
-                    ? 'bg-apex-800/10 border-slate-800 hover:border-slate-700 hover:bg-apex-800/20 cursor-pointer group'
-                    : !isSelected && 'bg-transparent border-slate-900 opacity-70'
+                    ? 'bg-blue-500/5 border-blue-500/30'
+                    : isDeepProfileUnlocked
+                        ? 'bg-slate-800/30 border-white/[0.08] hover:border-white/[0.12] hover:bg-slate-800/50 cursor-pointer'
+                        : 'bg-transparent border-white/[0.05] opacity-60'
                 }
             `}
         >
@@ -49,7 +60,7 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
                         onToggleSelection(c.id);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-2 border-apex-600 bg-apex-900 checked:bg-blue-600 checked:border-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
+                    className="w-4 h-4 rounded border border-slate-600 bg-slate-800 checked:bg-blue-600 checked:border-blue-600 focus:ring-2 focus:ring-blue-500/20 cursor-pointer transition-colors"
                 />
             </div>
 
@@ -60,7 +71,7 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
                         e.stopPropagation();
                         onDelete(c.id);
                     }}
-                    className="w-8 h-8 rounded-full bg-apex-900/80 hover:bg-red-900/80 border border-apex-700 hover:border-red-600 text-slate-400 hover:text-red-400 transition-all flex items-center justify-center group/delete"
+                    className="w-7 h-7 rounded-md bg-slate-800/80 hover:bg-red-500/20 border border-white/[0.08] hover:border-red-500/30 text-slate-500 hover:text-red-400 transition-colors flex items-center justify-center"
                     title="Delete candidate"
                 >
                     <i className="fa-solid fa-trash text-xs"></i>
@@ -70,11 +81,11 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
             {/* Candidate Info + Persona */}
             <div className="col-span-4 w-full md:w-auto pl-6 md:pl-0">
                 <div className="flex items-center mb-1">
-                    <img src={c.avatar} className="w-10 h-10 rounded-full border border-slate-800 mr-3" alt="avatar" />
+                    <img src={c.avatar} className="w-10 h-10 rounded-lg mr-3" alt="avatar" />
                     <div>
-                        <h4 className="text-sm font-semibold text-slate-100">{c.name}</h4>
-                        <div className="text-[11px] text-slate-500 font-normal">
-                            {c.currentRole && c.currentRole !== 'N/A' ? c.currentRole : 'Role Not Listed'}
+                        <h4 className="text-sm font-medium text-white">{c.name}</h4>
+                        <div className="text-xs text-slate-400">
+                            {c.currentRole && c.currentRole !== 'N/A' ? c.currentRole : 'Role not listed'}
                         </div>
                     </div>
                 </div>
@@ -85,7 +96,7 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
 
                     {/* Persona Archetype */}
                     {c.persona && (
-                        <span className="text-[9px] bg-slate-800/30 text-slate-400 border border-slate-700/50 px-1.5 py-0.5 rounded font-medium uppercase tracking-wider">
+                        <span className="text-xs bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded">
                             {c.persona.archetype}
                         </span>
                     )}
@@ -94,12 +105,12 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
 
             {/* Match Score (Desktop) */}
             <div className="col-span-2 hidden md:flex flex-col items-center justify-center">
-                <div className={`text-base font-medium font-mono ${c.alignmentScore > 80 ? 'text-emerald-500/80' : 'text-slate-400'}`}>
-                    {c.alignmentScore}%
+                <div className={`text-base font-semibold tabular-nums ${getScoreColor(c.alignmentScore)}`}>
+                    {c.alignmentScore}
                 </div>
-                <div className="w-16 h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                <div className="w-12 h-1 bg-slate-700 rounded-full mt-1.5 overflow-hidden">
                     <div
-                        className={`h-full rounded-full transition-all duration-1000 ${c.alignmentScore > 80 ? 'bg-emerald-500/40' : 'bg-slate-600'}`}
+                        className={`h-full rounded-full transition-all duration-500 ${getScoreBarColor(c.alignmentScore)}`}
                         style={{ width: `${c.alignmentScore}%` }}
                     ></div>
                 </div>
@@ -107,18 +118,16 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
 
             {/* Summary */}
             <div className="col-span-4 w-full">
-                <p className="text-[11px] text-slate-400 leading-normal line-clamp-2 md:line-clamp-none italic">&quot;{c.shortlistSummary}&quot;</p>
+                <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">{c.shortlistSummary}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                    {/* Dynamic Confidence Badge */}
                     {c.scoreConfidence && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-800 text-slate-500 bg-slate-900/50">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400">
                             {c.scoreConfidence.charAt(0).toUpperCase() + c.scoreConfidence.slice(1)}
                         </span>
                     )}
-                    {/* Score Drivers */}
                     {c.scoreDrivers && c.scoreDrivers.length > 0 && (
-                        <span className="text-[10px] bg-emerald-500/5 text-emerald-500/60 px-1.5 py-0.5 rounded border border-emerald-500/10" title={`Strengths: ${c.scoreDrivers.join(', ')}`}>
-                            {c.scoreDrivers.length} {c.scoreDrivers.length === 1 ? 'Driver' : 'Drivers'}
+                        <span className="text-xs bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded" title={`Strengths: ${c.scoreDrivers.join(', ')}`}>
+                            {c.scoreDrivers.length} {c.scoreDrivers.length === 1 ? 'driver' : 'drivers'}
                         </span>
                     )}
                 </div>
@@ -127,26 +136,19 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
             {/* Action */}
             <div className="col-span-2 flex justify-end w-full md:w-auto mt-2 md:mt-0">
                 {isDeepProfileUnlocked ? (
-                    <button className="w-full md:w-auto px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded border border-slate-700 transition-colors">
+                    <button className="w-full md:w-auto h-8 px-4 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-md transition-colors">
                         View Report
                     </button>
                 ) : (
                     <button
                         onClick={(e) => onUnlock(e, c.id, c.name)}
                         disabled={isProcessingThis}
-                        className={`
-                            w-full md:w-auto px-4 py-1.5 text-xs font-medium rounded border transition-colors
-                            ${isProcessingThis
-                                ? 'bg-slate-900 border-slate-800 text-slate-600 cursor-wait'
-                                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border-slate-800'
-                            }
-                        `}
+                        className={`w-full md:w-auto h-8 px-4 text-xs font-medium rounded-md border transition-colors ${isProcessingThis
+                                ? 'bg-slate-800 border-white/[0.05] text-slate-500 cursor-wait'
+                                : 'bg-slate-800/50 hover:bg-slate-700 text-slate-300 border-white/[0.08]'
+                            }`}
                     >
-                        {isProcessingThis ? (
-                            'Unlocking...'
-                        ) : (
-                            `Unlock (${PRICING.DEEP_PROFILE} Cr)`
-                        )}
+                        {isProcessingThis ? 'Unlocking...' : `Unlock · ${PRICING.DEEP_PROFILE} Cr`}
                     </button>
                 )}
             </div>

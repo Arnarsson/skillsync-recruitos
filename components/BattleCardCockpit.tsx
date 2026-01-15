@@ -62,7 +62,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[650px] bg-[#0E1525]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl z-50 flex flex-col font-sans"
+            className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[650px] bg-slate-900/95 backdrop-blur-xl border-l border-white/[0.08] z-50 flex flex-col font-sans"
         >
             <ProfileHero
                 candidate={candidate}
