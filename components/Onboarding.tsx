@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   Briefcase,
   Users,
@@ -41,96 +40,96 @@ interface Step {
 const steps: Step[] = [
   {
     id: 0,
-    title: "Welcome to RecruitOS",
-    subtitle: "AI-Powered Recruiting",
+    title: "Velkommen til RecruitOS",
+    subtitle: "AI-Drevet Rekruttering",
     description:
-      "Find elite engineers by analyzing their actual work on GitHub. No more resume screening - see what developers really build.",
+      "Find elite ingeniører ved at analysere deres faktiske arbejde på GitHub. Ingen flere CV-screeninger - se hvad udviklere virkelig bygger.",
     icon: <Sparkles className="w-12 h-12" />,
     features: [
-      "Search by capabilities, not keywords",
-      "AI-powered candidate scoring",
-      "Deep psychometric analysis",
-      "Personalized outreach generation",
+      "Søg efter kompetencer, ikke nøgleord",
+      "AI-drevet kandidatscoring",
+      "Dyb psykometrisk analyse",
+      "Personaliseret kontaktgenerering",
     ],
     color: "text-primary",
     gradient: "from-primary/20 to-purple-500/20",
   },
   {
     id: 1,
-    title: "Step 1: Job Intake",
-    subtitle: "Define Your Ideal Candidate",
+    title: "Trin 1: Jobindtag",
+    subtitle: "Definer Din Ideelle Kandidat",
     description:
-      "Start by providing context about the role. Paste a job URL or description, and our AI extracts key requirements automatically.",
+      "Start med at give kontekst om rollen. Indsæt en job-URL eller beskrivelse, og vores AI ekstraherer nøglekrav automatisk.",
     icon: <Briefcase className="w-12 h-12" />,
     features: [
-      "Paste job URL or description",
-      "AI extracts required skills",
-      "Add LinkedIn context for culture fit",
-      "Calibrate search parameters",
+      "Indsæt job-URL eller beskrivelse",
+      "AI ekstraherer påkrævede færdigheder",
+      "Tilføj LinkedIn kontekst for kulturmatch",
+      "Kalibrer søgeparametre",
     ],
     color: "text-blue-500",
     gradient: "from-blue-500/20 to-cyan-500/20",
   },
   {
     id: 2,
-    title: "Step 2: Talent Pipeline",
-    subtitle: "Source & Score Candidates",
+    title: "Trin 2: Talent Pipeline",
+    subtitle: "Find & Scor Kandidater",
     description:
-      "Search GitHub to find developers matching your requirements. Each candidate is scored based on their repositories and contributions.",
+      "Søg på GitHub for at finde udviklere der matcher dine krav. Hver kandidat scores baseret på deres repositories og bidrag.",
     icon: <Users className="w-12 h-12" />,
     features: [
-      "Natural language search",
-      "Real-time GitHub analysis",
-      "Alignment score (0-100)",
-      "Filter and compare candidates",
+      "Naturligt sprog søgning",
+      "Real-time GitHub analyse",
+      "Matchscore (0-100)",
+      "Filtrer og sammenlign kandidater",
     ],
     color: "text-green-500",
     gradient: "from-green-500/20 to-emerald-500/20",
   },
   {
     id: 3,
-    title: "Step 3: Deep Profile",
-    subtitle: "Evidence-Based Analysis",
+    title: "Trin 3: Dybdeprofil",
+    subtitle: "Evidensbaseret Analyse",
     description:
-      "Dive deep into a candidate's work history, coding patterns, and psychometric profile based on their GitHub activity.",
+      "Dyk ned i en kandidats arbejdshistorik, kodemønstre og psykometriske profil baseret på deres GitHub aktivitet.",
     icon: <Brain className="w-12 h-12" />,
     features: [
-      "Psychometric profiling",
-      "Work style indicators",
-      "Green & red flags",
-      "Interview question suggestions",
+      "Psykometrisk profilering",
+      "Arbejdsstil indikatorer",
+      "Grønne & røde flag",
+      "Forslag til interviewspørgsmål",
     ],
     color: "text-purple-500",
     gradient: "from-purple-500/20 to-pink-500/20",
   },
   {
     id: 4,
-    title: "Step 4: Outreach",
-    subtitle: "Personalized Messaging",
+    title: "Trin 4: Kontakt",
+    subtitle: "Personaliserede Beskeder",
     description:
-      "Generate personalized outreach messages tailored to each candidate's archetype and communication preferences.",
+      "Generer personaliserede kontaktbeskeder tilpasset hver kandidats arketype og kommunikationspræferencer.",
     icon: <MessageSquare className="w-12 h-12" />,
     features: [
-      "AI-generated messages",
-      "Archetype-specific tone",
-      "Personalized hooks",
-      "Multi-channel templates",
+      "AI-genererede beskeder",
+      "Arketype-specifik tone",
+      "Personaliserede hooks",
+      "Multi-kanal skabeloner",
     ],
     color: "text-orange-500",
     gradient: "from-orange-500/20 to-yellow-500/20",
   },
   {
     id: 5,
-    title: "You're All Set!",
-    subtitle: "Start Recruiting",
+    title: "Du Er Klar!",
+    subtitle: "Begynd Rekruttering",
     description:
-      "You're ready to find your next great hire. Start by setting up your first job intake, or explore the platform.",
+      "Du er klar til at finde din næste fantastiske ansættelse. Start med at opsætte dit første jobindtag, eller udforsk platformen.",
     icon: <CheckCircle className="w-12 h-12" />,
     features: [
-      "No credit card required",
-      "GitHub sign-in for full features",
-      "Free search tier available",
-      "Premium analysis on demand",
+      "Intet kreditkort krævet",
+      "GitHub login for alle funktioner",
+      "Gratis søgning tilgængelig",
+      "Premium analyse on demand",
     ],
     color: "text-green-500",
     gradient: "from-green-500/20 to-primary/20",
@@ -138,22 +137,22 @@ const steps: Step[] = [
 ];
 
 const featureIcons: Record<string, React.ReactNode> = {
-  "Paste job URL or description": <Target className="w-4 h-4" />,
-  "AI extracts required skills": <Sparkles className="w-4 h-4" />,
-  "Add LinkedIn context for culture fit": <Users className="w-4 h-4" />,
-  "Calibrate search parameters": <BarChart3 className="w-4 h-4" />,
-  "Natural language search": <Search className="w-4 h-4" />,
-  "Real-time GitHub analysis": <GitBranch className="w-4 h-4" />,
-  "Alignment score (0-100)": <Target className="w-4 h-4" />,
-  "Filter and compare candidates": <Users className="w-4 h-4" />,
-  "Psychometric profiling": <Brain className="w-4 h-4" />,
-  "Work style indicators": <BarChart3 className="w-4 h-4" />,
-  "Green & red flags": <CheckCircle className="w-4 h-4" />,
-  "Interview question suggestions": <MessageSquare className="w-4 h-4" />,
-  "AI-generated messages": <Sparkles className="w-4 h-4" />,
-  "Archetype-specific tone": <Brain className="w-4 h-4" />,
-  "Personalized hooks": <Zap className="w-4 h-4" />,
-  "Multi-channel templates": <Send className="w-4 h-4" />,
+  "Indsæt job-URL eller beskrivelse": <Target className="w-4 h-4" />,
+  "AI ekstraherer påkrævede færdigheder": <Sparkles className="w-4 h-4" />,
+  "Tilføj LinkedIn kontekst for kulturmatch": <Users className="w-4 h-4" />,
+  "Kalibrer søgeparametre": <BarChart3 className="w-4 h-4" />,
+  "Naturligt sprog søgning": <Search className="w-4 h-4" />,
+  "Real-time GitHub analyse": <GitBranch className="w-4 h-4" />,
+  "Matchscore (0-100)": <Target className="w-4 h-4" />,
+  "Filtrer og sammenlign kandidater": <Users className="w-4 h-4" />,
+  "Psykometrisk profilering": <Brain className="w-4 h-4" />,
+  "Arbejdsstil indikatorer": <BarChart3 className="w-4 h-4" />,
+  "Grønne & røde flag": <CheckCircle className="w-4 h-4" />,
+  "Forslag til interviewspørgsmål": <MessageSquare className="w-4 h-4" />,
+  "AI-genererede beskeder": <Sparkles className="w-4 h-4" />,
+  "Arketype-specifik tone": <Brain className="w-4 h-4" />,
+  "Personaliserede hooks": <Zap className="w-4 h-4" />,
+  "Multi-kanal skabeloner": <Send className="w-4 h-4" />,
 };
 
 export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
@@ -335,22 +334,22 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              Tilbage
             </Button>
 
             <div className="text-sm text-muted-foreground">
-              {currentStep + 1} of {steps.length}
+              {currentStep + 1} af {steps.length}
             </div>
 
             <Button onClick={handleNext} className="gap-2">
               {currentStep === steps.length - 1 ? (
                 <>
-                  Get Started
+                  Kom I Gang
                   <Sparkles className="w-4 h-4" />
                 </>
               ) : (
                 <>
-                  Next
+                  Næste
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -361,8 +360,8 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         {/* Keyboard hints */}
         <div className="px-8 pb-4 text-center">
           <p className="text-xs text-muted-foreground">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Enter</kbd> to continue
-            or <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Esc</kbd> to skip
+            Tryk <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Enter</kbd> for at fortsætte
+            eller <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Esc</kbd> for at springe over
           </p>
         </div>
       </motion.div>

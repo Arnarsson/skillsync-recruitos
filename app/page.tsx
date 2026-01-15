@@ -6,11 +6,11 @@ import Link from "next/link";
 import { ArrowRight, Terminal, Wand2, Zap } from "lucide-react";
 
 const quickSearches = [
-  "Kernel module developers",
-  "Binary instrumentation experts",
-  "Signal processing researchers",
-  "Database query optimizer experts",
-  "Virtual machine implementors",
+  "Kernel-modul udviklere",
+  "Binær instrumenteringseksperter",
+  "Signalbehandlingsforskere",
+  "Database query optimizer eksperter",
+  "Virtuel maskine implementører",
 ];
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
         <div className="max-w-2xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm mb-8">
-            <span className="text-muted-foreground">backed by</span>
+            <span className="text-muted-foreground">støttet af</span>
             <span className="text-orange-500 font-medium">Y Combinator</span>
           </div>
 
@@ -54,7 +54,7 @@ export default function Home() {
 
           {/* Headline */}
           <h1 className="text-xl md:text-2xl text-muted-foreground mb-10 font-normal">
-            Find engineers and scientists shaping your domain
+            Find ingeniører og forskere der former dit felt
           </h1>
 
           {/* Search Box */}
@@ -65,7 +65,7 @@ export default function Home() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Who are you looking for?"
+                placeholder="Hvem leder du efter?"
                 className="w-full bg-transparent px-4 py-4 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <button
@@ -77,8 +77,8 @@ export default function Home() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-primary">enter</span> to search,{" "}
-              <span className="text-primary">shift + enter</span> for new line
+              <span className="text-primary">enter</span> for at søge,{" "}
+              <span className="text-primary">shift + enter</span> for ny linje
             </p>
           </div>
 
@@ -104,21 +104,21 @@ export default function Home() {
             {[
               {
                 icon: Terminal,
-                title: "search by capabilities",
+                title: "søg efter kompetencer",
                 description:
-                  "recruitos analyzes expertise demonstrated by open source work",
+                  "recruitos analyserer ekspertise demonstreret gennem open source arbejde",
               },
               {
                 icon: Wand2,
-                title: "discover hidden experts",
+                title: "opdag skjulte eksperter",
                 description:
-                  "find elite but overlooked engineers from around the world",
+                  "find elite men oversete ingeniører fra hele verden",
               },
               {
                 icon: Zap,
-                title: "hire faster",
+                title: "ansæt hurtigere",
                 description:
-                  "see real work, qualify engineers faster",
+                  "se reelt arbejde, kvalificer ingeniører hurtigere",
               },
             ].map((feature) => (
               <div
@@ -141,22 +141,23 @@ export default function Home() {
         <div className="max-w-4xl mx-auto">
           <div className="grid md:grid-cols-3 gap-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-light">#buildinpublic</h2>
+              <h2 className="text-3xl md:text-4xl font-light">#bygioffentlighed</h2>
             </div>
             <div className="space-y-6 text-muted-foreground text-sm leading-relaxed lowercase">
               <p>
-                open source software powers the internet. but the builders that
-                make it happen often remain invisible. traditional metrics
-                reduce engineers to numbers, commits, prs, lines of code. but
-                that does not paint the{" "}
-                <span className="underline">whole</span> picture.
+                open source software driver internettet. men byggerne der får
+                det til at ske forbliver ofte usynlige. traditionelle metrikker
+                reducerer ingeniører til tal, commits, prs, kodelinjer. men det
+                tegner ikke det{" "}
+                <span className="underline">hele</span> billede.
               </p>
             </div>
             <div className="space-y-6 text-muted-foreground text-sm leading-relaxed lowercase">
               <p>
-                recruitos uncovers what&apos;s unique about each creator: how they
-                solve problems, and apply domain expertise where it matters. no
-                forms. no surveys. just signal drawn from real work.
+                recruitos afdækker hvad der er unikt ved hver skaber: hvordan de
+                løser problemer, og anvender domæneekspertise hvor det betyder
+                noget. ingen formularer. ingen spørgeskemaer. kun signal fra
+                reelt arbejde.
               </p>
             </div>
           </div>
@@ -164,17 +165,17 @@ export default function Home() {
           {/* Profile Explorer */}
           <div className="mt-12">
             <p className="text-sm text-muted-foreground mb-3 lowercase">
-              explore individual developer profiles
+              udforsk individuelle udvikler profiler
             </p>
             <div className="flex items-center gap-2">
               <div className="flex-1 px-4 py-3 rounded-lg border border-border bg-card text-sm text-muted-foreground">
-                https://<span className="text-primary">recruit</span>os.dev/github_username
+                https://<span className="text-primary">recruit</span>os.dev/github_brugernavn
               </div>
               <Link
                 href="/search"
                 className="px-4 py-3 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors"
               >
-                try now
+                prøv nu
               </Link>
             </div>
           </div>
@@ -185,13 +186,13 @@ export default function Home() {
       <section id="pricing" className="py-20 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-6 mb-10">
-            <h2 className="text-3xl md:text-4xl font-light">pricing</h2>
+            <h2 className="text-3xl md:text-4xl font-light">priser</h2>
             <div className="flex gap-2">
               <button className="px-3 py-1 text-sm rounded bg-primary/20 text-primary">
-                Monthly
+                Månedlig
               </button>
               <button className="px-3 py-1 text-sm rounded text-muted-foreground hover:text-foreground transition-colors">
-                Yearly (-20% OFF)
+                Årlig (-20% RABAT)
               </button>
             </div>
           </div>
@@ -206,29 +207,29 @@ export default function Home() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-light">$499</span>
                   <span className="text-sm text-muted-foreground">
-                    per month/per seat
+                    per måned/per bruger
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  for recruiters and small teams.
+                  til rekrutterere og små teams.
                 </p>
               </div>
 
               <ul className="space-y-2 text-sm mb-8">
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> 15 searches per month
+                  <span className="text-primary">✓</span> 15 søgninger per måned
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> 10 deep profile credits per month
+                  <span className="text-primary">✓</span> 10 dybdeprofil kreditter per måned
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> phone and chat support
+                  <span className="text-primary">✓</span> telefon og chat support
                 </li>
               </ul>
 
-              <p className="text-sm text-primary mb-3">start with 1 free search</p>
+              <p className="text-sm text-primary mb-3">start med 1 gratis søgning</p>
               <button className="w-full py-3 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors">
-                get started
+                kom i gang
               </button>
             </div>
 
@@ -239,33 +240,33 @@ export default function Home() {
                   ENTERPRISE
                 </h3>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light">custom</span>
+                  <span className="text-3xl font-light">tilpasset</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  for agencies and large companies.
+                  til bureauer og store virksomheder.
                 </p>
               </div>
 
               <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">
-                EVERYTHING IN PRO, AND:
+                ALT I PRO, OG:
               </p>
               <ul className="space-y-2 text-sm mb-8">
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> mcp server for custom workflows
+                  <span className="text-primary">✓</span> mcp server til brugerdefinerede workflows
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> dedicated account manager
+                  <span className="text-primary">✓</span> dedikeret account manager
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> internal app integrations
+                  <span className="text-primary">✓</span> interne app integrationer
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> priority support (email, chat, slack)
+                  <span className="text-primary">✓</span> prioriteret support (email, chat, slack)
                 </li>
               </ul>
 
               <button className="w-full py-3 rounded-lg bg-muted hover:bg-muted/80 text-sm transition-colors">
-                request demo
+                anmod om demo
               </button>
             </div>
           </div>
@@ -275,20 +276,20 @@ export default function Home() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
-                  DEEP PROFILE CREDITS
+                  DYBDEPROFIL KREDITTER
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2 max-w-lg">
-                  searches show you basic profiles. use a credit to unlock full skill breakdowns,
-                  project history, and technical depth analysis for candidates you want to
-                  seriously evaluate.
+                  søgninger viser basisprofiler. brug en kredit til at låse op for fuld
+                  kompetenceoversigt, projekthistorik og teknisk dybdeanalyse for kandidater
+                  du vil evaluere seriøst.
                 </p>
                 <p className="text-sm">
                   <span className="font-medium">$5</span>{" "}
-                  <span className="text-muted-foreground">per credit</span>
+                  <span className="text-muted-foreground">per kredit</span>
                 </p>
               </div>
               <button className="px-4 py-2 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors">
-                buy credits
+                køb kreditter
               </button>
             </div>
           </div>

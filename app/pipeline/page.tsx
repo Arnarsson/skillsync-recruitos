@@ -369,7 +369,7 @@ export default function PipelinePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary">Step 2 of 4</Badge>
+            <Badge className="mb-2 bg-primary/20 text-primary">Trin 2 af 4</Badge>
             <h1 className="text-3xl font-bold">Talent Pipeline</h1>
             {jobContext && (
               <>
@@ -378,7 +378,7 @@ export default function PipelinePage() {
                 </p>
                 {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground mr-1">Skills:</span>
+                    <span className="text-xs text-muted-foreground mr-1">Færdigheder:</span>
                     {jobContext.requiredSkills.slice(0, 5).map((skill) => (
                       <Badge key={skill} variant="outline" className="text-xs">
                         {skill}
@@ -392,12 +392,12 @@ export default function PipelinePage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
               <FileText className="w-4 h-4 mr-2" />
-              Import
+              Importer
             </Button>
             <Link href="/intake">
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 mr-2" />
-                Edit Job
+                Rediger Job
               </Button>
             </Link>
           </div>
@@ -411,9 +411,9 @@ export default function PipelinePage() {
                 <div>
                   <h3 className="font-medium flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                    Pipeline Intelligence
+                    Pipeline Intelligens
                   </h3>
-                  <p className="text-xs text-muted-foreground">Score distribution across {candidates.length} candidates</p>
+                  <p className="text-xs text-muted-foreground">Score fordeling på tværs af {candidates.length} kandidater</p>
                 </div>
                 <Badge variant="outline" className="gap-1">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -445,7 +445,7 @@ export default function PipelinePage() {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search GitHub developers (e.g., 'react copenhagen')"
+                  placeholder="Søg GitHub udviklere (f.eks. 'react københavn')"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -454,11 +454,11 @@ export default function PipelinePage() {
               </div>
               <Button onClick={handleSearch} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                <span className="ml-2">Add Candidates</span>
+                <span className="ml-2">Tilføj Kandidater</span>
               </Button>
               <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
                 <Filter className="w-4 h-4 mr-2" />
-                Filters
+                Filtre
                 <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showFilters ? "rotate-180" : ""}`} />
               </Button>
             </div>
@@ -474,16 +474,16 @@ export default function PipelinePage() {
                 >
                   <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Sort:</span>
+                      <span className="text-sm text-muted-foreground">Sorter:</span>
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                         className="text-sm bg-background border rounded px-2 py-1"
                       >
-                        <option value="score-desc">Score (High to Low)</option>
-                        <option value="score-asc">Score (Low to High)</option>
-                        <option value="name-asc">Name (A-Z)</option>
-                        <option value="name-desc">Name (Z-A)</option>
+                        <option value="score-desc">Score (Høj til Lav)</option>
+                        <option value="score-asc">Score (Lav til Høj)</option>
+                        <option value="name-asc">Navn (A-Z)</option>
+                        <option value="name-desc">Navn (Z-A)</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
@@ -508,12 +508,12 @@ export default function PipelinePage() {
                     </div>
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
-                        <Badge>{selectedIds.length} selected</Badge>
+                        <Badge>{selectedIds.length} valgt</Badge>
                         <Button size="sm" onClick={() => setShowComparison(true)}>
-                          Compare
+                          Sammenlign
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-                          Clear
+                          Ryd
                         </Button>
                       </div>
                     )}
@@ -531,9 +531,9 @@ export default function PipelinePage() {
               {loading ? (
                 <>
                   <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
-                  <h3 className="text-lg font-medium mb-2">Finding Candidates...</h3>
+                  <h3 className="text-lg font-medium mb-2">Finder Kandidater...</h3>
                   <p className="text-muted-foreground mb-4">
-                    Searching for developers matching your job requirements
+                    Søger efter udviklere der matcher dine jobkrav
                   </p>
                   {jobContext?.requiredSkills && (
                     <div className="flex flex-wrap gap-1 justify-center">
@@ -546,14 +546,14 @@ export default function PipelinePage() {
               ) : (
                 <>
                   <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">No Candidates Yet</h3>
+                  <h3 className="text-lg font-medium mb-2">Ingen Kandidater Endnu</h3>
                   <p className="text-muted-foreground mb-4">
-                    Search for developers on GitHub or import a resume
+                    Søg efter udviklere på GitHub eller importer et CV
                   </p>
                   <div className="flex gap-2 justify-center">
                     <Button onClick={() => setShowImport(true)}>
                       <FileText className="w-4 h-4 mr-2" />
-                      Import Resume
+                      Importer CV
                     </Button>
                   </div>
                 </>
@@ -626,7 +626,7 @@ export default function PipelinePage() {
                         <div className="flex items-center gap-2">
                           <Link href={`/profile/${candidate.id}/deep`}>
                             <Button size="sm">
-                              Deep Profile
+                              Dybdeprofil
                               <ArrowRight className="w-4 h-4 ml-1" />
                             </Button>
                           </Link>
@@ -675,23 +675,23 @@ export default function PipelinePage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Import Candidate</h2>
+                  <h2 className="text-xl font-bold">Importer Kandidat</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowImport(false)}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Paste a resume, LinkedIn profile text, or any candidate information. Our AI will analyze and extract the relevant details.
+                  Indsæt et CV, LinkedIn profiltekst eller anden kandidatinformation. Vores AI vil analysere og udtrække de relevante detaljer.
                 </p>
                 <textarea
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
-                  placeholder="Paste candidate information here..."
+                  placeholder="Indsæt kandidatinformation her..."
                   className="w-full h-64 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="outline" onClick={() => setShowImport(false)}>
-                    Cancel
+                    Annuller
                   </Button>
                   <Button onClick={handleImport} disabled={isImporting || !importText.trim()}>
                     {isImporting ? (
@@ -699,7 +699,7 @@ export default function PipelinePage() {
                     ) : (
                       <Sparkles className="w-4 h-4 mr-2" />
                     )}
-                    Analyze & Import
+                    Analyser & Importer
                   </Button>
                 </div>
               </motion.div>
@@ -725,7 +725,7 @@ export default function PipelinePage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">Compare Candidates</h2>
+                  <h2 className="text-xl font-bold">Sammenlign Kandidater</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowComparison(false)}>
                     <X className="w-4 h-4" />
                   </Button>
@@ -747,15 +747,15 @@ export default function PipelinePage() {
                           <div className={`text-3xl font-bold ${getScoreColor(c.alignmentScore)}`}>
                             {c.alignmentScore}
                           </div>
-                          <div className="text-xs text-muted-foreground">Alignment Score</div>
+                          <div className="text-xs text-muted-foreground">Match Score</div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Location</span>
+                            <span className="text-muted-foreground">Lokation</span>
                             <span>{c.location}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Company</span>
+                            <span className="text-muted-foreground">Virksomhed</span>
                             <span>{c.company}</span>
                           </div>
                         </div>
@@ -770,7 +770,7 @@ export default function PipelinePage() {
                         )}
                         <Link href={`/profile/${c.id}/deep`} className="block mt-4">
                           <Button className="w-full" size="sm">
-                            View Deep Profile
+                            Se Dybdeprofil
                           </Button>
                         </Link>
                       </CardContent>

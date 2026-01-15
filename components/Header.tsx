@@ -26,7 +26,7 @@ export default function Header() {
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
             >
-              BOOK A DEMO
+              BOOK EN DEMO
             </Link>
             <span className="text-muted-foreground">/</span>
 
@@ -45,7 +45,7 @@ export default function Header() {
                   onClick={() => signOut()}
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 >
-                  SIGN OUT
+                  LOG UD
                 </button>
               </>
             ) : (
@@ -54,14 +54,14 @@ export default function Header() {
                   href="/login"
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 >
-                  SIGN IN
+                  LOG IND
                 </Link>
                 <span className="text-muted-foreground">/</span>
                 <Link
                   href="/signup"
                   className="text-foreground hover:text-primary transition-colors uppercase tracking-wider font-medium"
                 >
-                  GET STARTED
+                  KOM I GANG
                 </Link>
               </>
             )}
@@ -91,7 +91,7 @@ export default function Header() {
                 className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 onClick={() => setIsMenuOpen(false)}
               >
-                BOOK A DEMO
+                BOOK EN DEMO
               </Link>
 
               {session?.user ? (
@@ -110,7 +110,7 @@ export default function Header() {
                     }}
                     className="text-left text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                   >
-                    SIGN OUT
+                    LOG UD
                   </button>
                 </>
               ) : (
@@ -120,14 +120,14 @@ export default function Header() {
                     className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    SIGN IN
+                    LOG IND
                   </Link>
                   <Link
                     href="/signup"
                     className="text-foreground hover:text-primary transition-colors uppercase tracking-wider font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    GET STARTED
+                    KOM I GANG
                   </Link>
                 </>
               )}

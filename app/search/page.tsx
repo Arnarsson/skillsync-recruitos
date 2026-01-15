@@ -128,7 +128,7 @@ function SearchResults() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search by capabilities... (e.g., 'React state management', 'Rust systems programming')"
+                  placeholder="Søg efter kompetencer... (f.eks. 'React state management', 'Rust systems programmering')"
                   className="pl-12 h-14 text-base bg-card border-border focus:border-primary/50"
                 />
               </div>
@@ -144,7 +144,7 @@ function SearchResults() {
               ) : (
                 <Search className="w-5 h-5" />
               )}
-              Search
+              Søg
             </Button>
           </div>
 
@@ -156,17 +156,17 @@ function SearchResults() {
               className="flex items-center justify-between"
             >
               <p className="text-muted-foreground">
-                Found{" "}
+                Fandt{" "}
                 <span className="text-foreground font-semibold">
                   {total.toLocaleString()}
                 </span>{" "}
-                developers for:{" "}
+                udviklere for:{" "}
                 <span className="text-primary">&ldquo;{query}&rdquo;</span>
               </p>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="gap-1">
                   <Sparkles className="w-3 h-3" />
-                  AI Scored
+                  AI Scoret
                 </Badge>
               </div>
             </motion.div>
@@ -272,7 +272,7 @@ function SearchResults() {
                               size="sm"
                               className="opacity-0 group-hover:opacity-100 transition-opacity gap-1"
                             >
-                              View Profile
+                              Se Profil
                               <ArrowRight className="w-4 h-4" />
                             </Button>
                           </div>
@@ -329,7 +329,7 @@ function SearchResults() {
                               ))}
                               {dev.skills.length > 6 && (
                                 <Badge variant="outline" className="text-xs">
-                                  +{dev.skills.length - 6} more
+                                  +{dev.skills.length - 6} flere
                                 </Badge>
                               )}
                             </div>
@@ -354,10 +354,10 @@ function SearchResults() {
             <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
               <Search className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-2xl font-semibold mb-3">No results found</h3>
+            <h3 className="text-2xl font-semibold mb-3">Ingen resultater fundet</h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              We couldn&apos;t find any developers matching your search. Try
-              adjusting your terms or using different keywords.
+              Vi kunne ikke finde nogen udviklere der matcher din søgning. Prøv
+              at justere dine søgeord eller brug andre nøgleord.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Badge
@@ -400,21 +400,21 @@ function SearchResults() {
               <Sparkles className="w-10 h-10 text-primary" />
             </div>
             <h3 className="text-2xl font-semibold mb-3">
-              Search for developers
+              Søg efter udviklere
             </h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Enter a search query to find elite developers by their skills,
-              technologies, or contributions. Our AI will analyze GitHub
-              profiles to find the best matches.
+              Indtast en søgning for at finde elite udviklere baseret på deres færdigheder,
+              teknologier eller bidrag. Vores AI vil analysere GitHub
+              profiler for at finde de bedste matches.
             </p>
             <div className="flex flex-col items-center gap-4">
-              <p className="text-sm text-muted-foreground">Popular searches:</p>
+              <p className="text-sm text-muted-foreground">Populære søgninger:</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {[
-                  "React state management Copenhagen",
-                  "Rust WebAssembly developers",
-                  "ML engineers PyTorch",
-                  "Senior TypeScript architects",
+                  "React state management København",
+                  "Rust WebAssembly udviklere",
+                  "ML ingeniører PyTorch",
+                  "Senior TypeScript arkitekter",
                 ].map((suggestion) => (
                   <Badge
                     key={suggestion}
@@ -443,7 +443,7 @@ export default function SearchPage() {
         <div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading search...</p>
+            <p className="text-muted-foreground">Indlæser søgning...</p>
           </div>
         </div>
       }

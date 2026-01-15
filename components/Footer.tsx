@@ -15,7 +15,7 @@ export default function Footer() {
           {/* Resources */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              resources
+              ressourcer
             </h3>
             <ul className="space-y-3">
               <li>
@@ -23,7 +23,7 @@ export default function Footer() {
                   href="/about"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  about
+                  om os
                 </Link>
               </li>
               <li>
@@ -31,7 +31,7 @@ export default function Footer() {
                   href="/contributors"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  contributors
+                  bidragydere
                 </Link>
               </li>
               <li>
@@ -39,7 +39,7 @@ export default function Footer() {
                   href="#pricing"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  pricing
+                  priser
                 </Link>
               </li>
             </ul>
@@ -48,7 +48,7 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              company
+              virksomhed
             </h3>
             <ul className="space-y-3">
               <li>
@@ -56,7 +56,7 @@ export default function Footer() {
                   href="/contact"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  contact
+                  kontakt
                 </Link>
               </li>
               <li>
@@ -76,7 +76,7 @@ export default function Footer() {
 
         <div className="flex items-center justify-between pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground lowercase">
-            © {new Date().getFullYear()} recruitos. all rights reserved.
+            © {new Date().getFullYear()} recruitos. alle rettigheder forbeholdes.
           </p>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             $
