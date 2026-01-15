@@ -41,7 +41,7 @@ interface Step {
 const steps: Step[] = [
   {
     id: 0,
-    title: "Welcome to SkillSync",
+    title: "Welcome to RecruitOS",
     subtitle: "AI-Powered Recruiting",
     description:
       "Find elite engineers by analyzing their actual work on GitHub. No more resume screening - see what developers really build.",

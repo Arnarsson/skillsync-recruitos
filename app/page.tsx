@@ -1,75 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
-import {
-  Search,
-  ArrowRight,
-  GitPullRequest,
-  MessageSquare,
-  Code2,
-  Star,
-  GitBranch,
-  Users,
-  Zap,
-  CheckCircle,
-} from "lucide-react";
+import { ArrowRight, Terminal, Wand2, Zap } from "lucide-react";
 
-const tryTheseQueries = [
-  "React state management experts",
-  "Rust async runtime contributors",
-  "TypeScript library maintainers",
-  "ML/LLM tooling engineers",
-];
-
-const mockResults = [
-  {
-    name: "Sarah Chen",
-    username: "sarahchen",
-    avatar: "",
-    role: "Core contributor @ zustand",
-    match: 94,
-    signals: ["847 PRs merged", "Core maintainer", "12k+ stars"],
-    skills: ["TypeScript", "React", "State Management"],
-  },
-  {
-    name: "Marcus Rivera",
-    username: "mrivera",
-    avatar: "",
-    role: "Rust async ecosystem",
-    match: 91,
-    signals: ["tokio contributor", "360 code reviews", "RFC author"],
-    skills: ["Rust", "Async", "Systems"],
-  },
-  {
-    name: "Aisha Patel",
-    username: "aishap",
-    avatar: "",
-    role: "ML Infrastructure @ Hugging Face",
-    match: 88,
-    signals: ["transformers maintainer", "220 issues closed", "Docs lead"],
-    skills: ["Python", "PyTorch", "MLOps"],
-  },
+const quickSearches = [
+  "Kernel module developers",
+  "Binary instrumentation experts",
+  "Signal processing researchers",
+  "Database query optimizer experts",
+  "Virtual machine implementors",
 ];
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    setMounted(true);
-    // Show preview after a brief delay
-    const timer = setTimeout(() => setShowPreview(true), 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleSearch = () => {
     if (query.trim()) {
@@ -77,277 +23,274 @@ export default function Home() {
     }
   };
 
-  const handleTryQuery = (q: string) => {
-    setQuery(q);
+  const handleQuickSearch = (q: string) => {
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
-  if (!mounted) return null;
-
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative pt-28 pb-8 px-4">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-          <div className="absolute top-32 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px]" />
-          <div className="absolute top-48 right-1/4 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px]" />
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Hero */}
+      <section className="pt-32 pb-20 px-4">
+        <div className="max-w-2xl mx-auto text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm mb-8">
+            <span className="text-muted-foreground">backed by</span>
+            <span className="text-orange-500 font-medium">Y Combinator</span>
+          </div>
 
-        <div className="max-w-3xl mx-auto relative z-10">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="grid grid-cols-3 gap-1">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-sm ${
+                    i < 3 || i === 4 ? "bg-foreground" : "bg-transparent"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
           {/* Headline */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-5 leading-[1.1] tracking-tight">
-              Find{" "}
-              <span className="text-primary">overlooked</span>{" "}
-              engineers with proven GitHub impact
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Search by capabilities. We analyze PRs, code reviews, issues, and releases — not resumes.
-            </p>
-          </motion.div>
+          <h1 className="text-xl md:text-2xl text-muted-foreground mb-10 font-normal">
+            Find engineers and scientists shaping your domain
+          </h1>
 
           {/* Search Box */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6"
-          >
-            <div className="relative">
-              {/* Glow effect */}
-              <div className="absolute -inset-1 bg-primary/20 rounded-2xl blur-xl opacity-50" />
-
-              <div className="relative bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
-                <div className="flex items-center gap-3 p-4">
-                  <Search className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    placeholder="Describe the engineer you need..."
-                    className="flex-1 bg-transparent text-lg placeholder:text-muted-foreground focus:outline-none"
-                  />
-                  <Button
-                    onClick={handleSearch}
-                    disabled={!query.trim()}
-                    size="lg"
-                    className="px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-                  >
-                    Search
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
+          <div className="mb-6">
+            <div className="relative bg-card border border-border rounded-lg overflow-hidden">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Who are you looking for?"
+                className="w-full bg-transparent px-4 py-4 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={!query.trim()}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded bg-muted hover:bg-muted/80 disabled:opacity-50 transition-colors"
+              >
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-
-            {/* Example hint */}
-            <p className="text-center text-sm text-muted-foreground mt-3">
-              Example: &ldquo;React experts who contributed to state management libraries&rdquo;
+            <p className="text-xs text-muted-foreground mt-2">
+              <span className="text-primary">enter</span> to search,{" "}
+              <span className="text-primary">shift + enter</span> for new line
             </p>
-          </motion.div>
+          </div>
 
-          {/* Try These Chips */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-wrap justify-center gap-2 mb-12"
-          >
-            <span className="text-sm text-muted-foreground mr-1">Try:</span>
-            {tryTheseQueries.map((q) => (
+          {/* Quick Search Tags */}
+          <div className="flex flex-wrap justify-center gap-2">
+            {quickSearches.map((q) => (
               <button
                 key={q}
-                onClick={() => handleTryQuery(q)}
-                className="px-3 py-1.5 text-sm rounded-full border border-border bg-card hover:border-primary hover:bg-primary/5 transition-colors"
+                onClick={() => handleQuickSearch(q)}
+                className="px-3 py-1.5 text-sm rounded-md border border-border hover:border-primary/50 hover:text-primary transition-colors"
               >
                 {q}
               </button>
             ))}
-          </motion.div>
-
-          {/* Results Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: showPreview ? 1 : 0, y: showPreview ? 0 : 20 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <div className="text-center mb-4">
-              <Badge variant="outline" className="text-xs">
-                Preview: What you&apos;ll discover
-              </Badge>
-            </div>
-
-            <div className="grid gap-3">
-              {mockResults.map((result, i) => (
-                <motion.div
-                  key={result.username}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + i * 0.1 }}
-                >
-                  <Card className="p-4 hover:border-primary/30 transition-colors cursor-pointer group">
-                    <div className="flex items-center gap-4">
-                      {/* Avatar */}
-                      <Avatar className="w-12 h-12 ring-2 ring-border group-hover:ring-primary/30 transition-all">
-                        <AvatarImage src={result.avatar} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {result.name.split(" ").map(n => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold group-hover:text-primary transition-colors">
-                            {result.name}
-                          </span>
-                          <Badge className="bg-primary/20 text-primary border-0 text-xs">
-                            {result.match}% match
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {result.role}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {result.signals.map((signal) => (
-                            <span
-                              key={signal}
-                              className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground"
-                            >
-                              {signal}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Skills */}
-                      <div className="hidden sm:flex gap-1.5">
-                        {result.skills.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* CTA under preview */}
-            <div className="text-center mt-6">
-              <Button variant="outline" size="lg" asChild className="group">
-                <Link href="/search">
-                  Explore all engineers
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-            </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Trust Row */}
-      <section className="py-12 px-4 border-t border-border">
+      {/* Feature Cards */}
+      <section className="py-16 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mb-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
-              { value: "10M+", label: "Profiles indexed", icon: Users },
-              { value: "500K+", label: "Repos analyzed", icon: GitBranch },
-              { value: "98%", label: "Precision rate", icon: CheckCircle },
-              { value: "< 2hrs", label: "Time to shortlist", icon: Zap },
-            ].map((stat) => (
-              <div key={stat.label} className="group">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <stat.icon className="w-4 h-4 text-primary" />
-                  <span className="text-2xl md:text-3xl font-bold">{stat.value}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* What we analyze */}
-          <div className="flex flex-wrap justify-center gap-3">
-            {[
-              { label: "Pull requests", icon: GitPullRequest },
-              { label: "Code reviews", icon: MessageSquare },
-              { label: "Commits & releases", icon: Code2 },
-              { label: "Stars & forks", icon: Star },
-            ].map((item) => (
-              <Badge
-                key={item.label}
-                variant="outline"
-                className="px-3 py-1.5 gap-1.5 text-sm"
+              {
+                icon: Terminal,
+                title: "search by capabilities",
+                description:
+                  "recruitos analyzes expertise demonstrated by open source work",
+              },
+              {
+                icon: Wand2,
+                title: "discover hidden experts",
+                description:
+                  "find elite but overlooked engineers from around the world",
+              },
+              {
+                icon: Zap,
+                title: "hire faster",
+                description:
+                  "see real work, qualify engineers faster",
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="p-6 rounded-lg border border-border bg-card"
               >
-                <item.icon className="w-3.5 h-3.5 text-primary" />
-                {item.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it works - simplified */}
-      <section className="py-16 px-4 border-t border-border bg-card/30">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-10">
-            How it works
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "1",
-                title: "Search by capability",
-                description: "Describe the skills and experience you need. Our AI understands context.",
-              },
-              {
-                step: "2",
-                title: "Review scored matches",
-                description: "See candidates ranked by real GitHub signals: PRs, reviews, impact.",
-              },
-              {
-                step: "3",
-                title: "Reach out with context",
-                description: "Generate personalized messages based on their work and interests.",
-              },
-            ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center mx-auto mb-4">
-                  {item.step}
-                </div>
-                <h3 className="font-semibold mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
+                <feature.icon className="w-5 h-5 text-muted-foreground mb-4" />
+                <h3 className="font-medium mb-2 lowercase">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground lowercase">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-16 px-4 border-t border-border">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Ready to find your next great hire?
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            No credit card required. Start searching in seconds.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" asChild>
-              <Link href="/signup">Get started free</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/intake">Set up job intake</Link>
-            </Button>
+      {/* Build in Public */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-12">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-light">#buildinpublic</h2>
+            </div>
+            <div className="space-y-6 text-muted-foreground text-sm leading-relaxed lowercase">
+              <p>
+                open source software powers the internet. but the builders that
+                make it happen often remain invisible. traditional metrics
+                reduce engineers to numbers, commits, prs, lines of code. but
+                that does not paint the{" "}
+                <span className="underline">whole</span> picture.
+              </p>
+            </div>
+            <div className="space-y-6 text-muted-foreground text-sm leading-relaxed lowercase">
+              <p>
+                recruitos uncovers what&apos;s unique about each creator: how they
+                solve problems, and apply domain expertise where it matters. no
+                forms. no surveys. just signal drawn from real work.
+              </p>
+            </div>
+          </div>
+
+          {/* Profile Explorer */}
+          <div className="mt-12">
+            <p className="text-sm text-muted-foreground mb-3 lowercase">
+              explore individual developer profiles
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-4 py-3 rounded-lg border border-border bg-card text-sm text-muted-foreground">
+                https://<span className="text-primary">recruit</span>os.dev/github_username
+              </div>
+              <Link
+                href="/search"
+                className="px-4 py-3 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors"
+              >
+                try now
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-6 mb-10">
+            <h2 className="text-3xl md:text-4xl font-light">pricing</h2>
+            <div className="flex gap-2">
+              <button className="px-3 py-1 text-sm rounded bg-primary/20 text-primary">
+                Monthly
+              </button>
+              <button className="px-3 py-1 text-sm rounded text-muted-foreground hover:text-foreground transition-colors">
+                Yearly (-20% OFF)
+              </button>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* Pro */}
+            <div className="p-6 rounded-lg border border-border bg-card">
+              <div className="mb-6">
+                <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
+                  PRO
+                </h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-light">$499</span>
+                  <span className="text-sm text-muted-foreground">
+                    per month/per seat
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  for recruiters and small teams.
+                </p>
+              </div>
+
+              <ul className="space-y-2 text-sm mb-8">
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> 15 searches per month
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> 10 deep profile credits per month
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> phone and chat support
+                </li>
+              </ul>
+
+              <p className="text-sm text-primary mb-3">start with 1 free search</p>
+              <button className="w-full py-3 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors">
+                get started
+              </button>
+            </div>
+
+            {/* Enterprise */}
+            <div className="p-6 rounded-lg border border-border bg-card">
+              <div className="mb-6">
+                <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
+                  ENTERPRISE
+                </h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-light">custom</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  for agencies and large companies.
+                </p>
+              </div>
+
+              <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">
+                EVERYTHING IN PRO, AND:
+              </p>
+              <ul className="space-y-2 text-sm mb-8">
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> mcp server for custom workflows
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> dedicated account manager
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> internal app integrations
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary">✓</span> priority support (email, chat, slack)
+                </li>
+              </ul>
+
+              <button className="w-full py-3 rounded-lg bg-muted hover:bg-muted/80 text-sm transition-colors">
+                request demo
+              </button>
+            </div>
+          </div>
+
+          {/* Deep Profile Credits */}
+          <div className="p-6 rounded-lg border border-border bg-card">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
+                  DEEP PROFILE CREDITS
+                </h3>
+                <p className="text-sm text-muted-foreground mb-2 max-w-lg">
+                  searches show you basic profiles. use a credit to unlock full skill breakdowns,
+                  project history, and technical depth analysis for candidates you want to
+                  seriously evaluate.
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">$5</span>{" "}
+                  <span className="text-muted-foreground">per credit</span>
+                </p>
+              </div>
+              <button className="px-4 py-2 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors">
+                buy credits
+              </button>
+            </div>
           </div>
         </div>
       </section>
