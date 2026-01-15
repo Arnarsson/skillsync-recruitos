@@ -32,12 +32,6 @@ export default function Home() {
       {/* Hero */}
       <section className="pt-32 pb-20 px-4">
         <div className="max-w-2xl mx-auto text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm mb-8">
-            <span className="text-muted-foreground">backed by</span>
-            <span className="text-orange-500 font-medium">Y Combinator</span>
-          </div>
-
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="grid grid-cols-3 gap-1">
@@ -106,7 +100,7 @@ export default function Home() {
                 icon: Terminal,
                 title: "search by capabilities",
                 description:
-                  "recruitos analyzes expertise demonstrated by open source work",
+                  "recruitos analyzes expertise demonstrated by real work",
               },
               {
                 icon: Wand2,
@@ -136,161 +130,44 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Build in Public */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-12">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-light">#buildinpublic</h2>
-            </div>
-            <div className="space-y-6 text-muted-foreground text-sm leading-relaxed lowercase">
-              <p>
-                open source software powers the internet. but the builders that
-                make it happen often remain invisible. traditional metrics
-                reduce engineers to numbers, commits, prs, lines of code. but
-                that does not paint the{" "}
-                <span className="underline">whole</span> picture.
-              </p>
-            </div>
-            <div className="space-y-6 text-muted-foreground text-sm leading-relaxed lowercase">
-              <p>
-                recruitos uncovers what&apos;s unique about each creator: how they
-                solve problems, and apply domain expertise where it matters. no
-                forms. no surveys. just signal drawn from real work.
-              </p>
-            </div>
-          </div>
-
-          {/* Profile Explorer */}
-          <div className="mt-12">
-            <p className="text-sm text-muted-foreground mb-3 lowercase">
-              explore individual developer profiles
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 px-4 py-3 rounded-lg border border-border bg-card text-sm text-muted-foreground">
-                https://<span className="text-primary">recruit</span>os.dev/github_username
-              </div>
-              <Link
-                href="/search"
-                className="px-4 py-3 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors"
-              >
-                try now
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-6 mb-10">
-            <h2 className="text-3xl md:text-4xl font-light">pricing</h2>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 text-sm rounded bg-primary/20 text-primary">
-                Monthly
-              </button>
-              <button className="px-3 py-1 text-sm rounded text-muted-foreground hover:text-foreground transition-colors">
-                Yearly (-20% OFF)
-              </button>
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-light mb-10 text-center">pricing</h2>
+
+          {/* Candidate on Demand */}
+          <div className="p-8 rounded-lg border border-border bg-card text-center">
+            <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">
+              CANDIDATE ON DEMAND
+            </h3>
+            <div className="flex items-baseline justify-center gap-2 mb-4">
+              <span className="text-5xl font-light">$15</span>
+              <span className="text-muted-foreground">per search</span>
             </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* Pro */}
-            <div className="p-6 rounded-lg border border-border bg-card">
-              <div className="mb-6">
-                <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
-                  PRO
-                </h3>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light">$499</span>
-                  <span className="text-sm text-muted-foreground">
-                    per month/per seat
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  for recruiters and small teams.
-                </p>
-              </div>
-
-              <ul className="space-y-2 text-sm mb-8">
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> 15 searches per month
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> 10 deep profile credits per month
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> phone and chat support
-                </li>
-              </ul>
-
-              <p className="text-sm text-primary mb-3">start with 1 free search</p>
-              <button className="w-full py-3 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors">
-                get started
-              </button>
-            </div>
-
-            {/* Enterprise */}
-            <div className="p-6 rounded-lg border border-border bg-card">
-              <div className="mb-6">
-                <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
-                  ENTERPRISE
-                </h3>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light">custom</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  for agencies and large companies.
-                </p>
-              </div>
-
-              <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">
-                EVERYTHING IN PRO, AND:
-              </p>
-              <ul className="space-y-2 text-sm mb-8">
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> mcp server for custom workflows
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> dedicated account manager
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> internal app integrations
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> priority support (email, chat, slack)
-                </li>
-              </ul>
-
-              <button className="w-full py-3 rounded-lg bg-muted hover:bg-muted/80 text-sm transition-colors">
-                request demo
-              </button>
-            </div>
-          </div>
-
-          {/* Deep Profile Credits */}
-          <div className="p-6 rounded-lg border border-border bg-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
-                  DEEP PROFILE CREDITS
-                </h3>
-                <p className="text-sm text-muted-foreground mb-2 max-w-lg">
-                  searches show you basic profiles. use a credit to unlock full skill breakdowns,
-                  project history, and technical depth analysis for candidates you want to
-                  seriously evaluate.
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium">$5</span>{" "}
-                  <span className="text-muted-foreground">per credit</span>
-                </p>
-              </div>
-              <button className="px-4 py-2 rounded-lg border border-border hover:border-primary/50 text-sm transition-colors">
-                buy credits
-              </button>
-            </div>
+            <p className="text-muted-foreground mb-6">
+              includes deep search and full profile analysis
+            </p>
+            <ul className="space-y-3 text-sm mb-8 text-left max-w-xs mx-auto">
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> full candidate search
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> deep profile analysis included
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> skill breakdown & insights
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> no subscription required
+              </li>
+            </ul>
+            <p className="text-sm text-primary mb-4">start with 1 free search</p>
+            <Link
+              href="/search"
+              className="inline-block w-full py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm transition-colors"
+            >
+              try free search
+            </Link>
           </div>
         </div>
       </section>

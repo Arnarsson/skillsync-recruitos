@@ -17,6 +17,8 @@ import {
   Code2,
   Filter,
   SortAsc,
+  Lock,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,20 +41,49 @@ interface Developer {
   score: number;
 }
 
+const SEARCH_COUNT_KEY = "recruitos_search_count";
+const FREE_SEARCHES = 1;
+
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get("q") || "";
+  const isAdmin = searchParams.get("admin") !== null;
   const [searchQuery, setSearchQuery] = useState(query);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchCount, setSearchCount] = useState(0);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
-  const searchDevelopers = useCallback(async (q: string) => {
+  // Load search count from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(SEARCH_COUNT_KEY);
+    if (stored) {
+      setSearchCount(parseInt(stored, 10));
+    }
+  }, []);
+
+  const isLocked = !isAdmin && searchCount >= FREE_SEARCHES;
+
+  const incrementSearchCount = useCallback(() => {
+    if (isAdmin) return; // Admin has unlimited searches
+    const newCount = searchCount + 1;
+    setSearchCount(newCount);
+    localStorage.setItem(SEARCH_COUNT_KEY, newCount.toString());
+  }, [searchCount, isAdmin]);
+
+  const searchDevelopers = useCallback(async (q: string, skipLockCheck = false) => {
     if (!q.trim()) {
       setDevelopers([]);
       setTotal(0);
+      return;
+    }
+
+    // Check if locked (unless skipping for initial load of previous search)
+    if (!skipLockCheck && !isAdmin && searchCount >= FREE_SEARCHES) {
+      setShowSignupModal(true);
       return;
     }
 
@@ -69,24 +100,35 @@ function SearchResults() {
 
       setDevelopers(data.users || []);
       setTotal(data.total || 0);
+
+      // Only increment count for new searches (not initial page load)
+      if (!skipLockCheck) {
+        incrementSearchCount();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       setDevelopers([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin, searchCount, incrementSearchCount]);
 
   useEffect(() => {
     setSearchQuery(query);
     if (query) {
-      searchDevelopers(query);
+      // On initial load, show results but don't count as new search
+      searchDevelopers(query, true);
     }
   }, [query, searchDevelopers]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      if (isLocked) {
+        setShowSignupModal(true);
+        return;
+      }
+      searchDevelopers(searchQuery.trim());
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}${isAdmin ? "&admin" : ""}`);
     }
   };
 
@@ -432,6 +474,84 @@ function SearchResults() {
           </motion.div>
         )}
       </div>
+
+      {/* Signup Modal */}
+      <AnimatePresence>
+        {showSignupModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowSignupModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-card border border-border rounded-xl max-w-md w-full p-8 relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowSignupModal(false)}
+                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Lock className="w-8 h-8 text-primary" />
+                </div>
+
+                <h3 className="text-2xl font-semibold mb-3">
+                  Free search used
+                </h3>
+
+                <p className="text-muted-foreground mb-6">
+                  You&apos;ve used your free search. Sign up to continue finding elite developers with our AI-powered search.
+                </p>
+
+                <div className="bg-muted/50 rounded-lg p-4 mb-6">
+                  <div className="flex items-baseline justify-center gap-2 mb-2">
+                    <span className="text-3xl font-light">$15</span>
+                    <span className="text-muted-foreground">per search</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Includes deep search & full profile analysis
+                  </p>
+                </div>
+
+                <ul className="text-sm text-left space-y-2 mb-6">
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">✓</span> Full candidate search results
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">✓</span> Deep profile analysis included
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">✓</span> Skill breakdown & insights
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">✓</span> No subscription required
+                  </li>
+                </ul>
+
+                <Button
+                  className="w-full mb-3 bg-primary hover:bg-primary/90"
+                  size="lg"
+                >
+                  Sign up to continue
+                </Button>
+
+                <p className="text-xs text-muted-foreground">
+                  Pay per search. No commitment required.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
