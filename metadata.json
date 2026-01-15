@@ -1,0 +1,5 @@
+{
+  "name": "6Degrees - Recruitment OS",
+  "description": "Tier-1 Recruitment OS with Live Resume Parsing, Job scraping, and Deep Profile analysis. Features a responsive design, EU AI Act compliance logging, and configurable Gemini/Firecrawl integrations.",
+  "requestFramePermissions": []
+}
