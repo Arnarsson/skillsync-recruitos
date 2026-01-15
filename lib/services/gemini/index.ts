@@ -1,9 +1,10 @@
-// Gemini AI Service - Ported from RecruitOS for Next.js
-// Uses Google Gemini for AI-powered candidate analysis
+// AI Service - Uses OpenRouter with Google Gemini model
+// OpenRouter provides access to Gemini via OpenAI-compatible API
 
-import { GoogleGenAI } from "@google/genai";
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-2.0-flash-exp:free";
 
-// Types imported from RecruitOS
+// Types
 export interface Persona {
   archetype: string;
   psychometric: {
@@ -87,11 +88,47 @@ export interface DeepProfile {
   };
 }
 
-// Get AI client - server-side only
-export function getAiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+// Get API key
+function getApiKey(): string | null {
+  return process.env.OPENROUTER_API_KEY || null;
+}
+
+// Call OpenRouter API
+async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<string> {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY not configured");
+  }
+
+  const messages = [];
+  if (systemPrompt) {
+    messages.push({ role: "system", content: systemPrompt });
+  }
+  messages.push({ role: "user", content: prompt });
+
+  const response = await fetch(OPENROUTER_API_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://skillsync.app",
+      "X-Title": "SkillSync Recruiting"
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: 0.7,
+      max_tokens: 4096
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
 }
 
 // Parse JSON safely from AI response
@@ -134,60 +171,55 @@ function calculateScore(breakdown: CandidateAnalysis['scoreBreakdown']): number 
 
 // Generate Persona from raw profile text
 export async function generatePersona(rawProfileText: string): Promise<Persona> {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Gemini API key not configured");
+  const systemPrompt = `You are an expert Executive Recruiter preparing a candidate briefing. Always respond with valid JSON only, no markdown or explanations.`;
 
-  const systemPrompt = `
-    You are an expert Executive Recruiter preparing a candidate briefing.
+  const prompt = `
+Analyze this candidate and return JSON with:
+{
+  "persona_archetype": "string (2-sentence elevator pitch)",
+  "psychometric_profile": {
+    "communication_style": "string",
+    "primary_motivator": "string",
+    "risk_tolerance": "string",
+    "leadership_potential": "string"
+  },
+  "soft_skills_analysis": ["string"],
+  "red_flags": ["string"],
+  "green_flags": ["string"],
+  "reasoning_evidence": "string",
+  "career_trajectory": {
+    "growth_velocity": "rapid|steady|slow",
+    "promotion_frequency": "high|moderate|low",
+    "role_progression": "vertical|lateral|mixed",
+    "industry_pivots": number,
+    "leadership_growth": "ascending|stable|declining",
+    "average_tenure": "string",
+    "tenure_pattern": "stable|job-hopper|long-term"
+  },
+  "skill_profile": {
+    "core_skills": [{"name": "string", "proficiency": "expert|advanced|intermediate", "years_active": number}],
+    "emerging_skills": ["string"],
+    "deprecated_skills": ["string"],
+    "skill_gaps": ["string"],
+    "adjacent_skills": ["string"],
+    "depth_vs_breadth": "specialist|generalist|t-shaped"
+  },
+  "risk_assessment": {
+    "attrition_risk": "low|moderate|high",
+    "flight_risk_factors": ["string"],
+    "skill_obsolescence_risk": "low|moderate|high",
+    "geographic_barriers": ["string"],
+    "unexplained_gaps": boolean,
+    "compensation_risk_level": "low|moderate|high"
+  }
+}
 
-    Analyze this candidate and return JSON with:
-    {
-      "persona_archetype": "string (2-sentence elevator pitch)",
-      "psychometric_profile": {
-        "communication_style": "string",
-        "primary_motivator": "string",
-        "risk_tolerance": "string",
-        "leadership_potential": "string"
-      },
-      "soft_skills_analysis": ["string"],
-      "red_flags": ["string"],
-      "green_flags": ["string"],
-      "reasoning_evidence": "string",
-      "career_trajectory": {
-        "growth_velocity": "rapid|steady|slow",
-        "promotion_frequency": "high|moderate|low",
-        "role_progression": "vertical|lateral|mixed",
-        "industry_pivots": number,
-        "leadership_growth": "ascending|stable|declining",
-        "average_tenure": "string",
-        "tenure_pattern": "stable|job-hopper|long-term"
-      },
-      "skill_profile": {
-        "core_skills": [{"name": "string", "proficiency": "expert|advanced|intermediate", "years_active": number}],
-        "emerging_skills": ["string"],
-        "deprecated_skills": ["string"],
-        "skill_gaps": ["string"],
-        "adjacent_skills": ["string"],
-        "depth_vs_breadth": "specialist|generalist|t-shaped"
-      },
-      "risk_assessment": {
-        "attrition_risk": "low|moderate|high",
-        "flight_risk_factors": ["string"],
-        "skill_obsolescence_risk": "low|moderate|high",
-        "geographic_barriers": ["string"],
-        "unexplained_gaps": boolean,
-        "compensation_risk_level": "low|moderate|high"
-      }
-    }
-  `;
+Raw Candidate Data:
+"${rawProfileText.substring(0, 30000)}"
 
-  const model = ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: `${systemPrompt}\n\nRaw Candidate Data:\n"${rawProfileText.substring(0, 30000)}"\n\nReturn ONLY valid JSON.`
-  });
+Return ONLY valid JSON.`;
 
-  const response = await model;
-  const text = response.text || '';
+  const text = await callOpenRouter(prompt, systemPrompt);
   const data = parseJsonSafe(text) as Record<string, unknown>;
 
   return {
@@ -213,46 +245,36 @@ export async function analyzeCandidateProfile(
   resumeText: string,
   jobContext: string
 ): Promise<CandidateAnalysis> {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Gemini API key not configured");
+  const systemPrompt = `You are a highly analytical Recruitment AI. Always respond with valid JSON only.`;
 
   const prompt = `
-    You are a highly analytical Recruitment AI.
+Job Context: ${jobContext}
 
-    Job Context: ${jobContext}
+Raw Input Text: "${resumeText.substring(0, 20000)}"
 
-    Raw Input Text: "${resumeText.substring(0, 20000)}"
+Return JSON only:
+{
+  "name": "string",
+  "currentRole": "string",
+  "company": "string",
+  "location": "string",
+  "yearsExperience": number,
+  "shortlistSummary": "string (max 50 words)",
+  "keyEvidence": ["string"],
+  "risks": ["string"],
+  "scoreBreakdown": {
+    "skills": { "value": number, "max": 35, "percentage": number },
+    "experience": { "value": number, "max": 20, "percentage": number },
+    "industry": { "value": number, "max": 15, "percentage": number },
+    "seniority": { "value": number, "max": 20, "percentage": number },
+    "location": { "value": number, "max": 10, "percentage": number }
+  },
+  "scoreConfidence": "high|moderate|low",
+  "scoreDrivers": ["string"],
+  "scoreDrags": ["string"]
+}`;
 
-    Return JSON only:
-    {
-      "name": "string",
-      "currentRole": "string",
-      "company": "string",
-      "location": "string",
-      "yearsExperience": number,
-      "shortlistSummary": "string (max 50 words)",
-      "keyEvidence": ["string"],
-      "risks": ["string"],
-      "scoreBreakdown": {
-        "skills": { "value": number, "max": 35, "percentage": number },
-        "experience": { "value": number, "max": 20, "percentage": number },
-        "industry": { "value": number, "max": 15, "percentage": number },
-        "seniority": { "value": number, "max": 20, "percentage": number },
-        "location": { "value": number, "max": 10, "percentage": number }
-      },
-      "scoreConfidence": "high|moderate|low",
-      "scoreDrivers": ["string"],
-      "scoreDrags": ["string"]
-    }
-  `;
-
-  const model = ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt
-  });
-
-  const response = await model;
-  const text = response.text || '';
+  const text = await callOpenRouter(prompt, systemPrompt);
   const data = parseJsonSafe(text) as CandidateAnalysis;
 
   return {
@@ -266,31 +288,23 @@ export async function generateDeepProfile(
   candidate: CandidateAnalysis,
   jobContext: string
 ): Promise<DeepProfile> {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Gemini API key not configured");
+  const systemPrompt = `You are a senior talent analyst. Always respond with valid JSON only.`;
 
   const prompt = `
-    Analyze this candidate for the following Job Context:
-    Job Context: ${jobContext}
-    Candidate: ${JSON.stringify(candidate)}
+Analyze this candidate for the following Job Context:
+Job Context: ${jobContext}
+Candidate: ${JSON.stringify(candidate)}
 
-    Return JSON only:
-    {
-      "indicators": [{ "name": "string", "value": number, "interpretation": "string", "icon": "string" }],
-      "questions": [{ "question": "string", "context": "string", "expectedAnswer": "string", "category": "Technical|Soft Skills|Behavioral" }],
-      "deepAnalysis": "string",
-      "cultureFit": "string",
-      "companyMatch": { "score": number, "reasons": ["string"], "risks": ["string"] }
-    }
-  `;
+Return JSON only:
+{
+  "indicators": [{ "name": "string", "value": number, "interpretation": "string", "icon": "string" }],
+  "questions": [{ "question": "string", "context": "string", "expectedAnswer": "string", "category": "Technical|Soft Skills|Behavioral" }],
+  "deepAnalysis": "string",
+  "cultureFit": "string",
+  "companyMatch": { "score": number, "reasons": ["string"], "risks": ["string"] }
+}`;
 
-  const model = ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt
-  });
-
-  const response = await model;
-  const text = response.text || '';
+  const text = await callOpenRouter(prompt, systemPrompt);
   return parseJsonSafe(text) as DeepProfile;
 }
 
@@ -302,25 +316,15 @@ export async function generateOutreach(
   jobContext: string,
   instructions: string
 ): Promise<string> {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Gemini API key not configured");
-
   const prompt = `
-    Generate a personalized outreach message.
-    Candidate: ${candidateName} (${candidateRole} at ${company})
-    Job Context: ${jobContext}
-    Instructions: ${instructions}
+Generate a personalized outreach message.
+Candidate: ${candidateName} (${candidateRole} at ${company})
+Job Context: ${jobContext}
+Instructions: ${instructions}
 
-    Return ONLY the message text, no JSON.
-  `;
+Return ONLY the message text, no JSON.`;
 
-  const model = ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt
-  });
-
-  const response = await model;
-  return response.text || '';
+  return await callOpenRouter(prompt);
 }
 
 // Analyze job description
@@ -333,33 +337,25 @@ export async function analyzeJobDescription(jobText: string): Promise<{
   location: string;
   summary: string;
 }> {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Gemini API key not configured");
+  const systemPrompt = `You are a job description analyst. Always respond with valid JSON only.`;
 
   const prompt = `
-    Extract structured information from this job description:
+Extract structured information from this job description:
 
-    "${jobText.substring(0, 10000)}"
+"${jobText.substring(0, 10000)}"
 
-    Return JSON:
-    {
-      "title": "string",
-      "company": "string",
-      "requiredSkills": ["string"],
-      "preferredSkills": ["string"],
-      "experienceLevel": "string",
-      "location": "string",
-      "summary": "string (2-3 sentences)"
-    }
-  `;
+Return JSON:
+{
+  "title": "string",
+  "company": "string",
+  "requiredSkills": ["string"],
+  "preferredSkills": ["string"],
+  "experienceLevel": "string",
+  "location": "string",
+  "summary": "string (2-3 sentences)"
+}`;
 
-  const model = ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt
-  });
-
-  const response = await model;
-  const text = response.text || '';
+  const text = await callOpenRouter(prompt, systemPrompt);
   return parseJsonSafe(text) as {
     title: string;
     company: string;
