@@ -11,28 +11,157 @@
  * - languages: Get aggregated language stats across all repos
  * - activity: Get recent activity (commits, PRs, issues)
  * - full: Get complete profile with all data (user + repos + languages)
- *
- * @see api/lib/schemas.ts for schemas
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import {
-  ErrorCode,
-  GitHubUserSchema,
-  GitHubRepoSchema,
-} from './lib/schemas';
-import {
-  handleCors,
-  applyCors,
-  rawSuccess,
-  error,
-  validationError,
-  authError,
-  externalError,
-  internalError,
-  logRequest,
-} from './lib/responses';
+
+// ============================================================
+// ERROR CODES (inlined)
+// ============================================================
+
+const ErrorCode = {
+  AUTH_MISSING: 'AUTH_MISSING',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  INVALID_ACTION: 'INVALID_ACTION',
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  RATE_LIMITED: 'RATE_LIMITED',
+} as const;
+
+type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
+
+// ============================================================
+// RESPONSE HELPERS (inlined)
+// ============================================================
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BrightData-Key, X-SERP-Key, X-GitHub-Token',
+};
+
+function applyCors(res: VercelResponse): void {
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+}
+
+function handleCors(res: VercelResponse): VercelResponse {
+  applyCors(res);
+  return res.status(200).end();
+}
+
+function rawSuccess<T>(
+  res: VercelResponse,
+  data: T,
+  status = 200
+): VercelResponse {
+  applyCors(res);
+  return res.status(status).json(data);
+}
+
+function inferErrorCode(status: number): ErrorCodeType {
+  switch (status) {
+    case 400:
+      return ErrorCode.VALIDATION_ERROR;
+    case 401:
+      return ErrorCode.AUTH_MISSING;
+    case 429:
+      return ErrorCode.RATE_LIMITED;
+    case 502:
+    case 503:
+      return ErrorCode.EXTERNAL_SERVICE_ERROR;
+    default:
+      return ErrorCode.INTERNAL_ERROR;
+  }
+}
+
+interface ErrorOptions {
+  code?: ErrorCodeType;
+  details?: Record<string, unknown>;
+  logError?: boolean;
+}
+
+function error(
+  res: VercelResponse,
+  message: string,
+  status: number,
+  options: ErrorOptions = {}
+): VercelResponse {
+  const { code, details, logError = status >= 500 } = options;
+
+  if (logError) {
+    console.error(`[API Error] ${code || 'UNKNOWN'}:`, message, details);
+  }
+
+  applyCors(res);
+
+  const response = {
+    success: false,
+    error: message,
+    code: code || inferErrorCode(status),
+    timestamp: new Date().toISOString(),
+    ...(details ? { details } : {}),
+  };
+
+  return res.status(status).json(response);
+}
+
+function validationError(
+  res: VercelResponse,
+  zodError: z.ZodError
+): VercelResponse {
+  const message = zodError.errors
+    .map((e) => `${e.path.join('.')}: ${e.message}`)
+    .join('; ');
+  return error(res, message, 400, {
+    code: ErrorCode.VALIDATION_ERROR,
+    details: {
+      issues: zodError.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+      })),
+    },
+  });
+}
+
+function externalError(
+  res: VercelResponse,
+  service: string,
+  originalError?: string
+): VercelResponse {
+  return error(res, `${service} service error: ${originalError || 'Unknown'}`, 502, {
+    code: ErrorCode.EXTERNAL_SERVICE_ERROR,
+    details: { service },
+    logError: true,
+  });
+}
+
+function internalError(
+  res: VercelResponse,
+  err: unknown
+): VercelResponse {
+  const message = err instanceof Error ? err.message : 'Internal server error';
+  return error(res, message, 500, {
+    code: ErrorCode.INTERNAL_ERROR,
+    logError: true,
+  });
+}
+
+function logRequest(
+  method: string,
+  url: string,
+  body?: unknown
+): string {
+  const requestId = Math.random().toString(36).slice(2, 10);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[${requestId}] ${method} ${url}`, body ? JSON.stringify(body).slice(0, 200) : '');
+  }
+
+  return requestId;
+}
 
 // ============================================================
 // CONSTANTS
@@ -246,7 +375,6 @@ async function handleLanguages(
 
     // Aggregate languages from repo metadata
     const languageCounts: Record<string, number> = {};
-    const languageBytes: Record<string, number> = {};
 
     for (const repo of repos) {
       if (repo.language) {

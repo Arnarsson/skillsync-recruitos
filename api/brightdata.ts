@@ -11,29 +11,190 @@
  * - progress: Check scrape progress
  * - snapshot: Get scraped data
  * - scrape: Generic web scrape (4-tier fallback)
- *
- * @see api/lib/schemas.ts for input/output schemas
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import {
-  ErrorCode,
-  LinkedInUrlSchema,
-  SnapshotIdSchema,
-  formatZodError,
-} from './lib/schemas';
-import {
-  handleCors,
-  applyCors,
-  rawSuccess,
-  error,
-  validationError,
-  authError,
-  externalError,
-  internalError,
-  logRequest,
-} from './lib/responses';
+
+// ============================================================
+// ERROR CODES (inlined from lib/schemas.ts)
+// ============================================================
+
+const ErrorCode = {
+  AUTH_MISSING: 'AUTH_MISSING',
+  AUTH_INVALID: 'AUTH_INVALID',
+  AUTH_EXPIRED: 'AUTH_EXPIRED',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  MISSING_PARAM: 'MISSING_PARAM',
+  INVALID_ACTION: 'INVALID_ACTION',
+  INVALID_URL: 'INVALID_URL',
+  BRIGHTDATA_ERROR: 'BRIGHTDATA_ERROR',
+  BRIGHTDATA_TIMEOUT: 'BRIGHTDATA_TIMEOUT',
+  SCRAPE_FAILED: 'SCRAPE_FAILED',
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  PARSE_ERROR: 'PARSE_ERROR',
+  RATE_LIMITED: 'RATE_LIMITED',
+} as const;
+
+type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
+
+// ============================================================
+// SCHEMAS (inlined from lib/schemas.ts)
+// ============================================================
+
+const LinkedInUrlSchema = z.string()
+  .url()
+  .refine(
+    (url) => url.includes('linkedin.com/in/'),
+    { message: 'Must be a valid LinkedIn profile URL' }
+  );
+
+const SnapshotIdSchema = z.string()
+  .min(1, 'snapshot_id is required')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Invalid snapshot_id format');
+
+function formatZodError(error: z.ZodError): string {
+  return error.errors
+    .map((e) => `${e.path.join('.')}: ${e.message}`)
+    .join('; ');
+}
+
+// ============================================================
+// RESPONSE HELPERS (inlined from lib/responses.ts)
+// ============================================================
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BrightData-Key, X-SERP-Key, X-GitHub-Token',
+};
+
+function applyCors(res: VercelResponse): void {
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+}
+
+function handleCors(res: VercelResponse): VercelResponse {
+  applyCors(res);
+  return res.status(200).end();
+}
+
+function rawSuccess<T>(
+  res: VercelResponse,
+  data: T,
+  status = 200
+): VercelResponse {
+  applyCors(res);
+  return res.status(status).json(data);
+}
+
+function inferErrorCode(status: number): ErrorCodeType {
+  switch (status) {
+    case 400:
+      return ErrorCode.VALIDATION_ERROR;
+    case 401:
+      return ErrorCode.AUTH_MISSING;
+    case 429:
+      return ErrorCode.RATE_LIMITED;
+    case 502:
+    case 503:
+      return ErrorCode.EXTERNAL_SERVICE_ERROR;
+    default:
+      return ErrorCode.INTERNAL_ERROR;
+  }
+}
+
+interface ErrorOptions {
+  code?: ErrorCodeType;
+  details?: Record<string, unknown>;
+  logError?: boolean;
+}
+
+function error(
+  res: VercelResponse,
+  message: string,
+  status: number,
+  options: ErrorOptions = {}
+): VercelResponse {
+  const { code, details, logError = status >= 500 } = options;
+
+  if (logError) {
+    console.error(`[API Error] ${code || 'UNKNOWN'}:`, message, details);
+  }
+
+  applyCors(res);
+
+  const response = {
+    success: false,
+    error: message,
+    code: code || inferErrorCode(status),
+    timestamp: new Date().toISOString(),
+    ...(details ? { details } : {}),
+  };
+
+  return res.status(status).json(response);
+}
+
+function validationError(
+  res: VercelResponse,
+  zodError: z.ZodError
+): VercelResponse {
+  return error(res, formatZodError(zodError), 400, {
+    code: ErrorCode.VALIDATION_ERROR,
+    details: {
+      issues: zodError.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+      })),
+    },
+  });
+}
+
+function authError(
+  res: VercelResponse,
+  message = 'API key required'
+): VercelResponse {
+  return error(res, message, 401, { code: ErrorCode.AUTH_MISSING });
+}
+
+function externalError(
+  res: VercelResponse,
+  service: string,
+  originalError?: string
+): VercelResponse {
+  return error(res, `${service} service error: ${originalError || 'Unknown'}`, 502, {
+    code: ErrorCode.EXTERNAL_SERVICE_ERROR,
+    details: { service },
+    logError: true,
+  });
+}
+
+function internalError(
+  res: VercelResponse,
+  err: unknown
+): VercelResponse {
+  const message = err instanceof Error ? err.message : 'Internal server error';
+  return error(res, message, 500, {
+    code: ErrorCode.INTERNAL_ERROR,
+    logError: true,
+  });
+}
+
+function logRequest(
+  method: string,
+  url: string,
+  body?: unknown
+): string {
+  const requestId = Math.random().toString(36).slice(2, 10);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[${requestId}] ${method} ${url}`, body ? JSON.stringify(body).slice(0, 200) : '');
+  }
+
+  return requestId;
+}
 
 // ============================================================
 // CONSTANTS

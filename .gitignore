@@ -50,3 +50,6 @@ dist-ssr
 lint_output.txt
 playwright-report/
 test-results/
+
+# API lib folder (inlined into API files for Vercel compatibility)
+api/lib/
