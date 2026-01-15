@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Candidate, FunnelStage, PRICING } from '../types';
-import { generateDeepProfile, generateNetworkDossier, analyzeCandidateProfile } from '../services/geminiService';
-import { candidateService } from '../services/candidateService';
-import { ToastType } from './ToastNotification';
-import { ScoreDistributionChart } from './visualizations/ScoreDistributionChart';
-import { CandidateCardSkeleton } from './visualizations/CandidateCardSkeleton';
-import { CandidateComparisonView } from './visualizations/CandidateComparisonView';
-import { useCandidateSourcing } from '../hooks/useCandidateSourcing';
-import { CandidateHeader } from './candidates/CandidateHeader';
-import { SourcingConsole } from './candidates/SourcingConsole';
-import { ImportModal } from './candidates/ImportModal';
-import { FilterToolbar } from './candidates/FilterToolbar';
-import { CandidateListElement } from './candidates/CandidateListElement';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GlassCard } from '../ui/GlassCard';
+import { Candidate, FunnelStage, PRICING } from '../../types';
+import { generateDeepProfile, generateNetworkDossier, analyzeCandidateProfile } from '../../services/geminiService';
+import { candidateService } from '../../services/candidateService';
+import { ToastType } from '../ToastNotification';
+import { ScoreDistributionChart } from '../visualizations/ScoreDistributionChart';
+import { CandidateCardSkeleton } from '../visualizations/CandidateCardSkeleton';
+import { CandidateComparisonView } from '../visualizations/CandidateComparisonView';
+import { useCandidateSourcing } from '../../hooks/useCandidateSourcing';
+import { CandidateHeader } from '../candidates/CandidateHeader';
+import { SourcingConsole } from '../candidates/SourcingConsole';
+import { ImportModal } from '../candidates/ImportModal';
+import { FilterToolbar } from '../candidates/FilterToolbar';
+import { CandidateListElement } from '../candidates/CandidateListElement';
 
 interface Props {
     jobContext: string;
@@ -64,13 +66,18 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
     // Sorting & Filtering State
     const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'>('score-desc');
     const [filterScore, setFilterScore] = useState<'high' | 'medium' | 'low' | null>(null);
+    const [filterArchetype, setFilterArchetype] = useState<string | null>(null);
+    const [filterRisk, setFilterRisk] = useState<'high' | 'moderate' | 'low' | null>(null);
 
     // Multi-Select & Comparison State
     const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
     const [isComparisonMode, setIsComparisonMode] = useState(false);
 
     const onCandidateCreated = useCallback((candidate: Candidate) => {
-        setCandidates(prev => [candidate, ...prev]);
+        setCandidates(prev => {
+            if (prev.some(c => c.id === candidate.id)) return prev;
+            return [candidate, ...prev];
+        });
     }, []);
 
     const {
@@ -228,20 +235,69 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
         }
     }, [candidates, sortBy]);
 
+    const availableArchetypes = useMemo(() => {
+        const archetypes = new Set<string>();
+        candidates.forEach(c => {
+            if (c.persona?.archetype) {
+                archetypes.add(c.persona.archetype);
+            }
+        });
+        return Array.from(archetypes).sort();
+    }, [candidates]);
+
     const filteredCandidates = useMemo(() => {
-        if (!filterScore) return sortedCandidates;
-        switch (filterScore) {
-            case 'high': return sortedCandidates.filter(c => c.alignmentScore >= 80);
-            case 'medium': return sortedCandidates.filter(c => c.alignmentScore >= 50 && c.alignmentScore < 80);
-            case 'low': return sortedCandidates.filter(c => c.alignmentScore < 50);
-            default: return sortedCandidates;
+        let result = sortedCandidates;
+
+        // 1. Filter by Score
+        if (filterScore) {
+            switch (filterScore) {
+                case 'high': result = result.filter(c => c.alignmentScore >= 80); break;
+                case 'medium': result = result.filter(c => c.alignmentScore >= 50 && c.alignmentScore < 80); break;
+                case 'low': result = result.filter(c => c.alignmentScore < 50); break;
+            }
         }
-    }, [sortedCandidates, filterScore]);
+
+        // 2. Filter by Archetype
+        if (filterArchetype) {
+            result = result.filter(c => c.persona?.archetype === filterArchetype);
+        }
+
+        // 3. Filter by Risk
+        if (filterRisk) {
+            result = result.filter(c => {
+                // Determine risk level based on score + explicit risks
+                const hasHighRisk = c.risks.length >= 2 || (c.persona?.riskAssessment?.attritionRisk === 'high');
+                const hasModerateRisk = c.risks.length === 1 || (c.persona?.riskAssessment?.attritionRisk === 'moderate');
+                const isLowRisk = c.risks.length === 0 && (!c.persona?.riskAssessment || c.persona?.riskAssessment?.attritionRisk === 'low');
+
+                if (filterRisk === 'high') return hasHighRisk;
+                if (filterRisk === 'moderate') return hasModerateRisk;
+                if (filterRisk === 'low') return isLowRisk;
+                return true;
+            });
+        }
+
+        return result;
+    }, [sortedCandidates, filterScore, filterArchetype, filterRisk]);
 
     const hasNoCandidates = candidates.length === 0;
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.05
+            }
+        }
+    };
+
     return (
-        <div className="h-full flex flex-col bg-slate-950">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="h-full flex flex-col bg-transparent" // Transparent to show App background
+        >
             <CandidateHeader
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
@@ -252,13 +308,15 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
             />
 
             {activeTab === 'sourcing' && (
-                <SourcingConsole
-                    sourcingUrl={sourcingUrl}
-                    setSourcingUrl={setSourcingUrl}
-                    handleSourcingRun={handleSourcingRun}
-                    isSourcing={isSourcing}
-                    sourcingLog={sourcingLog}
-                />
+                <div className="px-6 mb-4">
+                    <SourcingConsole
+                        sourcingUrl={sourcingUrl}
+                        setSourcingUrl={setSourcingUrl}
+                        handleSourcingRun={handleSourcingRun}
+                        isSourcing={isSourcing}
+                        sourcingLog={sourcingLog}
+                    />
+                </div>
             )}
 
             <ImportModal
@@ -271,18 +329,26 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
             />
 
             {activeTab === 'pipeline' && !hasNoCandidates && (
-                <div className="px-6 py-4 bg-apex-800/20 border-b border-apex-700" style={{ minHeight: '240px' }}>
-                    <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">Pipeline Distribution</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Score distribution across all candidates</p>
+                <div className="px-4 md:px-8 mb-4">
+                    <GlassCard variant="light" className="p-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-blue-500/5 pointer-events-none"></div>
+                        <div className="flex items-center justify-between mb-3 relative z-10">
+                            <div>
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wide flex items-center">
+                                    <i className="fa-solid fa-chart-pie mr-2 text-emerald-400"></i>
+                                    Pipeline Intelligence
+                                </h3>
+                                <p className="text-[10px] text-slate-400 mt-0.5 ml-5">Real-time score distribution</p>
+                            </div>
+                            <div className="text-[10px] text-slate-400 bg-black/20 px-2 py-1 rounded border border-white/5">
+                                <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full mr-1.5 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                                Top Match
+                            </div>
                         </div>
-                        <div className="text-xs text-slate-500">
-                            <span className="inline-block w-3 h-3 bg-emerald-600 rounded mr-1.5"></span>
-                            Selected candidate
+                        <div className="relative z-10">
+                            <ScoreDistributionChart candidates={candidates} height={140} />
                         </div>
-                    </div>
-                    <ScoreDistributionChart candidates={candidates} height={180} />
+                    </GlassCard>
                 </div>
             )}
 
@@ -291,7 +357,12 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                     sortBy={sortBy}
                     setSortBy={setSortBy}
                     filterScore={filterScore}
-                    setFilterScore={setFilterScore}
+                    setFilterScore={(val) => setFilterScore(val as 'high' | 'medium' | 'low' | null)}
+                    filterArchetype={filterArchetype}
+                    setFilterArchetype={setFilterArchetype}
+                    filterRisk={filterRisk}
+                    setFilterRisk={(val) => setFilterRisk(val as 'high' | 'moderate' | 'low' | null)}
+                    availableArchetypes={availableArchetypes}
                     selectedCandidateIds={selectedCandidateIds}
                     openComparison={() => setIsComparisonMode(true)}
                     clearSelection={() => setSelectedCandidateIds([])}
@@ -300,14 +371,19 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                 />
             )}
 
-            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-apex-800 border-b border-apex-700 text-xs font-bold uppercase text-slate-500 tracking-wider">
-                <div className="col-span-4">Candidate & Persona</div>
+            <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 border-b border-white/5 text-[10px] font-bold uppercase text-slate-500 tracking-widest">
+                <div className="col-span-4 pl-4">Candidate & Persona</div>
                 <div className="col-span-2 text-center">Match Score</div>
                 <div className="col-span-4">Evidence Summary</div>
-                <div className="col-span-2 text-right">Action</div>
+                <div className="col-span-2 text-right pr-4">Action</div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3">
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-3"
+            >
                 {isLoading ? (
                     <div className="space-y-3">
                         <CandidateCardSkeleton />
@@ -315,51 +391,56 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                         <CandidateCardSkeleton />
                     </div>
                 ) : hasNoCandidates ? (
-                    <div className="flex flex-col items-center justify-center h-full opacity-60">
-                        <div className="w-16 h-16 bg-apex-800 rounded-full flex items-center justify-center mb-4">
-                            <i className="fa-solid fa-users-slash text-2xl text-slate-600"></i>
+                    <GlassCard variant="dark" className="flex flex-col items-center justify-center p-12 opacity-80 mt-8">
+                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 shadow-inner border border-white/5">
+                            <i className="fa-solid fa-users-slash text-3xl text-slate-600"></i>
                         </div>
-                        <h3 className="text-white font-bold mb-2">Pipeline Empty</h3>
-                        <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">
-                            {activeTab === 'sourcing' ? 'Use the Sourcing Agent above to find candidates.' : 'Import a profile to start.'}
+                        <h3 className="text-white font-bold text-lg mb-2">Pipeline Empty</h3>
+                        <p className="text-sm text-slate-400 mb-8 max-w-sm text-center leading-relaxed">
+                            {activeTab === 'sourcing' ? 'Use the Sourcing Agent above to find candidates.' : 'Import a profile manually or try the demo data.'}
                         </p>
                         {activeTab !== 'sourcing' && (
-                            <button
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 onClick={() => setShowImport(true)}
-                                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg transition-all"
+                                className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/40 transition-all flex items-center"
                             >
                                 <i className="fa-solid fa-plus mr-2"></i> Import First Candidate
-                            </button>
+                            </motion.button>
                         )}
-                    </div>
+                    </GlassCard>
                 ) : (
                     <>
                         {(isSourcing || isImporting) && <CandidateCardSkeleton />}
-                        {filteredCandidates.map((c) => (
-                            <CandidateListElement
-                                key={c.id}
-                                candidate={c}
-                                isSelected={selectedCandidateIds.includes(c.id)}
-                                isDeepProfileUnlocked={c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE)}
-                                isProcessingThis={processingId === c.id}
-                                onToggleSelection={toggleCandidateSelection}
-                                onDelete={handleDeleteCandidate}
-                                onSelect={onSelectCandidate}
-                                onUnlock={handleUnlockProfile}
-                            />
-                        ))}
+                        <AnimatePresence>
+                            {filteredCandidates.map((c) => (
+                                <motion.div key={c.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
+                                    <CandidateListElement
+                                        candidate={c}
+                                        isSelected={selectedCandidateIds.includes(c.id)}
+                                        isDeepProfileUnlocked={c.unlockedSteps.includes(FunnelStage.DEEP_PROFILE)}
+                                        isProcessingThis={processingId === c.id}
+                                        onToggleSelection={toggleCandidateSelection}
+                                        onDelete={handleDeleteCandidate}
+                                        onSelect={onSelectCandidate}
+                                        onUnlock={handleUnlockProfile}
+                                    />
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </>
                 )}
 
                 {!hasNoCandidates && activeTab !== 'sourcing' && (
                     <button
                         onClick={() => setShowImport(true)}
-                        className="md:hidden w-full py-3 bg-apex-800 border border-dashed border-apex-700 text-slate-400 rounded-lg text-sm font-bold mt-4"
+                        className="md:hidden w-full py-4 bg-white/5 border border-dashed border-white/10 text-slate-400 rounded-xl text-sm font-bold mt-4 hover:bg-white/10 hover:text-white transition-all"
                     >
                         <i className="fa-solid fa-plus mr-2"></i> Import Candidate
                     </button>
                 )}
-            </div>
+            </motion.div>
 
             {isComparisonMode && (
                 <CandidateComparisonView
@@ -367,7 +448,7 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                     onClose={() => setIsComparisonMode(false)}
                 />
             )}
-        </div>
+        </motion.div>
     );
 };
 

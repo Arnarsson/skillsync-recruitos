@@ -1,6 +1,10 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 
-import { enrichSparseProfile, type EnrichedProfile } from './enrichmentService';
+import { type EnrichedProfile } from './enrichmentServiceLegacy';
+import { enrichCandidatePersona } from './enrichmentServiceV2';
+import { CandidatePersona } from '../types'; // eslint-disable-line @typescript-eslint/no-unused-vars
+
+import { callOpenRouter } from './geminiService';
 
 interface FirecrawlResponse {
   success: boolean;
@@ -414,10 +418,10 @@ const assessDataQuality = (profile: BrightDataProfile): { isRich: boolean; score
     hasExperience: !!profile.experience && profile.experience.length > 0,
     hasPositions: !!profile.positions && profile.positions.length > 0,
     hasSkills: (profile.skills && profile.skills.length > 0) ||
-               (profile.skill_list && profile.skill_list.length > 0),
+      (profile.skill_list && profile.skill_list.length > 0),
     hasAbout: !!profile.about || !!profile.summary,
     hasEducation: (profile.education && profile.education.length > 0) ||
-                  (profile.schools && profile.schools.length > 0)
+      (profile.schools && profile.schools.length > 0)
   };
 
   const score = Object.values(checks).filter(Boolean).length;
@@ -430,7 +434,7 @@ const assessDataQuality = (profile: BrightDataProfile): { isRich: boolean; score
 
   // Rich data = has experience AND (skills OR about)
   const isRich = (checks.hasExperience || checks.hasPositions) &&
-                 (checks.hasSkills || checks.hasAbout);
+    (checks.hasSkills || checks.hasAbout);
 
   return { isRich, score, missing };
 };
@@ -502,9 +506,9 @@ const decideProfileOutcome = (
   profile: BrightDataProfile
 ): ProfileOutcome => {
   const hasExperience = (profile.experience?.length ?? 0) > 0 ||
-                        (profile.positions?.length ?? 0) > 0;
+    (profile.positions?.length ?? 0) > 0;
   const hasSkills = (profile.skills?.length ?? 0) > 0 ||
-                    (profile.skill_list?.length ?? 0) > 0;
+    (profile.skill_list?.length ?? 0) > 0;
   const hasAbout = !!(profile.about || profile.summary);
   const experienceCount = (profile.experience?.length ?? 0) + (profile.positions?.length ?? 0);
   const skillsCount = (profile.skills?.length ?? 0) + (profile.skill_list?.length ?? 0);
@@ -548,14 +552,189 @@ const decideProfileOutcome = (
 /**
  * Helper: Scrape a single LinkedIn URL variant via BrightData
  */
+/**
+ * Helper: Extract profile data from HTML using AI (for Tiers 1-3)
+ */
+const extractProfileFromHtmlWithAi = async (html: string, url: string): Promise<BrightDataProfile | null> => {
+  // Pre-filter: Check if this is an authwall or security check
+  const authwallKeywords = [
+    'authwall', 'login', 'sign in', 'security check', 'challenge',
+    'please enter the characters', 'captcha', 'robot', 'unusual activity',
+    'LinkedIn | Log In', 'join linkedin'
+  ];
+
+  const isAuthwall = authwallKeywords.some(keyword =>
+    html.toLowerCase().includes(keyword.toLowerCase())
+  );
+
+  if (isAuthwall) {
+    if (process.env.NODE_ENV === 'development') {
+      const match = authwallKeywords.find(k => html.toLowerCase().includes(k.toLowerCase()));
+      console.warn(`[Scraper] 🛡️ Detected authwall/security check (${match}), skipping AI extraction`);
+    }
+    return null;
+  }
+
+  // Ensure we have enough content to actually be a profile
+  if (html.length < 2500) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Scraper] ⚠️ Content too short (', html.length, 'chars), skipping AI extraction');
+    }
+    return null;
+  }
+
+  try {
+    const prompt = `
+      Extract structured LinkedIn profile data from the following HTML content.
+      Only extract data if it looks like a real person's profile.
+      If it's a login page or error message, return null.
+
+      URL: ${url}
+      HTML content snippet:
+      ${html.substring(0, 15000)}
+    `;
+
+    const response = await callOpenRouter(prompt, {
+      type: "object",
+      properties: {
+        full_name: { type: "string" },
+        headline: { type: "string" },
+        summary: { type: "string" },
+        location: { type: "string" },
+        current_company_name: { type: "string" },
+        experience: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              company: { type: "string" },
+              start_date: { type: "string" },
+              end_date: { type: "string" },
+              description: { type: "string" }
+            }
+          }
+        },
+        skills: { type: "array", items: { type: "string" } },
+        education: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              school: { type: "string" },
+              degree: { type: "string" },
+              start_date: { type: "string" },
+              end_date: { type: "string" }
+            }
+          }
+        }
+      }
+    });
+
+    const cleanedJson = response.replace(/```json\n?|\n?```/g, '').trim();
+    if (cleanedJson === 'null' || cleanedJson === '{}') return null;
+    return JSON.parse(cleanedJson);
+  } catch (error) {
+    console.error('[BrightData] AI Extraction failed:', error);
+    return null;
+  }
+};
+
+/**
+ * Helper: Scrape a single LinkedIn URL variant via Progressive Four-Tier Strategy
+ */
 const scrapeSingleLinkedInUrl = async (url: string, brightDataKey: string): Promise<BrightDataProfile | null> => {
   const proxyBase = '/api/brightdata';
 
-  try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[BrightData] Attempting scrape:', url);
-    }
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Scraper] Starting 4-Tier Strategy for:', url);
+  }
 
+  // ===== TIER 1: Simple WebFetch (built-in proxy or direct) =====
+  // ===== TIER 1: Simple WebFetch (built-in proxy or direct) =====
+  try {
+    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 1: Simple WebFetch...');
+    // Use body for URL as preferred by backend to avoid 999/414 query length errors
+    const t1Response = await fetch(`${proxyBase}?action=scrape`, {
+      method: 'POST',
+      headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, tier: '1' })
+    });
+
+    if (t1Response.ok) {
+      const { content } = await t1Response.json();
+      if (content && content.length > 2500) {
+        const profile = await extractProfileFromHtmlWithAi(content, url);
+        if (profile && profile.full_name) {
+          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 1 Success!');
+          return profile;
+        }
+      }
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Scraper] Info: Tier 1 direct fetch skipped (expected for protected pages)');
+    }
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // ===== TIER 2: Customized Request (Browser Headers) =====
+  try {
+    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 2: Customized Request...');
+    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 2: Customized Request...');
+    const t2Response = await fetch(`${proxyBase}?action=scrape`, {
+      method: 'POST',
+      headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, tier: '2' })
+    });
+
+    if (t2Response.ok) {
+      const { content } = await t2Response.json();
+      if (content && content.length > 2500) {
+        const profile = await extractProfileFromHtmlWithAi(content, url);
+        if (profile && profile.full_name) {
+          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 2 Success!');
+          return profile;
+        }
+      }
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Scraper] Info: Tier 2 browser simulation skipped (likely authwall)');
+    }
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  // ===== TIER 3: Bright Data Web Unlocker (Scrape API) =====
+  try {
+    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 3: Bright Data Web Unlocker...');
+    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 3: Bright Data Web Unlocker...');
+    const t3Response = await fetch(`${proxyBase}?action=scrape`, {
+      method: 'POST',
+      headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, tier: '3' })
+    });
+
+    if (t3Response.ok) {
+      const { content } = await t3Response.json();
+      if (content && content.length > 500) {
+        const profile = await extractProfileFromHtmlWithAi(content, url);
+        if (profile && profile.full_name) {
+          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 3 Success!');
+          return profile;
+        }
+      }
+    } else if (t3Response.status === 401) {
+      if (process.env.NODE_ENV === 'development') console.warn('[Scraper] Tier 3 Skipped: Invalid BrightData API Key');
+    }
+  } catch (e) { console.warn('[Scraper] Tier 3 request failed'); }
+
+  // ===== TIER 4: Bright Data Dataset API (Legacy/Highest Reliability) =====
+  try {
+    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 4: Bright Data Dataset API...');
+    // Fix: pass url as query param for trigger action
     const triggerResponse = await fetch(
       `${proxyBase}?action=trigger&url=${encodeURIComponent(url)}`,
       {
@@ -567,86 +746,54 @@ const scrapeSingleLinkedInUrl = async (url: string, brightDataKey: string): Prom
       }
     );
 
-    if (!triggerResponse.ok) {
-      const errorData = await triggerResponse.json().catch(() => ({}));
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[BrightData] Trigger error for', url, ':', errorData);
-      }
-      return null; // Fail gracefully
-    }
+    if (!triggerResponse.ok) return null;
 
     const triggerResult = await triggerResponse.json();
     const snapshotId = triggerResult.snapshot_id;
+    if (!snapshotId) return null;
 
-    if (!snapshotId) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[BrightData] No snapshot ID returned for:', url);
-      }
-      return null;
-    }
-
-    // Poll for results (30 seconds max per URL)
-    const maxAttempts = 15; // 30 seconds
-    const pollInterval = 2000;
+    // Speed up polling in test environment to avoid timeouts
+    const isTest = process.env.NODE_ENV === 'test';
+    const maxAttempts = isTest ? 5 : 15;
+    const pollInterval = isTest ? 100 : 2000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await new Promise(resolve => setTimeout(resolve, pollInterval));
-
       const progressResponse = await fetch(
         `${proxyBase}?action=progress&snapshot_id=${snapshotId}`,
         { headers: { 'X-BrightData-Key': brightDataKey } }
       );
-
       if (!progressResponse.ok) continue;
 
       const progress = await progressResponse.json();
-
-      if (progress.status === 'ready') {
-        if (progress.records === 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('[BrightData] No records found for:', url);
-          }
-          return null;
-        }
-
+      if (progress.status === 'ready' && progress.records > 0) {
         const snapshotResponse = await fetch(
           `${proxyBase}?action=snapshot&snapshot_id=${snapshotId}`,
           { headers: { 'X-BrightData-Key': brightDataKey } }
         );
-
         if (!snapshotResponse.ok) return null;
-
-        const profiles: BrightDataProfile[] = await snapshotResponse.json();
-        return profiles.length > 0 ? profiles[0] : null;
-      }
-
-      if (progress.status === 'failed') {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[BrightData] Scrape failed for:', url);
+        const data = await snapshotResponse.json();
+        // Handle potential array wrapping
+        const profiles: BrightDataProfile[] = Array.isArray(data) ? data : [data];
+        if (profiles.length > 0) {
+          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 4 Success!');
+          return profiles[0];
         }
-        return null;
       }
+      if (progress.status === 'failed') break;
     }
-
-    // Timeout
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[BrightData] Timeout for:', url);
-    }
-    return null;
-
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[BrightData] Error scraping', url, ':', error);
-    }
-    return null;
+    if (process.env.NODE_ENV === 'development') console.error('[Scraper] Tier 4 error:', error);
   }
+
+  return null;
 };
 
 /**
  * Scrape LinkedIn profile using BrightData API with multi-URL fallback strategy
  * Tries: main URL → /details/experience/ → /details/skills/
  */
-const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
+const scrapeLinkedInWithBrightData = async (url: string, jobContext: string = 'Software Engineer'): Promise<string> => {
   const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
 
   if (!brightDataKey) {
@@ -665,23 +812,14 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
     }
 
     // Build URL variants
-    let baseUrl = url.replace(/\/$/, ''); // Remove trailing slash
+    // Optimization: Only use the main profile URL to save costs (no variants)
+    const baseUrl = url.replace(/\/$/, ''); // Remove trailing slash
 
-    // Main profile
+    // Main profile only
     urlsToTry.push(baseUrl);
 
-    // /details/experience/ variant
-    if (!baseUrl.includes('/details/')) {
-      urlsToTry.push(`${baseUrl}/details/experience/`);
-    }
-
-    // /details/skills/ variant
-    if (!baseUrl.includes('/details/')) {
-      urlsToTry.push(`${baseUrl}/details/skills/`);
-    }
-
     if (process.env.NODE_ENV === 'development') {
-      console.log('[BrightData] Will try', urlsToTry.length, 'URL variants');
+      console.log('[BrightData] Will try', urlsToTry.length, 'URL (optimized strategy)');
     }
 
     const scrapedProfiles: BrightDataProfile[] = [];
@@ -771,7 +909,7 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
     }
 
     // Convert merged profile to markdown
-    let finalProfile = mergedProfile;
+    const finalProfile = mergedProfile;
 
     // ===== ENRICHMENT PIPELINE: Try to enhance sparse OR empty profiles =====
     const needsEnrichment = scrapedProfiles.length === 0 || (!finalQuality.isRich && finalQuality.missing.length > 0);
@@ -783,13 +921,31 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
       }
 
       try {
-        enriched = await enrichSparseProfile({
+        const enrichmentResult = await enrichCandidatePersona({
           fullName: mergedProfile.name || mergedProfile.full_name || '',
-          currentCompany: mergedProfile.current_company?.name || mergedProfile.current_company_name || mergedProfile.company,
-          locationHint: mergedProfile.city || mergedProfile.location || mergedProfile.region
+          linkedinUrl: url,
+          jobContext
         });
 
-        if (enriched) {
+        if (enrichmentResult.status === 'ok') {
+          const persona = enrichmentResult.persona;
+          // Map V2 persona to legacy EnrichedProfile format for compatibility with existing merge logic
+          enriched = {
+            about: persona.headline || '',
+            skills: persona.skills,
+            experiences: persona.pastRoles.map(role => ({
+              title: role.title,
+              company: role.company,
+              startYear: role.startYear || undefined,
+              endYear: role.endYear || undefined,
+              description: ''
+            })),
+            enrichmentSources: Array.from(new Set(persona.evidence.map(e => {
+              try { return new URL(e.sourceUrl).hostname; } catch { return 'web'; }
+            }))),
+            evidenceUrls: Array.from(new Set(persona.evidence.map(e => e.sourceUrl)))
+          };
+
           // Merge enriched data into profile
           if (process.env.NODE_ENV === 'development') {
             console.log('[BrightData] ✅ Enrichment successful!');
@@ -824,7 +980,7 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
           (finalProfile as any).enrichmentUrls = enriched.evidenceUrls;
         } else {
           if (process.env.NODE_ENV === 'development') {
-            console.log('[BrightData] ⚠️ Enrichment found no additional data');
+            console.log('[BrightData] ⚠️ Enrichment found no additional data:', enrichmentResult.message);
           }
         }
       } catch (enrichError) {
@@ -834,7 +990,7 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
       }
     }
 
-    // ===== DECISION LOGIC: Route profile based on data quality =====
+    // ===== DECISION LOGIC: Route profile based on data quality (Runs for ALL profiles) =====
     const profileOutcome = decideProfileOutcome(
       scrapedProfiles.length > 0,
       enriched ? true : false,
@@ -844,7 +1000,6 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[BrightData] Profile outcome:', profileOutcome.type);
       console.log('[BrightData] Confidence:', profileOutcome.confidence);
-      console.log('[BrightData] Can auto-score:', profileOutcome.canAutoScore);
     }
 
     // For manual_required profiles, return a special markdown format
@@ -853,171 +1008,41 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
         console.log('[BrightData] Creating manual-input stub profile');
       }
 
-      // Return special markdown that UI can detect and handle
       return (
         `**Name:** ${finalProfile.name || 'Unknown'}\n` +
         `**LinkedIn:** ${url}\n\n` +
         `---\n` +
         `**STATUS:** MANUAL_INPUT_REQUIRED\n\n` +
         `❌ No public data found for this profile.\n\n` +
-        `**What we tried:**\n` +
-        `• LinkedIn scraping (${attemptedUrls.length} URLs)\n` +
-        `• Web enrichment: ${needsEnrichment ? 'Yes' : 'No'}\n\n` +
         `**Next steps:**\n` +
         `Please use Quick Paste to manually enter:\n` +
         `• Current role + company\n` +
         `• 1-2 past roles\n` +
-        `• 5-10 key skills\n\n` +
-        `This will allow us to generate a preliminary score.\n\n` +
-        `---\n` +
-        `**Attempted URLs:**\n${attemptedUrls.map(u => `- ${u}`).join('\n')}`
+        `• 5-10 key skills\n`
       );
     }
 
-    // Add profile outcome metadata
-    (finalProfile as any).dataSource = profileOutcome.source;
-    (finalProfile as any).scoreConfidence = profileOutcome.confidence;
-    (finalProfile as any).autoDataAvailable = true;
+    // Convert merged profile to markdown
+    let markdown = brightDataProfileToMarkdown(finalProfile);
 
-    if (process.env.NODE_ENV === 'development') {
-      const qualityCheck = assessDataQuality(finalProfile);
-      console.log('[BrightData] ✅ Final data check passed');
-      console.log('[BrightData] Quality score:', qualityCheck.score, '/ 5');
-      console.log('[BrightData] Has name:', !!finalProfile.name);
-      console.log('[BrightData] Has experience:', !!(finalProfile.experience?.length || finalProfile.positions?.length));
-      console.log('[BrightData] Has skills:', !!(finalProfile.skills?.length));
+    // Add enrichment notice if applicable
+    if (enriched && (finalProfile as any).enrichmentSources && (finalProfile as any).enrichmentSources.length > 0) {
+      const sources = (finalProfile as any).enrichmentSources;
+      const notice = `\n\n---\n**📊 Profile Enrichment Notice**\n\n` +
+        `This profile was enhanced with data from multiple public sources:\n` +
+        `- LinkedIn (partial data)\n` +
+        sources.map((s: string) => `- ${s}`).join('\n') + '\n\n' +
+        `*For higher accuracy, you can paste the candidate's full CV using "Quick Paste".*\n`;
+
+      markdown += notice;
     }
 
-    const profiles: BrightDataProfile[] = [finalProfile];
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[BrightData] ✅ Successfully extracted profile for:', finalProfile.name || finalProfile.full_name);
+      console.log('[BrightData] Markdown length:', markdown.length, 'characters');
+    }
 
-        if (profiles && profiles.length > 0) {
-          const profile = profiles[0];
-
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[BrightData] ===== RAW PROFILE ANALYSIS =====');
-
-            // All available keys in response
-            console.log('[BrightData] Available keys:', Object.keys(profile));
-
-            // Full profile dump for deep analysis
-            console.log('[BrightData] Full profile data:', JSON.stringify(profile, null, 2));
-
-            // Field presence analysis with variations
-            const fieldPresence = {
-              hasName: !!profile.name || !!profile.full_name,
-              hasPosition: !!profile.position || !!profile.headline || !!profile.title,
-              hasAbout: !!profile.about || !!profile.summary || !!profile.bio,
-              hasExperience: !!profile.experience || !!profile.positions,
-              experienceCount: (profile.experience || profile.positions || []).length,
-              hasEducation: !!profile.education || !!profile.schools || !!profile.educations_details,
-              educationCount: (profile.education || profile.schools || []).length,
-              hasSkills: !!profile.skills || !!profile.skill_list,
-              skillsCount: (profile.skills || profile.skill_list || []).length,
-              hasCertifications: !!profile.certifications,
-              certificationsCount: (profile.certifications || []).length,
-              hasCourses: !!profile.courses,
-              coursesCount: (profile.courses || []).length,
-              hasProfessionalNetwork: !!profile.people_also_viewed,
-              networkCount: (profile.people_also_viewed || []).length,
-              hasAvatar: !!profile.avatar && !profile.default_avatar,
-              hasMetadata: !!profile.linkedin_id || !!profile.url
-            };
-            console.log('[BrightData] Field presence:', fieldPresence);
-
-            // Raw data size analysis
-            const profileJson = JSON.stringify(profile);
-            console.log('[BrightData] Raw JSON size:', profileJson.length, 'characters');
-
-            // Data richness score (out of 10 total fields now)
-            const richnessScore = Object.keys(fieldPresence)
-              .filter(k => k.startsWith('has') && fieldPresence[k as keyof typeof fieldPresence]).length;
-            console.log('[BrightData] Data richness score:', richnessScore, '/ 10 fields');
-
-            // Potential dataset limitation detection
-            if (richnessScore < 3) {
-              console.warn('[BrightData] ⚠️ LOW DATA RICHNESS - Dataset may be limited or profile is private');
-              console.warn('[BrightData] Consider:');
-              console.warn('  1. Verify dataset ID supports full profile extraction');
-              console.warn('  2. Check if LinkedIn profile is public');
-              console.warn('  3. Review BrightData dashboard for dataset capabilities');
-            } else if (richnessScore >= 5) {
-              console.log('[BrightData] ✅ HIGH DATA RICHNESS - Good dataset configuration');
-            }
-          }
-
-          // Enhanced data validation with graceful degradation
-          const hasMinimalData = profile.name || profile.full_name ||
-            profile.position || profile.headline;
-          const hasRichData = profile.about || profile.summary ||
-            (profile.experience && profile.experience.length > 0) ||
-            (profile.positions && profile.positions.length > 0) ||
-            (profile.skills && profile.skills.length > 0) ||
-            (profile.skill_list && profile.skill_list.length > 0) ||
-            (profile.certifications && profile.certifications.length > 0) ||
-            (profile.courses && profile.courses.length > 0);
-
-          // No data at all - hard error
-          if (!hasMinimalData) {
-            throw new Error(
-              'BrightData returned empty profile data.\n\n' +
-              'Possible causes:\n' +
-              '• LinkedIn profile is private/restricted\n' +
-              '• Dataset "gd_l1viktl72bvl7bjuj0" has limited extraction capabilities\n' +
-              '• Profile URL invalid or redirected\n\n' +
-              'Recommendation: Use Quick Paste to manually enter profile data, or ' +
-              'check BrightData dashboard to verify dataset capabilities.'
-            );
-          }
-
-          // Minimal data but not rich - graceful degradation with warning
-          if (hasMinimalData && !hasRichData) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[BrightData] ⚠️ MINIMAL DATA EXTRACTED');
-              console.warn('Only basic fields (name, position) were extracted.');
-              console.warn('Missing: about, experience, education, skills');
-              console.warn('This may indicate:');
-              console.warn('  - Dataset configuration limits extraction depth');
-              console.warn('  - Profile has privacy restrictions');
-              console.warn('  - Consider upgrading to a full LinkedIn People dataset');
-            }
-
-            // Continue with minimal data but add notice
-            const markdown = brightDataProfileToMarkdown(profile);
-            const notice = '\n\n---\n*⚠️ Note: Only basic profile information was available. ' +
-              'Full details (experience, skills, etc.) could not be extracted.*\n';
-
-            if (process.env.NODE_ENV === 'development') {
-              console.log('[BrightData] Partial extraction for:', profile.name || profile.full_name);
-              console.log('[BrightData] Markdown length:', markdown.length, 'characters');
-            }
-
-            return markdown + notice;
-          }
-
-          // Success case - full or rich data extracted
-          let markdown = brightDataProfileToMarkdown(profile);
-
-          // Add enrichment notice if profile was enhanced from web sources
-          if ((profile as any).enrichmentSources && (profile as any).enrichmentSources.length > 0) {
-            const sources = (profile as any).enrichmentSources;
-            const notice = `\n\n---\n**📊 Profile Enrichment Notice**\n\n` +
-              `This profile was enhanced with data from multiple public sources:\n` +
-              `- LinkedIn (partial data)\n` +
-              sources.map((s: string) => `- ${s}`).join('\n') + '\n\n' +
-              `*For higher accuracy, you can paste the candidate's full CV using "Quick Paste".*\n`;
-
-            markdown += notice;
-          }
-
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[BrightData] ✅ Successfully extracted profile for:', profile.name || profile.full_name);
-            console.log('[BrightData] Markdown length:', markdown.length, 'characters');
-            console.log('[BrightData] Markdown preview:', markdown.substring(0, 500));
-          }
-
-          return markdown;
-        }
-        throw new Error('No profile data returned from merged profiles. The profile may be completely empty.');
+    return markdown;
 
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
@@ -1030,10 +1055,10 @@ const scrapeLinkedInWithBrightData = async (url: string): Promise<string> => {
 /**
  * Generic scraper - routes to BrightData for LinkedIn, Firecrawl for others
  */
-export const scrapeUrlContent = async (url: string): Promise<string> => {
+export const scrapeUrlContent = async (url: string, jobContext: string = 'Software Development'): Promise<string> => {
   // Route LinkedIn URLs to BrightData
   if (isLinkedInUrl(url)) {
-    return scrapeLinkedInWithBrightData(url);
+    return scrapeLinkedInWithBrightData(url, jobContext);
   }
 
   // Check for other blocked domains

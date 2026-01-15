@@ -1,6 +1,6 @@
 import React from 'react';
 import { Persona } from '../../types';
-import { getArchetypeIcon, getArchetypeInfo } from '../../utils/archetypes';
+
 
 interface PersonaIntelligencePanelProps {
   persona: Persona;
@@ -45,7 +45,7 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
     }
   };
 
-  const archetypeInfo = getArchetypeInfo(persona.archetype);
+
 
   return (
     <div className="space-y-10 p-2">

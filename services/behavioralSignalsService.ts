@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Behavioral Signals Service - Real-time Activity Tracking
  *

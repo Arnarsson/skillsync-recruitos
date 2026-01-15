@@ -25,6 +25,7 @@ export const CandidateListElement: React.FC<CandidateListElementProps> = ({
 }) => {
     return (
         <div
+            data-testid={`candidate-card-${c.id}`}
             onClick={() => isDeepProfileUnlocked ? onSelect(c) : null}
             className={`
                 flex flex-col md:grid md:grid-cols-12 gap-4 p-4 rounded-xl border transition-all duration-200 ease-linear items-start md:items-center relative

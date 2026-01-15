@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const BRIGHTDATA_API_BASE = 'https://api.brightdata.com/datasets/v3';
@@ -15,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const apiKey = req.headers['x-brightdata-key'] as string || process.env.BRIGHTDATA_API_KEY;
-  const serpKey = req.headers['x-serp-key'] as string || process.env.SERP_API_KEY;
+  // const serpKey = req.headers['x-serp-key'] as string || process.env.SERP_API_KEY;
 
   const { action, snapshot_id, url } = req.query;
 

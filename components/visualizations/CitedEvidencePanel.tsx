@@ -51,7 +51,6 @@ const SOURCE_TYPE_CONFIG: Record<string, { icon: string; color: string }> = {
 
 export const CitedEvidencePanel: React.FC<CitedEvidencePanelProps> = ({
   citedProfile,
-  candidateName,
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>('experiences');
 
@@ -104,11 +103,10 @@ export const CitedEvidencePanel: React.FC<CitedEvidencePanelProps> = ({
             <i className="fa-solid fa-shield-check text-emerald-400 mr-2"></i>
             Data Quality Score
           </h3>
-          <div className={`text-2xl font-bold ${
-            citedProfile.dataQualityScore >= 70 ? 'text-emerald-400' :
-            citedProfile.dataQualityScore >= 40 ? 'text-amber-400' :
-            'text-red-400'
-          }`}>
+          <div className={`text-2xl font-bold ${citedProfile.dataQualityScore >= 70 ? 'text-emerald-400' :
+              citedProfile.dataQualityScore >= 40 ? 'text-amber-400' :
+                'text-red-400'
+            }`}>
             {citedProfile.dataQualityScore}%
           </div>
         </div>
@@ -116,11 +114,10 @@ export const CitedEvidencePanel: React.FC<CitedEvidencePanelProps> = ({
         {/* Quality Bar */}
         <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
           <div
-            className={`h-full transition-all duration-500 ${
-              citedProfile.dataQualityScore >= 70 ? 'bg-emerald-500' :
-              citedProfile.dataQualityScore >= 40 ? 'bg-amber-500' :
-              'bg-red-500'
-            }`}
+            className={`h-full transition-all duration-500 ${citedProfile.dataQualityScore >= 70 ? 'bg-emerald-500' :
+                citedProfile.dataQualityScore >= 40 ? 'bg-amber-500' :
+                  'bg-red-500'
+              }`}
             style={{ width: `${citedProfile.dataQualityScore}%` }}
           />
         </div>

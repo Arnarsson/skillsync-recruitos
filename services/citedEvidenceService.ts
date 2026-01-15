@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Cited Evidence Service - AI Extraction with Source Citations
  *
@@ -47,20 +48,6 @@ function getSourceType(url: string): CitedClaim['sourceType'] {
   if (url.startsWith('local://')) return 'resume';
   // Default to company_page for unknown sources (valid type)
   return 'company_page';
-}
-
-// Safe version that returns string for reliability lookup (includes 'other')
-function getSourceTypeForReliability(url: string): string {
-  if (url.includes('linkedin.com')) return 'linkedin';
-  if (url.includes('github.com')) return 'github';
-  if (url.includes('medium.com') || url.includes('dev.to') || url.includes('substack.com')) {
-    return 'publication';
-  }
-  if (url.includes('techcrunch.com') || url.includes('forbes.com') || url.includes('bloomberg.com')) {
-    return 'news';
-  }
-  if (url.startsWith('local://')) return 'resume';
-  return 'other';
 }
 
 /**
@@ -425,7 +412,7 @@ If you cannot find evidence for a field, use null.`;
         const responseText = await callOpenRouter(
           prompt + '\n\nReturn ONLY valid JSON matching the schema.'
         );
-        const extracted = JSON.parse(responseText);
+        JSON.parse(responseText);
         // Same transformation as above (simplified for brevity)
         return {
           nameClaim: null,

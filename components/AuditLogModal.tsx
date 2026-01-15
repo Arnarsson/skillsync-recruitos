@@ -12,9 +12,7 @@ const AuditLogModal: React.FC<Props> = ({ credits, logs, onClose }) => {
     const [activeTab, setActiveTab] = useState<'transactions' | 'compliance'>('transactions');
     const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
-    const handleSetActiveTab = useCallback((tab: 'transactions' | 'compliance') => {
-        setActiveTab(tab);
-    }, []);
+
 
     const handleToggleExpanded = useCallback((logId: string) => {
         setExpandedLog(prev => prev === logId ? null : logId);

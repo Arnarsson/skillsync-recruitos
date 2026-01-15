@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Advanced Enrichment Service - Orchestration Layer
  *
@@ -223,12 +224,12 @@ export async function buildAdvancedProfile(
     const behavioralPromise = quickMode
       ? quickBehavioralCheck(candidateId, githubUrl)
       : collectBehavioralSignals(
-          candidateId,
-          candidateName,
-          linkedinUrl,
-          githubUrl,
-          previousProfileData
-        );
+        candidateId,
+        candidateName,
+        linkedinUrl,
+        githubUrl,
+        previousProfileData
+      );
 
     promises.push(
       behavioralPromise.then((result) => {

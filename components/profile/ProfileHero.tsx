@@ -1,4 +1,6 @@
+
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Candidate } from '../../types';
 
 interface ProfileHeroProps {
@@ -17,85 +19,102 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     onDownloadPDF
 }) => {
     return (
-        <div className="bg-transparent p-8 md:p-10 relative border-b border-slate-900">
+        <div className="bg-transparent p-6 md:p-8 relative border-b border-white/5">
             {/* Close Button */}
             <button
                 onClick={onClose}
-                className="absolute top-6 right-6 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2 rounded-full w-8 h-8 flex items-center justify-center z-10"
                 aria-label="Close profile"
             >
-                <i className="fa-solid fa-xmark text-lg"></i>
+                <i className="fa-solid fa-xmark text-sm"></i>
             </button>
 
             {/* Main Header Content */}
-            <div className="mb-10">
-                <h1 className="text-2xl font-semibold text-slate-100 mb-1 tracking-tight">{candidate.name}</h1>
-                <p className="text-base text-slate-400 mb-4 font-medium">
-                    {candidate.currentRole} <span className="text-slate-600 mx-1">·</span> {candidate.company}
+            <div className="mb-8 pr-10">
+                <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">{candidate.name}</h1>
+                <p className="text-sm text-slate-300 mb-4 font-medium flex items-center">
+                    <span className="text-emerald-400 mr-2"><i className="fa-solid fa-briefcase"></i></span>
+                    {candidate.currentRole}
+                    <span className="text-slate-600 mx-2">|</span>
+                    <span className="text-slate-300">{candidate.company}</span>
                 </p>
-                <div className="flex items-center gap-6 text-xs text-slate-500 uppercase tracking-widest font-medium">
-                    <span>{candidate.location}</span>
-                    <span>{candidate.yearsExperience}Y Experience</span>
+                <div className="flex items-center gap-4 text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                    <span className="bg-white/5 px-2 py-1 rounded border border-white/5 flex items-center">
+                        <i className="fa-solid fa-location-dot mr-1.5 text-slate-500"></i> {candidate.location}
+                    </span>
+                    <span className="bg-white/5 px-2 py-1 rounded border border-white/5 flex items-center">
+                        <i className="fa-solid fa-clock mr-1.5 text-slate-500"></i> {candidate.yearsExperience}Y Exp
+                    </span>
                 </div>
             </div>
 
-            {/* Alignment Score - Minimal */}
-            <div className="mb-6">
+            {/* Alignment Score - Enhanced */}
+            <div className="mb-8 bg-gradient-to-r from-emerald-900/20 to-transparent p-4 rounded-xl border border-emerald-500/10">
                 <div className="flex items-baseline justify-between mb-3">
-                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
-                        Match Alignment
+                    <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center">
+                        <i className="fa-solid fa-crosshairs mr-2"></i> Match Alignment
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <div className="text-3xl font-light text-slate-100 tabular-nums">
+                        <div className="text-4xl font-light text-white tabular-nums drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
                             {candidate.alignmentScore}
                         </div>
-                        <div className="text-sm text-slate-600">/ 100</div>
+                        <div className="text-xs text-slate-500 font-bold mb-1">/ 100</div>
                     </div>
                 </div>
-                <div className="h-1 bg-slate-900 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-slate-400 transition-all duration-1000 ease-out"
-                        style={{ width: `${candidate.alignmentScore}%` }}
+                <div className="h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${candidate.alignmentScore}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
                     />
                 </div>
             </div>
 
-            {/* Archetype - Minimal */}
+            {/* Archetype - Glass Style */}
             {candidate.persona?.archetype && (
-                <div className="border-t border-slate-900 pt-8">
-                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">
+                <div className="mb-8">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                         Profile Strategy
                     </div>
-                    <div className="text-lg font-medium text-slate-200 mb-3">
-                        {candidate.persona.archetype}
-                    </div>
-                    <div className="text-sm text-slate-500 leading-relaxed italic">
-                        &quot;{candidate.persona.reasoning?.substring(0, 180)}
-                        {candidate.persona.reasoning && candidate.persona.reasoning.length > 180 ? '...' : ''}&quot;
+                    <div className="bg-white/5 border-l-2 border-purple-500 p-4 rounded-r-lg">
+                        <div className="text-base font-bold text-white mb-2 flex items-center">
+                            <i className="fa-solid fa-chess-knight text-purple-400 mr-2 text-sm"></i>
+                            {candidate.persona.archetype}
+                        </div>
+                        <div className="text-xs text-slate-400 leading-relaxed italic opacity-80">
+                            &quot;{candidate.persona.reasoning?.substring(0, 150)}...&quot;
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Action Buttons - Minimal */}
-            <div className="flex items-center gap-3 mt-8 pt-8 border-t border-slate-900">
-                <button
+            {/* Action Buttons - Glass Row */}
+            <div className="flex items-center gap-3 pt-6 border-t border-white/5">
+                <motion.button
+                    whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={onRefresh}
-                    className="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-300 transition-colors tracking-widest"
+                    className="flex-1 py-2 bg-white/5 text-[10px] uppercase font-bold text-slate-300 rounded border border-white/10 transition-colors tracking-widest flex items-center justify-center"
                 >
-                    Refresh
-                </button>
-                <button
+                    <i className="fa-solid fa-rotate-right mr-2 text-slate-500"></i> Refresh
+                </motion.button>
+                <motion.button
+                    whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={onShare}
-                    className="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-300 transition-colors tracking-widest"
+                    className="flex-1 py-2 bg-white/5 text-[10px] uppercase font-bold text-slate-300 rounded border border-white/10 transition-colors tracking-widest flex items-center justify-center"
                 >
-                    Share
-                </button>
-                <button
+                    <i className="fa-solid fa-share-nodes mr-2 text-slate-500"></i> Share
+                </motion.button>
+                <motion.button
+                    whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={onDownloadPDF}
-                    className="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-300 transition-colors tracking-widest"
+                    className="flex-1 py-2 bg-white/5 text-[10px] uppercase font-bold text-slate-300 rounded border border-white/10 transition-colors tracking-widest flex items-center justify-center"
                 >
-                    PDF
-                </button>
+                    <i className="fa-solid fa-file-pdf mr-2 text-slate-500"></i> PDF
+                </motion.button>
             </div>
         </div>
     );

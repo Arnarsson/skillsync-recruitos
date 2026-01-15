@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import React, { useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Candidate } from '../../types';
@@ -20,8 +21,16 @@ export const ScoreDistributionChart: React.FC<ScoreDistributionChartProps> = ({
   currentCandidateId,
   height = 200
 }) => {
-  // DEBUG: Log when component renders
+  // PATCH: Suppress Recharts defaultProps warning for XAxis/YAxis in React 18
   useEffect(() => {
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && /defaultProps/.test(args[0]) && /XAxis|YAxis/.test(args[0])) {
+        return;
+      }
+      originalConsoleError(...args);
+    };
+
     if (process.env.NODE_ENV === 'development') {
       console.log('[ScoreDistributionChart] Rendering with:', {
         candidatesCount: candidates.length,
@@ -29,6 +38,10 @@ export const ScoreDistributionChart: React.FC<ScoreDistributionChartProps> = ({
         scores: candidates.map(c => c.alignmentScore)
       });
     }
+
+    return () => {
+      console.error = originalConsoleError;
+    };
   }, [candidates, height]);
 
   const distributionData = useMemo(() => {
@@ -97,11 +110,13 @@ export const ScoreDistributionChart: React.FC<ScoreDistributionChartProps> = ({
         <BarChart data={distributionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis
+            xAxisId={0}
             dataKey="range"
             tick={{ fill: '#94a3b8', fontSize: 11 }}
             axisLine={{ stroke: '#334155' }}
           />
           <YAxis
+            yAxisId={0}
             tick={{ fill: '#94a3b8', fontSize: 11 }}
             axisLine={{ stroke: '#334155' }}
             domain={[0, maxCount + 1]}

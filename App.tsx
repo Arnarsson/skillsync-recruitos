@@ -51,6 +51,14 @@ const SidebarLink: React.FC<{
     );
 };
 
+import { AnimatePresence, motion } from 'framer-motion';
+
+const pageVariants = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 }
+};
+
 const Layout: React.FC<{
     credits: number;
     selectedCandidate: Candidate | null;
@@ -69,12 +77,14 @@ const Layout: React.FC<{
     const isStep4 = !!outreachCandidate;
 
     return (
-        <div className="flex h-screen bg-apex-900 overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
+        <div className="flex h-screen bg-[#0A0F1C] overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
+            {/* Background Texture */}
+            <div className="fixed inset-0 z-0 pointer-events-none opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150"></div>
 
             {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-apex-900 border-b border-apex-800 z-50 flex items-center justify-between px-4">
+            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#0E1525]/90 backdrop-blur-md border-b border-white/5 z-50 flex items-center justify-between px-4">
                 <div className="flex items-center">
-                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-teal-900 rounded flex items-center justify-center shadow-lg shadow-emerald-500/20 mr-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 mr-3">
                         <i className="fa-solid fa-network-wired text-white text-xs"></i>
                     </div>
                     <h1 className="text-lg font-bold text-white tracking-tight">6Degrees</h1>
@@ -88,25 +98,30 @@ const Layout: React.FC<{
             </div>
 
             {/* Mobile Overlay */}
-            {isMobileMenuOpen && (
-                <div
-                    className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                ></div>
-            )}
+            <AnimatePresence>
+                {isMobileMenuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    ></motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Sidebar */}
             <div className={`
-            fixed inset-y-0 left-0 z-50 w-64 bg-apex-900 border-r border-apex-800 flex flex-col p-4 shadow-xl transition-transform duration-300 md:relative md:translate-x-0
+            fixed inset-y-0 left-0 z-50 w-64 bg-[#0E1525] border-r border-white/5 flex flex-col p-4 shadow-2xl transition-transform duration-300 md:relative md:translate-x-0
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
                 <div className="mb-8 px-2 flex items-center hidden md:flex">
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-900 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 mr-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 mr-3">
                         <i className="fa-solid fa-network-wired text-white text-lg"></i>
                     </div>
                     <div>
                         <h1 className="text-xl font-bold text-white tracking-tight">6Degrees</h1>
-                        <span className="text-xs text-slate-500 uppercase tracking-widest">Recruiting OS</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-widest font-medium">Recruiting OS</span>
                     </div>
                 </div>
 
@@ -116,7 +131,7 @@ const Layout: React.FC<{
                 </div>
 
                 <div className="flex-1 space-y-1">
-                    <div className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 px-3 mt-4">Funnel Steps</div>
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-3 mt-4">Funnel Steps</div>
 
                     {/* Visual Step Tracker */}
                     <SidebarLink
@@ -149,22 +164,25 @@ const Layout: React.FC<{
                     />
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-apex-800">
-                    <div
+                <div className="mt-auto pt-4 border-t border-white/5">
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={onOpenWallet}
-                        className="bg-apex-800/50 p-3 rounded-lg border border-apex-700 mb-4 cursor-pointer hover:bg-apex-800 hover:border-emerald-500/50 transition-all group"
+                        className="bg-gradient-to-r from-emerald-900/20 to-emerald-900/10 p-3 rounded-lg border border-emerald-900/30 mb-4 cursor-pointer hover:border-emerald-500/50 transition-all group relative overflow-hidden"
                     >
-                        <div className="flex justify-between items-center mb-1">
-                            <div className="text-xs text-slate-500 uppercase font-bold group-hover:text-emerald-400 transition-colors">Credits</div>
-                            <div className="text-xs bg-emerald-900 text-emerald-400 px-1.5 rounded">PILOT</div>
+                        <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="flex justify-between items-center mb-1 relative z-10">
+                            <div className="text-xs text-slate-400 uppercase font-bold group-hover:text-emerald-400 transition-colors">Credits</div>
+                            <div className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium border border-emerald-500/20">PILOT</div>
                         </div>
-                        <div className="text-xl font-mono text-white font-bold">{credits.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500 mt-1">≈ €{(credits * CREDITS_TO_EUR).toLocaleString(undefined, { maximumFractionDigits: 0 })} EUR</div>
-                    </div>
+                        <div className="text-xl font-mono text-white font-bold relative z-10">{credits.toLocaleString()}</div>
+                        <div className="text-xs text-slate-500 mt-1 relative z-10">≈ €{(credits * CREDITS_TO_EUR).toLocaleString(undefined, { maximumFractionDigits: 0 })} EUR</div>
+                    </motion.div>
 
                     <div
                         onClick={onOpenSettings}
-                        className="flex items-center px-2 py-2 opacity-60 hover:opacity-100 transition-opacity cursor-pointer rounded-lg hover:bg-apex-800"
+                        className="flex items-center px-2 py-2 opacity-60 hover:opacity-100 transition-opacity cursor-pointer rounded-lg hover:bg-white/5"
                     >
                         <img src="https://i.pravatar.cc/150?u=manager" className="w-8 h-8 rounded-full border border-slate-600" alt="User" />
                         <div className="ml-3 flex-1">
@@ -179,8 +197,20 @@ const Layout: React.FC<{
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 relative bg-gradient-to-br from-apex-900 via-apex-900 to-[#0f1f1a] pt-16 md:pt-0">
-                {children}
+            <main className="flex-1 relative z-10 overflow-hidden pt-16 md:pt-0 bg-transparent flex flex-col">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={location.pathname}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        variants={pageVariants}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                        className="flex-1 h-full flex flex-col"
+                    >
+                        {children}
+                    </motion.div>
+                </AnimatePresence>
             </main>
         </div>
     );
@@ -236,7 +266,7 @@ const App: React.FC = () => {
     }, []);
 
     return (
-        <HashRouter>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Layout
                 credits={credits}
                 selectedCandidate={selectedCandidate}

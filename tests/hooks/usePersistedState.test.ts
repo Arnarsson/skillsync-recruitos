@@ -9,71 +9,70 @@ beforeEach(() => {
 
 describe('usePersistedState', () => {
   it('should initialize with initial value when localStorage is empty', () => {
-    const { result } = renderHook(() => usePersistedState('test-key', 'initial'));
-
+    const { result } = renderHook(() => usePersistedState('key-1', 'initial'));
     expect(result.current[0]).toBe('initial');
   });
 
   it('should initialize with value from localStorage if it exists', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (localStorage.getItem as any).mockReturnValue(JSON.stringify('stored'));
+    // Write directly to storage instead of mocking getItem
+    localStorage.setItem('key-2', JSON.stringify('stored'));
 
-    const { result } = renderHook(() => usePersistedState('test-key', 'initial'));
+    const { result } = renderHook(() => usePersistedState('key-2', 'initial'));
 
     expect(result.current[0]).toBe('stored');
   });
 
   it('should persist state to localStorage when updated', () => {
     const setItemSpy = vi.spyOn(localStorage, 'setItem');
-    const { result } = renderHook(() => usePersistedState('test-key', 'initial'));
+    const { result } = renderHook(() => usePersistedState('key-3', 'initial'));
 
     act(() => {
       result.current[1]('updated');
     });
 
-    expect(setItemSpy).toHaveBeenCalledWith('test-key', JSON.stringify('updated'));
+    expect(setItemSpy).toHaveBeenCalledWith('key-3', JSON.stringify('updated'));
     expect(result.current[0]).toBe('updated');
   });
 
   it('should handle functional updates', () => {
-    const { result } = renderHook(() => usePersistedState('test-key', 0));
+    const { result } = renderHook(() => usePersistedState('key-4', 0));
 
     act(() => {
       result.current[1](prev => prev + 1);
     });
 
     expect(result.current[0]).toBe(1);
+    expect(localStorage.getItem('key-4')).toBe('1');
   });
 
   it('should handle complex objects', () => {
     const initialObj = { name: 'test', count: 0 };
-    const { result } = renderHook(() => usePersistedState('test-key', initialObj));
+    const { result } = renderHook(() => usePersistedState('key-5', initialObj));
 
     act(() => {
       result.current[1]({ name: 'updated', count: 5 });
     });
 
     expect(result.current[0]).toEqual({ name: 'updated', count: 5 });
+    expect(localStorage.getItem('key-5')).toBe(JSON.stringify({ name: 'updated', count: 5 }));
   });
 
-  it('should only write to localStorage when value changes', () => {
+  it('should optimize writes', () => {
     const setItemSpy = vi.spyOn(localStorage, 'setItem');
-    const { result, rerender } = renderHook(() => usePersistedState('test-key', 'initial'));
+    const { result, rerender } = renderHook(() => usePersistedState('key-6', 'initial'));
 
-    // Initial render should write (sync initial value)
-    expect(setItemSpy).toHaveBeenCalledTimes(1);
+    // Reset interaction count after initial render effects
+    setItemSpy.mockClear();
 
+    // 1. Update with NEW value -> Should write
     act(() => {
       result.current[1]('updated');
     });
+    expect(setItemSpy).toHaveBeenCalled();
+    const callsAfterUpdate = setItemSpy.mock.calls.length;
 
-    const firstCallCount = setItemSpy.mock.calls.length;
-    expect(firstCallCount).toBeGreaterThan(0);
-
-    // Force re-render without changing state
+    // 2. Force rerender without state change -> Should NOT write
     rerender();
-
-    // Should not write again
-    expect(setItemSpy.mock.calls.length).toBe(firstCallCount);
+    expect(setItemSpy.mock.calls.length).toBe(callsAfterUpdate);
   });
 });

@@ -39,17 +39,7 @@ const INTRO_QUALITY_ICONS: Record<WarmIntroPath['introQuality'], string> = {
 
 export const NetworkGraphPanel: React.FC<NetworkGraphPanelProps> = ({
   networkGraph,
-  candidateName,
 }) => {
-  // Group nodes by type for display
-  const nodesByType = useMemo(() => {
-    const grouped: Record<string, NetworkNode[]> = {};
-    for (const node of networkGraph.nodes) {
-      if (!grouped[node.type]) grouped[node.type] = [];
-      grouped[node.type].push(node);
-    }
-    return grouped;
-  }, [networkGraph.nodes]);
 
   // Calculate network stats
   const stats = useMemo(() => ({
@@ -284,11 +274,10 @@ export const NetworkGraphPanel: React.FC<NetworkGraphPanelProps> = ({
           <i className="fa-solid fa-clock mr-1"></i>
           Generated: {new Date(networkGraph.generatedAt).toLocaleString()}
         </span>
-        <span className={`px-2 py-0.5 rounded ${
-          networkGraph.dataFreshness === 'live' ? 'bg-emerald-500/20 text-emerald-400' :
-          networkGraph.dataFreshness === 'cached' ? 'bg-amber-500/20 text-amber-400' :
-          'bg-red-500/20 text-red-400'
-        }`}>
+        <span className={`px-2 py-0.5 rounded ${networkGraph.dataFreshness === 'live' ? 'bg-emerald-500/20 text-emerald-400' :
+            networkGraph.dataFreshness === 'cached' ? 'bg-amber-500/20 text-amber-400' :
+              'bg-red-500/20 text-red-400'
+          }`}>
           {networkGraph.dataFreshness}
         </span>
       </div>

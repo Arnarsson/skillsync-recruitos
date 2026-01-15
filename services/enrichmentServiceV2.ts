@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Profile Enrichment Pipeline V2
  *
@@ -14,8 +15,8 @@
  * 5. Return structured result or manual_required status
  */
 
-import { getAiClient, AI_MODELS, callOpenRouter } from './geminiService';
-import { Type } from '@google/genai';
+import { callOpenRouter } from './geminiService';
+
 import type {
   EnrichmentInput,
   EvidenceSource,
@@ -54,11 +55,12 @@ async function collectEvidence(input: EnrichmentInput): Promise<EvidenceSource[]
 
   // 1) LinkedIn via BrightData (if URL provided)
   if (input.linkedinUrl && brightDataKey) {
-    const linkedinVariants = [
-      input.linkedinUrl.replace(/\/$/, ''),
-      input.linkedinUrl.replace(/\/$/, '') + '/details/experience/',
-      input.linkedinUrl.replace(/\/$/, '') + '/details/skills/'
-    ];
+    // Optimization: Only try the main URL to save costs (no variants)
+    const url = input.linkedinUrl;
+
+    // Wrap in one-time execution block
+    const linkedinVariants = [url];
+
 
     for (const url of linkedinVariants) {
       try {
@@ -66,16 +68,22 @@ async function collectEvidence(input: EnrichmentInput): Promise<EvidenceSource[]
           console.log('[Enrichment] Trying LinkedIn:', url);
         }
 
-        const response = await fetch('/api/brightdata?action=trigger', {
+        // Fix: Pass url as query param for trigger action
+        const response = await fetch(`/api/brightdata?action=trigger&url=${encodeURIComponent(url)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-BrightData-Key': brightDataKey
-          },
-          body: JSON.stringify({ url })
+          }
         });
 
-        if (!response.ok) continue;
+        if (!response.ok) {
+          const errText = await response.text();
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Enrichment] Trigger failed:', errText);
+          }
+          continue;
+        }
 
         const triggerData = await response.json();
         const snapshotId = triggerData.snapshot_id;
@@ -105,7 +113,9 @@ async function collectEvidence(input: EnrichmentInput): Promise<EvidenceSource[]
 
             if (snapshotResponse.ok) {
               const data = await snapshotResponse.json();
-              const rawText = JSON.stringify(data);
+              // Handle array response from snapshot
+              const profileData = Array.isArray(data) ? data[0] : data;
+              const rawText = JSON.stringify(profileData);
 
               evidence.push({
                 url,
@@ -287,20 +297,12 @@ function hasMinimalEvidence(evidence: EvidenceSource[]): boolean {
 }
 
 /**
- * STEP 3: Ask Gemini to build unified persona from evidence
+ * STEP 3: Ask OpenRouter (Gemini via OpenRouter) to build unified persona from evidence
  */
 async function buildPersonaWithGemini(
   input: EnrichmentInput,
   evidence: EvidenceSource[]
 ): Promise<CandidatePersona | null> {
-  const ai = getAiClient();
-  if (!ai) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[Enrichment] Gemini client not available');
-    }
-    return null;
-  }
-
   try {
     // Combine all evidence with source attribution
     const evidenceText = evidence
@@ -309,7 +311,7 @@ async function buildPersonaWithGemini(
       .substring(0, 30000); // Limit total input
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Enrichment] Building persona with Gemini...');
+      console.log('[Enrichment] Building persona with OpenRouter...');
       console.log('[Enrichment] Evidence text length:', evidenceText.length, 'chars');
     }
 
@@ -318,100 +320,68 @@ You are an AI sourcing analyst for an internal recruitment OS (6Degrees).
 You receive multiple public web snippets about a single person.
 
 **IMPORTANT: You may be analyzing GitHub profiles, portfolio sites, or other tech platforms.**
-These sources may NOT contain traditional resume data (job titles, companies, dates).
-Instead, you might see:
-- GitHub repository names and descriptions
-- Programming languages used
-- Project topics and domains
-- Contribution patterns
-- Profile bio or location
+**These are NOT resumes - they are scraped web content. Be flexible.**
 
-**YOUR TASK:**
-1. Extract a structured candidate persona from whatever data is available.
-2. **ACCEPT PARTIAL DATA**: If you only find skills/domains, that's valid output!
-3. **Infer from technical signals**:
-   - Repo names like "react-ecommerce-app" → skills: React, ecommerce domain
-   - Languages like "TypeScript, Python" → skills: TypeScript, Python
-   - Topics like "machine-learning, nlp" → domains: Machine Learning, NLP
-4. **DO NOT invent work history**: If no clear companies/roles/dates, leave those null/empty
-5. **DO NOT require full resume**: Skills-only output is acceptable and useful
+**TASK:**
+Extract a unified candidate persona from the evidence below.
 
-Candidate name: "${input.fullName}"
-Target role context: "${input.jobContext}"
+**CRITICAL RULES:**
+1. ONLY extract information EXPLICITLY stated in the evidence
+2. DO NOT hallucinate or infer details not present
+3. If a field is unclear or missing, use null/empty
+4. Cite specific evidence for all claims
+5. Be conservative - only include info you can directly cite
 
-Now analyze the following sources:
-
+**INPUT EVIDENCE:**
 ${evidenceText}
 
-**OUTPUT REQUIREMENTS:**
-- If you find skills/domains but no work history: Return them! Don't fail.
-- If you find work history: Extract it carefully with dates.
-- If you find neither: Return minimal schema with name only.
+**JOB CONTEXT (for reference):**
+${input.jobContext}
+
+**OUTPUT FORMAT:**
+Return ONLY valid JSON (no markdown, no explanations) matching this schema:
+{
+  "name": "string",
+  "headline": "string or null",
+  "currentRole": {
+    "title": "string or null",
+    "company": "string or null",
+    "startYear": number or null,
+    "location": "string or null"
+  },
+  "pastRoles": [
+    {
+      "title": "string",
+      "company": "string",
+      "startYear": number or null,
+      "endYear": number or null
+    }
+  ],
+  "skills": ["array of skill strings"],
+  "domains": ["array of domain strings like 'fintech', 'ml', etc"],
+  "seniority": "string or null (junior/mid/senior/staff/principal/vp/c-level)",
+  "location": "string or null",
+  "evidence": [
+    {
+      "sourceUrl": "string",
+      "snippet": "string (specific quote from evidence)"
+    }
+  ]
+}
+
+**SPECIAL INSTRUCTIONS:**
+- If analyzing a GitHub profile, extract skills from repos, languages, and bio
+- If analyzing a company bio, extract current role and background
 - Focus on extracting ANY professional signals, even if incomplete.
     `;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.DEFAULT,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            headline: { type: Type.STRING },
-            currentRole: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                company: { type: Type.STRING },
-                startYear: { type: Type.NUMBER },
-                location: { type: Type.STRING }
-              }
-            },
-            pastRoles: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  company: { type: Type.STRING },
-                  startYear: { type: Type.NUMBER },
-                  endYear: { type: Type.NUMBER }
-                }
-              }
-            },
-            skills: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            domains: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            seniority: { type: Type.STRING },
-            location: { type: Type.STRING },
-            evidence: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  sourceUrl: { type: Type.STRING },
-                  snippet: { type: Type.STRING }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    const persona = JSON.parse(response.text || '{}') as CandidatePersona;
+    const responseText = await callOpenRouter(prompt);
+    const persona = JSON.parse(responseText) as CandidatePersona;
 
     // Sanity check
     if (!persona || !persona.name) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] Gemini returned invalid persona');
+        console.log('[Enrichment] OpenRouter returned invalid persona');
       }
       return null;
     }
@@ -422,13 +392,13 @@ ${evidenceText}
 
     if (!hasRoles && !hasSkills) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] Persona too sparse (no roles, no skills)');
+        console.log('[Enrichment] OpenRouter persona too sparse (no roles, no skills)');
       }
       return null;
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Enrichment] ✅ Persona built:', {
+      console.log('[Enrichment] ✅ OpenRouter persona built:', {
         name: persona.name,
         currentRole: persona.currentRole?.title,
         pastRoles: persona.pastRoles?.length || 0,
@@ -439,56 +409,6 @@ ${evidenceText}
     return persona;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    // If Gemini overloaded, try OpenRouter fallback
-    if (errorMessage.includes('GEMINI_OVERLOADED') || errorMessage.includes('503') || errorMessage.includes('overloaded')) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] 🔄 Persona building: Falling back to OpenRouter...');
-      }
-
-      try {
-        const promptWithInstructions = `${prompt}\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
-        const responseText = await callOpenRouter(promptWithInstructions);
-        const persona = JSON.parse(responseText) as CandidatePersona;
-
-        // Sanity check
-        if (!persona || !persona.name) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Enrichment] OpenRouter returned invalid persona');
-          }
-          return null;
-        }
-
-        // Check if persona is too sparse
-        const hasRoles = (persona.pastRoles?.length || 0) > 0 || persona.currentRole !== null;
-        const hasSkills = (persona.skills?.length || 0) > 0;
-
-        if (!hasRoles && !hasSkills) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Enrichment] OpenRouter persona too sparse (no roles, no skills)');
-          }
-          return null;
-        }
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Enrichment] ✅ OpenRouter persona built:', {
-            name: persona.name,
-            currentRole: persona.currentRole?.title,
-            pastRoles: persona.pastRoles?.length || 0,
-            skills: persona.skills?.length || 0
-          });
-        }
-
-        return persona;
-      } catch (openrouterError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[Enrichment] OpenRouter fallback failed:', openrouterError);
-        }
-        return null;
-      }
-    }
-
     if (process.env.NODE_ENV === 'development') {
       console.error('[Enrichment] Persona building failed:', error);
     }
@@ -497,43 +417,27 @@ ${evidenceText}
 }
 
 /**
- * STEP 4: Compute alignment score using Gemini
+ * STEP 4: Compute alignment score using OpenRouter
  */
 async function computeAlignmentScore(
   persona: CandidatePersona,
   jobContext: string
 ): Promise<AlignmentScore | null> {
-  const ai = getAiClient();
-  if (!ai) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[Enrichment] Gemini client not available for scoring');
-    }
-    return null;
-  }
-
   try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Enrichment] Computing alignment score with Gemini...');
-    }
+    const prompt = `You are an AI recruitment scoring engine.
 
-    const prompt = `
-You are an AI recruiter. Given a candidate persona and a job description, compute:
+Given a candidate persona and job context, compute an alignment score (0-100) and breakdown by factors.
 
-- overall alignment score (0–100)
-- confidence (0–1)
-- factor scores for skills, experience, domain, seniority, location.
-
-Return ONLY JSON matching this structure:
-
+Return ONLY valid JSON (no markdown) matching this schema:
 {
-  "score": number,
-  "confidence": number,
+  "score": number (0-100),
+  "confidence": number (0-1),
   "factors": {
-    "skills": number,
-    "experience": number,
-    "domain": number,
-    "seniority": number,
-    "location": number
+    "skills": number (0-1),
+    "experience": number (0-1),
+    "domain": number (0-1),
+    "seniority": number (0-1),
+    "location": number (0-1)
   }
 }
 
@@ -544,32 +448,8 @@ Job context:
 ${jobContext}
     `;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.SCORING,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            score: { type: Type.NUMBER },
-            confidence: { type: Type.NUMBER },
-            factors: {
-              type: Type.OBJECT,
-              properties: {
-                skills: { type: Type.NUMBER },
-                experience: { type: Type.NUMBER },
-                domain: { type: Type.NUMBER },
-                seniority: { type: Type.NUMBER },
-                location: { type: Type.NUMBER }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    const alignment = JSON.parse(response.text || '{}') as AlignmentScore;
+    const responseText = await callOpenRouter(prompt);
+    const alignment = JSON.parse(responseText) as AlignmentScore;
 
     if (process.env.NODE_ENV === 'development') {
       console.log('[Enrichment] ✅ Alignment score:', alignment.score, '/ 100');
@@ -579,33 +459,6 @@ ${jobContext}
     return alignment;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    // If Gemini overloaded, try OpenRouter fallback
-    if (errorMessage.includes('GEMINI_OVERLOADED') || errorMessage.includes('503') || errorMessage.includes('overloaded')) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] 🔄 Alignment scoring: Falling back to OpenRouter...');
-      }
-
-      try {
-        const promptWithInstructions = `${prompt}\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
-        const responseText = await callOpenRouter(promptWithInstructions);
-        const alignment = JSON.parse(responseText) as AlignmentScore;
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Enrichment] ✅ OpenRouter alignment score:', alignment.score, '/ 100');
-          console.log('[Enrichment] Confidence:', alignment.confidence);
-        }
-
-        return alignment;
-      } catch (openrouterError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[Enrichment] OpenRouter fallback failed:', openrouterError);
-        }
-        return null;
-      }
-    }
-
     if (process.env.NODE_ENV === 'development') {
       console.error('[Enrichment] Alignment scoring failed:', error);
     }
@@ -614,7 +467,7 @@ ${jobContext}
 }
 
 /**
- * AI-Powered Inference: Use Gemini/OpenRouter to reason about candidate
+ * AI-Powered Inference: Use OpenRouter to reason about candidate
  * even with minimal data. This is a fallback when scraping fails.
  */
 async function inferPersonaWithAI(
@@ -625,11 +478,6 @@ async function inferPersonaWithAI(
   }
 
   try {
-    const ai = getAiClient();
-    if (!ai) {
-      throw new Error('Gemini API key missing - cannot perform AI inference');
-    }
-
     const prompt = `You are an AI recruitment analyst. You need to make informed inferences about a candidate based on LIMITED information.
 
 **What we know:**
@@ -639,76 +487,32 @@ ${input.resumeText ? `- Resume/Bio text:\n${input.resumeText}` : ''}
 - Target role context: ${input.jobContext}
 
 **Your task:**
-Extract or REASONABLY INFER the following information. If you genuinely cannot infer something, use null.
+Make conservative inferences to build a minimal persona. Only include information you can reasonably infer.
 
-**CRITICAL RULES:**
-1. If resume text is provided, extract facts DIRECTLY from it
-2. For LinkedIn URLs like "linkedin.com/in/john-smith-data-engineer", you can infer likely role/skills
-3. For common names in job context (e.g., "Senior React Developer" + name "Sarah Chen"), make educated guesses
-4. NEVER hallucinate specific companies, dates, or detailed work history without evidence
-5. Use "Inferred from [source]" in evidence field when you're making educated guesses
-6. If truly no information available, return minimal schema with name only
+**Output format:**
+Return ONLY valid JSON (no markdown) matching this schema:
+{
+  "name": "string",
+  "headline": "string or null",
+  "currentRole": {
+    "title": "string or null",
+    "company": "string or null",
+    "startYear": number or null,
+    "location": "string or null"
+  },
+  "pastRoles": [],
+  "skills": ["array of skill strings"],
+  "domains": ["array of domain strings"],
+  "seniority": "string or null",
+  "location": "string or null",
+  "evidence": []
+}
 
 **Output format:**
 Return a structured persona with your best inferences. Be conservative - it's better to have fewer high-confidence fields than many low-confidence ones.`;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.DEFAULT,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            headline: { type: Type.STRING, nullable: true },
-            currentRole: {
-              type: Type.OBJECT,
-              nullable: true,
-              properties: {
-                title: { type: Type.STRING, nullable: true },
-                company: { type: Type.STRING, nullable: true },
-                startYear: { type: Type.NUMBER, nullable: true },
-                location: { type: Type.STRING, nullable: true }
-              }
-            },
-            pastRoles: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  company: { type: Type.STRING },
-                  startYear: { type: Type.NUMBER, nullable: true },
-                  endYear: { type: Type.NUMBER, nullable: true }
-                }
-              }
-            },
-            skills: { type: Type.ARRAY, items: { type: Type.STRING } },
-            domains: { type: Type.ARRAY, items: { type: Type.STRING } },
-            seniority: {
-              type: Type.STRING,
-              nullable: true,
-              enum: ['junior', 'mid', 'senior', 'lead', 'principal', 'director', 'vp', 'cto', 'founder']
-            },
-            location: { type: Type.STRING, nullable: true },
-            evidence: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  sourceUrl: { type: Type.STRING },
-                  snippet: { type: Type.STRING }
-                }
-              }
-            }
-          },
-          required: ['name', 'pastRoles', 'skills', 'domains', 'evidence']
-        }
-      }
-    });
-
-    const persona = JSON.parse(response.text || '{}') as CandidatePersona;
+    const responseText = await callOpenRouter(prompt);
+    const persona = JSON.parse(responseText) as CandidatePersona;
 
     if (process.env.NODE_ENV === 'development') {
       console.log('[Enrichment] ✅ AI-inferred persona:', {
@@ -722,37 +526,6 @@ Return a structured persona with your best inferences. Be conservative - it's be
     return persona;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    // If Gemini overloaded, try OpenRouter fallback
-    if (errorMessage.includes('GEMINI_OVERLOADED') || errorMessage.includes('503') || errorMessage.includes('overloaded')) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] 🔄 AI inference: Falling back to OpenRouter...');
-      }
-
-      try {
-        const promptWithInstructions = `${prompt}\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
-        const responseText = await callOpenRouter(promptWithInstructions);
-        const persona = JSON.parse(responseText) as CandidatePersona;
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Enrichment] ✅ OpenRouter AI-inferred persona:', {
-            name: persona.name,
-            currentRole: persona.currentRole?.title || 'none',
-            pastRolesCount: persona.pastRoles?.length || 0,
-            skillsCount: persona.skills?.length || 0
-          });
-        }
-
-        return persona;
-      } catch (openrouterError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[Enrichment] OpenRouter fallback failed:', openrouterError);
-        }
-        return null;
-      }
-    }
-
     if (process.env.NODE_ENV === 'development') {
       console.error('[Enrichment] AI inference failed:', error);
     }
@@ -1074,33 +847,33 @@ export async function enrichCandidateWithAdvanced(
 
     const advancedProfile = quickMode
       ? await quickEnrichment({
-          candidateId,
-          candidateName: input.fullName,
-          linkedinUrl: input.linkedinUrl,
-          githubUrl,
-          resumeText: input.resumeText,
-          evidenceSources: basicResult.rawEvidence,
-          teamLinkedInUrls,
-          previousProfileData: basicResult.persona.currentRole ? {
-            title: basicResult.persona.currentRole.title ?? undefined,
-            company: basicResult.persona.currentRole.company ?? undefined,
-            location: basicResult.persona.currentRole.location ?? undefined,
-          } : undefined
-        })
+        candidateId,
+        candidateName: input.fullName,
+        linkedinUrl: input.linkedinUrl,
+        githubUrl,
+        resumeText: input.resumeText,
+        evidenceSources: basicResult.rawEvidence,
+        teamLinkedInUrls,
+        previousProfileData: basicResult.persona.currentRole ? {
+          title: basicResult.persona.currentRole.title ?? undefined,
+          company: basicResult.persona.currentRole.company ?? undefined,
+          location: basicResult.persona.currentRole.location ?? undefined,
+        } : undefined
+      })
       : await buildAdvancedProfile({
-          candidateId,
-          candidateName: input.fullName,
-          linkedinUrl: input.linkedinUrl,
-          githubUrl,
-          resumeText: input.resumeText,
-          evidenceSources: basicResult.rawEvidence,
-          teamLinkedInUrls,
-          previousProfileData: basicResult.persona.currentRole ? {
-            title: basicResult.persona.currentRole.title ?? undefined,
-            company: basicResult.persona.currentRole.company ?? undefined,
-            location: basicResult.persona.currentRole.location ?? undefined,
-          } : undefined
-        });
+        candidateId,
+        candidateName: input.fullName,
+        linkedinUrl: input.linkedinUrl,
+        githubUrl,
+        resumeText: input.resumeText,
+        evidenceSources: basicResult.rawEvidence,
+        teamLinkedInUrls,
+        previousProfileData: basicResult.persona.currentRole ? {
+          title: basicResult.persona.currentRole.title ?? undefined,
+          company: basicResult.persona.currentRole.company ?? undefined,
+          location: basicResult.persona.currentRole.location ?? undefined,
+        } : undefined
+      });
 
     if (process.env.NODE_ENV === 'development') {
       console.log('[Enrichment] ✅ Advanced profile complete:', {

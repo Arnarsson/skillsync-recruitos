@@ -1,4 +1,10 @@
+/* eslint-disable no-console */
 /**
+ * ⚠️ LEGACY SERVICE - Use enrichmentServiceV2.ts for new code
+ * 
+ * This service is kept for backward compatibility with scrapingService.ts fallback flow.
+ * New enrichment should use enrichmentServiceV2.ts which has better architecture.
+ * 
  * Profile Enrichment Service
  *
  * When LinkedIn profiles are sparse (missing experience/skills), this service:
@@ -76,7 +82,7 @@ const filterPromisingSources = (results: SERPResult[]): string[] => {
   for (const result of results) {
     const url = result.url.toLowerCase();
     const title = result.title.toLowerCase();
-    const snippet = result.snippet.toLowerCase();
+    // const snippet = result.snippet.toLowerCase();
 
     // Skip bad patterns
     if (badPatterns.some(pattern => pattern.test(url))) {
@@ -407,122 +413,122 @@ export const enrichSparseProfile = async (candidate: {
 
     if (serpApiKey) {
 
-    const queries = [
-      // Query 1: Name + company (if known)
-      candidate.currentCompany
-        ? `"${candidate.fullName}" "${candidate.currentCompany}"`
-        : `"${candidate.fullName}" developer engineer`,
+      const queries = [
+        // Query 1: Name + company (if known)
+        candidate.currentCompany
+          ? `"${candidate.fullName}" "${candidate.currentCompany}"`
+          : `"${candidate.fullName}" developer engineer`,
 
-      // Query 2: Name + common profile sites
-      `"${candidate.fullName}" (GitHub OR portfolio OR bio)`,
+        // Query 2: Name + common profile sites
+        `"${candidate.fullName}" (GitHub OR portfolio OR bio)`,
 
-      // Query 3: Name + location (if known)
-      candidate.locationHint
-        ? `"${candidate.fullName}" "${candidate.locationHint}" profile`
-        : null
-    ].filter(Boolean);
+        // Query 3: Name + location (if known)
+        candidate.locationHint
+          ? `"${candidate.fullName}" "${candidate.locationHint}" profile`
+          : null
+      ].filter(Boolean);
 
-    const allResults: SERPResult[] = [];
+      const allResults: SERPResult[] = [];
 
-    for (const query of queries) {
-      if (!query) continue;
+      for (const query of queries) {
+        if (!query) continue;
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] SERP query:', query);
-      }
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Enrichment] SERP query:', query);
+        }
 
-      try {
-        // Use Bright Data SERP API (datasets format, not simple GET)
-        // Trigger SERP scrape
-        const triggerResponse = await fetch('/api/brightdata?action=serp-trigger', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-BrightData-Key': brightDataKey || serpApiKey
-          },
-          body: JSON.stringify({ keyword: query })
-        });
+        try {
+          // Use Bright Data SERP API (datasets format, not simple GET)
+          // Trigger SERP scrape
+          const triggerResponse = await fetch('/api/brightdata?action=serp-trigger', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-BrightData-Key': brightDataKey || serpApiKey
+            },
+            body: JSON.stringify({ keyword: query })
+          });
 
-        if (triggerResponse.ok) {
-          const triggerData = await triggerResponse.json();
-          const snapshotId = triggerData.snapshot_id;
+          if (triggerResponse.ok) {
+            const triggerData = await triggerResponse.json();
+            const snapshotId = triggerData.snapshot_id;
 
-          if (snapshotId) {
-            // Poll for results (max 30 seconds)
-            const maxAttempts = 15;
-            const pollInterval = 2000;
+            if (snapshotId) {
+              // Poll for results (max 30 seconds)
+              const maxAttempts = 15;
+              const pollInterval = 2000;
 
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-              await new Promise(resolve => setTimeout(resolve, pollInterval));
+              for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
 
-              const progressResponse = await fetch(
-                `/api/brightdata?action=progress&snapshot_id=${snapshotId}`,
-                {
-                  headers: {
-                    'X-BrightData-Key': brightDataKey || serpApiKey
-                  }
-                }
-              );
-
-              if (progressResponse.ok) {
-                const progress = await progressResponse.json();
-
-                if (progress.status === 'ready' && progress.records > 0) {
-                  // Get snapshot data
-                  const snapshotResponse = await fetch(
-                    `/api/brightdata?action=snapshot&snapshot_id=${snapshotId}`,
-                    {
-                      headers: {
-                        'X-BrightData-Key': brightDataKey || serpApiKey
-                      }
+                const progressResponse = await fetch(
+                  `/api/brightdata?action=progress&snapshot_id=${snapshotId}`,
+                  {
+                    headers: {
+                      'X-BrightData-Key': brightDataKey || serpApiKey
                     }
-                  );
+                  }
+                );
 
-                  if (snapshotResponse.ok) {
-                    const serpData = await snapshotResponse.json();
+                if (progressResponse.ok) {
+                  const progress = await progressResponse.json();
 
-                    // Parse SERP results from dataset
-                    for (const item of serpData) {
-                      if (item.organic_results) {
-                        for (const result of item.organic_results) {
-                          allResults.push({
-                            title: result.title || '',
-                            url: result.url || result.link || '',
-                            snippet: result.snippet || result.description || ''
-                          });
+                  if (progress.status === 'ready' && progress.records > 0) {
+                    // Get snapshot data
+                    const snapshotResponse = await fetch(
+                      `/api/brightdata?action=snapshot&snapshot_id=${snapshotId}`,
+                      {
+                        headers: {
+                          'X-BrightData-Key': brightDataKey || serpApiKey
                         }
                       }
-                    }
+                    );
 
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log('[Enrichment] Found', allResults.length, 'SERP results for:', query);
+                    if (snapshotResponse.ok) {
+                      const serpData = await snapshotResponse.json();
+
+                      // Parse SERP results from dataset
+                      for (const item of serpData) {
+                        if (item.organic_results) {
+                          for (const result of item.organic_results) {
+                            allResults.push({
+                              title: result.title || '',
+                              url: result.url || result.link || '',
+                              snippet: result.snippet || result.description || ''
+                            });
+                          }
+                        }
+                      }
+
+                      if (process.env.NODE_ENV === 'development') {
+                        console.log('[Enrichment] Found', allResults.length, 'SERP results for:', query);
+                      }
                     }
+                    break;
+                  } else if (progress.status === 'failed') {
+                    break;
                   }
-                  break;
-                } else if (progress.status === 'failed') {
-                  break;
                 }
               }
             }
           }
+        } catch (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Enrichment] SERP query failed:', error);
+          }
         }
-      } catch (error) {
+      }
+
+      // ==== STEP 2: Filter SERP results for promising URLs ====
+
+      if (allResults.length > 0) {
+        const serpUrls = filterPromisingSources(allResults);
+        promisingUrls.push(...serpUrls);
+
         if (process.env.NODE_ENV === 'development') {
-          console.warn('[Enrichment] SERP query failed:', error);
+          console.log('[Enrichment] Added', serpUrls.length, 'promising URLs from SERP');
         }
       }
-    }
-
-    // ==== STEP 2: Filter SERP results for promising URLs ====
-
-    if (allResults.length > 0) {
-      const serpUrls = filterPromisingSources(allResults);
-      promisingUrls.push(...serpUrls);
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Enrichment] Added', serpUrls.length, 'promising URLs from SERP');
-      }
-    }
 
     } else {
       // No SERP API - rely on common URL patterns
@@ -678,9 +684,9 @@ export const enrichSparseProfile = async (candidate: {
 
         // Human-readable source name
         const sourceName = snippet.url.includes('github.com') ? 'GitHub' :
-                          snippet.url.includes('about') || snippet.url.includes('team') ? 'Company Bio' :
-                          snippet.url.includes('linkedin') ? 'LinkedIn' :
-                          'Public Profile';
+          snippet.url.includes('about') || snippet.url.includes('team') ? 'Company Bio' :
+            snippet.url.includes('linkedin') ? 'LinkedIn' :
+              'Public Profile';
 
         if (!enriched.enrichmentSources.includes(sourceName)) {
           enriched.enrichmentSources.push(sourceName);

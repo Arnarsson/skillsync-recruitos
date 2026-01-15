@@ -18,6 +18,8 @@ interface Props {
     addToast: (type: ToastType, message: string) => void;
 }
 
+import { motion } from 'framer-motion';
+
 const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onClose, onOpenOutreach, addToast }) => {
     const isOutreachUnlocked = candidate?.unlockedSteps.includes(FunnelStage.OUTREACH) || false;
 
@@ -55,7 +57,13 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
     if (!candidate) return null;
 
     return (
-        <div className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[650px] bg-slate-950 border-l border-slate-900 shadow-none transform transition-transform duration-300 z-50 flex flex-col font-sans">
+        <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed inset-y-0 right-0 left-0 md:left-auto md:w-[650px] bg-[#0E1525]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl z-50 flex flex-col font-sans"
+        >
             <ProfileHero
                 candidate={candidate}
                 onClose={onClose}
@@ -64,7 +72,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
                 onDownloadPDF={onDownloadPDF}
             />
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-10 custom-scrollbar bg-slate-950">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-10 custom-scrollbar bg-transparent">
                 <InsightsOverview candidate={candidate} />
                 <RecommendationBanner candidate={candidate} />
                 <AlignmentRadar candidate={candidate} />
@@ -76,7 +84,7 @@ const DeepProfile: React.FC<Props> = ({ candidate, credits, onSpendCredits, onCl
                     onOpenOutreach={onOpenOutreach}
                 />
             </div>
-        </div>
+        </motion.div>
     );
 };
 

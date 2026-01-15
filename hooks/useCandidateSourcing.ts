@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useCallback } from 'react';
 import { Candidate, PRICING } from '../types';
 import { analyzeCandidateProfile, generatePersona } from '../services/geminiService';
@@ -89,17 +90,26 @@ export const useCandidateSourcing = ({
       } else {
         addToLog(`Step 1: Ingesting public profile data...`);
       }
-      const rawMarkdown = await scrapeUrlContent(sourcingUrl);
+
+      console.log('[UI] Starting scrapeUrlContent...');
+      const rawMarkdown = await scrapeUrlContent(sourcingUrl, jobContext);
+      console.log('[UI] scrapeUrlContent resolved. Length:', rawMarkdown.length);
+
       addToLog(`✓ Data Ingested (${rawMarkdown.length} chars).`);
 
       // 2. Persona Engine
       addToLog(`Step 2: Constructing Psychometric Persona...`);
+      console.log('[UI] Starting generatePersona...');
       const persona = await generatePersona(rawMarkdown);
+      console.log('[UI] generatePersona resolved:', persona.archetype);
+
       addToLog(`✓ Persona Identified: ${persona.archetype}`);
 
       // 3. Fit Analysis
       addToLog(`Step 3: Calculating Job Fit & Scoring...`);
+      console.log('[UI] Starting analyzeCandidateProfile...');
       const candidate = await analyzeCandidateProfile(rawMarkdown, jobContext, persona);
+      console.log('[UI] analyzeCandidateProfile resolved');
 
       // Add URL for reference
       candidate.sourceUrl = sourcingUrl;
@@ -108,11 +118,19 @@ export const useCandidateSourcing = ({
       addToLog(`Step 4: Persisting to Supabase...`);
       await candidateService.create(candidate);
 
-      onCandidateCreated(candidate);
       addToLog(`✓ Candidate Added to Pipeline.`);
+      console.log('[UI] Sourcing finished successfully');
+
+      // Explicitly update state before callbacks to ensure UI reflects completion
+      setIsSourcing(false);
+
       onSpendCredits(PRICING.SOURCING_SCAN, `Sourcing Run: ${candidate.name}`);
       addToast('success', "Candidate sourced successfully");
       setSourcingUrl(''); // Clear input
+
+      // Trigger parent callback last
+      console.log('[UI] Triggering onCandidateCreated');
+      onCandidateCreated(candidate);
 
     } catch (error: unknown) {
       if (process.env.NODE_ENV === 'development') {
@@ -121,7 +139,9 @@ export const useCandidateSourcing = ({
       const errorMessage = error instanceof Error ? error.message : "Sourcing failed";
       addToLog(`ERROR: ${errorMessage}`);
       addToast('error', errorMessage);
+      setIsSourcing(false);
     } finally {
+      // Redundant but safe
       setIsSourcing(false);
     }
   }, [sourcingUrl, credits, jobContext, onSpendCredits, addToast, addToLog, onCandidateCreated]);

@@ -54,8 +54,8 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
           <div className="flex items-center">
             <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Advanced Intelligence</h2>
             <span className={`ml-3 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded border ${advancedProfile.overallConfidence >= 70 ? 'border-emerald-500/20 text-emerald-500/60' :
-                advancedProfile.overallConfidence >= 40 ? 'border-slate-800 text-slate-500' :
-                  'border-red-500/20 text-red-500/60'
+              advancedProfile.overallConfidence >= 40 ? 'border-slate-800 text-slate-500' :
+                'border-red-500/20 text-red-500/60'
               }`}>
               {advancedProfile.overallConfidence}% Confidence
             </span>
@@ -88,10 +88,10 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
               onClick={() => handleTabChange(tab.id)}
               disabled={!hasData}
               className={`flex-1 px-4 py-3 text-[10px] uppercase font-bold tracking-widest transition-colors relative ${activeTab === tab.id
-                  ? 'text-slate-100'
-                  : hasData
-                    ? 'text-slate-600 hover:text-slate-400'
-                    : 'text-slate-800 cursor-not-allowed'
+                ? 'text-slate-100'
+                : hasData
+                  ? 'text-slate-600 hover:text-slate-400'
+                  : 'text-slate-800 cursor-not-allowed'
                 }`}
             >
               {tab.label}
@@ -111,7 +111,6 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
         {activeTab === 'overview' && (
           <OverviewTab
             advancedProfile={advancedProfile}
-            candidate={candidate}
             onViewDetails={handleTabChange}
           />
         )}
@@ -154,9 +153,8 @@ export const AdvancedProfilePanel: React.FC<AdvancedProfilePanelProps> = ({
 // Overview Tab Component
 const OverviewTab: React.FC<{
   advancedProfile: AdvancedCandidateProfile;
-  candidate: Candidate;
   onViewDetails: (tab: TabId) => void;
-}> = ({ advancedProfile, candidate, onViewDetails }) => {
+}> = ({ advancedProfile, onViewDetails }) => {
   const { dataCompleteness } = advancedProfile;
 
   return (
@@ -164,18 +162,18 @@ const OverviewTab: React.FC<{
       {/* Approach Readiness - Most Important */}
       {advancedProfile.behavioralSignals && (
         <div className={`rounded-lg p-4 border ${advancedProfile.behavioralSignals.approachReadiness === 'ready'
-            ? 'bg-emerald-500/10 border-emerald-500/30'
-            : advancedProfile.behavioralSignals.approachReadiness === 'not_ready'
-              ? 'bg-red-500/10 border-red-500/30'
-              : 'bg-amber-500/10 border-amber-500/30'
+          ? 'bg-emerald-500/10 border-emerald-500/30'
+          : advancedProfile.behavioralSignals.approachReadiness === 'not_ready'
+            ? 'bg-red-500/10 border-red-500/30'
+            : 'bg-amber-500/10 border-amber-500/30'
           }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <i className={`fa-solid ${advancedProfile.behavioralSignals.approachReadiness === 'ready'
-                  ? 'fa-check-circle text-emerald-400'
-                  : advancedProfile.behavioralSignals.approachReadiness === 'not_ready'
-                    ? 'fa-times-circle text-red-400'
-                    : 'fa-minus-circle text-amber-400'
+                ? 'fa-check-circle text-emerald-400'
+                : advancedProfile.behavioralSignals.approachReadiness === 'not_ready'
+                  ? 'fa-times-circle text-red-400'
+                  : 'fa-minus-circle text-amber-400'
                 } text-2xl mr-3`}></i>
               <div>
                 <div className="text-sm font-semibold text-white capitalize">
@@ -350,9 +348,9 @@ const CompletenessBar: React.FC<{
         {label}
       </div>
       <span className={`text-xs ${value >= 70 ? 'text-emerald-400' :
-          value >= 40 ? 'text-amber-400' :
-            value > 0 ? 'text-red-400' :
-              'text-slate-500'
+        value >= 40 ? 'text-amber-400' :
+          value > 0 ? 'text-red-400' :
+            'text-slate-500'
         }`}>
         {value}%
       </span>
@@ -360,9 +358,9 @@ const CompletenessBar: React.FC<{
     <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
       <div
         className={`h-full transition-all duration-500 ${value >= 70 ? 'bg-emerald-500' :
-            value >= 40 ? 'bg-amber-500' :
-              value > 0 ? 'bg-red-500' :
-                'bg-slate-600'
+          value >= 40 ? 'bg-amber-500' :
+            value > 0 ? 'bg-red-500' :
+              'bg-slate-600'
           }`}
         style={{ width: `${value}%` }}
       />

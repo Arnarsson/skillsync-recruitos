@@ -45,3 +45,8 @@ Thumbs.db
 build
 dist-ssr
 .worktrees/
+
+# Linting and Testing artifacts
+lint_output.txt
+playwright-report/
+test-results/

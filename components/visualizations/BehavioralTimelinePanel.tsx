@@ -55,7 +55,6 @@ const APPROACH_READINESS_CONFIG = {
 
 export const BehavioralTimelinePanel: React.FC<BehavioralTimelinePanelProps> = ({
   signals,
-  candidateName,
 }) => {
   const readinessConfig = APPROACH_READINESS_CONFIG[signals.approachReadiness];
 
@@ -169,11 +168,10 @@ export const BehavioralTimelinePanel: React.FC<BehavioralTimelinePanelProps> = (
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>
           Overall Engagement:
-          <span className={`ml-1 capitalize ${
-            signals.engagementRecency === 'active' ? 'text-emerald-400' :
-            signals.engagementRecency === 'moderate' ? 'text-amber-400' :
-            'text-red-400'
-          }`}>
+          <span className={`ml-1 capitalize ${signals.engagementRecency === 'active' ? 'text-emerald-400' :
+              signals.engagementRecency === 'moderate' ? 'text-amber-400' :
+                'text-red-400'
+            }`}>
             {signals.engagementRecency}
           </span>
         </span>
