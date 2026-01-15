@@ -101,7 +101,7 @@ export const CandidateGridRow: React.FC<CandidateGridRowProps> = ({
 
           {/* Persona Archetype */}
           {c.persona && (
-            <span className="text-[9px] bg-purple-900/30 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
+            <span className="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-medium">
               <i className="fa-solid fa-fingerprint mr-1"></i> {c.persona.archetype}
             </span>
           )}

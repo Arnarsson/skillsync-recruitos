@@ -303,8 +303,8 @@ export const PersonaIntelligencePanel: React.FC<PersonaIntelligencePanelProps> =
             {skillProfile.adjacentSkills && skillProfile.adjacentSkills.length > 0 && (
               <div className="bg-apex-800/30 rounded p-3 border border-apex-700/50">
                 <div className="flex items-center space-x-1.5 mb-2">
-                  <i className="fa-solid fa-arrows-left-right text-purple-400 text-xs"></i>
-                  <div className="text-xs font-bold text-purple-400 uppercase">Adjacent</div>
+                  <i className="fa-solid fa-arrows-left-right text-blue-400 text-xs"></i>
+                  <div className="text-xs font-bold text-blue-400 uppercase">Adjacent</div>
                 </div>
                 <div className="space-y-1">
                   {skillProfile.adjacentSkills.map((skill, i) => (

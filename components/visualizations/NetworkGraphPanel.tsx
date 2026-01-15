@@ -20,9 +20,9 @@ interface NetworkGraphPanelProps {
 const NODE_COLORS: Record<NetworkNode['type'], string> = {
   candidate: 'bg-emerald-500',
   person: 'bg-blue-500',
-  company: 'bg-purple-500',
+  company: 'bg-blue-500',
   school: 'bg-amber-500',
-  event: 'bg-pink-500',
+  event: 'bg-slate-500',
 };
 
 const INTRO_QUALITY_COLORS: Record<WarmIntroPath['introQuality'], string> = {
@@ -70,7 +70,7 @@ export const NetworkGraphPanel: React.FC<NetworkGraphPanelProps> = ({
           icon="fa-building"
           label="Shared Companies"
           value={stats.sharedCompanies}
-          color="text-purple-400"
+          color="text-blue-400"
         />
         <StatCard
           icon="fa-graduation-cap"
@@ -134,7 +134,7 @@ export const NetworkGraphPanel: React.FC<NetworkGraphPanelProps> = ({
         {networkGraph.sharedEmployers.length > 0 && (
           <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center">
-              <i className="fa-solid fa-building text-purple-400 mr-2"></i>
+              <i className="fa-solid fa-building text-blue-400 mr-2"></i>
               Shared Employers
             </h3>
             <div className="space-y-2">
@@ -153,10 +153,10 @@ export const NetworkGraphPanel: React.FC<NetworkGraphPanelProps> = ({
                     {employer.people.slice(0, 3).map((person, pIdx) => (
                       <div
                         key={pIdx}
-                        className="w-6 h-6 rounded-full bg-purple-500/30 border border-purple-500/50 flex items-center justify-center"
+                        className="w-6 h-6 rounded-full bg-blue-500/30 border border-blue-500/50 flex items-center justify-center"
                         title={person}
                       >
-                        <span className="text-[10px] text-purple-300">
+                        <span className="text-[10px] text-blue-300">
                           {person.charAt(0)}
                         </span>
                       </div>

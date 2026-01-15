@@ -89,9 +89,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                     <div className="text-xs font-medium text-slate-500 mb-2">
                         Profile Strategy
                     </div>
-                    <div className="bg-slate-800/30 border-l-2 border-purple-500/50 p-4 rounded-r-lg border border-white/[0.08] border-l-purple-500/50">
+                    <div className="bg-slate-800/30 border-l-2 border-blue-500/50 p-4 rounded-r-lg border border-white/[0.08]">
                         <div className="text-sm font-medium text-white mb-1 flex items-center">
-                            <i className="fa-solid fa-chess-knight text-purple-400 mr-2"></i>
+                            <i className="fa-solid fa-chess-knight text-blue-400 mr-2"></i>
                             {candidate.persona.archetype}
                         </div>
                         <div className="text-xs text-slate-400 leading-relaxed">

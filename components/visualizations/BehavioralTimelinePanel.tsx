@@ -121,7 +121,7 @@ export const BehavioralTimelinePanel: React.FC<BehavioralTimelinePanelProps> = (
           icon="fa-microphone"
           label="Speaking Events"
           value={signals.speakingEngagements.length}
-          color="text-purple-400"
+          color="text-blue-400"
         />
         <ActivityStat
           icon="fa-bell"
@@ -311,7 +311,7 @@ const TimelineItem: React.FC<{
   };
 }> = ({ item }) => {
   const config = {
-    speaking: { icon: 'fa-microphone', color: 'text-purple-400', bg: 'bg-purple-500/20' },
+    speaking: { icon: 'fa-microphone', color: 'text-blue-400', bg: 'bg-blue-500/20' },
     job_signal: { icon: 'fa-bell', color: 'text-amber-400', bg: 'bg-amber-500/20' },
     content: { icon: 'fa-pen', color: 'text-blue-400', bg: 'bg-blue-500/20' },
   };

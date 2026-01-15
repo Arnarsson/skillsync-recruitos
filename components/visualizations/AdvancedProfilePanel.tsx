@@ -228,7 +228,7 @@ const OverviewTab: React.FC<{
           <InsightCard
             title="Network"
             icon="fa-project-diagram"
-            color="text-purple-400"
+            color="text-blue-400"
             onClick={() => onViewDetails('network')}
           >
             <div className="space-y-2">

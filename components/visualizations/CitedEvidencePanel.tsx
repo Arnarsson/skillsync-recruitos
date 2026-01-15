@@ -43,7 +43,7 @@ const VERIFICATION_STATUS_CONFIG = {
 const SOURCE_TYPE_CONFIG: Record<string, { icon: string; color: string }> = {
   linkedin: { icon: 'fa-brands fa-linkedin', color: 'text-blue-400' },
   github: { icon: 'fa-brands fa-github', color: 'text-slate-300' },
-  publication: { icon: 'fa-solid fa-newspaper', color: 'text-purple-400' },
+  publication: { icon: 'fa-solid fa-newspaper', color: 'text-blue-400' },
   news: { icon: 'fa-solid fa-broadcast-tower', color: 'text-amber-400' },
   company_page: { icon: 'fa-solid fa-building', color: 'text-blue-300' },
   resume: { icon: 'fa-solid fa-file-lines', color: 'text-emerald-400' },

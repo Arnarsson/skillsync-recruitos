@@ -651,7 +651,6 @@ const scrapeSingleLinkedInUrl = async (url: string, brightDataKey: string): Prom
   }
 
   // ===== TIER 1: Simple WebFetch (built-in proxy or direct) =====
-  // ===== TIER 1: Simple WebFetch (built-in proxy or direct) =====
   try {
     if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 1: Simple WebFetch...');
     // Use body for URL as preferred by backend to avoid 999/414 query length errors

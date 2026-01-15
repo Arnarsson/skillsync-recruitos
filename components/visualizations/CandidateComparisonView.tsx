@@ -160,7 +160,7 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
                   {candidate.persona && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-500">Archetype</span>
-                      <span className="text-purple-400 text-[10px] font-bold uppercase">{candidate.persona.archetype}</span>
+                      <span className="text-blue-400 text-[10px] font-bold uppercase">{candidate.persona.archetype}</span>
                     </div>
                   )}
                 </div>
