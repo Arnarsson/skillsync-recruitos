@@ -28,7 +28,9 @@ import {
   Link as LinkIcon,
   Sparkles,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
+import OutreachModal from "@/components/OutreachModal";
 import {
   ResponsiveContainer,
   BarChart,
@@ -84,6 +86,10 @@ export default function PipelinePage() {
   // Multi-select for comparison
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+
+  // Outreach modal state
+  const [showOutreach, setShowOutreach] = useState(false);
+  const [outreachCandidate, setOutreachCandidate] = useState<Candidate | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("apex_job_context");
@@ -626,6 +632,16 @@ export default function PipelinePage() {
                           </Link>
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setOutreachCandidate(candidate);
+                              setShowOutreach(true);
+                            }}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => handleDelete(candidate.id)}
                           >
@@ -765,6 +781,24 @@ export default function PipelinePage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Outreach Modal */}
+        {outreachCandidate && (
+          <OutreachModal
+            isOpen={showOutreach}
+            onClose={() => {
+              setShowOutreach(false);
+              setOutreachCandidate(null);
+            }}
+            candidate={{
+              name: outreachCandidate.name,
+              currentRole: outreachCandidate.currentRole,
+              company: outreachCandidate.company,
+              avatar: outreachCandidate.avatar,
+            }}
+            jobContext={jobContext || undefined}
+          />
+        )}
       </div>
     </div>
   );

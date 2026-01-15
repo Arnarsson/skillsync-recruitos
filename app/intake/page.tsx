@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   Briefcase,
   Link as LinkIcon,
@@ -48,13 +49,33 @@ Requirements:
 - Strong communication skills and ability to work cross-functionally`
 };
 
+const LOADING_STEPS = [
+  "Extracting job content...",
+  "Identifying required skills...",
+  "Analyzing seniority level...",
+  "Calibrating search parameters...",
+];
+
 export default function IntakePage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("url");
   const [jobUrl, setJobUrl] = useState("");
   const [jobText, setJobText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // Progressive loading animation
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setLoadingStep((prev) => (prev + 1) % LOADING_STEPS.length);
+      }, 1500);
+      return () => clearInterval(interval);
+    } else {
+      setLoadingStep(0);
+    }
+  }, [loading]);
 
   // Social context fields
   const [companyUrl, setCompanyUrl] = useState("");
@@ -95,10 +116,14 @@ export default function IntakePage() {
       }
 
       setCalibration(data);
+      toast.success("Job analyzed successfully", {
+        description: `Found ${data.requiredSkills?.length || 0} required skills`,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to analyze job";
       console.error("Calibration error:", message);
       setError(message);
+      toast.error("Analysis failed", { description: message });
     } finally {
       setLoading(false);
     }
@@ -123,10 +148,14 @@ export default function IntakePage() {
       }
 
       setCalibration(data);
+      toast.success("Job analyzed successfully", {
+        description: `Found ${data.requiredSkills?.length || 0} required skills`,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to analyze job";
       console.error("Calibration error:", message);
       setError(message);
+      toast.error("Analysis failed", { description: message });
     } finally {
       setLoading(false);
     }
@@ -282,22 +311,37 @@ export default function IntakePage() {
                             onChange={(e) => setJobUrl(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
                             className="flex-1"
+                            disabled={loading}
                           />
                           <Button
                             onClick={handleUrlSubmit}
                             disabled={loading || !jobUrl.trim()}
+                            className="min-w-[120px]"
                           >
                             {loading ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Sparkles className="w-4 h-4" />
                             )}
-                            <span className="ml-2">Fetch</span>
+                            <span className="ml-2">{loading ? "Analyzing..." : "Fetch"}</span>
                           </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Works with LinkedIn, Greenhouse, Lever, and most job boards
-                        </p>
+                        {loading && (
+                          <motion.p
+                            key={loadingStep}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="text-xs text-primary mt-2 flex items-center gap-2"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                            {LOADING_STEPS[loadingStep]}
+                          </motion.p>
+                        )}
+                        {!loading && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Works with LinkedIn, Greenhouse, Lever, and most job boards
+                          </p>
+                        )}
                       </div>
                     </TabsContent>
 
@@ -312,6 +356,7 @@ export default function IntakePage() {
                             value={jobText}
                             onChange={(e) => setJobText(e.target.value)}
                             className="w-full h-48 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                            disabled={loading}
                           />
                           <div className="absolute bottom-3 right-3 text-xs text-muted-foreground font-mono">
                             {jobText.length} chars
@@ -328,8 +373,19 @@ export default function IntakePage() {
                         ) : (
                           <Sparkles className="w-4 h-4" />
                         )}
-                        Analyze Job Description
+                        {loading ? "Analyzing..." : "Analyze Job Description"}
                       </Button>
+                      {loading && (
+                        <motion.p
+                          key={loadingStep}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-xs text-primary flex items-center gap-2 justify-center"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          {LOADING_STEPS[loadingStep]}
+                        </motion.p>
+                      )}
                     </TabsContent>
                   </Tabs>
 

@@ -20,7 +20,9 @@ import {
   Brain,
   MessageSquare,
   RefreshCw,
+  Send,
 } from "lucide-react";
+import OutreachModal from "@/components/OutreachModal";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -124,6 +126,12 @@ export default function DeepProfilePage() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "questions" | "persona">("overview");
+  const [showOutreach, setShowOutreach] = useState(false);
+  const [jobContext, setJobContext] = useState<{
+    title?: string;
+    company?: string;
+    requiredSkills?: string[];
+  } | null>(null);
 
   useEffect(() => {
     // Load candidate from localStorage
@@ -139,6 +147,17 @@ export default function DeepProfilePage() {
         // Ignore parse errors
       }
     }
+
+    // Load job context
+    const storedJob = localStorage.getItem("apex_job_context");
+    if (storedJob) {
+      try {
+        setJobContext(JSON.parse(storedJob));
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
     setLoading(false);
   }, [username]);
 
@@ -259,18 +278,28 @@ export default function DeepProfilePage() {
             <Badge className="mb-2 bg-primary/20 text-primary">Step 3 of 4</Badge>
             <h1 className="text-3xl font-bold">Deep Profile</h1>
           </div>
-          <Button
-            onClick={runDeepAnalysis}
-            disabled={analyzing}
-            className="gap-2"
-          >
-            {analyzing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            {candidate.persona ? "Refresh Analysis" : "Run AI Analysis"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={runDeepAnalysis}
+              disabled={analyzing}
+              variant="outline"
+              className="gap-2"
+            >
+              {analyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {candidate.persona ? "Refresh Analysis" : "Run AI Analysis"}
+            </Button>
+            <Button
+              onClick={() => setShowOutreach(true)}
+              className="gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Generate Outreach
+            </Button>
+          </div>
         </div>
 
         {/* Profile Hero */}
@@ -712,6 +741,21 @@ export default function DeepProfilePage() {
               </Card>
             )}
           </div>
+        )}
+
+        {/* Outreach Modal */}
+        {candidate && (
+          <OutreachModal
+            isOpen={showOutreach}
+            onClose={() => setShowOutreach(false)}
+            candidate={{
+              name: candidate.name,
+              currentRole: candidate.currentRole,
+              company: candidate.company,
+              avatar: candidate.avatar,
+            }}
+            jobContext={jobContext || undefined}
+          />
         )}
       </div>
     </div>
