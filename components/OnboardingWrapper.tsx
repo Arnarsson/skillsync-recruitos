@@ -11,40 +11,33 @@ interface OnboardingWrapperProps {
 }
 
 export default function OnboardingWrapper({ children }: OnboardingWrapperProps) {
+  const [mounted, setMounted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Check if user has completed onboarding
+    setMounted(true);
+
+    // Check if user has completed onboarding - show immediately if not
     const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
 
     if (!hasCompletedOnboarding) {
-      // Small delay to let the page load first
-      const timer = setTimeout(() => {
-        setShowOnboarding(true);
-      }, 500);
-      return () => clearTimeout(timer);
+      setShowOnboarding(true);
     }
-
-    setIsReady(true);
   }, []);
 
   const handleComplete = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setShowOnboarding(false);
-    setIsReady(true);
   }, []);
 
   const handleSkip = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setShowOnboarding(false);
-    setIsReady(true);
   }, []);
 
-  // Expose a way to reset onboarding (useful for testing)
+  // Ctrl/Cmd + Shift + O to reset onboarding (for testing)
   useEffect(() => {
     const handleReset = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + Shift + O to reset onboarding
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "O") {
         localStorage.removeItem(ONBOARDING_KEY);
         setShowOnboarding(true);
@@ -54,6 +47,11 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
     window.addEventListener("keydown", handleReset);
     return () => window.removeEventListener("keydown", handleReset);
   }, []);
+
+  // Don't render onboarding until mounted (SSR safety)
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <>
