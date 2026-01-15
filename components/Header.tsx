@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Search, LogOut, Menu, X } from "lucide-react";
+import { Search, LogOut, Menu, X, Briefcase, Users, UserCheck, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -32,28 +32,33 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" asChild>
-              <Link
-                href="https://cal.com"
-                target="_blank"
-                className="text-xs uppercase tracking-wider font-medium"
-              >
-                Book a Demo
-              </Link>
-            </Button>
+          <div className="hidden md:flex items-center gap-6">
+            {/* Recruiting Funnel Nav */}
+            <div className="flex items-center gap-1 border-r border-border pr-6">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/intake" className="gap-2">
+                  <Briefcase className="w-4 h-4" />
+                  <span className="hidden lg:inline">Intake</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/pipeline" className="gap-2">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden lg:inline">Pipeline</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/search" className="gap-2">
+                  <Search className="w-4 h-4" />
+                  <span className="hidden lg:inline">Search</span>
+                </Link>
+              </Button>
+            </div>
 
             {status === "loading" ? (
               <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
             ) : session?.user ? (
               <>
-                <Button variant="ghost" asChild>
-                  <Link href="/search" className="gap-2">
-                    <Search className="w-4 h-4" />
-                    Search
-                  </Link>
-                </Button>
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
@@ -105,24 +110,31 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-2">
-              <Button variant="ghost" asChild className="justify-start">
-                <Link
-                  href="https://cal.com"
-                  target="_blank"
-                  className="text-xs uppercase tracking-wider"
-                >
-                  Book a Demo
-                </Link>
-              </Button>
+              {/* Recruiting Funnel Links */}
+              <div className="pb-2 mb-2 border-b border-border">
+                <p className="text-xs text-muted-foreground px-4 mb-2">Recruiting Pipeline</p>
+                <Button variant="ghost" asChild className="justify-start w-full">
+                  <Link href="/intake" className="gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Intake
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild className="justify-start w-full">
+                  <Link href="/pipeline" className="gap-2">
+                    <Users className="w-4 h-4" />
+                    Pipeline
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild className="justify-start w-full">
+                  <Link href="/search" className="gap-2">
+                    <Search className="w-4 h-4" />
+                    Search
+                  </Link>
+                </Button>
+              </div>
 
               {session?.user ? (
                 <>
-                  <Button variant="ghost" asChild className="justify-start">
-                    <Link href="/search" className="gap-2">
-                      <Search className="w-4 h-4" />
-                      Search
-                    </Link>
-                  </Button>
                   <div className="flex items-center gap-3 px-4 py-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
