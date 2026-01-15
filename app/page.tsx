@@ -8,16 +8,22 @@ export default function Home() {
       {/* Hero Section */}
       <section className="pt-32 pb-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
+          {/* YC Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-8">
+            <span className="text-orange-400 font-semibold text-sm">Y Combinator</span>
+            <span className="text-gray-400 text-sm">Backed</span>
+          </div>
+
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
             Find elite{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
               (but overlooked!)
             </span>{" "}
-            engineers on GitHub
+            engineers on Github
           </h1>
           <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-            The first hiring platform that sources engineers by what they&apos;ve actually built.
-            Discover engineers and scientists shaping your domain.
+            The first hiring platform that analyzes your candidates&apos; expertise through their open source work.
+            Find the engineers and scientists shaping your domain.
           </p>
 
           <SearchBar />

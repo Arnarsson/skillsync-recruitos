@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  name          String?
+  image         String?
+  githubId      String    @unique
+  githubToken   String?
+
+  // Credits & Subscription
+  credits       Int       @default(5)
+  plan          Plan      @default(FREE)
+  stripeCustomerId    String?   @unique
+  stripeSubscriptionId String?
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  profileViews  ProfileView[]
+  searches      Search[]
+  payments      Payment[]
+}
+
+model ProfileView {
+  id          String   @id @default(cuid())
+  userId      String
+  username    String   // GitHub username viewed
+  creditUsed  Boolean  @default(false)
+  viewedAt    DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([username])
+}
+
+model Search {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  results   Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  userId          String
+  stripePaymentId String   @unique
+  amount          Int      // in cents
+  credits         Int      // credits purchased
+  status          String
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}

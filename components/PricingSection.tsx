@@ -8,7 +8,7 @@ export default function PricingSection() {
   const [isYearly, setIsYearly] = useState(false);
 
   const proPrice = isYearly ? "$399" : "$499";
-  const proPeriod = isYearly ? "mo (billed yearly)" : "month";
+  const proPeriod = isYearly ? "seat/mo (billed yearly)" : "seat/month";
 
   return (
     <section id="pricing" className="py-24 px-4">
@@ -31,14 +31,14 @@ export default function PricingSection() {
             name="Pro"
             price={proPrice}
             period={proPeriod}
-            description="For growing teams looking to hire top talent"
+            description="For teams looking to hire top engineering talent"
             features={[
-              "Unlimited capability searches",
-              "50 deep profile credits/month",
+              "15 searches monthly",
+              "10 deep profile credits monthly",
+              "Phone and chat support",
               "GitHub activity analysis",
-              "Export to CSV",
-              "Email support",
-              "API access",
+              "Export candidate data",
+              "Try your first search free",
             ]}
             cta="Get Started"
             ctaLink="/signup"
@@ -52,17 +52,24 @@ export default function PricingSection() {
             description="For large organizations with custom needs"
             features={[
               "Everything in Pro",
-              "Unlimited deep profile credits",
-              "Custom integrations",
-              "MCP server access",
+              "MCP server integration",
               "Dedicated account manager",
-              "SSO & advanced security",
+              "Internal app integrations",
+              "Priority multi-channel support",
               "Custom contract terms",
             ]}
             cta="Request Demo"
             ctaLink="https://cal.com"
             enterprise
           />
+        </div>
+
+        {/* Deep Profile Credits */}
+        <div className="mt-12 p-6 bg-[#1a1b1e] rounded-xl border border-white/5 text-center">
+          <p className="text-gray-400 mb-2">Need more deep profile credits?</p>
+          <p className="text-white">
+            Additional credits available at <span className="text-blue-400 font-semibold">$5 each</span>
+          </p>
         </div>
 
         {isYearly && (
