@@ -3,6 +3,8 @@
 import { useState, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
@@ -26,28 +28,29 @@ export default function SearchBar() {
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-        <div className="relative bg-[#1a1b1e] border border-white/10 rounded-2xl overflow-hidden focus-within:border-white/20 transition-colors">
-          <textarea
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+        <div className="relative bg-card border border-border rounded-xl overflow-hidden focus-within:border-ring focus-within:ring-1 focus-within:ring-ring transition-all">
+          <Textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search by capabilities... (e.g., 'React experts who contributed to state management libraries')"
-            className="w-full bg-transparent px-6 py-4 text-white placeholder-gray-500 resize-none focus:outline-none min-h-[100px]"
+            className="w-full bg-transparent px-6 py-4 text-foreground placeholder:text-muted-foreground resize-none focus-visible:ring-0 focus-visible:ring-offset-0 border-0 min-h-[100px]"
             rows={3}
           />
-          <div className="flex items-center justify-between px-6 py-3 border-t border-white/5">
-            <span className="text-xs text-gray-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
+            <span className="text-xs text-muted-foreground">
               enter to search, shift + enter for new line
             </span>
-            <button
+            <Button
               onClick={handleSearch}
               disabled={!query.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-[#141517] rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              size="sm"
+              className="gap-2"
             >
               <Search className="w-4 h-4" />
               Search
-            </button>
+            </Button>
           </div>
         </div>
       </div>

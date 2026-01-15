@@ -49,6 +49,90 @@ export interface SearchResult {
   score: number;
 }
 
+// Parse natural language query into GitHub search qualifiers
+function parseSearchQuery(query: string): {
+  keywords: string[];
+  language: string | null;
+  location: string | null;
+} {
+  const lowerQuery = query.toLowerCase();
+
+  // Known cities and countries for location extraction
+  const locations = [
+    "copenhagen", "denmark", "stockholm", "sweden", "oslo", "norway",
+    "helsinki", "finland", "berlin", "germany", "amsterdam", "netherlands",
+    "london", "uk", "united kingdom", "paris", "france", "madrid", "spain",
+    "new york", "san francisco", "seattle", "austin", "boston", "chicago",
+    "los angeles", "toronto", "vancouver", "canada", "sydney", "melbourne",
+    "australia", "tokyo", "japan", "singapore", "bangalore", "india",
+    "tel aviv", "israel", "dublin", "ireland", "zurich", "switzerland",
+    "remote", "usa", "united states", "europe", "asia",
+  ];
+
+  // Language mappings (handle variations like c++, c#)
+  const languageMap: Record<string, string> = {
+    "c++": "cpp",
+    "c#": "csharp",
+    "javascript": "javascript",
+    "typescript": "typescript",
+    "python": "python",
+    "rust": "rust",
+    "go": "go",
+    "golang": "go",
+    "java": "java",
+    "ruby": "ruby",
+    "php": "php",
+    "swift": "swift",
+    "kotlin": "kotlin",
+    "scala": "scala",
+    "react": "javascript",
+    "vue": "javascript",
+    "angular": "typescript",
+    "node": "javascript",
+    "nodejs": "javascript",
+    "deno": "typescript",
+    "cpp": "cpp",
+    "csharp": "csharp",
+  };
+
+  // Terms to filter out (not searchable on GitHub)
+  const filterTerms = [
+    "years", "experience", "senior", "junior", "mid", "level",
+    "developer", "engineer", "programmer", "5+", "3+", "10+",
+    "looking", "for", "with", "and", "or", "the", "a", "an",
+  ];
+
+  let detectedLocation: string | null = null;
+  let detectedLanguage: string | null = null;
+  let remainingQuery = lowerQuery;
+
+  // Extract location
+  for (const loc of locations) {
+    if (lowerQuery.includes(loc)) {
+      detectedLocation = loc;
+      remainingQuery = remainingQuery.replace(new RegExp(loc, "gi"), "").trim();
+      break;
+    }
+  }
+
+  // Extract language
+  for (const [term, lang] of Object.entries(languageMap)) {
+    if (lowerQuery.includes(term)) {
+      detectedLanguage = lang;
+      remainingQuery = remainingQuery.replace(new RegExp(term.replace("+", "\\+"), "gi"), "").trim();
+      break;
+    }
+  }
+
+  // Filter out non-searchable terms and clean up
+  const keywords = remainingQuery
+    .split(/\s+/)
+    .filter(word => word.length > 1 && !filterTerms.includes(word))
+    .filter(word => !/^\d+\+?$/.test(word)); // Remove numbers like "5+"
+
+  return { keywords, language: detectedLanguage, location: detectedLocation };
+}
+
 // Search GitHub users by query
 export async function searchDevelopers(
   query: string,
@@ -58,15 +142,31 @@ export async function searchDevelopers(
 ): Promise<{ users: SearchResult[]; total: number }> {
   const octokit = createOctokit(accessToken);
 
-  // Parse query for skills/languages
-  const queryParts = query.toLowerCase().split(/\s+/);
-  const languages = extractLanguages(queryParts);
+  // Parse the natural language query
+  const { keywords, language, location } = parseSearchQuery(query);
 
-  // Build GitHub search query
-  let searchQuery = query;
-  if (languages.length > 0) {
-    searchQuery = `${query} language:${languages[0]}`;
+  // Build GitHub search query with qualifiers
+  const queryParts: string[] = [];
+
+  // Add any remaining keywords
+  if (keywords.length > 0) {
+    queryParts.push(keywords.join(" "));
   }
+
+  // Add language qualifier
+  if (language) {
+    queryParts.push(`language:${language}`);
+  }
+
+  // Add location qualifier
+  if (location) {
+    queryParts.push(`location:${location}`);
+  }
+
+  // Ensure we have at least some search criteria
+  const searchQuery = queryParts.length > 0 ? queryParts.join(" ") : "type:user";
+
+  console.log("GitHub search query:", searchQuery); // Debug logging
 
   try {
     // Search users

@@ -3,7 +3,13 @@
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Filter, MapPin, Building, Star, GitBranch, Users, Loader2 } from "lucide-react";
+import { Search, MapPin, Building, Star, GitBranch, Users, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Developer {
   username: string;
@@ -83,56 +89,53 @@ function SearchResults() {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search by capabilities... (e.g., 'React state management', 'Rust systems programming')"
-                className="w-full pl-12 pr-4 py-3 bg-[#1a1b1e] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-white/20"
+                className="pl-12 h-12 text-base"
               />
             </div>
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-[#141517] rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
+            <Button onClick={handleSearch} disabled={loading} size="lg" className="gap-2">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
               Search
-            </button>
+            </Button>
           </div>
           {query && !loading && (
-            <p className="text-gray-400">
-              Found <span className="text-white font-medium">{total.toLocaleString()}</span> developers for: <span className="text-white">&ldquo;{query}&rdquo;</span>
+            <p className="text-muted-foreground">
+              Found <span className="text-foreground font-medium">{total.toLocaleString()}</span> developers for: <span className="text-foreground">&ldquo;{query}&rdquo;</span>
             </p>
           )}
         </div>
 
         {/* Error State */}
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-8">
-            <p className="text-red-400">{error}</p>
-          </div>
+          <Card className="mb-8 border-destructive/50 bg-destructive/10">
+            <CardContent className="py-4">
+              <p className="text-destructive">{error}</p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Loading State */}
         {loading && (
           <div className="grid gap-4">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="p-6 bg-[#1a1b1e] rounded-xl border border-white/5 animate-pulse"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-white/10 rounded-full" />
-                  <div className="flex-1">
-                    <div className="h-6 w-48 bg-white/10 rounded mb-2" />
-                    <div className="h-4 w-32 bg-white/10 rounded mb-4" />
-                    <div className="h-4 w-full bg-white/10 rounded" />
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <Skeleton className="w-16 h-16 rounded-full" />
+                    <div className="flex-1 space-y-3">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
@@ -141,73 +144,69 @@ function SearchResults() {
         {!loading && developers.length > 0 && (
           <div className="grid gap-4">
             {developers.map((dev) => (
-              <Link
-                key={dev.username}
-                href={`/profile/${dev.username}`}
-                className="p-6 bg-[#1a1b1e] rounded-xl border border-white/5 hover:border-white/10 transition-colors group"
-              >
-                <div className="flex items-start gap-4">
-                  <img
-                    src={dev.avatar}
-                    alt={dev.name}
-                    className="w-16 h-16 rounded-full bg-white/10"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-lg font-semibold group-hover:text-blue-400 transition-colors">
-                        {dev.name}
-                      </h3>
-                      <div className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 text-sm rounded-full">
-                        <Star className="w-3 h-3" />
-                        {dev.score}% match
+              <Link key={dev.username} href={`/profile/${dev.username}`}>
+                <Card className="hover:border-ring transition-colors cursor-pointer">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <Avatar className="w-16 h-16">
+                        <AvatarImage src={dev.avatar} alt={dev.name} />
+                        <AvatarFallback>{dev.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="text-lg font-semibold hover:text-primary transition-colors">
+                            {dev.name}
+                          </h3>
+                          <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-0">
+                            <Star className="w-3 h-3 mr-1" />
+                            {dev.score}% match
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground text-sm mb-2">@{dev.username}</p>
+                        {dev.bio && (
+                          <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{dev.bio}</p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          {dev.location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-4 h-4" />
+                              {dev.location}
+                            </div>
+                          )}
+                          {dev.company && (
+                            <div className="flex items-center gap-1">
+                              <Building className="w-4 h-4" />
+                              {dev.company}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <GitBranch className="w-4 h-4" />
+                            {dev.repos} repos
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4" />
+                            {dev.stars >= 1000 ? `${(dev.stars / 1000).toFixed(1)}k` : dev.stars} stars
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            {dev.followers >= 1000 ? `${(dev.followers / 1000).toFixed(1)}k` : dev.followers} followers
+                          </div>
+                        </div>
+
+                        {dev.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {dev.skills.slice(0, 6).map((skill) => (
+                              <Badge key={skill} variant="secondary" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <p className="text-gray-500 text-sm mb-2">@{dev.username}</p>
-                    {dev.bio && (
-                      <p className="text-gray-400 text-sm mb-4 line-clamp-2">{dev.bio}</p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                      {dev.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          {dev.location}
-                        </div>
-                      )}
-                      {dev.company && (
-                        <div className="flex items-center gap-1">
-                          <Building className="w-4 h-4" />
-                          {dev.company}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <GitBranch className="w-4 h-4" />
-                        {dev.repos} repos
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4" />
-                        {dev.stars >= 1000 ? `${(dev.stars / 1000).toFixed(1)}k` : dev.stars} stars
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {dev.followers >= 1000 ? `${(dev.followers / 1000).toFixed(1)}k` : dev.followers} followers
-                      </div>
-                    </div>
-
-                    {dev.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {dev.skills.slice(0, 6).map((skill) => (
-                          <span
-                            key={skill}
-                            className="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </Link>
             ))}
           </div>
@@ -216,11 +215,11 @@ function SearchResults() {
         {/* Empty State */}
         {!loading && !error && query && developers.length === 0 && (
           <div className="text-center py-16">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-gray-500" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-xl font-semibold mb-2">No results found</h3>
-            <p className="text-gray-400">
+            <p className="text-muted-foreground">
               Try adjusting your search terms to find developers.
             </p>
           </div>
@@ -229,11 +228,11 @@ function SearchResults() {
         {/* Initial State */}
         {!loading && !query && (
           <div className="text-center py-16">
-            <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-blue-400" />
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-primary" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Search for developers</h3>
-            <p className="text-gray-400 max-w-md mx-auto">
+            <p className="text-muted-foreground max-w-md mx-auto">
               Enter a search query to find elite developers by their skills, technologies, or contributions.
             </p>
           </div>
@@ -245,7 +244,11 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
       <SearchResults />
     </Suspense>
   );
