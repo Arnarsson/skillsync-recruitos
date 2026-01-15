@@ -66,7 +66,10 @@ export default function PipelinePage() {
   const [jobContext, setJobContext] = useState<{
     title: string;
     company: string;
+    requiredSkills?: string[];
+    location?: string;
   } | null>(null);
+  const [autoSearched, setAutoSearched] = useState(false);
 
   // Import modal state
   const [showImport, setShowImport] = useState(false);
@@ -84,23 +87,86 @@ export default function PipelinePage() {
 
   useEffect(() => {
     const stored = localStorage.getItem("apex_job_context");
+    let parsedJobContext = null;
     if (stored) {
       try {
-        setJobContext(JSON.parse(stored));
+        parsedJobContext = JSON.parse(stored);
+        setJobContext(parsedJobContext);
       } catch {
         // Ignore
       }
     }
 
     const storedCandidates = localStorage.getItem("apex_candidates");
+    let existingCandidates: Candidate[] = [];
     if (storedCandidates) {
       try {
-        setCandidates(JSON.parse(storedCandidates));
+        existingCandidates = JSON.parse(storedCandidates);
+        setCandidates(existingCandidates);
       } catch {
         // Ignore
       }
     }
-  }, []);
+
+    // Auto-search for candidates based on job requirements
+    if (parsedJobContext?.requiredSkills?.length > 0 && existingCandidates.length === 0 && !autoSearched) {
+      setAutoSearched(true);
+      const skills = parsedJobContext.requiredSkills.slice(0, 3);
+      const location = parsedJobContext.location || "";
+      const query = [...skills, location].filter(Boolean).join(" ");
+
+      if (query) {
+        setSearchQuery(query);
+        // Auto-trigger search after a short delay
+        setTimeout(() => {
+          autoSearchCandidates(query);
+        }, 500);
+      }
+    }
+  }, [autoSearched]);
+
+  // Auto-search function (separate from manual search to handle initial load)
+  const autoSearchCandidates = async (query: string) => {
+    if (!query.trim()) return;
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(query)}`
+      );
+      const data = await response.json();
+
+      if (data.users && data.users.length > 0) {
+        const newCandidates = data.users.map((user: {
+          username: string;
+          name: string;
+          avatar: string;
+          bio: string;
+          location: string;
+          company: string;
+          skills: string[];
+          score: number;
+        }) => ({
+          id: user.username,
+          name: user.name || user.username,
+          currentRole: user.bio || "Developer",
+          company: user.company || "Independent",
+          location: user.location || "Remote",
+          alignmentScore: user.score || Math.floor(Math.random() * 30) + 60,
+          avatar: user.avatar,
+          skills: user.skills || [],
+          createdAt: new Date().toISOString(),
+        }));
+
+        setCandidates(newCandidates);
+        localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
+      }
+    } catch (error) {
+      console.error("Auto-search error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -300,9 +366,21 @@ export default function PipelinePage() {
             <Badge className="mb-2 bg-primary/20 text-primary">Step 2 of 4</Badge>
             <h1 className="text-3xl font-bold">Talent Pipeline</h1>
             {jobContext && (
-              <p className="text-muted-foreground mt-1">
-                {jobContext.title} at {jobContext.company}
-              </p>
+              <>
+                <p className="text-muted-foreground mt-1">
+                  {jobContext.title} at {jobContext.company}
+                </p>
+                {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-xs text-muted-foreground mr-1">Skills:</span>
+                    {jobContext.requiredSkills.slice(0, 5).map((skill) => (
+                      <Badge key={skill} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="flex gap-2">
@@ -444,17 +522,36 @@ export default function PipelinePage() {
         {filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
-              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">No Candidates Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Search for developers on GitHub or import a resume
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => setShowImport(true)}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Import Resume
-                </Button>
-              </div>
+              {loading ? (
+                <>
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
+                  <h3 className="text-lg font-medium mb-2">Finding Candidates...</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Searching for developers matching your job requirements
+                  </p>
+                  {jobContext?.requiredSkills && (
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {jobContext.requiredSkills.slice(0, 3).map((skill) => (
+                        <Badge key={skill} variant="secondary">{skill}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No Candidates Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Search for developers on GitHub or import a resume
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button onClick={() => setShowImport(true)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Import Resume
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         ) : (
