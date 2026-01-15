@@ -60,10 +60,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(analysis);
   } catch (error) {
-    console.error("Calibration API error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Calibration API error:", errorMessage);
     return NextResponse.json(
-      { error: "Failed to analyze job description" },
+      {
+        error: "Failed to analyze job description",
+        details: errorMessage
+      },
       { status: 500 }
     );
   }
 }
+
+// Increase timeout for AI operations
+export const maxDuration = 60;

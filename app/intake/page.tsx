@@ -15,6 +15,7 @@ import {
   Sparkles,
   CheckCircle,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 
 export default function IntakePage() {
@@ -23,6 +24,7 @@ export default function IntakePage() {
   const [jobUrl, setJobUrl] = useState("");
   const [jobText, setJobText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [calibration, setCalibration] = useState<{
     title: string;
     company: string;
@@ -36,6 +38,7 @@ export default function IntakePage() {
   const handleUrlSubmit = async () => {
     if (!jobUrl.trim()) return;
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/calibration", {
@@ -44,12 +47,17 @@ export default function IntakePage() {
         body: JSON.stringify({ type: "url", url: jobUrl }),
       });
 
-      if (!response.ok) throw new Error("Failed to analyze job");
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Failed to analyze job");
+      }
+
       setCalibration(data);
-    } catch (error) {
-      console.error("Calibration error:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to analyze job";
+      console.error("Calibration error:", message);
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -58,6 +66,7 @@ export default function IntakePage() {
   const handleTextSubmit = async () => {
     if (!jobText.trim()) return;
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/calibration", {
@@ -66,12 +75,17 @@ export default function IntakePage() {
         body: JSON.stringify({ type: "text", text: jobText }),
       });
 
-      if (!response.ok) throw new Error("Failed to analyze job");
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Failed to analyze job");
+      }
+
       setCalibration(data);
-    } catch (error) {
-      console.error("Calibration error:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to analyze job";
+      console.error("Calibration error:", message);
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -175,6 +189,19 @@ export default function IntakePage() {
                   </Button>
                 </TabsContent>
               </Tabs>
+
+              {/* Error Display */}
+              {error && (
+                <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-red-500">Analysis Failed</p>
+                      <p className="text-sm text-muted-foreground mt-1">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (

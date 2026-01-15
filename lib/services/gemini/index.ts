@@ -88,16 +88,22 @@ export interface DeepProfile {
   };
 }
 
-// Get API key
+// Get API key - ONLY OpenRouter
 function getApiKey(): string | null {
-  return process.env.OPENROUTER_API_KEY || null;
+  const key = process.env.OPENROUTER_API_KEY;
+  if (key) {
+    console.log(`[AI] API Key loaded: ${key.substring(0, 8)}...${key.substring(key.length - 4)}`);
+  } else {
+    console.error("[AI] OPENROUTER_API_KEY is NOT set in environment!");
+  }
+  return key || null;
 }
 
 // Call OpenRouter API
 async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<string> {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY not configured");
+    throw new Error("OPENROUTER_API_KEY not configured - add it to Vercel environment variables");
   }
 
   const messages = [];
@@ -106,29 +112,44 @@ async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<st
   }
   messages.push({ role: "user", content: prompt });
 
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://skillsync.app",
-      "X-Title": "SkillSync Recruiting"
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      temperature: 0.7,
-      max_tokens: 4096
-    })
-  });
+  console.log(`[AI] Calling OpenRouter with model: ${MODEL}`);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://skillsync.app",
+        "X-Title": "SkillSync Recruiting"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 4096
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[AI] OpenRouter Error ${response.status}:`, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    if (!content) {
+      throw new Error("AI returned empty response");
+    }
+
+    console.log(`[AI] Response received (${content.length} chars)`);
+    return content;
+  } catch (error) {
+    console.error("[AI] callOpenRouter failed:", error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
 }
 
 // Parse JSON safely from AI response
