@@ -4,43 +4,38 @@ import { motion, HTMLMotionProps } from 'framer-motion';
 interface GlassCardProps extends HTMLMotionProps<"div"> {
     children: ReactNode;
     className?: string;
+    /** @deprecated Use default styling. Variants removed for consistency. */
     variant?: 'dark' | 'light' | 'neo';
+    /** @deprecated Hover effects removed. Use CSS hover states if needed. */
     hoverEffect?: boolean;
+    /** Whether to animate on mount */
+    animate?: boolean;
 }
 
+/**
+ * Card component following design system.
+ * Uses borders-only depth strategy - no shadows, no gradients.
+ */
 export const GlassCard: React.FC<GlassCardProps> = ({
     children,
     className = '',
-    variant = 'dark',
-    hoverEffect = false,
+    animate = true,
     ...props
 }) => {
-    // Base styles for glassmorphism
-    const baseStyles = "backdrop-blur-md border rounded-xl overflow-hidden transition-all duration-300";
+    // Single consistent style - borders only, no shadows
+    const baseStyles = "bg-slate-800/50 border border-white/[0.08] rounded-lg overflow-hidden";
 
-    // Variants
-    const variants = {
-        dark: "bg-slate-900/40 border-slate-800/50 shadow-xl shadow-black/20",
-        light: "bg-white/10 border-white/20 shadow-lg",
-        neo: "bg-gradient-to-br from-slate-900/80 to-slate-900/40 border-t border-l border-slate-700/50 shadow-2xl"
-    };
-
-    // Hover animation props
-    const hoverProps = hoverEffect ? {
-        whileHover: { y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }, // fixed shadow prop name too
-        initial: { opacity: 0, y: 20 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.4, ease: "easeOut" as const }
-    } : {
+    // Simple fade-in animation
+    const animationProps = animate ? {
         initial: { opacity: 0 },
         animate: { opacity: 1 },
-        transition: { duration: 0.3 }
-    };
+        transition: { duration: 0.2, ease: "easeOut" as const }
+    } : {};
 
     return (
         <motion.div
-            className={`${baseStyles} ${variants[variant]} ${className}`}
-            {...hoverProps}
+            className={`${baseStyles} ${className}`}
+            {...animationProps}
             {...props}
         >
             {children}

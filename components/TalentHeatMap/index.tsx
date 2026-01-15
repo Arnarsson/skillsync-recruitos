@@ -330,24 +330,21 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
 
             {activeTab === 'pipeline' && !hasNoCandidates && (
                 <div className="px-4 md:px-8 mb-4">
-                    <GlassCard variant="light" className="p-4 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-blue-500/5 pointer-events-none"></div>
-                        <div className="flex items-center justify-between mb-3 relative z-10">
+                    <GlassCard className="p-4">
+                        <div className="flex items-center justify-between mb-3">
                             <div>
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wide flex items-center">
-                                    <i className="fa-solid fa-chart-pie mr-2 text-emerald-400"></i>
+                                <h3 className="text-sm font-medium text-white flex items-center">
+                                    <i className="fa-solid fa-chart-pie mr-2 text-slate-400"></i>
                                     Pipeline Intelligence
                                 </h3>
-                                <p className="text-[10px] text-slate-400 mt-0.5 ml-5">Real-time score distribution</p>
+                                <p className="text-xs text-slate-400 mt-1">Real-time score distribution</p>
                             </div>
-                            <div className="text-[10px] text-slate-400 bg-black/20 px-2 py-1 rounded border border-white/5">
-                                <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full mr-1.5 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                            <div className="text-xs text-slate-400 bg-slate-700/50 px-2 py-1 rounded flex items-center">
+                                <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full mr-1.5"></span>
                                 Top Match
                             </div>
                         </div>
-                        <div className="relative z-10">
-                            <ScoreDistributionChart candidates={candidates} height={140} />
-                        </div>
+                        <ScoreDistributionChart candidates={candidates} height={140} />
                     </GlassCard>
                 </div>
             )}
@@ -371,10 +368,10 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                 />
             )}
 
-            <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 border-b border-white/5 text-[10px] font-bold uppercase text-slate-500 tracking-widest">
-                <div className="col-span-4 pl-4">Candidate & Persona</div>
-                <div className="col-span-2 text-center">Match Score</div>
-                <div className="col-span-4">Evidence Summary</div>
+            <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 border-b border-white/[0.05] text-xs font-medium text-slate-500">
+                <div className="col-span-4 pl-4">Candidate</div>
+                <div className="col-span-2 text-center">Score</div>
+                <div className="col-span-4">Summary</div>
                 <div className="col-span-2 text-right pr-4">Action</div>
             </div>
 
@@ -391,23 +388,21 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                         <CandidateCardSkeleton />
                     </div>
                 ) : hasNoCandidates ? (
-                    <GlassCard variant="dark" className="flex flex-col items-center justify-center p-12 opacity-80 mt-8">
-                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 shadow-inner border border-white/5">
-                            <i className="fa-solid fa-users-slash text-3xl text-slate-600"></i>
+                    <GlassCard className="flex flex-col items-center justify-center p-12 mt-8">
+                        <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center">
+                            <i className="fa-solid fa-users text-xl text-slate-400"></i>
                         </div>
-                        <h3 className="text-white font-bold text-lg mb-2">Pipeline Empty</h3>
-                        <p className="text-sm text-slate-400 mb-8 max-w-sm text-center leading-relaxed">
+                        <h3 className="text-lg font-semibold text-white mt-4">No candidates yet</h3>
+                        <p className="text-sm text-slate-400 mt-2 max-w-sm text-center">
                             {activeTab === 'sourcing' ? 'Use the Sourcing Agent above to find candidates.' : 'Import a profile manually or try the demo data.'}
                         </p>
                         {activeTab !== 'sourcing' && (
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                            <button
                                 onClick={() => setShowImport(true)}
-                                className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/40 transition-all flex items-center"
+                                className="mt-6 h-9 px-4 bg-blue-600 hover:bg-blue-500 text-sm font-medium text-white rounded-md transition-colors flex items-center"
                             >
-                                <i className="fa-solid fa-plus mr-2"></i> Import First Candidate
-                            </motion.button>
+                                <i className="fa-solid fa-plus mr-2"></i> Import Candidate
+                            </button>
                         )}
                     </GlassCard>
                 ) : (
@@ -435,7 +430,7 @@ const ShortlistGrid: React.FC<Props> = ({ jobContext, credits, onSpendCredits, o
                 {!hasNoCandidates && activeTab !== 'sourcing' && (
                     <button
                         onClick={() => setShowImport(true)}
-                        className="md:hidden w-full py-4 bg-white/5 border border-dashed border-white/10 text-slate-400 rounded-xl text-sm font-bold mt-4 hover:bg-white/10 hover:text-white transition-all"
+                        className="md:hidden w-full py-3 bg-slate-800/50 border border-dashed border-white/[0.08] text-slate-400 rounded-lg text-sm font-medium mt-4 hover:bg-slate-700/50 hover:text-white transition-colors"
                     >
                         <i className="fa-solid fa-plus mr-2"></i> Import Candidate
                     </button>
