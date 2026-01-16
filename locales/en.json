@@ -164,7 +164,8 @@
       "preferredSkills": "Preferred Skills",
       "aiSummary": "AI Summary",
       "startOver": "Start Over",
-      "initializePipeline": "Initialize Pipeline"
+      "initializePipeline": "Initialize Pipeline",
+      "initializingPipeline": "Initializing pipeline & finding candidates..."
     },
     "processPreview": {
       "title": "Process Preview",
@@ -220,7 +221,19 @@
     "candidate": {
       "at": "at",
       "deepProfile": "Deep Profile",
-      "deleteConfirm": "Delete this candidate from the pipeline?"
+      "deleteConfirm": "Delete this candidate from the pipeline?",
+      "whyScore": "Why?",
+      "scoreBreakdown": "Score Breakdown",
+      "baseScore": "Base",
+      "skillsMatch": "Skills",
+      "preferred": "Preferred",
+      "locationBonus": "Location",
+      "requiredSkills": "Required Skills",
+      "preferredSkillsMatched": "Preferred Skills Matched",
+      "locationMatch": "Location",
+      "exactMatch": "Exact match",
+      "remoteCompatible": "Remote compatible",
+      "noMatch": "No match"
     },
     "importModal": {
       "title": "Import Candidate",

@@ -39,7 +39,9 @@ export async function POST(request: NextRequest) {
       deepProfile,
       scoreBreakdown: candidateAnalysis.scoreBreakdown,
       keyEvidence: candidateAnalysis.keyEvidence,
+      keyEvidenceWithSources: candidateAnalysis.keyEvidenceWithSources,
       risks: candidateAnalysis.risks,
+      risksWithSources: candidateAnalysis.risksWithSources,
       alignmentScore: candidateAnalysis.alignmentScore,
     });
   } catch (error) {

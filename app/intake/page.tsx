@@ -90,6 +90,32 @@ export default function IntakePage() {
     location: string;
     summary: string;
   } | null>(null);
+  const [autoNavigating, setAutoNavigating] = useState(false);
+
+  // Auto-navigate to pipeline after successful analysis
+  useEffect(() => {
+    if (calibration && !autoNavigating) {
+      setAutoNavigating(true);
+
+      // Save job context immediately
+      const enrichedContext = {
+        ...calibration,
+        socialContext: {
+          companyUrl,
+          managerUrl,
+          benchmarkUrl,
+        },
+      };
+      localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
+
+      // Show brief success state then navigate
+      const timer = setTimeout(() => {
+        router.push(`/pipeline${isAdmin ? "?admin" : ""}`);
+      }, 1500); // 1.5 second delay to show success
+
+      return () => clearTimeout(timer);
+    }
+  }, [calibration, autoNavigating, companyUrl, managerUrl, benchmarkUrl, router, isAdmin]);
 
   const handleLoadDemo = () => {
     setCalibration(DEMO_JOB_CONTEXT);
@@ -480,17 +506,31 @@ export default function IntakePage() {
                 </Card>
 
                 <div className="flex gap-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCalibration(null)}
-                    className="flex-1"
-                  >
-                    {t("intake.results.startOver")}
-                  </Button>
-                  <Button onClick={handleContinue} className="flex-1 gap-2">
-                    {t("intake.results.initializePipeline")}
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
+                  {autoNavigating ? (
+                    <div className="flex-1 flex items-center justify-center gap-3 py-3 bg-primary/10 rounded-lg border border-primary/30">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-sm font-medium text-primary">
+                        {t("intake.results.initializingPipeline") || "Initializing pipeline..."}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setCalibration(null);
+                          setAutoNavigating(false);
+                        }}
+                        className="flex-1"
+                      >
+                        {t("intake.results.startOver")}
+                      </Button>
+                      <Button onClick={handleContinue} className="flex-1 gap-2">
+                        {t("intake.results.initializePipeline")}
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             )}

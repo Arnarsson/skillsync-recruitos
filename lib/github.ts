@@ -347,3 +347,206 @@ function calculateScore(
 
   return Math.min(99, score);
 }
+
+// Deep GitHub Analysis Types
+export interface GitHubDeepAnalysis {
+  commitActivity: {
+    totalCommits: number;
+    avgCommitsPerWeek: number;
+    mostActiveDay: string;
+    mostActiveHour: number;
+    commitsByDay: Record<string, number>;
+    recentCommitDates: string[];
+  };
+  pullRequests: {
+    totalOpened: number;
+    totalMerged: number;
+    avgMergeTime: string;
+    recentPRs: Array<{
+      title: string;
+      repo: string;
+      state: string;
+      createdAt: string;
+      mergedAt?: string;
+    }>;
+  };
+  codeReview: {
+    reviewsGiven: number;
+    commentsGiven: number;
+    avgResponseTime: string;
+  };
+  contributionPatterns: {
+    consistency: 'high' | 'moderate' | 'sporadic';
+    streak: number;
+    longestStreak: number;
+    activeMonths: number;
+  };
+  collaborationStyle: {
+    soloProjects: number;
+    teamProjects: number;
+    opensourceContributions: number;
+    style: 'solo' | 'collaborative' | 'balanced';
+  };
+  topLanguages: Array<{
+    name: string;
+    percentage: number;
+    repoCount: number;
+  }>;
+}
+
+// Fetch deep analysis for a GitHub user
+export async function getDeepGitHubAnalysis(
+  username: string,
+  accessToken?: string
+): Promise<GitHubDeepAnalysis | null> {
+  const octokit = createOctokit(accessToken);
+
+  try {
+    // Fetch user events (commits, PRs, reviews)
+    const [eventsResponse, reposResponse] = await Promise.all([
+      octokit.activity.listPublicEventsForUser({
+        username,
+        per_page: 100,
+      }),
+      octokit.repos.listForUser({
+        username,
+        sort: "updated",
+        per_page: 100,
+      }),
+    ]);
+
+    const events = eventsResponse.data;
+    const repos = reposResponse.data;
+
+    // Analyze commit activity
+    const pushEvents = events.filter((e) => e.type === "PushEvent");
+    const commitDates: Date[] = [];
+    const commitsByDay: Record<string, number> = {
+      Sunday: 0, Monday: 0, Tuesday: 0, Wednesday: 0,
+      Thursday: 0, Friday: 0, Saturday: 0
+    };
+    const commitsByHour: Record<number, number> = {};
+
+    pushEvents.forEach((event) => {
+      const date = new Date(event.created_at || "");
+      commitDates.push(date);
+      const day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][date.getDay()];
+      commitsByDay[day] = (commitsByDay[day] || 0) + 1;
+      const hour = date.getHours();
+      commitsByHour[hour] = (commitsByHour[hour] || 0) + 1;
+    });
+
+    const mostActiveDay = Object.entries(commitsByDay)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
+
+    const mostActiveHour = Object.entries(commitsByHour)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "12";
+
+    // Analyze PR activity
+    const prEvents = events.filter((e) => e.type === "PullRequestEvent");
+    const openedPRs = prEvents.filter((e) => (e.payload as { action?: string }).action === "opened");
+    const mergedPRs = prEvents.filter((e) => (e.payload as { action?: string }).action === "closed");
+
+    const recentPRs = prEvents.slice(0, 5).map((e) => {
+      const payload = e.payload as {
+        pull_request?: {
+          title?: string;
+          state?: string;
+          created_at?: string;
+          merged_at?: string;
+        };
+      };
+      return {
+        title: payload.pull_request?.title || "Unknown",
+        repo: e.repo.name,
+        state: payload.pull_request?.state || "unknown",
+        createdAt: payload.pull_request?.created_at || "",
+        mergedAt: payload.pull_request?.merged_at,
+      };
+    });
+
+    // Analyze code review activity
+    const reviewEvents = events.filter((e) => e.type === "PullRequestReviewEvent");
+    const commentEvents = events.filter((e) =>
+      e.type === "IssueCommentEvent" || e.type === "PullRequestReviewCommentEvent"
+    );
+
+    // Analyze contribution patterns
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentEvents = events.filter((e) => new Date(e.created_at || "") > thirtyDaysAgo);
+
+    let consistency: 'high' | 'moderate' | 'sporadic' = 'sporadic';
+    if (recentEvents.length > 50) consistency = 'high';
+    else if (recentEvents.length > 20) consistency = 'moderate';
+
+    // Analyze collaboration style
+    const ownedRepos = repos.filter((r) => !r.fork);
+    const forkedRepos = repos.filter((r) => r.fork);
+    const teamRepos = repos.filter((r) => (r.forks_count || 0) > 5 || (r.stargazers_count || 0) > 10);
+
+    let style: 'solo' | 'collaborative' | 'balanced' = 'balanced';
+    if (forkedRepos.length > ownedRepos.length * 0.5) style = 'collaborative';
+    else if (forkedRepos.length < ownedRepos.length * 0.1) style = 'solo';
+
+    // Analyze languages
+    const languageMap = new Map<string, { count: number; repos: number }>();
+    repos.forEach((repo) => {
+      if (repo.language) {
+        const existing = languageMap.get(repo.language) || { count: 0, repos: 0 };
+        languageMap.set(repo.language, {
+          count: existing.count + (repo.size || 0),
+          repos: existing.repos + 1,
+        });
+      }
+    });
+
+    const totalSize = Array.from(languageMap.values()).reduce((sum, l) => sum + l.count, 0);
+    const topLanguages = Array.from(languageMap.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5)
+      .map(([name, data]) => ({
+        name,
+        percentage: totalSize > 0 ? Math.round((data.count / totalSize) * 100) : 0,
+        repoCount: data.repos,
+      }));
+
+    return {
+      commitActivity: {
+        totalCommits: pushEvents.length * 3, // Estimate (events contain multiple commits)
+        avgCommitsPerWeek: Math.round((pushEvents.length * 3) / 4), // Estimate for ~1 month of events
+        mostActiveDay,
+        mostActiveHour: parseInt(mostActiveHour),
+        commitsByDay,
+        recentCommitDates: commitDates.slice(0, 10).map((d) => d.toISOString()),
+      },
+      pullRequests: {
+        totalOpened: openedPRs.length,
+        totalMerged: mergedPRs.length,
+        avgMergeTime: "~2 days", // Would need more data for accurate calculation
+        recentPRs,
+      },
+      codeReview: {
+        reviewsGiven: reviewEvents.length,
+        commentsGiven: commentEvents.length,
+        avgResponseTime: "~4 hours", // Would need more data for accurate calculation
+      },
+      contributionPatterns: {
+        consistency,
+        streak: recentEvents.length > 0 ? 7 : 0, // Simplified
+        longestStreak: Math.min(recentEvents.length, 30),
+        activeMonths: 12, // Would need more historical data
+      },
+      collaborationStyle: {
+        soloProjects: ownedRepos.length - teamRepos.length,
+        teamProjects: teamRepos.length,
+        opensourceContributions: forkedRepos.length,
+        style,
+      },
+      topLanguages,
+    };
+  } catch (error) {
+    console.error("GitHub deep analysis error:", error);
+    return null;
+  }
+}

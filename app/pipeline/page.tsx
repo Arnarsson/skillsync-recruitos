@@ -29,7 +29,11 @@ import {
   Link as LinkIcon,
   Sparkles,
   ChevronDown,
+  ChevronUp,
   MessageSquare,
+  HelpCircle,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
 import ScoreBadge from "@/components/ScoreBadge";
@@ -44,6 +48,17 @@ import {
 } from "recharts";
 import { useLanguage } from "@/lib/i18n";
 
+interface ScoreBreakdown {
+  requiredMatched: string[];
+  requiredMissing: string[];
+  preferredMatched: string[];
+  locationMatch: "exact" | "remote" | "none";
+  baseScore: number;
+  skillsScore: number;
+  preferredScore: number;
+  locationScore: number;
+}
+
 interface Candidate {
   id: string;
   name: string;
@@ -56,6 +71,7 @@ interface Candidate {
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
+  scoreBreakdown?: ScoreBreakdown;
   persona?: {
     archetype?: string;
     riskAssessment?: {
@@ -97,6 +113,9 @@ export default function PipelinePage() {
   // Outreach modal state
   const [showOutreach, setShowOutreach] = useState(false);
   const [outreachCandidate, setOutreachCandidate] = useState<Candidate | null>(null);
+
+  // Expanded explanation state
+  const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("apex_job_context");
@@ -170,56 +189,79 @@ export default function PipelinePage() {
   const calculateAlignmentScore = (
     user: { skills: string[]; bio: string; location: string },
     jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
-  ): number => {
-    let score = 50; // Base score
+  ): { score: number; breakdown: ScoreBreakdown } => {
+    const baseScore = 50;
+    let skillsScore = 0;
+    let preferredScore = 0;
+    let locationScore = 0;
 
     const requiredSkills = jobRequirements.requiredSkills || [];
     const preferredSkills = jobRequirements.preferredSkills || [];
     const userSkillsLower = user.skills.map((s) => s.toLowerCase());
     const userBioLower = (user.bio || "").toLowerCase();
 
-    // Score for required skills (up to 35 points)
-    let requiredMatches = 0;
+    // Track matched and missing required skills
+    const requiredMatched: string[] = [];
+    const requiredMissing: string[] = [];
     requiredSkills.forEach((skill) => {
       const skillLower = skill.toLowerCase();
       if (
         userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
         userBioLower.includes(skillLower)
       ) {
-        requiredMatches++;
+        requiredMatched.push(skill);
+      } else {
+        requiredMissing.push(skill);
       }
     });
     if (requiredSkills.length > 0) {
-      score += Math.round((requiredMatches / requiredSkills.length) * 35);
+      skillsScore = Math.round((requiredMatched.length / requiredSkills.length) * 35);
     }
 
-    // Score for preferred skills (up to 15 points)
-    let preferredMatches = 0;
+    // Track matched preferred skills
+    const preferredMatched: string[] = [];
     preferredSkills.forEach((skill) => {
       const skillLower = skill.toLowerCase();
       if (
         userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
         userBioLower.includes(skillLower)
       ) {
-        preferredMatches++;
+        preferredMatched.push(skill);
       }
     });
     if (preferredSkills.length > 0) {
-      score += Math.round((preferredMatches / preferredSkills.length) * 15);
+      preferredScore = Math.round((preferredMatched.length / preferredSkills.length) * 15);
     }
 
-    // Location match bonus (up to 10 points)
+    // Location match
+    let locationMatch: "exact" | "remote" | "none" = "none";
     if (jobRequirements.location && user.location) {
       const jobLocLower = jobRequirements.location.toLowerCase();
       const userLocLower = user.location.toLowerCase();
       if (userLocLower.includes(jobLocLower) || jobLocLower.includes(userLocLower)) {
-        score += 10;
+        locationScore = 10;
+        locationMatch = "exact";
       } else if (userLocLower.includes("remote") || jobLocLower.includes("remote")) {
-        score += 5;
+        locationScore = 5;
+        locationMatch = "remote";
       }
     }
 
-    return Math.min(99, Math.max(30, score));
+    const totalScore = Math.min(99, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
+
+    return {
+      score: totalScore,
+      breakdown: {
+        requiredMatched,
+        requiredMissing,
+        preferredMatched,
+        locationMatch,
+        baseScore,
+        skillsScore,
+        preferredScore,
+        locationScore,
+      },
+    };
   };
 
   // Auto-search function (separate from manual search to handle initial load)
@@ -250,7 +292,7 @@ export default function PipelinePage() {
           score: number;
         }) => {
           // Calculate alignment score based on job requirements
-          const alignmentScore = calculateAlignmentScore(
+          const { score, breakdown } = calculateAlignmentScore(
             { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
             {
               requiredSkills: jobReqs.requiredSkills,
@@ -265,7 +307,8 @@ export default function PipelinePage() {
             currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
             company: user.company || "Independent",
             location: user.location || "Remote",
-            alignmentScore,
+            alignmentScore: score,
+            scoreBreakdown: breakdown,
             avatar: user.avatar,
             skills: user.skills || [],
             createdAt: new Date().toISOString(),
@@ -311,7 +354,7 @@ export default function PipelinePage() {
           score: number;
         }) => {
           // Calculate alignment score based on job requirements
-          const alignmentScore = calculateAlignmentScore(
+          const { score, breakdown } = calculateAlignmentScore(
             { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
             {
               requiredSkills: jobReqs.requiredSkills,
@@ -326,7 +369,8 @@ export default function PipelinePage() {
             currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
             company: user.company || "Independent",
             location: user.location || "Remote",
-            alignmentScore,
+            alignmentScore: score,
+            scoreBreakdown: breakdown,
             avatar: user.avatar,
             skills: user.skills || [],
             createdAt: new Date().toISOString(),
@@ -653,43 +697,73 @@ export default function PipelinePage() {
           </CardContent>
         </Card>
 
+        {/* Skeleton Loader for Loading State */}
+        {loading && candidates.length === 0 && (
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              <span className="text-sm text-muted-foreground">{t("pipeline.empty.loading.title")}</span>
+              {jobContext?.requiredSkills && (
+                <div className="flex gap-1 ml-2">
+                  {jobContext.requiredSkills.slice(0, 3).map((skill) => (
+                    <Badge key={skill} variant="secondary" className="text-xs">{skill}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-4">
+                    {/* Checkbox skeleton */}
+                    <div className="w-5 h-5 rounded bg-muted" />
+                    {/* Avatar skeleton */}
+                    <div className="w-12 h-12 rounded-full bg-muted" />
+                    {/* Info skeleton */}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-32 bg-muted rounded" />
+                        <div className="h-4 w-20 bg-muted rounded" />
+                      </div>
+                      <div className="h-4 w-48 bg-muted rounded" />
+                      <div className="flex gap-2">
+                        <div className="h-3 w-24 bg-muted rounded" />
+                        <div className="h-3 w-32 bg-muted rounded" />
+                      </div>
+                    </div>
+                    {/* Score skeleton */}
+                    <div className="w-14 h-14 rounded-xl bg-muted" />
+                    {/* Actions skeleton */}
+                    <div className="flex gap-2">
+                      <div className="h-8 w-24 bg-muted rounded" />
+                      <div className="h-8 w-8 bg-muted rounded" />
+                      <div className="h-8 w-8 bg-muted rounded" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
         {/* Candidates List */}
-        {filteredCandidates.length === 0 ? (
+        {!loading && filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
-              {loading ? (
-                <>
-                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
-                  <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.loading.title")}</h3>
-                  <p className="text-muted-foreground mb-4">
-                    {t("pipeline.empty.loading.description")}
-                  </p>
-                  {jobContext?.requiredSkills && (
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {jobContext.requiredSkills.slice(0, 3).map((skill) => (
-                        <Badge key={skill} variant="secondary">{skill}</Badge>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.noResults.title")}</h3>
-                  <p className="text-muted-foreground mb-4">
-                    {t("pipeline.empty.noResults.description")}
-                  </p>
-                  <div className="flex gap-2 justify-center">
-                    <Button onClick={() => setShowImport(true)}>
-                      <FileText className="w-4 h-4 mr-2" />
-                      {t("pipeline.empty.noResults.importResume")}
-                    </Button>
-                  </div>
-                </>
-              )}
+              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.noResults.title")}</h3>
+              <p className="text-muted-foreground mb-4">
+                {t("pipeline.empty.noResults.description")}
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={() => setShowImport(true)}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  {t("pipeline.empty.noResults.importResume")}
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        ) : (
+        ) : filteredCandidates.length > 0 ? (
           <div className="space-y-3">
             <AnimatePresence>
               {filteredCandidates.map((candidate) => (
@@ -743,8 +817,22 @@ export default function PipelinePage() {
                           </div>
                         </div>
 
-                        {/* Score */}
-                        <ScoreBadge score={candidate.alignmentScore} size="md" />
+                        {/* Score with explanation toggle */}
+                        <div className="flex flex-col items-center gap-1">
+                          <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
+                          <button
+                            onClick={() => setExpandedExplanation(expandedExplanation === candidate.id ? null : candidate.id)}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <HelpCircle className="w-3 h-3" />
+                            <span>{t("pipeline.candidate.whyScore") || "Why?"}</span>
+                            {expandedExplanation === candidate.id ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-2">
@@ -773,13 +861,107 @@ export default function PipelinePage() {
                           </Button>
                         </div>
                       </div>
+
+                      {/* Score Explanation Panel */}
+                      <AnimatePresence>
+                        {expandedExplanation === candidate.id && candidate.scoreBreakdown && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-4 pt-4 border-t space-y-4">
+                              <h4 className="text-sm font-medium flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4" />
+                                {t("pipeline.candidate.scoreBreakdown") || "Score Breakdown"}
+                              </h4>
+
+                              {/* Score Components */}
+                              <div className="grid grid-cols-4 gap-3">
+                                <div className="p-2 rounded-lg bg-muted/50 text-center">
+                                  <div className="text-lg font-bold text-muted-foreground">{candidate.scoreBreakdown.baseScore}</div>
+                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.baseScore") || "Base"}</div>
+                                </div>
+                                <div className="p-2 rounded-lg bg-green-500/10 text-center">
+                                  <div className="text-lg font-bold text-green-500">+{candidate.scoreBreakdown.skillsScore}</div>
+                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.skillsMatch") || "Skills"}</div>
+                                </div>
+                                <div className="p-2 rounded-lg bg-blue-500/10 text-center">
+                                  <div className="text-lg font-bold text-blue-500">+{candidate.scoreBreakdown.preferredScore}</div>
+                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.preferred") || "Preferred"}</div>
+                                </div>
+                                <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
+                                  <div className="text-lg font-bold text-yellow-500">+{candidate.scoreBreakdown.locationScore}</div>
+                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.locationBonus") || "Location"}</div>
+                                </div>
+                              </div>
+
+                              {/* Required Skills */}
+                              {(candidate.scoreBreakdown.requiredMatched.length > 0 || candidate.scoreBreakdown.requiredMissing.length > 0) && (
+                                <div>
+                                  <div className="text-xs font-medium text-muted-foreground mb-2">
+                                    {t("pipeline.candidate.requiredSkills") || "Required Skills"} ({candidate.scoreBreakdown.requiredMatched.length}/{candidate.scoreBreakdown.requiredMatched.length + candidate.scoreBreakdown.requiredMissing.length})
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {candidate.scoreBreakdown.requiredMatched.map((skill) => (
+                                      <Badge key={skill} className="bg-green-500/20 text-green-600 border-green-500/30 text-xs gap-1">
+                                        <Check className="w-3 h-3" />
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                    {candidate.scoreBreakdown.requiredMissing.map((skill) => (
+                                      <Badge key={skill} variant="outline" className="text-muted-foreground text-xs gap-1 opacity-60">
+                                        <AlertTriangle className="w-3 h-3" />
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Preferred Skills */}
+                              {candidate.scoreBreakdown.preferredMatched.length > 0 && (
+                                <div>
+                                  <div className="text-xs font-medium text-muted-foreground mb-2">
+                                    {t("pipeline.candidate.preferredSkillsMatched") || "Preferred Skills Matched"}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {candidate.scoreBreakdown.preferredMatched.map((skill) => (
+                                      <Badge key={skill} className="bg-blue-500/20 text-blue-600 border-blue-500/30 text-xs gap-1">
+                                        <Check className="w-3 h-3" />
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Location Match */}
+                              <div className="flex items-center gap-2 text-xs">
+                                <MapPin className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">{t("pipeline.candidate.locationMatch") || "Location"}:</span>
+                                {candidate.scoreBreakdown.locationMatch === "exact" && (
+                                  <Badge className="bg-green-500/20 text-green-600 text-xs">{t("pipeline.candidate.exactMatch") || "Exact match"}</Badge>
+                                )}
+                                {candidate.scoreBreakdown.locationMatch === "remote" && (
+                                  <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">{t("pipeline.candidate.remoteCompatible") || "Remote compatible"}</Badge>
+                                )}
+                                {candidate.scoreBreakdown.locationMatch === "none" && (
+                                  <Badge variant="outline" className="text-muted-foreground text-xs">{t("pipeline.candidate.noMatch") || "No match"}</Badge>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </CardContent>
                   </Card>
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
-        )}
+        ) : null}
 
         {/* Import Modal */}
         <AnimatePresence>

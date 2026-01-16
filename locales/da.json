@@ -164,7 +164,8 @@
       "preferredSkills": "Foretrukne Kompetencer",
       "aiSummary": "AI Opsummering",
       "startOver": "Start Forfra",
-      "initializePipeline": "Initialiser Pipeline"
+      "initializePipeline": "Initialiser Pipeline",
+      "initializingPipeline": "Initialiserer pipeline & finder kandidater..."
     },
     "processPreview": {
       "title": "Proces Forhåndsvisning",
@@ -220,7 +221,19 @@
     "candidate": {
       "at": "hos",
       "deepProfile": "Dyb Profil",
-      "deleteConfirm": "Slet denne kandidat fra pipeline?"
+      "deleteConfirm": "Slet denne kandidat fra pipeline?",
+      "whyScore": "Hvorfor?",
+      "scoreBreakdown": "Score Opdeling",
+      "baseScore": "Basis",
+      "skillsMatch": "Kompetencer",
+      "preferred": "Foretrukne",
+      "locationBonus": "Lokation",
+      "requiredSkills": "Påkrævede Kompetencer",
+      "preferredSkillsMatched": "Matchede Foretrukne Kompetencer",
+      "locationMatch": "Lokation",
+      "exactMatch": "Præcis match",
+      "remoteCompatible": "Remote kompatibel",
+      "noMatch": "Ingen match"
     },
     "importModal": {
       "title": "Importer Kandidat",

@@ -44,6 +44,12 @@ export interface Persona {
   };
 }
 
+export interface EvidenceItem {
+  claim: string;
+  source: 'github_profile' | 'repositories' | 'contributions' | 'bio' | 'inferred' | 'location_data';
+  sourceDetail?: string; // e.g., "Based on 15+ React repositories"
+}
+
 export interface CandidateAnalysis {
   name: string;
   currentRole: string;
@@ -53,7 +59,9 @@ export interface CandidateAnalysis {
   alignmentScore: number;
   shortlistSummary: string;
   keyEvidence: string[];
+  keyEvidenceWithSources?: EvidenceItem[];
   risks: string[];
+  risksWithSources?: EvidenceItem[];
   scoreBreakdown: {
     skills: { value: number; max: number; percentage: number };
     experience: { value: number; max: number; percentage: number };
@@ -266,14 +274,16 @@ export async function analyzeCandidateProfile(
   resumeText: string,
   jobContext: string
 ): Promise<CandidateAnalysis> {
-  const systemPrompt = `You are a highly analytical Recruitment AI. Always respond with valid JSON only.`;
+  const systemPrompt = `You are a highly analytical Recruitment AI. Always respond with valid JSON only.
+IMPORTANT: For every claim you make, you MUST cite specific evidence from the provided data.
+Do NOT make claims that cannot be verified from the input data.`;
 
   const prompt = `
 Job Context: ${jobContext}
 
 Raw Input Text: "${resumeText.substring(0, 20000)}"
 
-Return JSON only:
+Return JSON only. For each evidence item and risk, you MUST include the source of the information:
 {
   "name": "string",
   "currentRole": "string",
@@ -282,7 +292,21 @@ Return JSON only:
   "yearsExperience": number,
   "shortlistSummary": "string (max 50 words)",
   "keyEvidence": ["string"],
+  "keyEvidenceWithSources": [
+    {
+      "claim": "string (the evidence claim)",
+      "source": "github_profile|repositories|contributions|bio|inferred|location_data",
+      "sourceDetail": "string (specific detail, e.g. 'Based on 12 React repositories' or 'From GitHub bio')"
+    }
+  ],
   "risks": ["string"],
+  "risksWithSources": [
+    {
+      "claim": "string (the risk)",
+      "source": "github_profile|repositories|contributions|bio|inferred|location_data",
+      "sourceDetail": "string (what led to this conclusion)"
+    }
+  ],
   "scoreBreakdown": {
     "skills": { "value": number, "max": 35, "percentage": number },
     "experience": { "value": number, "max": 20, "percentage": number },
@@ -293,7 +317,15 @@ Return JSON only:
   "scoreConfidence": "high|moderate|low",
   "scoreDrivers": ["string"],
   "scoreDrags": ["string"]
-}`;
+}
+
+Source types explained:
+- github_profile: From profile fields (name, bio, location, company)
+- repositories: From their public repos (languages, topics, stars)
+- contributions: From commit history and contribution patterns
+- bio: From their bio/about text
+- inferred: Logical inference from available data
+- location_data: From location field`;
 
   const text = await callOpenRouter(prompt, systemPrompt);
   const data = parseJsonSafe(text) as CandidateAnalysis;
