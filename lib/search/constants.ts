@@ -19,9 +19,8 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connector words
     'looking', 'for', 'with', 'and', 'or', 'the', 'a', 'an', 'in', 'at',
     'from', 'to', 'on', 'of', 'is', 'are', 'who', 'that', 'this',
-    // Common phrases
-    'full', 'stack', 'fullstack', 'full-stack', 'frontend', 'front-end',
-    'backend', 'back-end', 'devops', 'dev', 'ops',
+    // NOTE: Terms like 'fullstack', 'frontend', 'backend', 'devops' are NOT stop words
+    // because they are useful for finding users with these terms in their bio
     // Misc
     'remote', 'hybrid', 'onsite', 'office', 'work', 'job', 'position',
     'role', 'opportunity', 'hire', 'hiring',
@@ -38,7 +37,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'søger', 'med', 'og', 'i', 'til', 'fra', 'på', 'for', 'en', 'et', 'den', 'det',
     // Common
-    'fuld', 'stack', 'arbejde', 'stilling', 'job',
+    'arbejde', 'stilling', 'job',
   ],
 
   // Swedish
@@ -52,7 +51,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'söker', 'med', 'och', 'i', 'till', 'från', 'på', 'för', 'en', 'ett', 'den', 'det',
     // Common
-    'full', 'stack', 'arbete', 'tjänst', 'jobb',
+    'arbete', 'tjänst', 'jobb',
   ],
 
   // Norwegian
@@ -66,7 +65,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'søker', 'med', 'og', 'i', 'til', 'fra', 'på', 'for', 'en', 'et', 'den', 'det',
     // Common
-    'full', 'stack', 'arbeid', 'stilling', 'jobb',
+    'arbeid', 'stilling', 'jobb',
   ],
 
   // Finnish
@@ -95,7 +94,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     'suchen', 'sucht', 'mit', 'und', 'oder', 'in', 'für', 'der', 'die', 'das',
     'ein', 'eine', 'einer',
     // Common
-    'full', 'stack', 'stelle', 'position', 'job', 'arbeit',
+    'stelle', 'position', 'job', 'arbeit',
   ],
 
   // Dutch
@@ -109,7 +108,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'zoekt', 'met', 'en', 'of', 'in', 'voor', 'de', 'het', 'een',
     // Common
-    'full', 'stack', 'baan', 'functie', 'vacature',
+    'baan', 'functie', 'vacature',
   ],
 
   // French
@@ -124,7 +123,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'cherche', 'avec', 'et', 'ou', 'dans', 'pour', 'le', 'la', 'les', 'un', 'une',
     // Common
-    'full', 'stack', 'poste', 'emploi', 'travail',
+    'poste', 'emploi', 'travail',
   ],
 
   // Spanish
@@ -138,7 +137,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'busca', 'con', 'y', 'o', 'en', 'para', 'el', 'la', 'los', 'las', 'un', 'una',
     // Common
-    'full', 'stack', 'puesto', 'empleo', 'trabajo',
+    'puesto', 'empleo', 'trabajo',
   ],
 
   // Italian
@@ -152,7 +151,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'cerca', 'con', 'e', 'o', 'in', 'per', 'il', 'la', 'i', 'le', 'un', 'una',
     // Common
-    'full', 'stack', 'posizione', 'lavoro',
+    'posizione', 'lavoro',
   ],
 
   // Portuguese
@@ -166,7 +165,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'procura', 'com', 'e', 'ou', 'em', 'para', 'o', 'a', 'os', 'as', 'um', 'uma',
     // Common
-    'full', 'stack', 'vaga', 'emprego', 'trabalho',
+    'vaga', 'emprego', 'trabalho',
   ],
 
   // Polish
@@ -180,7 +179,7 @@ export const STOP_WORDS: Record<string, string[]> = {
     // Connectors
     'szuka', 'z', 'i', 'lub', 'w', 'dla', 'na',
     // Common
-    'full', 'stack', 'stanowisko', 'praca',
+    'stanowisko', 'praca',
   ],
 };
 

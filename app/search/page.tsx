@@ -43,6 +43,13 @@ interface Developer {
   score: number;
 }
 
+interface SearchInterpretation {
+  language: string | null;
+  location: string | null;
+  keywords: string[];
+  githubQuery: string;
+}
+
 const SEARCH_COUNT_KEY = "recruitos_search_count";
 const FREE_SEARCHES = 1;
 
@@ -55,6 +62,7 @@ function SearchResults() {
   const [searchQuery, setSearchQuery] = useState(query);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [total, setTotal] = useState(0);
+  const [interpretation, setInterpretation] = useState<SearchInterpretation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchCount, setSearchCount] = useState(0);
@@ -103,6 +111,7 @@ function SearchResults() {
 
       setDevelopers(data.users || []);
       setTotal(data.total || 0);
+      setInterpretation(data.interpretation || null);
 
       // Only increment count for new searches (not initial page load)
       if (!skipLockCheck) {
@@ -192,22 +201,47 @@ function SearchResults() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center justify-between"
+              className="space-y-2"
             >
-              <p className="text-muted-foreground">
-                {t("search.found")}{" "}
-                <span className="text-foreground font-semibold">
-                  {total.toLocaleString()}
-                </span>{" "}
-                {t("search.developers")}{" "}
-                <span className="text-primary">&ldquo;{query}&rdquo;</span>
-              </p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  {t("search.aiScored")}
-                </Badge>
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground">
+                  {t("search.found")}{" "}
+                  <span className="text-foreground font-semibold">
+                    {total.toLocaleString()}
+                  </span>{" "}
+                  {t("search.developers")}{" "}
+                  <span className="text-primary">&ldquo;{query}&rdquo;</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {t("search.aiScored")}
+                  </Badge>
+                </div>
               </div>
+              {/* Search interpretation badges */}
+              {interpretation && (interpretation.language || interpretation.location || interpretation.keywords.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Searching:</span>
+                  {interpretation.language && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Code2 className="w-3 h-3" />
+                      {interpretation.language}
+                    </Badge>
+                  )}
+                  {interpretation.location && (
+                    <Badge variant="secondary" className="gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {interpretation.location}
+                    </Badge>
+                  )}
+                  {interpretation.keywords.map((keyword, i) => (
+                    <Badge key={i} variant="outline">
+                      {keyword}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
         </motion.div>

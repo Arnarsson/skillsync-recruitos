@@ -1,7 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { extractLocation } from "./search/locationNormalizer";
 import { extractSkill, getGitHubLanguage } from "./search/skillNormalizer";
-import { parseExperience, type ExperienceInfo } from "./search/experienceParser";
+import { parseExperience, removeExperienceTerms, type ExperienceInfo } from "./search/experienceParser";
 import { filterStopWords } from "./search/constants";
 
 // Create authenticated Octokit instance
@@ -70,6 +70,9 @@ function parseSearchQuery(query: string): ParsedSearchQuery {
   // 1. Extract experience info first (before removing words)
   const experience = parseExperience(remaining);
 
+  // 1b. Remove experience terms from query (e.g., "5 års erfaring", "3-5 years")
+  remaining = removeExperienceTerms(remaining);
+
   // 2. Extract and normalize location (handles København → copenhagen, etc.)
   const { location, remainingQuery: afterLocation } = extractLocation(remaining);
   remaining = afterLocation;
@@ -108,13 +111,21 @@ function parseSearchQuery(query: string): ParsedSearchQuery {
   };
 }
 
+// Search query interpretation for UI display
+export interface SearchInterpretation {
+  language: string | null;
+  location: string | null;
+  keywords: string[];
+  githubQuery: string;
+}
+
 // Search GitHub users by query
 export async function searchDevelopers(
   query: string,
   accessToken?: string,
   page: number = 1,
   perPage: number = 10
-): Promise<{ users: SearchResult[]; total: number }> {
+): Promise<{ users: SearchResult[]; total: number; interpretation: SearchInterpretation }> {
   const octokit = createOctokit(accessToken);
 
   // Parse the natural language query
@@ -200,10 +211,25 @@ export async function searchDevelopers(
     return {
       users: users.filter((u): u is SearchResult => u !== null),
       total: searchData.total_count,
+      interpretation: {
+        language,
+        location,
+        keywords,
+        githubQuery: searchQuery,
+      },
     };
   } catch (error) {
     console.error("GitHub search error:", error);
-    return { users: [], total: 0 };
+    return {
+      users: [],
+      total: 0,
+      interpretation: {
+        language,
+        location,
+        keywords,
+        githubQuery: searchQuery,
+      },
+    };
   }
 }
 
