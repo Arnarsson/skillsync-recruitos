@@ -780,7 +780,7 @@ export default function DeepProfilePage() {
                   <TrendingUp className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Score-fordeling</h3>
+                  <h3 className="font-semibold text-foreground">Score-fordeling</h3>
                   <p className="text-xs text-muted-foreground">Klik for at se vægtning + kilder pr. kategori</p>
                 </div>
               </div>
@@ -793,7 +793,7 @@ export default function DeepProfilePage() {
                         <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
                         <PolarAngleAxis
                           dataKey="subject"
-                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                          tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
                         />
                         <PolarRadiusAxis
                           angle={90}
