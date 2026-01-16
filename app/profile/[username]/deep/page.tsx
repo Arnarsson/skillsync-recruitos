@@ -780,20 +780,20 @@ export default function DeepProfilePage() {
                   <TrendingUp className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Score-fordeling</h3>
-                  <p className="text-xs text-muted-foreground">Klik for at se vægtning + kilder pr. kategori</p>
+                  <h3 className="font-semibold text-white">Score-fordeling</h3>
+                  <p className="text-xs text-neutral-400">Klik for at se vægtning + kilder pr. kategori</p>
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 gap-6 items-center">
+              <div className="grid md:grid-cols-2 gap-6 items-start">
                 {/* Radar Chart */}
-                <div className="h-48">
+                <div className="h-56">
                   {radarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                        <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                        <PolarGrid stroke="#525252" strokeOpacity={0.6} />
                         <PolarAngleAxis
                           dataKey="subject"
-                          tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
+                          tick={{ fill: "#e5e5e5", fontSize: 11 }}
                         />
                         <PolarRadiusAxis
                           angle={90}
@@ -804,9 +804,9 @@ export default function DeepProfilePage() {
                         <Radar
                           name="Score"
                           dataKey="value"
-                          stroke="hsl(var(--primary))"
-                          fill="hsl(var(--primary))"
-                          fillOpacity={0.5}
+                          stroke="#22d3ee"
+                          fill="#22d3ee"
+                          fillOpacity={0.4}
                           strokeWidth={2}
                         />
                       </RadarChart>
@@ -837,7 +837,7 @@ export default function DeepProfilePage() {
                       return (
                         <div key={key}>
                           <div className="flex justify-between text-xs mb-1">
-                            <span className="text-muted-foreground">{labelDa}</span>
+                            <span className="text-neutral-300">{labelDa}</span>
                             <span className={getScoreColor(pct)}>
                               {pct}%
                             </span>
