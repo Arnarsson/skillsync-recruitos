@@ -19,6 +19,8 @@ import {
   SortAsc,
   Lock,
   X,
+  Linkedin,
+  Github,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/lib/i18n";
 import { getScoreInfo } from "@/components/ScoreBadge";
 
@@ -50,6 +53,15 @@ interface SearchInterpretation {
   githubQuery: string;
 }
 
+interface LinkedInProfile {
+  name: string;
+  headline: string;
+  location: string;
+  profileUrl: string;
+  imageUrl?: string;
+  currentCompany?: string;
+}
+
 const SEARCH_COUNT_KEY = "recruitos_search_count";
 const FREE_SEARCHES = 1;
 
@@ -67,6 +79,11 @@ function SearchResults() {
   const [error, setError] = useState<string | null>(null);
   const [searchCount, setSearchCount] = useState(0);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  // LinkedIn search state
+  const [includeLinkedIn, setIncludeLinkedIn] = useState(false);
+  const [linkedInProfiles, setLinkedInProfiles] = useState<LinkedInProfile[]>([]);
+  const [linkedInLoading, setLinkedInLoading] = useState(false);
+  const [linkedInSnapshotId, setLinkedInSnapshotId] = useState<string | null>(null);
 
   // Load search count from localStorage
   useEffect(() => {
@@ -117,13 +134,73 @@ function SearchResults() {
       if (!skipLockCheck) {
         incrementSearchCount();
       }
+
+      // Trigger LinkedIn search if enabled
+      if (includeLinkedIn) {
+        triggerLinkedInSearch(q, data.interpretation);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       setDevelopers([]);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, searchCount, incrementSearchCount]);
+  }, [isAdmin, searchCount, incrementSearchCount, includeLinkedIn]);
+
+  // Trigger LinkedIn search via Bright Data
+  const triggerLinkedInSearch = async (q: string, interp: SearchInterpretation | null) => {
+    setLinkedInLoading(true);
+    setLinkedInProfiles([]);
+    setLinkedInSnapshotId(null);
+
+    try {
+      const response = await fetch("/api/brightdata/linkedin-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keywords: q,
+          location: interp?.location || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedInSnapshotId(data.snapshotId);
+      }
+    } catch (err) {
+      console.error("LinkedIn search failed:", err);
+    }
+  };
+
+  // Poll for LinkedIn results
+  useEffect(() => {
+    if (!linkedInSnapshotId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/brightdata/linkedin-search?snapshotId=${linkedInSnapshotId}`
+        );
+        const data = await response.json();
+
+        if (data.status === "ready") {
+          setLinkedInProfiles(data.profiles || []);
+          setLinkedInLoading(false);
+          setLinkedInSnapshotId(null);
+          clearInterval(pollInterval);
+        } else if (data.status === "error") {
+          setLinkedInLoading(false);
+          setLinkedInSnapshotId(null);
+          clearInterval(pollInterval);
+        }
+      } catch {
+        setLinkedInLoading(false);
+        clearInterval(pollInterval);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [linkedInSnapshotId]);
 
   useEffect(() => {
     setSearchQuery(query);
@@ -194,6 +271,26 @@ function SearchResults() {
               )}
               {t("common.search")}
             </Button>
+          </div>
+
+          {/* Source toggles */}
+          <div className="flex items-center gap-6 mb-4">
+            <div className="flex items-center gap-2">
+              <Github className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">GitHub</span>
+              <Badge variant="secondary" className="text-xs">Always on</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+              <span className="text-sm text-muted-foreground">LinkedIn</span>
+              <Switch
+                checked={includeLinkedIn}
+                onCheckedChange={setIncludeLinkedIn}
+              />
+              {linkedInLoading && (
+                <Loader2 className="w-4 h-4 animate-spin text-[#0A66C2]" />
+              )}
+            </div>
           </div>
 
           {/* Results count */}
@@ -417,6 +514,120 @@ function SearchResults() {
                 </Link>
               </motion.div>
             ))}
+          </motion.div>
+        )}
+
+        {/* LinkedIn Results */}
+        {includeLinkedIn && (linkedInProfiles.length > 0 || linkedInLoading) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+              <h2 className="text-lg font-semibold">LinkedIn Results</h2>
+              {linkedInLoading && (
+                <Badge variant="outline" className="gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Searching...
+                </Badge>
+              )}
+              {!linkedInLoading && linkedInProfiles.length > 0 && (
+                <Badge variant="secondary">{linkedInProfiles.length} found</Badge>
+              )}
+            </div>
+
+            {linkedInLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="overflow-hidden border-[#0A66C2]/20">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="w-14 h-14 rounded-full" />
+                        <div className="flex-1 space-y-3">
+                          <Skeleton className="h-5 w-40" />
+                          <Skeleton className="h-4 w-64" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {linkedInProfiles.map((profile, index) => (
+                  <motion.div
+                    key={`linkedin-${index}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <a
+                      href={profile.profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Card className="group overflow-hidden hover:border-[#0A66C2]/50 transition-all hover:shadow-lg border-[#0A66C2]/20">
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            <Avatar className="w-14 h-14 ring-2 ring-[#0A66C2]/20 group-hover:ring-[#0A66C2]/50 transition-all">
+                              {profile.imageUrl ? (
+                                <AvatarImage src={profile.imageUrl} alt={profile.name} />
+                              ) : null}
+                              <AvatarFallback className="bg-[#0A66C2]/10 text-[#0A66C2]">
+                                {profile.name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold group-hover:text-[#0A66C2] transition-colors">
+                                  {profile.name}
+                                </h3>
+                                <Badge variant="outline" className="text-xs gap-1 border-[#0A66C2]/30 text-[#0A66C2]">
+                                  <Linkedin className="w-3 h-3" />
+                                  LinkedIn
+                                </Badge>
+                              </div>
+                              {profile.headline && (
+                                <p className="text-sm text-muted-foreground line-clamp-1 mb-1">
+                                  {profile.headline}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                {profile.location && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {profile.location}
+                                  </span>
+                                )}
+                                {profile.currentCompany && (
+                                  <span className="flex items-center gap-1">
+                                    <Building className="w-3 h-3" />
+                                    {profile.currentCompany}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity gap-1 text-[#0A66C2]"
+                            >
+                              View Profile
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </a>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 
