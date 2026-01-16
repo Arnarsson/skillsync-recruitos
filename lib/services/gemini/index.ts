@@ -348,7 +348,7 @@ Return ONLY the message text, no JSON.`;
   return await callOpenRouter(prompt);
 }
 
-// Analyze job description
+// Analyze job description (supports Danish and English)
 export async function analyzeJobDescription(jobText: string): Promise<{
   title: string;
   company: string;
@@ -358,23 +358,39 @@ export async function analyzeJobDescription(jobText: string): Promise<{
   location: string;
   summary: string;
 }> {
-  const systemPrompt = `You are a job description analyst. Always respond with valid JSON only.`;
+  const systemPrompt = `You are a job description analyst that understands both Danish and English.
+You extract structured information and ALWAYS return skills in ENGLISH for GitHub search compatibility.
+When the job description is in Danish, translate skill names to their standard English equivalents.
+For example: "frontend udvikling" → "Frontend development", "databaser" → "Databases", "brugeroplevelse" → "UX".
+Always respond with valid JSON only.`;
 
   const prompt = `
-Extract structured information from this job description:
+Extract structured information from this job description. The text may be in Danish or English.
+IMPORTANT: Always return skill names in ENGLISH (translate from Danish if needed) for GitHub search compatibility.
+Use standard technology names (e.g., "React", "Python", "TypeScript") not verbose descriptions.
 
+Job description:
 "${jobText.substring(0, 10000)}"
 
 Return JSON:
 {
-  "title": "string",
+  "title": "string (in original language)",
   "company": "string",
-  "requiredSkills": ["string"],
-  "preferredSkills": ["string"],
+  "requiredSkills": ["string - MUST be in English, use standard tech names like 'React', 'Python', 'AWS'"],
+  "preferredSkills": ["string - MUST be in English"],
   "experienceLevel": "string",
   "location": "string",
-  "summary": "string (2-3 sentences)"
-}`;
+  "summary": "string (2-3 sentences in English)"
+}
+
+Example skill translations:
+- "Frontend udvikling" → "Frontend"
+- "Backend udvikling" → "Backend"
+- "Databaser" → "SQL" or "Databases"
+- "Webudvikling" → "Web development"
+- "Brugeroplevelse/UX" → "UX"
+- "Systemudvikling" → "Software development"
+- "API principper" → "REST API" or "API design"`;
 
   const text = await callOpenRouter(prompt, systemPrompt);
   return parseJsonSafe(text) as {
