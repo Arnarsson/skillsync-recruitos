@@ -34,6 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import OutreachModal from "@/components/OutreachModal";
+import { BehavioralBadges } from "@/components/BehavioralBadges";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -465,6 +466,8 @@ export default function DeepProfilePage() {
                     </Badge>
                   ))}
                 </div>
+                {/* Behavioral Insights */}
+                <BehavioralBadges username={candidate.id} className="mt-4" />
               </div>
             </div>
           </CardContent>

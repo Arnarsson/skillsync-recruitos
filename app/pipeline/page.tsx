@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
 import ScoreBadge from "@/components/ScoreBadge";
+import { BehavioralBadges } from "@/components/BehavioralBadges";
 import {
   ResponsiveContainer,
   BarChart,
@@ -815,6 +816,8 @@ export default function PipelinePage() {
                               <span>{candidate.skills.slice(0, 3).join(", ")}</span>
                             )}
                           </div>
+                          {/* Behavioral Insights Badges */}
+                          <BehavioralBadges username={candidate.id} compact className="mt-2" />
                         </div>
 
                         {/* Score with explanation toggle */}

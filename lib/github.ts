@@ -1,4 +1,8 @@
 import { Octokit } from "@octokit/rest";
+import { extractLocation } from "./search/locationNormalizer";
+import { extractSkill, getGitHubLanguage } from "./search/skillNormalizer";
+import { parseExperience, type ExperienceInfo } from "./search/experienceParser";
+import { filterStopWords } from "./search/constants";
 
 // Create authenticated Octokit instance
 export function createOctokit(accessToken?: string) {
@@ -49,88 +53,59 @@ export interface SearchResult {
   score: number;
 }
 
-// Parse natural language query into GitHub search qualifiers
-function parseSearchQuery(query: string): {
+// Parsed query result with enhanced search intelligence
+export interface ParsedSearchQuery {
   keywords: string[];
   language: string | null;
   location: string | null;
-} {
-  const lowerQuery = query.toLowerCase();
+  experience: ExperienceInfo;
+  frameworkKeyword: string | null; // e.g., "react" to include in search
+}
 
-  // Known cities and countries for location extraction
-  const locations = [
-    "copenhagen", "denmark", "stockholm", "sweden", "oslo", "norway",
-    "helsinki", "finland", "berlin", "germany", "amsterdam", "netherlands",
-    "london", "uk", "united kingdom", "paris", "france", "madrid", "spain",
-    "new york", "san francisco", "seattle", "austin", "boston", "chicago",
-    "los angeles", "toronto", "vancouver", "canada", "sydney", "melbourne",
-    "australia", "tokyo", "japan", "singapore", "bangalore", "india",
-    "tel aviv", "israel", "dublin", "ireland", "zurich", "switzerland",
-    "remote", "usa", "united states", "europe", "asia",
-  ];
+// Parse natural language query into GitHub search qualifiers
+// Supports multiple languages (Danish, Swedish, German, etc.) and unicode normalization
+function parseSearchQuery(query: string): ParsedSearchQuery {
+  let remaining = query;
 
-  // Language mappings (handle variations like c++, c#)
-  const languageMap: Record<string, string> = {
-    "c++": "cpp",
-    "c#": "csharp",
-    "javascript": "javascript",
-    "typescript": "typescript",
-    "python": "python",
-    "rust": "rust",
-    "go": "go",
-    "golang": "go",
-    "java": "java",
-    "ruby": "ruby",
-    "php": "php",
-    "swift": "swift",
-    "kotlin": "kotlin",
-    "scala": "scala",
-    "react": "javascript",
-    "vue": "javascript",
-    "angular": "typescript",
-    "node": "javascript",
-    "nodejs": "javascript",
-    "deno": "typescript",
-    "cpp": "cpp",
-    "csharp": "csharp",
+  // 1. Extract experience info first (before removing words)
+  const experience = parseExperience(remaining);
+
+  // 2. Extract and normalize location (handles København → copenhagen, etc.)
+  const { location, remainingQuery: afterLocation } = extractLocation(remaining);
+  remaining = afterLocation;
+
+  // 3. Extract programming language/skill (handles c++ → cpp, react → javascript, etc.)
+  const { skill, githubLanguage, keyword: frameworkKeyword, remainingQuery: afterSkill } = extractSkill(remaining);
+  remaining = afterSkill;
+
+  // 4. Filter stop words from all supported languages
+  const words = remaining.split(/\s+/).filter(w => w.length > 0);
+  let filteredWords = filterStopWords(words);
+
+  // 5. Remove any remaining numeric patterns (like "5+", "10")
+  filteredWords = filteredWords.filter(word => !/^\d+\+?$/.test(word));
+
+  // 6. Add framework keyword to search terms if detected (e.g., "react")
+  const keywords = frameworkKeyword
+    ? [frameworkKeyword, ...filteredWords.filter(w => w !== frameworkKeyword)]
+    : filteredWords;
+
+  console.log('[parseSearchQuery] Input:', query);
+  console.log('[parseSearchQuery] Parsed:', {
+    keywords,
+    language: githubLanguage,
+    location,
+    experience,
+    frameworkKeyword,
+  });
+
+  return {
+    keywords,
+    language: githubLanguage,
+    location,
+    experience,
+    frameworkKeyword,
   };
-
-  // Terms to filter out (not searchable on GitHub)
-  const filterTerms = [
-    "years", "experience", "senior", "junior", "mid", "level",
-    "developer", "engineer", "programmer", "5+", "3+", "10+",
-    "looking", "for", "with", "and", "or", "the", "a", "an",
-  ];
-
-  let detectedLocation: string | null = null;
-  let detectedLanguage: string | null = null;
-  let remainingQuery = lowerQuery;
-
-  // Extract location
-  for (const loc of locations) {
-    if (lowerQuery.includes(loc)) {
-      detectedLocation = loc;
-      remainingQuery = remainingQuery.replace(new RegExp(loc, "gi"), "").trim();
-      break;
-    }
-  }
-
-  // Extract language
-  for (const [term, lang] of Object.entries(languageMap)) {
-    if (lowerQuery.includes(term)) {
-      detectedLanguage = lang;
-      remainingQuery = remainingQuery.replace(new RegExp(term.replace("+", "\\+"), "gi"), "").trim();
-      break;
-    }
-  }
-
-  // Filter out non-searchable terms and clean up
-  const keywords = remainingQuery
-    .split(/\s+/)
-    .filter(word => word.length > 1 && !filterTerms.includes(word))
-    .filter(word => !/^\d+\+?$/.test(word)); // Remove numbers like "5+"
-
-  return { keywords, language: detectedLanguage, location: detectedLocation };
 }
 
 // Search GitHub users by query
@@ -549,4 +524,356 @@ export async function getDeepGitHubAnalysis(
     console.error("GitHub deep analysis error:", error);
     return null;
   }
+}
+
+// ============================================================================
+// BEHAVIORAL INSIGHTS - Phase 1
+// ============================================================================
+
+/**
+ * Activity signals that indicate a candidate might be "open to work"
+ */
+export interface ActivitySignals {
+  openToWork: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  signals: string[];
+  lastProfileUpdate: string | null;
+  activityTrend: 'increasing' | 'stable' | 'decreasing';
+  recentActivityCount: number;
+}
+
+/**
+ * Engagement scoring to predict likelihood of response
+ */
+export interface EngagementScore {
+  score: number; // 0-100
+  factors: {
+    activityRecency: number;    // 0-30 points
+    contactability: number;     // 0-25 points
+    signalStrength: number;     // 0-25 points
+    responsiveness: number;     // 0-20 points
+  };
+  bestOutreachTime: string | null;
+  timezone: string | null;
+}
+
+// Keywords in bio that suggest openness to opportunities
+const OPEN_TO_WORK_KEYWORDS = [
+  'open to', 'looking for', 'seeking', 'available for',
+  'exploring', 'interested in', 'freelance', 'contractor',
+  'consultant', 'hire me', 'available', 'job', 'opportunity',
+  'opportunities', 'new role', 'career', 'transition',
+  // Danish
+  'søger job', 'ledig', 'til rådighed', 'freelancer',
+  // Swedish
+  'söker jobb', 'tillgänglig', 'frilans',
+  // German
+  'offen für', 'suche', 'verfügbar', 'freiberuflich',
+];
+
+// Keywords that suggest NOT looking for work
+const NOT_LOOKING_KEYWORDS = [
+  'not looking', 'not seeking', 'happily employed',
+  'not available', 'not open to', 'no recruiters',
+  'hiring', 'we are hiring', "we're hiring",
+];
+
+/**
+ * Detect "open to work" signals from GitHub activity
+ */
+export async function detectActivitySignals(
+  username: string,
+  accessToken?: string
+): Promise<ActivitySignals> {
+  const octokit = createOctokit(accessToken);
+
+  const result: ActivitySignals = {
+    openToWork: false,
+    confidence: 'low',
+    signals: [],
+    lastProfileUpdate: null,
+    activityTrend: 'stable',
+    recentActivityCount: 0,
+  };
+
+  try {
+    // Fetch user profile and events
+    const [userResponse, eventsResponse, reposResponse] = await Promise.all([
+      octokit.users.getByUsername({ username }),
+      octokit.activity.listPublicEventsForUser({ username, per_page: 100 }),
+      octokit.repos.listForUser({ username, sort: 'created', per_page: 10 }),
+    ]);
+
+    const user = userResponse.data;
+    const events = eventsResponse.data;
+    const recentRepos = reposResponse.data;
+
+    // 1. Check bio for "open to work" keywords
+    const bio = (user.bio || '').toLowerCase();
+    for (const keyword of OPEN_TO_WORK_KEYWORDS) {
+      if (bio.includes(keyword.toLowerCase())) {
+        result.signals.push(`Bio contains "${keyword}"`);
+        result.openToWork = true;
+      }
+    }
+
+    // Check for "not looking" signals
+    for (const keyword of NOT_LOOKING_KEYWORDS) {
+      if (bio.includes(keyword.toLowerCase())) {
+        result.signals = result.signals.filter(s => !s.startsWith('Bio contains'));
+        result.openToWork = false;
+        result.signals.push(`Bio indicates not looking ("${keyword}")`);
+        break;
+      }
+    }
+
+    // 2. Check company field (empty or changed)
+    if (!user.company || user.company.trim() === '') {
+      result.signals.push('No company listed');
+    } else if (user.company.toLowerCase().includes('freelance') ||
+               user.company.toLowerCase().includes('self-employed') ||
+               user.company.toLowerCase().includes('independent')) {
+      result.signals.push('Listed as freelance/independent');
+      result.openToWork = true;
+    }
+
+    // 3. Analyze activity patterns
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const recentEvents = events.filter(e =>
+      new Date(e.created_at || '') > sevenDaysAgo
+    );
+    const monthEvents = events.filter(e =>
+      new Date(e.created_at || '') > thirtyDaysAgo
+    );
+
+    result.recentActivityCount = recentEvents.length;
+
+    // Activity trend analysis
+    if (events.length >= 10) {
+      const firstHalf = events.slice(0, Math.floor(events.length / 2));
+      const secondHalf = events.slice(Math.floor(events.length / 2));
+
+      // Compare timestamps to determine trend
+      const firstHalfAvgAge = firstHalf.reduce((sum, e) =>
+        sum + (now.getTime() - new Date(e.created_at || '').getTime()), 0) / firstHalf.length;
+      const secondHalfAvgAge = secondHalf.reduce((sum, e) =>
+        sum + (now.getTime() - new Date(e.created_at || '').getTime()), 0) / secondHalf.length;
+
+      if (firstHalfAvgAge < secondHalfAvgAge * 0.7) {
+        result.activityTrend = 'increasing';
+        result.signals.push('Activity increasing recently');
+      } else if (firstHalfAvgAge > secondHalfAvgAge * 1.5) {
+        result.activityTrend = 'decreasing';
+      }
+    }
+
+    // 4. Check for recent portfolio activity (new public repos)
+    const recentNewRepos = recentRepos.filter(repo => {
+      const created = new Date(repo.created_at || '');
+      return created > thirtyDaysAgo && !repo.fork;
+    });
+
+    if (recentNewRepos.length >= 2) {
+      result.signals.push(`Created ${recentNewRepos.length} new repos recently (portfolio building?)`);
+      result.openToWork = true;
+    }
+
+    // 5. High activity recently
+    if (recentEvents.length > 20) {
+      result.signals.push('Very active in last 7 days');
+    } else if (recentEvents.length > 10) {
+      result.signals.push('Active in last 7 days');
+    }
+
+    // 6. Check if email is public (more contactable)
+    if (user.email) {
+      result.signals.push('Public email available');
+    }
+
+    // 7. Check Twitter/social presence
+    if (user.twitter_username) {
+      result.signals.push('Twitter/X profile linked');
+    }
+
+    // Determine confidence level
+    const signalCount = result.signals.filter(s =>
+      !s.includes('not looking') &&
+      !s.includes('No company')
+    ).length;
+
+    if (result.openToWork && signalCount >= 3) {
+      result.confidence = 'high';
+    } else if (result.openToWork && signalCount >= 2) {
+      result.confidence = 'medium';
+    } else if (signalCount >= 1) {
+      result.confidence = 'low';
+    }
+
+    // Record profile update time
+    result.lastProfileUpdate = user.updated_at || null;
+
+  } catch (error) {
+    console.error('Error detecting activity signals:', error);
+  }
+
+  return result;
+}
+
+/**
+ * Calculate engagement score to predict response likelihood
+ */
+export async function calculateEngagementScore(
+  username: string,
+  accessToken?: string,
+  targetLocation?: string
+): Promise<EngagementScore> {
+  const octokit = createOctokit(accessToken);
+
+  const result: EngagementScore = {
+    score: 0,
+    factors: {
+      activityRecency: 0,
+      contactability: 0,
+      signalStrength: 0,
+      responsiveness: 0,
+    },
+    bestOutreachTime: null,
+    timezone: null,
+  };
+
+  try {
+    const [userResponse, eventsResponse] = await Promise.all([
+      octokit.users.getByUsername({ username }),
+      octokit.activity.listPublicEventsForUser({ username, per_page: 100 }),
+    ]);
+
+    const user = userResponse.data;
+    const events = eventsResponse.data;
+
+    // 1. Activity Recency (0-30 points)
+    const now = new Date();
+    if (events.length > 0) {
+      const lastEvent = new Date(events[0].created_at || '');
+      const daysSinceActivity = (now.getTime() - lastEvent.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceActivity <= 1) {
+        result.factors.activityRecency = 30;
+      } else if (daysSinceActivity <= 3) {
+        result.factors.activityRecency = 25;
+      } else if (daysSinceActivity <= 7) {
+        result.factors.activityRecency = 20;
+      } else if (daysSinceActivity <= 14) {
+        result.factors.activityRecency = 15;
+      } else if (daysSinceActivity <= 30) {
+        result.factors.activityRecency = 10;
+      } else {
+        result.factors.activityRecency = 5;
+      }
+    }
+
+    // 2. Contactability (0-25 points)
+    if (user.email) {
+      result.factors.contactability += 15;
+    }
+    if (user.twitter_username) {
+      result.factors.contactability += 5;
+    }
+    if (user.blog) {
+      result.factors.contactability += 5;
+    }
+
+    // 3. Signal Strength (0-25 points)
+    const signals = await detectActivitySignals(username, accessToken);
+    if (signals.openToWork) {
+      if (signals.confidence === 'high') {
+        result.factors.signalStrength = 25;
+      } else if (signals.confidence === 'medium') {
+        result.factors.signalStrength = 18;
+      } else {
+        result.factors.signalStrength = 10;
+      }
+    } else if (signals.signals.length > 0) {
+      result.factors.signalStrength = 5;
+    }
+
+    // 4. Responsiveness (0-20 points) - based on issue/PR engagement
+    const issueEvents = events.filter(e =>
+      e.type === 'IssueCommentEvent' ||
+      e.type === 'IssuesEvent' ||
+      e.type === 'PullRequestReviewEvent' ||
+      e.type === 'PullRequestReviewCommentEvent'
+    );
+
+    if (issueEvents.length > 20) {
+      result.factors.responsiveness = 20;
+    } else if (issueEvents.length > 10) {
+      result.factors.responsiveness = 15;
+    } else if (issueEvents.length > 5) {
+      result.factors.responsiveness = 10;
+    } else if (issueEvents.length > 0) {
+      result.factors.responsiveness = 5;
+    }
+
+    // Calculate total score
+    result.score = Object.values(result.factors).reduce((a, b) => a + b, 0);
+
+    // Determine best outreach time based on activity patterns
+    const eventHours = events.map(e => new Date(e.created_at || '').getUTCHours());
+    if (eventHours.length > 0) {
+      // Find most common hour
+      const hourCounts = new Map<number, number>();
+      eventHours.forEach(h => hourCounts.set(h, (hourCounts.get(h) || 0) + 1));
+      const peakHour = [...hourCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 10;
+
+      // Suggest outreach 1-2 hours before peak activity
+      const suggestedHour = (peakHour - 1 + 24) % 24;
+      result.bestOutreachTime = `${suggestedHour}:00 UTC`;
+
+      // Try to infer timezone from location
+      result.timezone = inferTimezone(user.location || '');
+    }
+
+  } catch (error) {
+    console.error('Error calculating engagement score:', error);
+  }
+
+  return result;
+}
+
+/**
+ * Infer timezone from location string
+ */
+function inferTimezone(location: string): string | null {
+  const loc = location.toLowerCase();
+
+  // Europe
+  if (/copenhagen|denmark|århus|aarhus/i.test(loc)) return 'Europe/Copenhagen';
+  if (/stockholm|sweden|göteborg|malmö/i.test(loc)) return 'Europe/Stockholm';
+  if (/oslo|norway|bergen|trondheim/i.test(loc)) return 'Europe/Oslo';
+  if (/helsinki|finland/i.test(loc)) return 'Europe/Helsinki';
+  if (/berlin|munich|germany|frankfurt|hamburg/i.test(loc)) return 'Europe/Berlin';
+  if (/amsterdam|netherlands|holland/i.test(loc)) return 'Europe/Amsterdam';
+  if (/london|uk|united kingdom|england|manchester/i.test(loc)) return 'Europe/London';
+  if (/paris|france|lyon/i.test(loc)) return 'Europe/Paris';
+  if (/madrid|spain|barcelona/i.test(loc)) return 'Europe/Madrid';
+  if (/zurich|switzerland|geneva/i.test(loc)) return 'Europe/Zurich';
+
+  // US
+  if (/new york|nyc|boston|philadelphia/i.test(loc)) return 'America/New_York';
+  if (/chicago|illinois/i.test(loc)) return 'America/Chicago';
+  if (/denver|colorado/i.test(loc)) return 'America/Denver';
+  if (/san francisco|sf|los angeles|la|seattle|california/i.test(loc)) return 'America/Los_Angeles';
+
+  // Other
+  if (/toronto|montreal|canada/i.test(loc)) return 'America/Toronto';
+  if (/tokyo|japan/i.test(loc)) return 'Asia/Tokyo';
+  if (/singapore/i.test(loc)) return 'Asia/Singapore';
+  if (/sydney|melbourne|australia/i.test(loc)) return 'Australia/Sydney';
+  if (/bangalore|mumbai|india/i.test(loc)) return 'Asia/Kolkata';
+  if (/tel aviv|israel/i.test(loc)) return 'Asia/Tel_Aviv';
+
+  return null;
 }
