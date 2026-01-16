@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +32,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/lib/i18n";
 import { getScoreInfo } from "@/components/ScoreBadge";
+import {
+  SearchFiltersPanel,
+  SearchFilters,
+  DEFAULT_FILTERS,
+  AvailableFilters,
+} from "@/components/search/SearchFilters";
+import { OpenToWorkBadge, BehavioralBadges } from "@/components/BehavioralBadges";
 
 interface Developer {
   username: string;
@@ -96,6 +103,9 @@ function SearchResults() {
   const [includeGoogle, setIncludeGoogle] = useState(false);
   const [googleResults, setGoogleResults] = useState<GoogleResult[]>([]);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Filter state
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
 
   // Load search count from localStorage
   useEffect(() => {
@@ -254,6 +264,155 @@ function SearchResults() {
     }
   }, [query, searchDevelopers]);
 
+  // Trigger LinkedIn search when toggle is enabled and there's a query
+  useEffect(() => {
+    if (includeLinkedIn && query && !linkedInSnapshotId && linkedInProfiles.length === 0) {
+      triggerLinkedInSearch(query, interpretation);
+    }
+  }, [includeLinkedIn, query, interpretation, linkedInSnapshotId, linkedInProfiles.length]);
+
+  // Trigger Google search when toggle is enabled and there's a query
+  useEffect(() => {
+    if (includeGoogle && query && googleResults.length === 0 && !googleLoading) {
+      triggerGoogleSearch(query, interpretation);
+    }
+  }, [includeGoogle, query, interpretation, googleResults.length, googleLoading]);
+
+  // Compute available filter options from the current results (GitHub + Google)
+  const availableFilters: AvailableFilters = useMemo(() => {
+    const locations = new Set<string>();
+    const languages = new Set<string>();
+    const companies = new Set<string>();
+    let maxRepos = 0;
+    let maxStars = 0;
+
+    // Extract from GitHub developers
+    developers.forEach((dev) => {
+      if (dev.location) {
+        locations.add(dev.location);
+      }
+      if (dev.skills) {
+        dev.skills.forEach((skill) => {
+          languages.add(skill);
+        });
+      }
+      if (dev.company) {
+        companies.add(dev.company);
+      }
+      if (dev.repos > maxRepos) maxRepos = dev.repos;
+      if (dev.stars > maxStars) maxStars = dev.stars;
+    });
+
+    // Extract from Google results (parse snippets for locations)
+    const locationPatterns = [
+      /(?:in|from|based in|located in|living in)\s+([A-Z][a-zA-Z\s,]+?)(?:\s*[-·|]|\s*$)/gi,
+      /([A-Z][a-zA-Z]+(?:,\s*[A-Z]{2})?)\s+Area/gi,
+      /Location:\s*([A-Z][a-zA-Z\s,]+)/gi,
+    ];
+
+    googleResults.forEach((result) => {
+      const textToSearch = `${result.title} ${result.snippet}`;
+
+      // Try to extract locations from snippets
+      locationPatterns.forEach((pattern) => {
+        const matches = textToSearch.matchAll(pattern);
+        for (const match of matches) {
+          if (match[1] && match[1].length < 50) {
+            const loc = match[1].trim();
+            if (loc && !loc.match(/^(the|and|or|for|with)$/i)) {
+              locations.add(loc);
+            }
+          }
+        }
+      });
+
+      // Extract skills/languages mentioned in title or snippet
+      const techKeywords = ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'Go', 'Rust', 'Ruby', 'PHP', 'Swift', 'Kotlin', 'React', 'Angular', 'Vue', 'Node.js', 'Django', 'Rails', 'Spring', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP'];
+      techKeywords.forEach((tech) => {
+        if (textToSearch.toLowerCase().includes(tech.toLowerCase())) {
+          languages.add(tech);
+        }
+      });
+    });
+
+    return {
+      locations: Array.from(locations).sort(),
+      languages: Array.from(languages).sort(),
+      companies: Array.from(companies).sort(),
+      maxRepos,
+      maxStars,
+    };
+  }, [developers, googleResults]);
+
+  // Filter developers based on current filters
+  const filteredDevelopers = developers.filter((dev) => {
+    // Location filter
+    if (filters.location) {
+      const devLocation = (dev.location || "").toLowerCase();
+      if (!devLocation.includes(filters.location.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // Language filter (check skills)
+    if (filters.language) {
+      const hasLanguage = dev.skills?.some(
+        (skill) => skill.toLowerCase().includes(filters.language!.toLowerCase())
+      );
+      if (!hasLanguage) {
+        return false;
+      }
+    }
+
+    // Min repos filter
+    if (filters.minRepos > 0 && (dev.repos || 0) < filters.minRepos) {
+      return false;
+    }
+
+    // Min stars filter
+    if (filters.minStars > 0 && (dev.stars || 0) < filters.minStars) {
+      return false;
+    }
+
+    // Experience level filter (estimate based on repos/followers/stars)
+    if (filters.experienceLevel) {
+      const activityScore = (dev.repos || 0) + (dev.stars || 0) / 10 + (dev.followers || 0) / 5;
+      const levelThresholds: Record<string, [number, number]> = {
+        junior: [0, 20],
+        mid: [20, 50],
+        senior: [50, 150],
+        lead: [150, Infinity],
+      };
+      const [min, max] = levelThresholds[filters.experienceLevel] || [0, Infinity];
+      if (activityScore < min || activityScore >= max) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Filter Google results based on current filters
+  const filteredGoogleResults = googleResults.filter((result) => {
+    const textToSearch = `${result.title} ${result.snippet}`.toLowerCase();
+
+    // Location filter - check if location mentioned in text
+    if (filters.location) {
+      if (!textToSearch.includes(filters.location.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // Language filter - check if language/tech mentioned in text
+    if (filters.language) {
+      if (!textToSearch.includes(filters.language.toLowerCase())) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   const handleSearch = () => {
     if (searchQuery.trim()) {
       if (isLocked) {
@@ -316,34 +475,46 @@ function SearchResults() {
               {t("common.search")}
             </Button>
           </div>
+        </motion.div>
 
-          {/* Source toggles */}
-          <div className="flex items-center gap-6 mb-4">
+        {/* Main content with filters sidebar */}
+        <div className="flex gap-6">
+          {/* Desktop filter sidebar */}
+          <SearchFiltersPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            resultCount={filteredDevelopers.length}
+            mode="desktop"
+            availableFilters={availableFilters}
+          />
+
+          {/* Results area */}
+          <div className="flex-1 min-w-0">
+            {/* Source toggles and mobile filter button */}
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-4">
+              {/* Mobile filter button */}
+              <SearchFiltersPanel
+                filters={filters}
+                onFiltersChange={setFilters}
+                resultCount={filteredDevelopers.length}
+                mode="mobile"
+                availableFilters={availableFilters}
+              />
+
             <div className="flex items-center gap-2">
               <Github className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">GitHub</span>
+              <span className="text-sm text-muted-foreground hidden sm:inline">GitHub</span>
               <Badge variant="secondary" className="text-xs">Always on</Badge>
             </div>
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-[#4285F4]" />
-              <span className="text-sm text-muted-foreground">Google</span>
+              <span className="text-sm text-muted-foreground hidden sm:inline">Google</span>
               <Switch
                 checked={includeGoogle}
                 onCheckedChange={setIncludeGoogle}
               />
               {googleLoading && (
                 <Loader2 className="w-4 h-4 animate-spin text-[#4285F4]" />
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
-              <span className="text-sm text-muted-foreground">LinkedIn</span>
-              <Switch
-                checked={includeLinkedIn}
-                onCheckedChange={setIncludeLinkedIn}
-              />
-              {linkedInLoading && (
-                <Loader2 className="w-4 h-4 animate-spin text-[#0A66C2]" />
               )}
             </div>
           </div>
@@ -355,11 +526,13 @@ function SearchResults() {
               animate={{ opacity: 1 }}
               className="space-y-2"
             >
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <p className="text-muted-foreground text-sm sm:text-base">
                   {t("search.found")}{" "}
                   <span className="text-foreground font-semibold">
-                    {total.toLocaleString()}
+                    {filteredDevelopers.length !== developers.length
+                      ? `${filteredDevelopers.length} of ${total.toLocaleString()}`
+                      : total.toLocaleString()}
                   </span>{" "}
                   {t("search.developers")}{" "}
                   <span className="text-primary">&ldquo;{query}&rdquo;</span>
@@ -396,7 +569,6 @@ function SearchResults() {
               )}
             </motion.div>
           )}
-        </motion.div>
 
         {/* Error State */}
         <AnimatePresence>
@@ -441,8 +613,24 @@ function SearchResults() {
           </div>
         )}
 
+        {/* No results after filtering */}
+        {!loading && developers.length > 0 && filteredDevelopers.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="p-8 text-center">
+              <Filter className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-semibold mb-2">No matches with current filters</h3>
+              <p className="text-muted-foreground mb-4">
+                Found {developers.length} developers, but none match your filter criteria.
+              </p>
+              <Button variant="outline" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                Reset Filters
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Results */}
-        {!loading && developers.length > 0 && (
+        {!loading && filteredDevelopers.length > 0 && (
           <motion.div
             className="space-y-4"
             initial="hidden"
@@ -451,7 +639,7 @@ function SearchResults() {
               visible: { transition: { staggerChildren: 0.05 } },
             }}
           >
-            {developers.map((dev, index) => (
+            {filteredDevelopers.map((dev, index) => (
               <motion.div
                 key={dev.username}
                 variants={{
@@ -494,6 +682,7 @@ function SearchResults() {
                                   </Badge>
                                 );
                               })()}
+                              <OpenToWorkBadge username={dev.username} />
                             </div>
                             <Button
                               variant="ghost"
@@ -573,7 +762,7 @@ function SearchResults() {
         )}
 
         {/* Google SERP Results */}
-        {includeGoogle && (googleResults.length > 0 || googleLoading) && (
+        {includeGoogle && (filteredGoogleResults.length > 0 || googleLoading) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -588,8 +777,12 @@ function SearchResults() {
                   Searching...
                 </Badge>
               )}
-              {!googleLoading && googleResults.length > 0 && (
-                <Badge variant="secondary">{googleResults.length} found</Badge>
+              {!googleLoading && filteredGoogleResults.length > 0 && (
+                <Badge variant="secondary">
+                  {filteredGoogleResults.length !== googleResults.length
+                    ? `${filteredGoogleResults.length} of ${googleResults.length}`
+                    : googleResults.length} found
+                </Badge>
               )}
             </div>
 
@@ -609,7 +802,7 @@ function SearchResults() {
               </div>
             ) : (
               <div className="space-y-4">
-                {googleResults.map((result, index) => (
+                {filteredGoogleResults.map((result, index) => (
                   <motion.div
                     key={`google-${index}`}
                     initial={{ opacity: 0, y: 10 }}
@@ -661,8 +854,8 @@ function SearchResults() {
           </motion.div>
         )}
 
-        {/* LinkedIn Results */}
-        {includeLinkedIn && (linkedInProfiles.length > 0 || linkedInLoading) && (
+        {/* LinkedIn Results - Disabled due to unreliable Bright Data scraper */}
+        {/* {includeLinkedIn && (linkedInProfiles.length > 0 || linkedInLoading) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -773,7 +966,7 @@ function SearchResults() {
               </div>
             )}
           </motion.div>
-        )}
+        )} */}
 
         {/* Empty State */}
         {!loading && !error && query && developers.length === 0 && (
@@ -859,6 +1052,8 @@ function SearchResults() {
             </div>
           </motion.div>
         )}
+          </div>
+        </div>
       </div>
 
       {/* Signup Modal */}

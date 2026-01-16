@@ -135,22 +135,9 @@ export default function ProfilePage({
     }
   }, [linkedInProfile, profile]);
 
-  const handleUnlockDeepProfile = async () => {
-    setUnlocking(true);
-    try {
-      const response = await fetch(`/api/developers/${username}?deep=true`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to unlock profile");
-      }
-
-      setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to unlock profile");
-    } finally {
-      setUnlocking(false);
-    }
+  const handleUnlockDeepProfile = () => {
+    // Navigate to the deep profile page which has full AI analysis
+    window.location.href = `/profile/${username}/deep`;
   };
 
   const handleLinkedInEnrich = async () => {
@@ -412,27 +399,24 @@ export default function ProfilePage({
             )}
 
             {/* Deep Profile CTA */}
-            {!deep && (
-              <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lock className="w-5 h-5 text-primary" />
-                        <h3 className="font-semibold">Unlock Deep Profile</h3>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        Get contact info, detailed contribution analysis, and code quality metrics.
-                      </p>
+            <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Brain className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold">View Deep Profile</h3>
                     </div>
-                    <Button onClick={handleUnlockDeepProfile} disabled={unlocking}>
-                      {unlocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Use 1 Credit
-                    </Button>
+                    <p className="text-muted-foreground text-sm">
+                      AI-powered analysis with contribution patterns, code quality metrics, and interview guide.
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <Button onClick={handleUnlockDeepProfile}>
+                    View Analysis
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {deep && contact && (
               <Card>

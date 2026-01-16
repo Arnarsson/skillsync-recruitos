@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Bright Data SERP API endpoint
-const BRIGHTDATA_SERP_URL = "https://api.brightdata.com/serp/req";
+// Bright Data SERP API endpoint (new format)
+const BRIGHTDATA_SERP_URL = "https://api.brightdata.com/request";
 
 export interface SerpResult {
   title: string;
@@ -43,8 +43,15 @@ export async function POST(request: NextRequest) {
     // Build search query for finding developers
     // Append site filters to focus on relevant platforms
     const searchQuery = buildDeveloperSearchQuery(query, location);
+    const countryCode = location ? getCountryCode(location) : "us";
 
-    console.log("[SERP] Searching:", searchQuery);
+    // Build Google search URL with parameters
+    const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&hl=en&gl=${countryCode}&num=${num}`;
+
+    console.log("[SERP] Searching:", googleSearchUrl);
+
+    // Get SERP zone (optional, uses default if not set)
+    const serpZone = process.env.BRIGHTDATA_SERP_ZONE || "serp_api1";
 
     const response = await fetch(BRIGHTDATA_SERP_URL, {
       method: "POST",
@@ -53,11 +60,10 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: searchQuery,
-        search_engine: "google",
-        country: location ? getCountryCode(location) : "us",
-        num_results: num,
-        parse: true,
+        zone: serpZone,
+        url: googleSearchUrl,
+        format: "raw",
+        data_format: "parsed_light", // Get parsed JSON results
       }),
     });
 
@@ -153,16 +159,28 @@ function getCountryCode(location: string): string {
 
 /**
  * Parse Bright Data SERP response into normalized results
+ * Handles multiple possible response formats
  */
 function parseSerpResults(data: any): SerpResult[] {
-  if (!data || !data.organic) {
+  // Handle different response structures
+  let organic = data?.organic || data?.results?.organic || data?.results || [];
+
+  // If data is the array directly
+  if (Array.isArray(data)) {
+    organic = data;
+  }
+
+  if (!Array.isArray(organic)) {
+    console.log("[SERP] Unexpected response structure:", JSON.stringify(data).slice(0, 500));
     return [];
   }
 
-  return data.organic.map((item: any, index: number) => ({
-    title: item.title || "",
-    link: item.link || item.url || "",
-    snippet: item.snippet || item.description || "",
-    position: index + 1,
-  }));
+  return organic
+    .filter((item: any) => item && (item.title || item.link || item.url))
+    .map((item: any, index: number) => ({
+      title: item.title || "",
+      link: item.link || item.url || item.href || "",
+      snippet: item.snippet || item.description || item.text || "",
+      position: index + 1,
+    }));
 }
