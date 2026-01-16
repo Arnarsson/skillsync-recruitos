@@ -193,11 +193,21 @@ interface Candidate {
   risks?: string[];
   risksWithSources?: EvidenceItem[];
   scoreBreakdown?: {
-    skills: { value: number; max: number; percentage: number };
-    experience: { value: number; max: number; percentage: number };
-    industry: { value: number; max: number; percentage: number };
-    seniority: { value: number; max: number; percentage: number };
-    location: { value: number; max: number; percentage: number };
+    // New format from AI analysis
+    skills?: { value: number; max: number; percentage: number };
+    experience?: { value: number; max: number; percentage: number };
+    industry?: { value: number; max: number; percentage: number };
+    seniority?: { value: number; max: number; percentage: number };
+    location?: { value: number; max: number; percentage: number };
+    // Old format from pipeline search
+    requiredMatched?: string[];
+    requiredMissing?: string[];
+    preferredMatched?: string[];
+    locationMatch?: "exact" | "remote" | "none";
+    baseScore?: number;
+    skillsScore?: number;
+    preferredScore?: number;
+    locationScore?: number;
   };
   persona?: Persona;
   deepProfile?: DeepProfile;
@@ -390,13 +400,48 @@ export default function DeepProfilePage() {
     );
   }
 
-  const radarData = candidate.scoreBreakdown
+  // Convert pipeline scoreBreakdown format to the format used by charts
+  const normalizedScoreBreakdown = candidate.scoreBreakdown
+    ? candidate.scoreBreakdown.skills?.percentage !== undefined
+      ? // New format from AI analysis - use as-is
+        candidate.scoreBreakdown
+      : // Old format from pipeline - convert
+        {
+          skills: {
+            value: candidate.scoreBreakdown.skillsScore || 0,
+            max: 35,
+            percentage: Math.round(((candidate.scoreBreakdown.skillsScore || 0) / 35) * 100),
+          },
+          experience: {
+            value: candidate.scoreBreakdown.baseScore || 50,
+            max: 50,
+            percentage: Math.round(((candidate.scoreBreakdown.baseScore || 50) / 50) * 100),
+          },
+          industry: {
+            value: candidate.scoreBreakdown.preferredScore || 0,
+            max: 15,
+            percentage: Math.round(((candidate.scoreBreakdown.preferredScore || 0) / 15) * 100),
+          },
+          seniority: {
+            value: 50, // Default for pipeline candidates
+            max: 100,
+            percentage: 50,
+          },
+          location: {
+            value: candidate.scoreBreakdown.locationScore || 0,
+            max: 10,
+            percentage: Math.round(((candidate.scoreBreakdown.locationScore || 0) / 10) * 100),
+          },
+        }
+    : null;
+
+  const radarData = normalizedScoreBreakdown
     ? [
-        { subject: "Skills", value: candidate.scoreBreakdown.skills?.percentage || 0 },
-        { subject: "Exp.", value: candidate.scoreBreakdown.experience?.percentage || 0 },
-        { subject: "Industry", value: candidate.scoreBreakdown.industry?.percentage || 0 },
-        { subject: "Seniority", value: candidate.scoreBreakdown.seniority?.percentage || 0 },
-        { subject: "Location", value: candidate.scoreBreakdown.location?.percentage || 0 },
+        { subject: "Skills", value: normalizedScoreBreakdown.skills?.percentage || 0 },
+        { subject: "Exp.", value: normalizedScoreBreakdown.experience?.percentage || 0 },
+        { subject: "Industry", value: normalizedScoreBreakdown.industry?.percentage || 0 },
+        { subject: "Seniority", value: normalizedScoreBreakdown.seniority?.percentage || 0 },
+        { subject: "Location", value: normalizedScoreBreakdown.location?.percentage || 0 },
       ]
     : [];
 
@@ -764,7 +809,7 @@ export default function DeepProfilePage() {
                 </div>
 
                 {/* Progress Bars */}
-                {candidate.scoreBreakdown ? (
+                {normalizedScoreBreakdown ? (
                   <div className="space-y-3">
                     {[
                       { key: "skills", label: "Skills", labelDa: "Kompetencer" },
@@ -772,12 +817,12 @@ export default function DeepProfilePage() {
                       { key: "industry", label: "Industry", labelDa: "Branche" },
                       { key: "seniority", label: "Seniority", labelDa: "Senioritet" },
                       { key: "location", label: "Location", labelDa: "Lokation" },
-                    ].map(({ key, label, labelDa }) => {
+                    ].map(({ key, labelDa }) => {
                       const component =
-                        candidate.scoreBreakdown?.[
-                          key as keyof typeof candidate.scoreBreakdown
-                        ];
-                      if (!component) return null;
+                        normalizedScoreBreakdown[
+                          key as keyof typeof normalizedScoreBreakdown
+                        ] as { value: number; max: number; percentage: number } | undefined;
+                      if (!component || typeof component.percentage !== 'number') return null;
                       return (
                         <div key={key}>
                           <div className="flex justify-between text-xs mb-1">
