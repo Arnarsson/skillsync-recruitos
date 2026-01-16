@@ -407,7 +407,7 @@ function SearchResults() {
                 variant="outline"
                 className="cursor-pointer hover:bg-muted"
                 onClick={() =>
-                  router.push("/search?q=React%20TypeScript%20developers")
+                  router.push(`/search?q=React%20TypeScript%20developers${isAdmin ? "&admin" : ""}`)
                 }
               >
                 React TypeScript
@@ -415,7 +415,7 @@ function SearchResults() {
               <Badge
                 variant="outline"
                 className="cursor-pointer hover:bg-muted"
-                onClick={() => router.push("/search?q=Python%20ML%20engineers")}
+                onClick={() => router.push(`/search?q=Python%20ML%20engineers${isAdmin ? "&admin" : ""}`)}
               >
                 Python ML
               </Badge>
@@ -423,7 +423,7 @@ function SearchResults() {
                 variant="outline"
                 className="cursor-pointer hover:bg-muted"
                 onClick={() =>
-                  router.push("/search?q=Rust%20systems%20programming")
+                  router.push(`/search?q=Rust%20systems%20programming${isAdmin ? "&admin" : ""}`)
                 }
               >
                 Rust systems
@@ -462,7 +462,7 @@ function SearchResults() {
                     variant="outline"
                     className="cursor-pointer hover:bg-primary/10 hover:border-primary/50 transition-colors px-3 py-1.5"
                     onClick={() =>
-                      router.push(`/search?q=${encodeURIComponent(suggestion)}`)
+                      router.push(`/search?q=${encodeURIComponent(suggestion)}${isAdmin ? "&admin" : ""}`)
                     }
                   >
                     {suggestion}
