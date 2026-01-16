@@ -252,16 +252,16 @@ export function CandidatePipelineItem({
                     </div>
 
                     {/* Skills Match */}
-                    {(candidate.scoreBreakdown.requiredMatched.length > 0 ||
-                      candidate.scoreBreakdown.requiredMissing.length > 0) && (
+                    {((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
+                      (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
                       <div className="mt-3">
                         <div className="text-xs font-medium text-muted-foreground mb-2">
-                          Required Skills ({candidate.scoreBreakdown.requiredMatched.length}/
-                          {candidate.scoreBreakdown.requiredMatched.length +
-                            candidate.scoreBreakdown.requiredMissing.length})
+                          Required Skills ({candidate.scoreBreakdown.requiredMatched?.length || 0}/
+                          {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                            (candidate.scoreBreakdown.requiredMissing?.length || 0)})
                         </div>
                         <div className="flex flex-wrap gap-1">
-                          {candidate.scoreBreakdown.requiredMatched.map((skill) => (
+                          {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
                             <Badge
                               key={skill}
                               className="bg-green-500/20 text-green-600 border-green-500/30 text-xs gap-1"
@@ -270,7 +270,7 @@ export function CandidatePipelineItem({
                               {skill}
                             </Badge>
                           ))}
-                          {candidate.scoreBreakdown.requiredMissing.map((skill) => (
+                          {candidate.scoreBreakdown.requiredMissing?.map((skill) => (
                             <Badge
                               key={skill}
                               variant="outline"
