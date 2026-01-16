@@ -239,6 +239,17 @@
     "enterKey": "Enter",
     "escKey": "Esc",
     "getStarted": "Kom I Gang",
+    "skipTour": "Spring intro over",
+    "welcome": {
+      "title": "Velkommen til RecruitOS",
+      "subtitle": "Find elite ingeniører baseret på hvad de faktisk har bygget"
+    },
+    "quickSteps": {
+      "job": "Indsæt job URL eller beskrivelse",
+      "pipeline": "AI finder matchende kandidater",
+      "profile": "Dyb analyse & scoring",
+      "outreach": "Personaliserede beskeder"
+    },
     "steps": {
       "welcome": {
         "title": "Velkommen til RecruitOS",

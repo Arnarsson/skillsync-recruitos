@@ -32,6 +32,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
+import ScoreBadge from "@/components/ScoreBadge";
 import {
   ResponsiveContainer,
   BarChart,
@@ -743,12 +744,7 @@ export default function PipelinePage() {
                         </div>
 
                         {/* Score */}
-                        <div className={`text-center px-4 py-2 rounded-lg ${getScoreBg(candidate.alignmentScore)}`}>
-                          <div className={`text-2xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
-                            {candidate.alignmentScore}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{t("common.score")}</div>
-                        </div>
+                        <ScoreBadge score={candidate.alignmentScore} size="md" />
 
                         {/* Actions */}
                         <div className="flex items-center gap-2">

@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/lib/i18n";
+import { getScoreInfo } from "@/components/ScoreBadge";
 
 interface Developer {
   username: string;
@@ -48,7 +49,7 @@ const FREE_SEARCHES = 1;
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const query = searchParams.get("q") || "";
   const isAdmin = searchParams.get("admin") !== null;
   const [searchQuery, setSearchQuery] = useState(query);
@@ -138,12 +139,6 @@ function SearchResults() {
     if (e.key === "Enter") {
       handleSearch();
     }
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "bg-green-500/20 text-green-400 border-green-500/30";
-    if (score >= 60) return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-    return "bg-red-500/20 text-red-400 border-red-500/30";
   };
 
   const formatNumber = (num: number) => {
@@ -304,12 +299,15 @@ function SearchResults() {
                               <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
                                 {dev.name}
                               </h3>
-                              <Badge
-                                className={`${getScoreColor(dev.score)} border`}
-                              >
-                                <Star className="w-3 h-3 mr-1" />
-                                {dev.score}% {t("search.match")}
-                              </Badge>
+                              {(() => {
+                                const scoreInfo = getScoreInfo(dev.score);
+                                return (
+                                  <Badge className={`${scoreInfo.bg} ${scoreInfo.color} ${scoreInfo.border} border`}>
+                                    <Star className="w-3 h-3 mr-1" />
+                                    {dev.score}% - {lang === "da" ? scoreInfo.labelDa : scoreInfo.label}
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <Button
                               variant="ghost"
