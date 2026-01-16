@@ -652,8 +652,8 @@ export default function DeepProfilePage() {
         {/* Content */}
         {activeTab === "overview" && (
           <BentoGrid className="auto-rows-[minmax(140px,_1fr)]">
-            {/* Key Evidence - Large Card (2x2) */}
-            <BentoCard colSpan={2} rowSpan={2} className="bg-gradient-to-br from-green-500/5 to-transparent">
+            {/* Key Evidence */}
+            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-green-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-2 rounded-lg bg-green-500/10">
                   <CheckCircle className="w-5 h-5 text-green-500" />
@@ -707,8 +707,8 @@ export default function DeepProfilePage() {
               </TooltipProvider>
             </BentoCard>
 
-            {/* Alignment Score - Small Card (1x1) */}
-            <BentoCard colSpan={1} rowSpan={1} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent">
+            {/* Alignment Score */}
+            <BentoCard colSpan={1} rowSpan={2} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent">
               <div className={`text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
                 {candidate.alignmentScore}
               </div>
@@ -720,8 +720,8 @@ export default function DeepProfilePage() {
               )}
             </BentoCard>
 
-            {/* Potential Gaps - Tall Card (1x2) */}
-            <BentoCard colSpan={1} rowSpan={2} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
+            {/* Potential Gaps */}
+            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-2 rounded-lg bg-yellow-500/10">
                   <AlertTriangle className="w-5 h-5 text-yellow-500" />
