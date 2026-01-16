@@ -38,6 +38,7 @@ import {
 import OutreachModal from "@/components/OutreachModal";
 import ScoreBadge from "@/components/ScoreBadge";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
+import { CandidatePipelineItem } from "@/components/pipeline/CandidatePipelineItem";
 import {
   ResponsiveContainer,
   BarChart,
@@ -115,8 +116,7 @@ export default function PipelinePage() {
   const [showOutreach, setShowOutreach] = useState(false);
   const [outreachCandidate, setOutreachCandidate] = useState<Candidate | null>(null);
 
-  // Expanded explanation state
-  const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
+  // Note: expandedExplanation state moved to CandidatePipelineItem component
 
   useEffect(() => {
     const stored = localStorage.getItem("apex_job_context");
@@ -775,191 +775,17 @@ export default function PipelinePage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   layout
                 >
-                  <Card className="hover:border-primary/50 transition-colors">
-                    <CardContent className="py-4">
-                      <div className="flex items-center gap-4">
-                        {/* Checkbox */}
-                        <button onClick={() => toggleSelect(candidate.id)} className="text-muted-foreground hover:text-foreground">
-                          {selectedIds.includes(candidate.id) ? (
-                            <CheckSquare className="w-5 h-5 text-primary" />
-                          ) : (
-                            <Square className="w-5 h-5" />
-                          )}
-                        </button>
-
-                        {/* Avatar */}
-                        <img
-                          src={candidate.avatar}
-                          alt={candidate.name}
-                          className="w-12 h-12 rounded-full"
-                        />
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium truncate">{candidate.name}</h3>
-                            {candidate.persona?.archetype && (
-                              <Badge variant="outline" className="text-xs">
-                                {candidate.persona.archetype.split(" ").slice(0, 2).join(" ")}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {candidate.currentRole} at {candidate.company}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {candidate.location}
-                            </span>
-                            {candidate.skills && candidate.skills.length > 0 && (
-                              <span>{candidate.skills.slice(0, 3).join(", ")}</span>
-                            )}
-                          </div>
-                          {/* Behavioral Insights Badges */}
-                          <BehavioralBadges username={candidate.id} compact className="mt-2" />
-                        </div>
-
-                        {/* Score with explanation toggle */}
-                        <div className="flex flex-col items-center gap-1">
-                          <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
-                          <button
-                            onClick={() => setExpandedExplanation(expandedExplanation === candidate.id ? null : candidate.id)}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <HelpCircle className="w-3 h-3" />
-                            <span>{t("pipeline.candidate.whyScore") || "Why?"}</span>
-                            {expandedExplanation === candidate.id ? (
-                              <ChevronUp className="w-3 h-3" />
-                            ) : (
-                              <ChevronDown className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          <Link href={`/profile/${candidate.id}/deep${adminSuffix}`}>
-                            <Button size="sm">
-                              {t("pipeline.candidate.deepProfile")}
-                              <ArrowRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          </Link>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setOutreachCandidate(candidate);
-                              setShowOutreach(true);
-                            }}
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(candidate.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Score Explanation Panel */}
-                      <AnimatePresence>
-                        {expandedExplanation === candidate.id && candidate.scoreBreakdown && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mt-4 pt-4 border-t space-y-4">
-                              <h4 className="text-sm font-medium flex items-center gap-2">
-                                <BarChart3 className="w-4 h-4" />
-                                {t("pipeline.candidate.scoreBreakdown") || "Score Breakdown"}
-                              </h4>
-
-                              {/* Score Components */}
-                              <div className="grid grid-cols-4 gap-3">
-                                <div className="p-2 rounded-lg bg-muted/50 text-center">
-                                  <div className="text-lg font-bold text-muted-foreground">{candidate.scoreBreakdown.baseScore}</div>
-                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.baseScore") || "Base"}</div>
-                                </div>
-                                <div className="p-2 rounded-lg bg-green-500/10 text-center">
-                                  <div className="text-lg font-bold text-green-500">+{candidate.scoreBreakdown.skillsScore}</div>
-                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.skillsMatch") || "Skills"}</div>
-                                </div>
-                                <div className="p-2 rounded-lg bg-blue-500/10 text-center">
-                                  <div className="text-lg font-bold text-blue-500">+{candidate.scoreBreakdown.preferredScore}</div>
-                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.preferred") || "Preferred"}</div>
-                                </div>
-                                <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
-                                  <div className="text-lg font-bold text-yellow-500">+{candidate.scoreBreakdown.locationScore}</div>
-                                  <div className="text-[10px] text-muted-foreground">{t("pipeline.candidate.locationBonus") || "Location"}</div>
-                                </div>
-                              </div>
-
-                              {/* Required Skills */}
-                              {(candidate.scoreBreakdown.requiredMatched.length > 0 || candidate.scoreBreakdown.requiredMissing.length > 0) && (
-                                <div>
-                                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                                    {t("pipeline.candidate.requiredSkills") || "Required Skills"} ({candidate.scoreBreakdown.requiredMatched.length}/{candidate.scoreBreakdown.requiredMatched.length + candidate.scoreBreakdown.requiredMissing.length})
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {candidate.scoreBreakdown.requiredMatched.map((skill) => (
-                                      <Badge key={skill} className="bg-green-500/20 text-green-600 border-green-500/30 text-xs gap-1">
-                                        <Check className="w-3 h-3" />
-                                        {skill}
-                                      </Badge>
-                                    ))}
-                                    {candidate.scoreBreakdown.requiredMissing.map((skill) => (
-                                      <Badge key={skill} variant="outline" className="text-muted-foreground text-xs gap-1 opacity-60">
-                                        <AlertTriangle className="w-3 h-3" />
-                                        {skill}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Preferred Skills */}
-                              {candidate.scoreBreakdown.preferredMatched.length > 0 && (
-                                <div>
-                                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                                    {t("pipeline.candidate.preferredSkillsMatched") || "Preferred Skills Matched"}
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {candidate.scoreBreakdown.preferredMatched.map((skill) => (
-                                      <Badge key={skill} className="bg-blue-500/20 text-blue-600 border-blue-500/30 text-xs gap-1">
-                                        <Check className="w-3 h-3" />
-                                        {skill}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Location Match */}
-                              <div className="flex items-center gap-2 text-xs">
-                                <MapPin className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-muted-foreground">{t("pipeline.candidate.locationMatch") || "Location"}:</span>
-                                {candidate.scoreBreakdown.locationMatch === "exact" && (
-                                  <Badge className="bg-green-500/20 text-green-600 text-xs">{t("pipeline.candidate.exactMatch") || "Exact match"}</Badge>
-                                )}
-                                {candidate.scoreBreakdown.locationMatch === "remote" && (
-                                  <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">{t("pipeline.candidate.remoteCompatible") || "Remote compatible"}</Badge>
-                                )}
-                                {candidate.scoreBreakdown.locationMatch === "none" && (
-                                  <Badge variant="outline" className="text-muted-foreground text-xs">{t("pipeline.candidate.noMatch") || "No match"}</Badge>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </CardContent>
-                  </Card>
+                  <CandidatePipelineItem
+                    candidate={candidate}
+                    isSelected={selectedIds.includes(candidate.id)}
+                    onToggleSelect={toggleSelect}
+                    onDelete={handleDelete}
+                    onOutreach={(c) => {
+                      setOutreachCandidate(c);
+                      setShowOutreach(true);
+                    }}
+                    adminSuffix={adminSuffix}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
