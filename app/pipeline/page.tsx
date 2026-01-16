@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useAdmin } from "@/lib/adminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,9 +84,8 @@ interface Candidate {
 
 export default function PipelinePage() {
   const { t } = useLanguage();
-  const searchParams = useSearchParams();
-  const isAdmin = searchParams.get("admin") !== null;
-  const adminSuffix = isAdmin ? "?admin" : "";
+  const { isAdmin } = useAdmin();
+  const adminSuffix = ""; // No longer needed with context-based admin
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -784,7 +783,6 @@ export default function PipelinePage() {
                       setOutreachCandidate(c);
                       setShowOutreach(true);
                     }}
-                    adminSuffix={adminSuffix}
                   />
                 </motion.div>
               ))}

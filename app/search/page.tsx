@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/lib/i18n";
+import { useAdmin } from "@/lib/adminContext";
 import { getScoreInfo } from "@/components/ScoreBadge";
 import {
   SearchFiltersPanel,
@@ -84,8 +85,8 @@ function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { t, lang } = useLanguage();
+  const { isAdmin } = useAdmin();
   const query = searchParams.get("q") || "";
-  const isAdmin = searchParams.get("admin") !== null;
   const [searchQuery, setSearchQuery] = useState(query);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [total, setTotal] = useState(0);
@@ -420,7 +421,7 @@ function SearchResults() {
         return;
       }
       searchDevelopers(searchQuery.trim());
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}${isAdmin ? "&admin" : ""}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -647,7 +648,7 @@ function SearchResults() {
                   visible: { opacity: 1, y: 0 },
                 }}
               >
-                <Link href={`/profile/${dev.username}${isAdmin ? '?admin' : ''}`}>
+                <Link href={`/profile/${dev.username}`}>
                   <Card className="group overflow-hidden hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
@@ -987,7 +988,7 @@ function SearchResults() {
                 variant="outline"
                 className="cursor-pointer hover:bg-muted"
                 onClick={() =>
-                  router.push(`/search?q=React%20TypeScript%20developers${isAdmin ? "&admin" : ""}`)
+                  router.push(`/search?q=React%20TypeScript%20developers`)
                 }
               >
                 React TypeScript
@@ -995,7 +996,7 @@ function SearchResults() {
               <Badge
                 variant="outline"
                 className="cursor-pointer hover:bg-muted"
-                onClick={() => router.push(`/search?q=Python%20ML%20engineers${isAdmin ? "&admin" : ""}`)}
+                onClick={() => router.push(`/search?q=Python%20ML%20engineers`)}
               >
                 Python ML
               </Badge>
@@ -1003,7 +1004,7 @@ function SearchResults() {
                 variant="outline"
                 className="cursor-pointer hover:bg-muted"
                 onClick={() =>
-                  router.push(`/search?q=Rust%20systems%20programming${isAdmin ? "&admin" : ""}`)
+                  router.push(`/search?q=Rust%20systems%20programming`)
                 }
               >
                 Rust systems
@@ -1042,7 +1043,7 @@ function SearchResults() {
                     variant="outline"
                     className="cursor-pointer hover:bg-primary/10 hover:border-primary/50 transition-colors px-3 py-1.5"
                     onClick={() =>
-                      router.push(`/search?q=${encodeURIComponent(suggestion)}${isAdmin ? "&admin" : ""}`)
+                      router.push(`/search?q=${encodeURIComponent(suggestion)}`)
                     }
                   >
                     {suggestion}

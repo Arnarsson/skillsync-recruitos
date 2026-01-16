@@ -83,7 +83,6 @@ interface CandidatePipelineItemProps {
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onOutreach: (candidate: Candidate) => void;
-  adminSuffix: string;
 }
 
 export function CandidatePipelineItem({
@@ -92,7 +91,6 @@ export function CandidatePipelineItem({
   onToggleSelect,
   onDelete,
   onOutreach,
-  adminSuffix,
 }: CandidatePipelineItemProps) {
   const { t } = useLanguage();
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
@@ -390,7 +388,7 @@ export function CandidatePipelineItem({
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 pt-4 border-t">
-                  <Link href={`/profile/${candidate.id}/deep${adminSuffix}`} className="flex-1">
+                  <Link href={`/profile/${candidate.id}/deep`} className="flex-1">
                     <Button className="w-full gap-2">
                       <Brain className="w-4 h-4" />
                       Full Deep Profile

@@ -51,16 +51,16 @@
     ],
     "features": {
       "searchByCapabilities": {
-        "title": "search by capabilities",
-        "description": "recruitos analyzes expertise demonstrated through open source work"
+        "title": "multi-source intelligence",
+        "description": "search github, google, and linkedin simultaneously. natural language queries in any language."
       },
       "discoverExperts": {
-        "title": "discover hidden experts",
-        "description": "find elite but overlooked engineers from around the world"
+        "title": "behavioral signals",
+        "description": "detect 'open to work' signals, engagement patterns, and job-seeking indicators automatically."
       },
       "hireFaster": {
-        "title": "hire faster",
-        "description": "see real work, qualify engineers faster"
+        "title": "inline insights",
+        "description": "expand any candidate card for instant AI analysis. no more page-hopping."
       }
     },
     "buildInPublic": {

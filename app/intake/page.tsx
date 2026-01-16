@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAdmin } from "@/lib/adminContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,8 +55,7 @@ Requirements:
 
 export default function IntakePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isAdmin = searchParams.get("admin") !== null;
+  const { isAdmin } = useAdmin();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("url");
   const [jobUrl, setJobUrl] = useState("");
@@ -110,7 +110,7 @@ export default function IntakePage() {
 
       // Show brief success state then navigate
       const timer = setTimeout(() => {
-        router.push(`/pipeline${isAdmin ? "?admin" : ""}`);
+        router.push(`/pipeline`);
       }, 1500); // 1.5 second delay to show success
 
       return () => clearTimeout(timer);
@@ -199,7 +199,7 @@ export default function IntakePage() {
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
     }
-    router.push(`/pipeline${isAdmin ? "?admin" : ""}`);
+    router.push(`/pipeline`);
   };
 
   const loadingSteps = [

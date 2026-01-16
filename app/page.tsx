@@ -1,29 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Terminal, Wand2, Zap } from "lucide-react";
+import { ArrowRight, Terminal, Wand2, Zap, Brain, Globe, Sparkles } from "lucide-react";
 import { useLanguage, useTranslatedArray } from "@/lib/i18n";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isAdmin = searchParams.get("admin") !== null;
   const { t } = useLanguage();
   const quickSearches = useTranslatedArray("home.quickSearches");
 
   const handleSearch = () => {
     if (query.trim()) {
-      const adminParam = isAdmin ? "&admin" : "";
-      router.push(`/search?q=${encodeURIComponent(query.trim())}${adminParam}`);
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
 
   const handleQuickSearch = (q: string) => {
-    const adminParam = isAdmin ? "&admin" : "";
-    router.push(`/search?q=${encodeURIComponent(q)}${adminParam}`);
+    router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
   return (
@@ -101,17 +97,17 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                icon: Terminal,
+                icon: Globe,
                 titleKey: "home.features.searchByCapabilities.title",
                 descKey: "home.features.searchByCapabilities.description",
               },
               {
-                icon: Wand2,
+                icon: Sparkles,
                 titleKey: "home.features.discoverExperts.title",
                 descKey: "home.features.discoverExperts.description",
               },
               {
-                icon: Zap,
+                icon: Brain,
                 titleKey: "home.features.hireFaster.title",
                 descKey: "home.features.hireFaster.description",
               },
