@@ -31,14 +31,13 @@ async function scrapeWithFirecrawl(url: string): Promise<string | null> {
       body: JSON.stringify({
         url: url,
         formats: ["markdown"],
-        pageOptions: {
-          onlyMainContent: true,
-        },
+        onlyMainContent: true,
       }),
     });
 
     if (!response.ok) {
-      console.log(`[Calibration] Firecrawl returned ${response.status}, falling back to basic fetch`);
+      const errorText = await response.text();
+      console.log(`[Calibration] Firecrawl returned ${response.status}: ${errorText.substring(0, 200)}`);
       return null;
     }
 

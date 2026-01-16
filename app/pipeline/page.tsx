@@ -146,9 +146,11 @@ export default function PipelinePage() {
         localStorage.setItem("apex_job_context_hash", jobContextHash);
       }
 
-      const skills = parsedJobContext.requiredSkills.slice(0, 3);
-      const location = parsedJobContext.location || "";
-      const query = [...skills, location].filter(Boolean).join(" ");
+      // Use only top 2 skills for search - more specific queries return 0 results from GitHub
+      const skills = parsedJobContext.requiredSkills.slice(0, 2);
+      // Don't include location in search query - it makes GitHub search too restrictive
+      // Location is still used for scoring candidates
+      const query = skills.join(" ");
 
       if (query) {
         setSearchQuery(query);

@@ -439,7 +439,7 @@ export default function IntakePage() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {calibration.requiredSkills.map((skill) => (
+                        {(calibration.requiredSkills || []).map((skill) => (
                           <Badge key={skill} className="bg-primary/20 text-primary">
                             {skill}
                           </Badge>
@@ -456,7 +456,7 @@ export default function IntakePage() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {calibration.preferredSkills.map((skill) => (
+                        {(calibration.preferredSkills || []).map((skill) => (
                           <Badge key={skill} variant="outline">
                             {skill}
                           </Badge>
