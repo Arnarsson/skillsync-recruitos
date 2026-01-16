@@ -21,6 +21,7 @@ import {
   X,
   Linkedin,
   Github,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,13 @@ interface LinkedInProfile {
   currentCompany?: string;
 }
 
+interface GoogleResult {
+  title: string;
+  link: string;
+  snippet: string;
+  position: number;
+}
+
 const SEARCH_COUNT_KEY = "recruitos_search_count";
 const FREE_SEARCHES = 1;
 
@@ -84,6 +92,10 @@ function SearchResults() {
   const [linkedInProfiles, setLinkedInProfiles] = useState<LinkedInProfile[]>([]);
   const [linkedInLoading, setLinkedInLoading] = useState(false);
   const [linkedInSnapshotId, setLinkedInSnapshotId] = useState<string | null>(null);
+  // Google SERP search state
+  const [includeGoogle, setIncludeGoogle] = useState(false);
+  const [googleResults, setGoogleResults] = useState<GoogleResult[]>([]);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Load search count from localStorage
   useEffect(() => {
@@ -139,13 +151,18 @@ function SearchResults() {
       if (includeLinkedIn) {
         triggerLinkedInSearch(q, data.interpretation);
       }
+
+      // Trigger Google SERP search if enabled
+      if (includeGoogle) {
+        triggerGoogleSearch(q, data.interpretation);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       setDevelopers([]);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, searchCount, incrementSearchCount, includeLinkedIn]);
+  }, [isAdmin, searchCount, incrementSearchCount, includeLinkedIn, includeGoogle]);
 
   // Trigger LinkedIn search via Bright Data
   const triggerLinkedInSearch = async (q: string, interp: SearchInterpretation | null) => {
@@ -169,6 +186,33 @@ function SearchResults() {
       }
     } catch (err) {
       console.error("LinkedIn search failed:", err);
+    }
+  };
+
+  // Trigger Google SERP search via Bright Data
+  const triggerGoogleSearch = async (q: string, interp: SearchInterpretation | null) => {
+    setGoogleLoading(true);
+    setGoogleResults([]);
+
+    try {
+      const response = await fetch("/api/brightdata/serp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: q,
+          location: interp?.location || undefined,
+          num: 10,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGoogleResults(data.results || []);
+      }
+    } catch (err) {
+      console.error("Google SERP search failed:", err);
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -279,6 +323,17 @@ function SearchResults() {
               <Github className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">GitHub</span>
               <Badge variant="secondary" className="text-xs">Always on</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#4285F4]" />
+              <span className="text-sm text-muted-foreground">Google</span>
+              <Switch
+                checked={includeGoogle}
+                onCheckedChange={setIncludeGoogle}
+              />
+              {googleLoading && (
+                <Loader2 className="w-4 h-4 animate-spin text-[#4285F4]" />
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Linkedin className="w-4 h-4 text-[#0A66C2]" />
@@ -514,6 +569,95 @@ function SearchResults() {
                 </Link>
               </motion.div>
             ))}
+          </motion.div>
+        )}
+
+        {/* Google SERP Results */}
+        {includeGoogle && (googleResults.length > 0 || googleLoading) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="w-5 h-5 text-[#4285F4]" />
+              <h2 className="text-lg font-semibold">Google Results</h2>
+              {googleLoading && (
+                <Badge variant="outline" className="gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Searching...
+                </Badge>
+              )}
+              {!googleLoading && googleResults.length > 0 && (
+                <Badge variant="secondary">{googleResults.length} found</Badge>
+              )}
+            </div>
+
+            {googleLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="overflow-hidden border-[#4285F4]/20">
+                    <CardContent className="p-6">
+                      <div className="space-y-3">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {googleResults.map((result, index) => (
+                  <motion.div
+                    key={`google-${index}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <a
+                      href={result.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Card className="group overflow-hidden hover:border-[#4285F4]/50 transition-all hover:shadow-lg border-[#4285F4]/20">
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-full bg-[#4285F4]/10 flex items-center justify-center flex-shrink-0">
+                              <Globe className="w-5 h-5 text-[#4285F4]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold group-hover:text-[#4285F4] transition-colors line-clamp-1">
+                                  {result.title}
+                                </h3>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-2 truncate">
+                                {result.link}
+                              </p>
+                              {result.snippet && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {result.snippet}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity gap-1 text-[#4285F4]"
+                            >
+                              Visit
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </a>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 
