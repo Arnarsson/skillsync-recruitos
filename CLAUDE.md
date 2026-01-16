@@ -4,283 +4,178 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**6Degrees** is an AI-powered recruitment decision-support system built as a single-page React application. The system implements a 4-stage recruiting funnel: **Intake → Shortlist → Deep Profile → Outreach**. It uses Google Gemini for AI reasoning and Firecrawl for web scraping.
+**RecruitOS** (package: skillsync-recruitos) is an AI-powered recruitment decision-support system built with Next.js 16 App Router and React 19. The system searches for software engineers on GitHub, scores them via Google Gemini AI (0-100 alignment scale), generates psychometric profiles, and creates personalized outreach messages.
 
 Key Architectural Principles:
-- **Client-side only**: All data persists in `localStorage`, no backend server (except optional Supabase)
-- **Credit economy**: Internal currency (`CR`) tracks AI operation costs
-- **EU AI Act compliance**: Immutable audit logs for all high-risk profiling decisions
+- **Next.js App Router**: All routes under `/app`, API routes under `/app/api`
+- **Client-side state**: Primary data in `localStorage`, optional Supabase sync
+- **Credit economy**: Internal currency tracks AI operation costs
+- **EU AI Act compliance**: Immutable audit logs for profiling decisions
 
 ## Development Commands
 
-### Running the Application
 ```bash
-npm run dev      # Start dev server on http://localhost:3000
-npm run build    # Production build to /dist
-npm run preview  # Preview production build
+npm run dev          # Start dev server on http://localhost:3000
+npm run build        # Production build
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run lint:fix     # Auto-fix ESLint errors
+npm run format       # Format code with Prettier
+npm run type-check   # TypeScript type checking
 ```
 
-### Testing & Quality
+**Note**: Test commands (`npm test`, `npm run test:watch`, `npm run test:coverage`, `npm run validate`) are not configured in package.json. Test files exist in `/tests` but Vitest config is backed up (`vitest.config.ts.bak`).
+
+## Environment Configuration
+
+Copy `.env.example` to `.env` before starting:
+
 ```bash
-npm test              # Run tests once
-npm run test:watch    # Run tests in watch mode
-npm run test:coverage # Generate coverage report
-npm run lint          # Run ESLint
-npm run lint:fix      # Auto-fix ESLint errors
-npm run format        # Format code with Prettier
-npm run type-check    # TypeScript type checking
-npm run validate      # Run all checks (types, lint, tests)
+GEMINI_API_KEY=         # Required - Google Gemini AI
+FIRECRAWL_API_KEY=      # Required - Job description scraping
+BRIGHTDATA_API_KEY=     # Optional - LinkedIn extraction
+NEXT_PUBLIC_SUPABASE_URL=     # Optional - Database
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
+OPENROUTER_API_KEY=     # Optional - Alternative AI
+STRIPE_*               # Optional - Payment processing
+NEXTAUTH_*             # Required for auth
 ```
-
-### Environment Configuration
-
-**IMPORTANT:** Copy `.env.example` to `.env` before starting development.
-
-API keys can be configured either via `.env` file or through the Admin Settings UI (stored in localStorage):
-- `GEMINI_API_KEY` - Required for AI analysis
-- `FIRECRAWL_API_KEY` - Required for job description scraping
-- `BRIGHTDATA_API_KEY` - Optional for LinkedIn data extraction
-- `SUPABASE_URL` + `SUPABASE_ANON_KEY` - Optional for persistent storage
-- `OPENROUTER_API_KEY` - Optional for alternative AI inference
-
-**Security Note:** For production, use environment variables only. localStorage storage is vulnerable to XSS. See [SECURITY.md](./SECURITY.md) for details.
 
 ## Architecture
 
-### 4-Stage Funnel Flow
+### Directory Structure
 
-The application enforces a linear workflow through `FunnelStage` enum:
+```
+app/                        # Next.js App Router
+├── api/                   # API routes
+│   ├── auth/[...nextauth]/ # NextAuth OAuth
+│   ├── search/            # GitHub developer search
+│   ├── profile/analyze/   # Gemini AI analysis
+│   ├── checkout/          # Stripe payments
+│   ├── credits/           # Credit management
+│   ├── outreach/          # Message generation
+│   ├── brightdata/        # LinkedIn scraping proxy
+│   └── developers/[username]/ # Public profiles
+├── intake/                # Job context input
+├── search/                # Search results
+├── pipeline/              # Candidate management
+├── profile/[username]/    # Developer profiles
+├── login/, signup/        # Auth pages
+├── page.tsx               # Homepage
+└── layout.tsx             # Root layout
 
-1. **INTAKE** (`CalibrationEngine.tsx`): Job context extraction from URLs or raw text
-2. **SHORTLIST** (`TalentHeatMap.tsx`): Candidate parsing, scoring (0-100), and pipeline management
-3. **DEEP_PROFILE** (`BattleCardCockpit.tsx`): Evidence-based profiling with workstyle indicators
-4. **OUTREACH** (`NetworkPathfinder.tsx`): Personalized message drafting
+services/                   # Business logic
+├── geminiService.ts       # AI analysis (scoring, personas, profiles)
+├── scrapingService.ts     # Firecrawl/BrightData integration
+├── candidateService.ts    # Data persistence (localStorage + Supabase)
+├── enrichmentServiceV2.ts # Profile enrichment pipeline
+├── networkAnalysisService.ts # Relationship mapping
+└── logger.ts              # Centralized logging
 
-Navigation is controlled in `App.tsx` via React Router (HashRouter). The sidebar visually tracks funnel progress.
+lib/                       # Utilities
+├── services/gemini/       # Gemini client
+├── supabase/              # Supabase clients (client/server)
+├── auth.ts                # NextAuth config (GitHub OAuth)
+├── github.ts              # Octokit wrapper
+├── stripe.ts              # Stripe integration
+└── utils.ts               # Helper functions
+
+components/                # React components
+├── ui/                    # shadcn/ui + Radix primitives
+└── [feature components]   # Header, Footer, SearchBar, etc.
+```
 
 ### State Management
 
-**Persisted State** (via `usePersistedState` hook in localStorage):
+**Persisted State** (localStorage via `usePersistedState` hook):
 - `apex_credits`: Credit balance
-- `apex_logs`: Audit event history (`AuditEvent[]`)
+- `apex_logs`: Audit event history
 - `apex_job_context`: Job description text
+- `recruitos_search_count`: Free search tracking
 
-**Transient UI State** (React `useState`):
-- `selectedCandidate`: Opens Deep Profile side panel
-- `outreachCandidate`: Opens Outreach modal
-- `showWallet`, `showSettings`: Modal visibility
+**API Keys**: Retrieved from `localStorage` first, then `process.env`
 
 ### Core Services
 
-All services are in `/services/`:
+**geminiService.ts** - AI operations:
+- `analyzeCandidateProfile()`: Alignment scoring (0-100)
+- `generatePersona()`: Psychometric profiling
+- `generateDeepProfile()`: Evidence-based analysis
+- `generateOutreach()`: Personalized messages
+- Uses structured JSON via `responseMimeType` + `responseSchema`
+- Retry logic for 503/429 errors
 
-**geminiService.ts** - AI Intelligence Layer
-- `analyzeCandidateProfile()`: Generates alignment scores + score breakdown
-- `generatePersona()`: Psychometric profiling (archetype, soft skills, red/green flags)
-- `generateDeepProfile()`: Evidence-based analysis with interview questions
-- `generateOutreach()`: Personalized message drafting
-- Uses structured JSON output via `responseMimeType` and `responseSchema`
-- Implements retry logic for transient API errors (503, 429)
+**candidateService.ts** - Dual-mode persistence:
+- Always updates localStorage first (synchronous)
+- Attempts Supabase sync (async, best-effort)
+- Graceful degradation if DB unavailable
 
-**candidateService.ts** - Data Persistence
-- Dual-mode: Local cache + optional Supabase sync
-- Always updates local cache first, then attempts DB write
-- Maps internal `Candidate` interface to Supabase schema
-
-**scrapingService.ts** - External Data Extraction
-- Firecrawl integration for job description scraping
-- BrightData integration for LinkedIn profile extraction (via `/api/brightdata` proxy)
-
-**supabase.ts** - Optional Database Client
-- Gracefully degrades if credentials missing
-- Table: `candidates` with UUID primary keys
-
-### Data Model (`types.ts`)
-
-**Candidate Interface**:
-- Core fields: `name`, `currentRole`, `company`, `location`, `yearsExperience`
-- Scoring: `alignmentScore` (0-100), `scoreBreakdown` (5 weighted components)
-- Deep Profile: `indicators` (workstyle traits), `interviewGuide`, `companyMatch`
-- Persona: Optional `persona` object with psychometric analysis
-- Funnel State: `unlockedSteps` array tracks which stages are accessible
-
-**Score Breakdown Structure**:
-- 5 components: `skills`, `experience`, `industry`, `seniority`, `location`
-- Each component: `{ value, max, percentage }`
-- Final score = weighted average across all components
-
-### Component Architecture
-
-**App.tsx** (Root):
-- Manages global state and credit spending
-- Implements `Layout` component with responsive sidebar
-- Handles toast notifications and audit logging
-
-**CalibrationEngine.tsx** (Step 1):
-- URL scraping via Firecrawl or manual text input
-- Job context saved to localStorage for downstream scoring
-
-**TalentHeatMap.tsx** (Step 2):
-- Candidate import via resume text or LinkedIn JSON
-- Grid view with sorting/filtering by score and stage
-- CSV export functionality
-- "Deep Profile" unlock costs `PRICING.DEEP_PROFILE` credits
-
-**BattleCardCockpit.tsx** (Step 3):
-- Side panel display (slides in from right)
-- Evidence-based analysis with confidence indicators
-- Dynamic interview guide generation
-- Company match scoring with strengths/friction points
-
-**NetworkPathfinder.tsx** (Step 4):
-- Modal overlay for outreach drafting
-- Context-aware message generation using persona data
-
-### Styling
-
-- Tailwind CSS with custom color palette (`apex-900`, `apex-800`, etc.)
-- FontAwesome 6 for icons
-- Mobile-responsive with hamburger menu on small screens
-- Custom selection colors: `selection:bg-emerald-500`
-
-## Important Implementation Notes
-
-### API Key Handling
-- Keys retrieved via `localStorage.getItem()` first, then fallback to `process.env`
-- Admin Settings UI validates keys before saving
-- Gemini client initialized lazily in `getAiClient()`
-- **Security Warning Banner** now displayed in AdminSettings about localStorage risks
-
-### Performance Optimizations (Added 2026-01-07)
-- All major components use `useCallback` for event handlers
-- Computed values memoized with `useMemo` (candidate lists, radar charts)
-- `usePersistedState` hook optimized to prevent unnecessary localStorage writes
-- App.tsx callbacks properly memoized to prevent unnecessary re-renders
-
-### Code Quality
-- TypeScript `any` types replaced with proper type definitions
-- Console statements wrapped in `process.env.NODE_ENV === 'development'` checks
-- Centralized logging service available at `services/logger.ts`
-- ESLint configured to enforce type safety and React best practices
-- Prettier configured for consistent code formatting
+**scrapingService.ts** - External data:
+- Firecrawl for job descriptions
+- BrightData for LinkedIn profiles
 
 ### Credit System
-- Pricing constants in `types.ts` under `PRICING` object
-- All AI operations call `handleSpendCredits()` in App.tsx
-- Credits displayed with EUR conversion (`CREDITS_TO_EUR = 0.54`)
 
-### Error Handling
-- Gemini API: Retry logic with exponential backoff for 503/429 errors
-- Database: Graceful degradation to local-only mode
-- Toast notifications for user feedback
+All AI operations are metered via `PRICING` constants in `types.ts`:
+- `DEEP_PROFILE`: 278 credits
+- `OUTREACH`: 463 credits
+- `FULL_ANALYSIS`: 741 credits
 
-### EU AI Act Compliance
-- All profiling operations logged to `apex_logs` with:
-  - Timestamp, cost, user, event type
-  - Metadata field for model version and input hash
-- Logs viewable in `AuditLogModal.tsx`
+Credits displayed with EUR conversion (`CREDITS_TO_EUR = 0.54`).
 
-### Path Aliases
-- `@/*` resolves to project root (configured in tsconfig.json + vite.config.ts)
-- Use `@/types` instead of `../types` when possible
+## Data Model
 
-### BrightData Integration
-- Dev server proxy in `vite.config.ts` handles `/api/brightdata` requests
-- Production requires Vercel serverless function in `/api/brightdata.ts`
-- Three actions: `trigger`, `progress`, `snapshot`
+**Candidate Interface** (`types.ts`):
+- Core: `name`, `currentRole`, `company`, `location`, `yearsExperience`
+- Scoring: `alignmentScore` (0-100), `scoreBreakdown` (5 components)
+- Deep Profile: `indicators`, `interviewGuide`, `companyMatch`
+- Persona: Optional psychometric analysis
+- State: `unlockedSteps` array for funnel progress
 
-## Testing
+**Score Breakdown**: 5 weighted components: `skills`, `experience`, `industry`, `seniority`, `location`
 
-### Running Tests
-```bash
-npm test              # Run all tests
-npm run test:watch    # Watch mode
-npm run test:coverage # With coverage
-```
+## Path Aliases
 
-### Test Structure
-```
-tests/
-├── setup.ts                           # Test configuration
-├── hooks/
-│   └── usePersistedState.test.ts     # Hook tests
-└── services/
-    └── geminiService.test.ts         # Service tests
-```
-
-### Writing Tests
-- Use Vitest + React Testing Library
-- Mock localStorage in tests
-- Test business logic in service layer
-- Integration tests for complex component interactions
-
-Example test:
+`@/*` resolves to project root (configured in `tsconfig.json`):
 ```typescript
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-
-describe('usePersistedState', () => {
-  it('should persist state to localStorage', () => {
-    const { result } = renderHook(() => usePersistedState('key', 'initial'));
-    act(() => result.current[1]('updated'));
-    expect(localStorage.getItem('key')).toBe(JSON.stringify('updated'));
-  });
-});
+import { Candidate } from '@/types';
+import { geminiService } from '@/services/geminiService';
 ```
 
-## Common Development Patterns
+## Adding New Features
 
-### Adding a New AI Operation
-1. Add function to `geminiService.ts` with structured JSON schema
+### New AI Operation
+1. Add function to `services/geminiService.ts` with JSON schema
 2. Update `AuditEventType` enum in `types.ts`
 3. Add pricing to `PRICING` constant
-4. Call `handleSpendCredits()` from component
-5. Handle errors with toast notifications
-6. **Use proper error types** (catch `unknown`, not `any`)
-7. **Wrap callbacks in `useCallback`** with proper dependencies
-8. **Memoize computed values** with `useMemo`
+4. Use `useCallback`/`useMemo` for performance
+
+### New API Route
+1. Create route file in `app/api/[endpoint]/route.ts`
+2. Export HTTP method handlers (`GET`, `POST`, etc.)
+3. Handle auth via NextAuth session if needed
 
 ### Extending Candidate Model
 1. Update `Candidate` interface in `types.ts`
 2. Update Supabase mapping in `candidateService.ts`
-3. Update relevant Gemini response schemas in `geminiService.ts`
+3. Update Gemini response schemas
 
-### Adding New Funnel Stage
-1. Add to `FunnelStage` enum
-2. Create new component in `/components/`
-3. Add route in `App.tsx`
-4. Update sidebar in `Layout` component
-5. Update `unlockedSteps` logic in scoring flow
+## External Integrations
 
-## CI/CD Pipeline
+| Service | Purpose | Config |
+|---------|---------|--------|
+| Google Gemini | AI analysis | `GEMINI_API_KEY` |
+| GitHub API (Octokit) | Developer search | OAuth token |
+| Firecrawl | Web scraping | `FIRECRAWL_API_KEY` |
+| BrightData | LinkedIn extraction | `BRIGHTDATA_API_KEY` |
+| Supabase | PostgreSQL database | `NEXT_PUBLIC_SUPABASE_*` |
+| Stripe | Payments | `STRIPE_*` |
+| NextAuth | OAuth sessions | `NEXTAUTH_*` |
 
-The project uses GitHub Actions for continuous integration:
-- **Lint & Test**: Runs ESLint, TypeScript checks, and Vitest
-- **Build**: Creates production build
-- **Security Scan**: Runs npm audit and TruffleHog
+## CI/CD
 
-Configuration: `.github/workflows/ci.yml`
-
-## Security Considerations
-
-1. **Never commit API keys** to the repository
-2. **Supabase credentials** must be provided via environment variables (no hardcoded fallbacks)
-3. **Content Security Policy** configured in index.html to prevent XSS
-4. **Row-Level Security** must be enabled on Supabase tables before production
-5. See [SECURITY.md](./SECURITY.md) for comprehensive security guidelines
-
-## Code Style
-
-- **ESLint**: Enforces TypeScript best practices and React hooks rules
-- **Prettier**: Automatic code formatting (single quotes, 100 char width)
-- **Pre-commit**: Run `npm run validate` before committing
-- **Import order**: React → External libs → Internal services → Types → Styles
-
-## Performance Best Practices
-
-1. **Always use `useCallback`** for event handlers passed as props
-2. **Always use `useMemo`** for computed values/filtered lists
-3. **Wrap large lists** with virtualization if >100 items
-4. **Lazy load** heavy components with `React.lazy()`
-5. **Optimize images** and use appropriate formats
-6. **Monitor bundle size** with `npm run build` output
+GitHub Actions (`.github/workflows/ci.yml`):
+- Lint & Type Check
+- Build verification
+- Security scan (npm audit, TruffleHog)

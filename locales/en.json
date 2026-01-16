@@ -1,0 +1,311 @@
+{
+  "lang": "en",
+  "common": {
+    "bookDemo": "BOOK A DEMO",
+    "signIn": "SIGN IN",
+    "signOut": "SIGN OUT",
+    "getStarted": "START HIRING",
+    "pipeline": "PIPELINE",
+    "intake": "INTAKE",
+    "loading": "Loading...",
+    "search": "Search",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "next": "Next",
+    "back": "Back",
+    "close": "Close",
+    "clear": "Clear",
+    "compare": "Compare",
+    "selected": "selected",
+    "score": "Score",
+    "skills": "Skills",
+    "location": "Location",
+    "company": "Company"
+  },
+  "header": {
+    "logo": "recruitos"
+  },
+  "footer": {
+    "resources": "resources",
+    "about": "about",
+    "contributors": "contributors",
+    "pricing": "pricing",
+    "company": "company",
+    "contact": "contact",
+    "copyright": "© {year} recruitos. all rights reserved."
+  },
+  "home": {
+    "headline": "Hire by what they've built, not what they claim",
+    "subheadline": "AI-powered candidate intelligence from real GitHub contributions",
+    "searchPlaceholder": "Senior React developer, ML engineer, Go backend...",
+    "searchHint": "{enter} to search, {shiftEnter} for new line",
+    "enter": "enter",
+    "shiftEnter": "shift + enter",
+    "quickSearches": [
+      "Senior fullstack developer React",
+      "Data scientist Python ML",
+      "AI engineer LLM",
+      "Backend developer Go",
+      "DevOps engineer Kubernetes"
+    ],
+    "features": {
+      "searchByCapabilities": {
+        "title": "search by capabilities",
+        "description": "recruitos analyzes expertise demonstrated through open source work"
+      },
+      "discoverExperts": {
+        "title": "discover hidden experts",
+        "description": "find elite but overlooked engineers from around the world"
+      },
+      "hireFaster": {
+        "title": "hire faster",
+        "description": "see real work, qualify engineers faster"
+      }
+    },
+    "buildInPublic": {
+      "title": "#buildinpublic",
+      "description1": "open source software drives the internet. but the builders who make it happen often remain invisible. traditional metrics reduce engineers to numbers, commits, prs, lines of code. but that doesn't paint the {whole} picture.",
+      "description2": "recruitos uncovers what's unique about each creator: how they solve problems, and apply domain expertise where it matters. no forms. no questionnaires. only signal from real work.",
+      "whole": "whole",
+      "exploreProfiles": "explore individual developer profiles",
+      "profilePlaceholder": "https://recruitos.dev/github_username",
+      "tryNow": "try now"
+    },
+    "pricing": {
+      "title": "pricing",
+      "candidateOnDemand": "CANDIDATE ON DEMAND",
+      "perSearch": "per search",
+      "includesDeepSearch": "includes deep search and full profile analysis",
+      "features": {
+        "fullSearch": "full candidate search",
+        "deepProfile": "deep profile analysis included",
+        "skillBreakdown": "skill breakdown & insights",
+        "noSubscription": "no subscription required"
+      },
+      "startFree": "Start with 1 free search — no card required",
+      "tryFreeSearch": "Find your first hire free"
+    }
+  },
+  "search": {
+    "placeholder": "Search by capabilities... (e.g., 'React state management', 'Rust systems programming')",
+    "found": "Found",
+    "developers": "developers for:",
+    "aiScored": "AI Scored",
+    "viewProfile": "View Profile",
+    "match": "match",
+    "repos": "repos",
+    "stars": "stars",
+    "followers": "followers",
+    "more": "more",
+    "noResults": {
+      "title": "No results found",
+      "description": "We couldn't find any developers matching your search. Try adjusting your terms or using different keywords."
+    },
+    "initial": {
+      "title": "Search for developers",
+      "description": "Enter a search query to find elite developers by their skills, technologies, or contributions. Our AI will analyze GitHub profiles to find the best matches.",
+      "popularSearches": "Popular searches:"
+    },
+    "modal": {
+      "title": "Free search used",
+      "description": "You've used your free search. Sign up to continue finding elite developers with our AI-powered search.",
+      "perSearch": "per search",
+      "includesDeep": "Includes deep search & full profile analysis",
+      "features": {
+        "fullResults": "Full candidate search results",
+        "deepProfile": "Deep profile analysis included",
+        "skillBreakdown": "Skill breakdown & insights",
+        "noSubscription": "No subscription required"
+      },
+      "signUp": "Sign up to continue",
+      "payPerSearch": "Pay per search. No commitment required."
+    },
+    "loadingSearch": "Loading search..."
+  },
+  "intake": {
+    "step": "Step 1 of 4",
+    "title": "Context & Job Intake",
+    "description": "Provide the job context. This establishes the baseline for AI alignment scoring.",
+    "loadDemo": "Load Demo",
+    "socialContext": {
+      "title": "Social Context",
+      "subtitle": "Critical for culture match",
+      "companyLinkedIn": "Company LinkedIn URL",
+      "hiringManager": "Hiring Manager LinkedIn",
+      "topPerformer": "Top Performer (Benchmark)",
+      "note": "We analyze these profiles to calibrate for team culture, communication style, and educational background."
+    },
+    "jobRequirements": {
+      "title": "Job Requirements",
+      "subtitle": "Paste or import from URL",
+      "fromUrl": "From URL",
+      "pasteText": "Paste Text",
+      "jobPostingUrl": "Job Posting URL",
+      "fetch": "Fetch",
+      "analyzing": "Analyzing...",
+      "urlHelp": "Works with LinkedIn, Greenhouse, Lever, and most job boards",
+      "jobDescription": "Job Description",
+      "pastePlaceholder": "Paste the full job description here...",
+      "chars": "chars",
+      "analyzeJob": "Analyze Job Description"
+    },
+    "loading": {
+      "extracting": "Extracting job content...",
+      "identifying": "Identifying required skills...",
+      "analyzing": "Analyzing seniority level...",
+      "calibrating": "Calibrating search parameters..."
+    },
+    "error": {
+      "title": "Analysis Failed"
+    },
+    "results": {
+      "requiredSkills": "Required Skills",
+      "preferredSkills": "Preferred Skills",
+      "aiSummary": "AI Summary",
+      "startOver": "Start Over",
+      "initializePipeline": "Initialize Pipeline"
+    },
+    "processPreview": {
+      "title": "Process Preview",
+      "steps": {
+        "jobIntake": "Job Intake",
+        "jobIntakeDesc": "Context & calibration",
+        "talentPipeline": "Talent Pipeline",
+        "talentPipelineDesc": "Source & score candidates",
+        "deepProfile": "Deep Profile",
+        "deepProfileDesc": "Evidence-based analysis",
+        "outreach": "Outreach",
+        "outreachDesc": "Personalized messaging"
+      },
+      "creditSystem": {
+        "title": "Credit System",
+        "description": "1 CR = AI operation cost. Pay per candidate processed."
+      }
+    }
+  },
+  "pipeline": {
+    "step": "Step 2 of 4",
+    "title": "Talent Pipeline",
+    "import": "Import",
+    "editJob": "Edit Job",
+    "intelligence": {
+      "title": "Pipeline Intelligence",
+      "distribution": "Score distribution across {count} candidates",
+      "topMatch": "Top Match"
+    },
+    "searchPlaceholder": "Search GitHub developers (e.g., 'react copenhagen')",
+    "addCandidates": "Add Candidates",
+    "filters": "Filters",
+    "sort": "Sort:",
+    "sortOptions": {
+      "scoreDesc": "Score (High to Low)",
+      "scoreAsc": "Score (Low to High)",
+      "nameAsc": "Name (A-Z)",
+      "nameDesc": "Name (Z-A)"
+    },
+    "scoreFilter": "Score:",
+    "all": "All",
+    "empty": {
+      "loading": {
+        "title": "Finding Candidates...",
+        "description": "Searching for developers matching your job requirements"
+      },
+      "noResults": {
+        "title": "No Candidates Yet",
+        "description": "Search for developers on GitHub or import a resume",
+        "importResume": "Import Resume"
+      }
+    },
+    "candidate": {
+      "at": "at",
+      "deepProfile": "Deep Profile",
+      "deleteConfirm": "Delete this candidate from the pipeline?"
+    },
+    "importModal": {
+      "title": "Import Candidate",
+      "description": "Paste a resume, LinkedIn profile text, or any candidate information. Our AI will analyze and extract the relevant details.",
+      "placeholder": "Paste candidate information here...",
+      "analyzeImport": "Analyze & Import"
+    },
+    "compareModal": {
+      "title": "Compare Candidates",
+      "alignmentScore": "Alignment Score",
+      "viewDeepProfile": "View Deep Profile"
+    }
+  },
+  "onboarding": {
+    "skipHint": "Press {enter} to continue or {esc} to skip",
+    "enterKey": "Enter",
+    "escKey": "Esc",
+    "getStarted": "Get Started",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to RecruitOS",
+        "subtitle": "AI-Powered Recruiting",
+        "description": "Find elite engineers by analyzing their actual work on GitHub. No more resume screening - see what developers really build.",
+        "features": [
+          "Search by capabilities, not keywords",
+          "AI-powered candidate scoring",
+          "Deep psychometric analysis",
+          "Personalized outreach generation"
+        ]
+      },
+      "jobIntake": {
+        "title": "Step 1: Job Intake",
+        "subtitle": "Define Your Ideal Candidate",
+        "description": "Start by providing context about the role. Paste a job URL or description, and our AI extracts key requirements automatically.",
+        "features": [
+          "Paste job URL or description",
+          "AI extracts required skills",
+          "Add LinkedIn context for culture fit",
+          "Calibrate search parameters"
+        ]
+      },
+      "talentPipeline": {
+        "title": "Step 2: Talent Pipeline",
+        "subtitle": "Source & Score Candidates",
+        "description": "Search GitHub to find developers matching your requirements. Each candidate is scored based on their repositories and contributions.",
+        "features": [
+          "Natural language search",
+          "Real-time GitHub analysis",
+          "Alignment score (0-100)",
+          "Filter and compare candidates"
+        ]
+      },
+      "deepProfile": {
+        "title": "Step 3: Deep Profile",
+        "subtitle": "Evidence-Based Analysis",
+        "description": "Dive deep into a candidate's work history, coding patterns, and psychometric profile based on their GitHub activity.",
+        "features": [
+          "Psychometric profiling",
+          "Work style indicators",
+          "Green & red flags",
+          "Interview question suggestions"
+        ]
+      },
+      "outreach": {
+        "title": "Step 4: Outreach",
+        "subtitle": "Personalized Messaging",
+        "description": "Generate personalized outreach messages tailored to each candidate's archetype and communication preferences.",
+        "features": [
+          "AI-generated messages",
+          "Archetype-specific tone",
+          "Personalized hooks",
+          "Multi-channel templates"
+        ]
+      },
+      "complete": {
+        "title": "You're All Set!",
+        "subtitle": "Start Recruiting",
+        "description": "You're ready to find your next great hire. Start by setting up your first job intake, or explore the platform.",
+        "features": [
+          "No credit card required",
+          "GitHub sign-in for full features",
+          "Free search tier available",
+          "Premium analysis on demand"
+        ]
+      }
+    }
+  }
+}

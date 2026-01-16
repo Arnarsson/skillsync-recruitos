@@ -156,6 +156,12 @@ export default function ProfilePage({
   const handleLinkedInEnrich = async () => {
     if (!linkedInUrl.trim()) return;
 
+    // Check if BrightData is configured
+    if (!brightDataService.isConfigured()) {
+      console.warn("LinkedIn enrichment requires BRIGHTDATA_API_KEY to be configured");
+      return;
+    }
+
     setLinkedInLoading(true);
     try {
       const linkedIn = await brightDataService.scrapeLinkedInProfile(linkedInUrl);

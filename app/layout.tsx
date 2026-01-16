@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AdminToolbar from "@/components/AdminToolbar";
 import Providers from "@/components/Providers";
 import { Toaster } from "sonner";
 
@@ -12,13 +13,18 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SkillSync - Find Elite Engineers on GitHub",
-  description: "The first hiring platform that sources engineers by what they've actually built. Find elite (but overlooked!) engineers and scientists shaping your domain.",
-  keywords: ["hiring", "engineers", "GitHub", "recruiting", "talent", "developers"],
+  title: "RecruitOS — Hire by what they've built, not what they claim",
+  description: "Stop guessing. Start hiring engineers based on real GitHub contributions, code quality, and technical depth. AI-powered candidate intelligence for modern recruiting.",
+  keywords: ["hiring", "engineers", "GitHub", "recruiting", "talent", "developers", "AI recruiting", "technical hiring"],
   openGraph: {
-    title: "SkillSync - Find Elite Engineers on GitHub",
-    description: "The first hiring platform that sources engineers by what they've actually built.",
+    title: "RecruitOS — Hire by what they've built, not what they claim",
+    description: "Stop guessing. Start hiring engineers based on real GitHub contributions, code quality, and technical depth.",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RecruitOS — Hire by what they've built, not what they claim",
+    description: "AI-powered candidate intelligence for modern recruiting.",
   },
 };
 
@@ -34,6 +40,7 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
+          <AdminToolbar />
           <Toaster position="bottom-right" theme="dark" richColors />
         </Providers>
       </body>

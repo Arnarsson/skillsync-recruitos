@@ -33,7 +33,7 @@ export const callOpenRouter = async (prompt: string, schema?: unknown): Promise<
   const messages = [{ role: 'user', content: prompt }];
 
   const requestBody: Record<string, unknown> = {
-    model: 'google/gemini-2.0-flash-exp:free', // Free Gemini model via OpenRouter
+    model: 'google/gemini-2.0-flash-001', // Gemini Flash via OpenRouter (paid tier - no rate limits)
     messages
   };
 

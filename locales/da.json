@@ -1,0 +1,311 @@
+{
+  "lang": "da",
+  "common": {
+    "bookDemo": "BOOK EN DEMO",
+    "signIn": "LOG IND",
+    "signOut": "LOG UD",
+    "getStarted": "BEGYND AT ANSÆTTE",
+    "pipeline": "PIPELINE",
+    "intake": "OPTAG",
+    "loading": "Indlæser...",
+    "search": "Søg",
+    "cancel": "Annuller",
+    "delete": "Slet",
+    "save": "Gem",
+    "next": "Næste",
+    "back": "Tilbage",
+    "close": "Luk",
+    "clear": "Ryd",
+    "compare": "Sammenlign",
+    "selected": "valgt",
+    "score": "Score",
+    "skills": "Kompetencer",
+    "location": "Lokation",
+    "company": "Virksomhed"
+  },
+  "header": {
+    "logo": "recruitos"
+  },
+  "footer": {
+    "resources": "ressourcer",
+    "about": "om os",
+    "contributors": "bidragsydere",
+    "pricing": "priser",
+    "company": "virksomhed",
+    "contact": "kontakt",
+    "copyright": "© {year} recruitos. alle rettigheder forbeholdes."
+  },
+  "home": {
+    "headline": "Ansæt efter hvad de har bygget, ikke hvad de påstår",
+    "subheadline": "AI-drevet kandidat-indsigt fra rigtige GitHub-bidrag",
+    "searchPlaceholder": "Senior React udvikler, ML ingeniør, Go backend...",
+    "searchHint": "{enter} for at søge, {shiftEnter} for ny linje",
+    "enter": "enter",
+    "shiftEnter": "shift + enter",
+    "quickSearches": [
+      "Senior fullstack udvikler React",
+      "Data scientist Python ML",
+      "AI ingeniør LLM",
+      "Backend udvikler Go",
+      "DevOps ingeniør Kubernetes"
+    ],
+    "features": {
+      "searchByCapabilities": {
+        "title": "søg efter kompetencer",
+        "description": "recruitos analyserer ekspertise demonstreret gennem open source arbejde"
+      },
+      "discoverExperts": {
+        "title": "opdag skjulte eksperter",
+        "description": "find elite men oversete ingeniører fra hele verden"
+      },
+      "hireFaster": {
+        "title": "ansæt hurtigere",
+        "description": "se reelt arbejde, kvalificer ingeniører hurtigere"
+      }
+    },
+    "buildInPublic": {
+      "title": "#bygioffentlighed",
+      "description1": "open source software driver internettet. men byggerne der får det til at ske forbliver ofte usynlige. traditionelle metrikker reducerer ingeniører til tal, commits, prs, kodelinjer. men det tegner ikke det {hele} billede.",
+      "description2": "recruitos afdækker hvad der er unikt ved hver skaber: hvordan de løser problemer, og anvender domæneekspertise hvor det betyder noget. ingen formularer. ingen spørgeskemaer. kun signal fra reelt arbejde.",
+      "whole": "hele",
+      "exploreProfiles": "udforsk individuelle udvikler profiler",
+      "profilePlaceholder": "https://recruitos.dev/github_brugernavn",
+      "tryNow": "prøv nu"
+    },
+    "pricing": {
+      "title": "priser",
+      "candidateOnDemand": "KANDIDAT ON DEMAND",
+      "perSearch": "per søgning",
+      "includesDeepSearch": "inkluderer dyb søgning og fuld profilanalyse",
+      "features": {
+        "fullSearch": "fuld kandidatsøgning",
+        "deepProfile": "dyb profilanalyse inkluderet",
+        "skillBreakdown": "kompetenceopdeling & indsigt",
+        "noSubscription": "ingen abonnement påkrævet"
+      },
+      "startFree": "Start med 1 gratis søgning — intet kort påkrævet",
+      "tryFreeSearch": "Find din første ansættelse gratis"
+    }
+  },
+  "search": {
+    "placeholder": "Søg efter kompetencer... (f.eks. 'React state management', 'Rust systems programmering')",
+    "found": "Fandt",
+    "developers": "udviklere for:",
+    "aiScored": "AI Scoret",
+    "viewProfile": "Se Profil",
+    "match": "match",
+    "repos": "repos",
+    "stars": "stjerner",
+    "followers": "følgere",
+    "more": "mere",
+    "noResults": {
+      "title": "Ingen resultater fundet",
+      "description": "Vi kunne ikke finde nogen udviklere der matcher din søgning. Prøv at justere dine søgeord eller brug andre nøgleord."
+    },
+    "initial": {
+      "title": "Søg efter udviklere",
+      "description": "Indtast en søgning for at finde elite udviklere baseret på deres kompetencer, teknologier eller bidrag. Vores AI analyserer GitHub profiler for at finde de bedste match.",
+      "popularSearches": "Populære søgninger:"
+    },
+    "modal": {
+      "title": "Gratis søgning brugt",
+      "description": "Du har brugt din gratis søgning. Tilmeld dig for at fortsætte med at finde elite udviklere med vores AI-drevne søgning.",
+      "perSearch": "per søgning",
+      "includesDeep": "Inkluderer dyb søgning & fuld profilanalyse",
+      "features": {
+        "fullResults": "Fulde kandidat søgeresultater",
+        "deepProfile": "Dyb profilanalyse inkluderet",
+        "skillBreakdown": "Kompetenceopdeling & indsigt",
+        "noSubscription": "Ingen abonnement påkrævet"
+      },
+      "signUp": "Tilmeld dig for at fortsætte",
+      "payPerSearch": "Betal per søgning. Ingen binding påkrævet."
+    },
+    "loadingSearch": "Indlæser søgning..."
+  },
+  "intake": {
+    "step": "Trin 1 af 4",
+    "title": "Kontekst & Jobindtag",
+    "description": "Angiv jobkonteksten. Dette etablerer grundlaget for AI alignment scoring.",
+    "loadDemo": "Indlæs Demo",
+    "socialContext": {
+      "title": "Social Kontekst",
+      "subtitle": "Kritisk for kulturmatch",
+      "companyLinkedIn": "Virksomhed LinkedIn URL",
+      "hiringManager": "Ansættelsesansvarlig LinkedIn",
+      "topPerformer": "Top Performer (Benchmark)",
+      "note": "Vi analyserer disse profiler for at kalibrere for teamkultur, kommunikationsstil og uddannelsesbaggrund."
+    },
+    "jobRequirements": {
+      "title": "Jobkrav",
+      "subtitle": "Indsæt eller importer fra URL",
+      "fromUrl": "Fra URL",
+      "pasteText": "Indsæt Tekst",
+      "jobPostingUrl": "Job Opslag URL",
+      "fetch": "Hent",
+      "analyzing": "Analyserer...",
+      "urlHelp": "Virker med LinkedIn, Greenhouse, Lever, og de fleste jobportaler",
+      "jobDescription": "Jobbeskrivelse",
+      "pastePlaceholder": "Indsæt den fulde jobbeskrivelse her...",
+      "chars": "tegn",
+      "analyzeJob": "Analyser Jobbeskrivelse"
+    },
+    "loading": {
+      "extracting": "Udtrækker jobindhold...",
+      "identifying": "Identificerer påkrævede kompetencer...",
+      "analyzing": "Analyserer senioritetsniveau...",
+      "calibrating": "Kalibrerer søgeparametre..."
+    },
+    "error": {
+      "title": "Analyse Fejlede"
+    },
+    "results": {
+      "requiredSkills": "Påkrævede Kompetencer",
+      "preferredSkills": "Foretrukne Kompetencer",
+      "aiSummary": "AI Opsummering",
+      "startOver": "Start Forfra",
+      "initializePipeline": "Initialiser Pipeline"
+    },
+    "processPreview": {
+      "title": "Proces Forhåndsvisning",
+      "steps": {
+        "jobIntake": "Jobindtag",
+        "jobIntakeDesc": "Kontekst & kalibrering",
+        "talentPipeline": "Talent Pipeline",
+        "talentPipelineDesc": "Kilde & scorer kandidater",
+        "deepProfile": "Dyb Profil",
+        "deepProfileDesc": "Evidensbaseret analyse",
+        "outreach": "Outreach",
+        "outreachDesc": "Personaliseret besked"
+      },
+      "creditSystem": {
+        "title": "Kredit System",
+        "description": "1 CR = AI operation omkostning. Betal per kandidat behandlet."
+      }
+    }
+  },
+  "pipeline": {
+    "step": "Trin 2 af 4",
+    "title": "Talent Pipeline",
+    "import": "Importer",
+    "editJob": "Rediger Job",
+    "intelligence": {
+      "title": "Pipeline Intelligence",
+      "distribution": "Score fordeling på tværs af {count} kandidater",
+      "topMatch": "Top Match"
+    },
+    "searchPlaceholder": "Søg GitHub udviklere (f.eks. 'react copenhagen')",
+    "addCandidates": "Tilføj Kandidater",
+    "filters": "Filtre",
+    "sort": "Sorter:",
+    "sortOptions": {
+      "scoreDesc": "Score (Høj til Lav)",
+      "scoreAsc": "Score (Lav til Høj)",
+      "nameAsc": "Navn (A-Z)",
+      "nameDesc": "Navn (Z-A)"
+    },
+    "scoreFilter": "Score:",
+    "all": "Alle",
+    "empty": {
+      "loading": {
+        "title": "Finder Kandidater...",
+        "description": "Søger efter udviklere der matcher dine jobkrav"
+      },
+      "noResults": {
+        "title": "Ingen Kandidater Endnu",
+        "description": "Søg efter udviklere på GitHub eller importer et CV",
+        "importResume": "Importer CV"
+      }
+    },
+    "candidate": {
+      "at": "hos",
+      "deepProfile": "Dyb Profil",
+      "deleteConfirm": "Slet denne kandidat fra pipeline?"
+    },
+    "importModal": {
+      "title": "Importer Kandidat",
+      "description": "Indsæt et CV, LinkedIn profil tekst, eller enhver kandidat information. Vores AI vil analysere og udtrække de relevante detaljer.",
+      "placeholder": "Indsæt kandidat information her...",
+      "analyzeImport": "Analyser & Importer"
+    },
+    "compareModal": {
+      "title": "Sammenlign Kandidater",
+      "alignmentScore": "Alignment Score",
+      "viewDeepProfile": "Se Dyb Profil"
+    }
+  },
+  "onboarding": {
+    "skipHint": "Tryk {enter} for at fortsætte eller {esc} for at springe over",
+    "enterKey": "Enter",
+    "escKey": "Esc",
+    "getStarted": "Kom I Gang",
+    "steps": {
+      "welcome": {
+        "title": "Velkommen til RecruitOS",
+        "subtitle": "AI-Drevet Rekruttering",
+        "description": "Find elite ingeniører ved at analysere deres faktiske arbejde på GitHub. Ikke mere CV screening - se hvad udviklere virkelig bygger.",
+        "features": [
+          "Søg efter kompetencer, ikke nøgleord",
+          "AI-drevet kandidat scoring",
+          "Dyb psykometrisk analyse",
+          "Personaliseret outreach generering"
+        ]
+      },
+      "jobIntake": {
+        "title": "Trin 1: Jobindtag",
+        "subtitle": "Definer Din Ideelle Kandidat",
+        "description": "Start med at give kontekst om rollen. Indsæt en job URL eller beskrivelse, og vores AI udtrækker nøglekrav automatisk.",
+        "features": [
+          "Indsæt job URL eller beskrivelse",
+          "AI udtrækker påkrævede kompetencer",
+          "Tilføj LinkedIn kontekst for kulturmatch",
+          "Kalibrer søgeparametre"
+        ]
+      },
+      "talentPipeline": {
+        "title": "Trin 2: Talent Pipeline",
+        "subtitle": "Kilde & Score Kandidater",
+        "description": "Søg GitHub for at finde udviklere der matcher dine krav. Hver kandidat scores baseret på deres repositories og bidrag.",
+        "features": [
+          "Naturligt sprog søgning",
+          "Real-time GitHub analyse",
+          "Alignment score (0-100)",
+          "Filtrer og sammenlign kandidater"
+        ]
+      },
+      "deepProfile": {
+        "title": "Trin 3: Dyb Profil",
+        "subtitle": "Evidensbaseret Analyse",
+        "description": "Dyk dybt ned i en kandidats arbejdshistorik, kodemønstre og psykometriske profil baseret på deres GitHub aktivitet.",
+        "features": [
+          "Psykometrisk profilering",
+          "Arbejdsstil indikatorer",
+          "Grønne & røde flag",
+          "Interviewspørgsmål forslag"
+        ]
+      },
+      "outreach": {
+        "title": "Trin 4: Outreach",
+        "subtitle": "Personaliseret Besked",
+        "description": "Generer personaliserede outreach beskeder tilpasset hver kandidats arketype og kommunikationspræferencer.",
+        "features": [
+          "AI-genererede beskeder",
+          "Arketype-specifik tone",
+          "Personaliserede hooks",
+          "Multi-kanal skabeloner"
+        ]
+      },
+      "complete": {
+        "title": "Du Er Klar!",
+        "subtitle": "Start Rekruttering",
+        "description": "Du er klar til at finde din næste fantastiske ansættelse. Start med at opsætte dit første jobindtag, eller udforsk platformen.",
+        "features": [
+          "Ingen kreditkort påkrævet",
+          "GitHub login for fulde funktioner",
+          "Gratis søgeniveau tilgængeligt",
+          "Premium analyse on demand"
+        ]
+      }
+    }
+  }
+}

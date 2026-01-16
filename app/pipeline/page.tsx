@@ -40,6 +40,7 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
+import { useLanguage } from "@/lib/i18n";
 
 interface Candidate {
   id: string;
@@ -62,6 +63,7 @@ interface Candidate {
 }
 
 export default function PipelinePage() {
+  const { t } = useLanguage();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,33 +105,115 @@ export default function PipelinePage() {
       }
     }
 
+    // Create a hash of job context to detect changes
+    const jobContextHash = parsedJobContext
+      ? JSON.stringify({
+          title: parsedJobContext.title,
+          skills: parsedJobContext.requiredSkills?.slice(0, 5),
+          location: parsedJobContext.location,
+        })
+      : null;
+    const storedJobHash = localStorage.getItem("apex_job_context_hash");
+
+    // Check if job context changed - if so, clear old candidates
+    const jobContextChanged = jobContextHash && storedJobHash !== jobContextHash;
+
     const storedCandidates = localStorage.getItem("apex_candidates");
     let existingCandidates: Candidate[] = [];
-    if (storedCandidates) {
+    if (storedCandidates && !jobContextChanged) {
       try {
         existingCandidates = JSON.parse(storedCandidates);
         setCandidates(existingCandidates);
       } catch {
         // Ignore
       }
+    } else if (jobContextChanged) {
+      // Clear old candidates when job context changes
+      localStorage.removeItem("apex_candidates");
+      setCandidates([]);
     }
 
     // Auto-search for candidates based on job requirements
-    if (parsedJobContext?.requiredSkills?.length > 0 && existingCandidates.length === 0 && !autoSearched) {
+    const shouldAutoSearch =
+      parsedJobContext?.requiredSkills?.length > 0 &&
+      (existingCandidates.length === 0 || jobContextChanged) &&
+      !autoSearched;
+
+    if (shouldAutoSearch) {
       setAutoSearched(true);
+      // Store the new job context hash
+      if (jobContextHash) {
+        localStorage.setItem("apex_job_context_hash", jobContextHash);
+      }
+
       const skills = parsedJobContext.requiredSkills.slice(0, 3);
       const location = parsedJobContext.location || "";
       const query = [...skills, location].filter(Boolean).join(" ");
 
       if (query) {
         setSearchQuery(query);
-        // Auto-trigger search after a short delay
-        setTimeout(() => {
-          autoSearchCandidates(query);
-        }, 500);
+        // Auto-trigger search immediately
+        setLoading(true);
+        autoSearchCandidates(query);
       }
     }
   }, [autoSearched]);
+
+  // Calculate alignment score based on job requirements
+  const calculateAlignmentScore = (
+    user: { skills: string[]; bio: string; location: string },
+    jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
+  ): number => {
+    let score = 50; // Base score
+
+    const requiredSkills = jobRequirements.requiredSkills || [];
+    const preferredSkills = jobRequirements.preferredSkills || [];
+    const userSkillsLower = user.skills.map((s) => s.toLowerCase());
+    const userBioLower = (user.bio || "").toLowerCase();
+
+    // Score for required skills (up to 35 points)
+    let requiredMatches = 0;
+    requiredSkills.forEach((skill) => {
+      const skillLower = skill.toLowerCase();
+      if (
+        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
+        userBioLower.includes(skillLower)
+      ) {
+        requiredMatches++;
+      }
+    });
+    if (requiredSkills.length > 0) {
+      score += Math.round((requiredMatches / requiredSkills.length) * 35);
+    }
+
+    // Score for preferred skills (up to 15 points)
+    let preferredMatches = 0;
+    preferredSkills.forEach((skill) => {
+      const skillLower = skill.toLowerCase();
+      if (
+        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
+        userBioLower.includes(skillLower)
+      ) {
+        preferredMatches++;
+      }
+    });
+    if (preferredSkills.length > 0) {
+      score += Math.round((preferredMatches / preferredSkills.length) * 15);
+    }
+
+    // Location match bonus (up to 10 points)
+    if (jobRequirements.location && user.location) {
+      const jobLocLower = jobRequirements.location.toLowerCase();
+      const userLocLower = user.location.toLowerCase();
+      if (userLocLower.includes(jobLocLower) || jobLocLower.includes(userLocLower)) {
+        score += 10;
+      } else if (userLocLower.includes("remote") || jobLocLower.includes("remote")) {
+        score += 5;
+      }
+    }
+
+    return Math.min(99, Math.max(30, score));
+  };
 
   // Auto-search function (separate from manual search to handle initial load)
   const autoSearchCandidates = async (query: string) => {
@@ -137,12 +221,17 @@ export default function PipelinePage() {
     setLoading(true);
 
     try {
+      // Fetch more candidates to have better selection
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}`
+        `/api/search?q=${encodeURIComponent(query)}&perPage=15`
       );
       const data = await response.json();
 
       if (data.users && data.users.length > 0) {
+        // Get job context for scoring
+        const storedContext = localStorage.getItem("apex_job_context");
+        const jobReqs = storedContext ? JSON.parse(storedContext) : {};
+
         const newCandidates = data.users.map((user: {
           username: string;
           name: string;
@@ -152,17 +241,32 @@ export default function PipelinePage() {
           company: string;
           skills: string[];
           score: number;
-        }) => ({
-          id: user.username,
-          name: user.name || user.username,
-          currentRole: user.bio || "Developer",
-          company: user.company || "Independent",
-          location: user.location || "Remote",
-          alignmentScore: user.score || Math.floor(Math.random() * 30) + 60,
-          avatar: user.avatar,
-          skills: user.skills || [],
-          createdAt: new Date().toISOString(),
-        }));
+        }) => {
+          // Calculate alignment score based on job requirements
+          const alignmentScore = calculateAlignmentScore(
+            { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
+            {
+              requiredSkills: jobReqs.requiredSkills,
+              preferredSkills: jobReqs.preferredSkills,
+              location: jobReqs.location,
+            }
+          );
+
+          return {
+            id: user.username,
+            name: user.name || user.username,
+            currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
+            company: user.company || "Independent",
+            location: user.location || "Remote",
+            alignmentScore,
+            avatar: user.avatar,
+            skills: user.skills || [],
+            createdAt: new Date().toISOString(),
+          };
+        });
+
+        // Sort by alignment score
+        newCandidates.sort((a: Candidate, b: Candidate) => b.alignmentScore - a.alignmentScore);
 
         setCandidates(newCandidates);
         localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
@@ -180,11 +284,15 @@ export default function PipelinePage() {
 
     try {
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(searchQuery)}`
+        `/api/search?q=${encodeURIComponent(searchQuery)}&perPage=15`
       );
       const data = await response.json();
 
       if (data.users && data.users.length > 0) {
+        // Get job context for scoring
+        const storedContext = localStorage.getItem("apex_job_context");
+        const jobReqs = storedContext ? JSON.parse(storedContext) : {};
+
         const newCandidates = data.users.map((user: {
           username: string;
           name: string;
@@ -194,23 +302,37 @@ export default function PipelinePage() {
           company: string;
           skills: string[];
           score: number;
-        }) => ({
-          id: user.username,
-          name: user.name || user.username,
-          currentRole: user.bio || "Developer",
-          company: user.company || "Independent",
-          location: user.location || "Remote",
-          alignmentScore: user.score || Math.floor(Math.random() * 30) + 60,
-          avatar: user.avatar,
-          skills: user.skills || [],
-          createdAt: new Date().toISOString(),
-        }));
+        }) => {
+          // Calculate alignment score based on job requirements
+          const alignmentScore = calculateAlignmentScore(
+            { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
+            {
+              requiredSkills: jobReqs.requiredSkills,
+              preferredSkills: jobReqs.preferredSkills,
+              location: jobReqs.location,
+            }
+          );
+
+          return {
+            id: user.username,
+            name: user.name || user.username,
+            currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
+            company: user.company || "Independent",
+            location: user.location || "Remote",
+            alignmentScore,
+            avatar: user.avatar,
+            skills: user.skills || [],
+            createdAt: new Date().toISOString(),
+          };
+        });
 
         setCandidates((prev) => {
           const merged = [...newCandidates, ...prev];
           const unique = merged.filter(
             (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
           );
+          // Sort by alignment score
+          unique.sort((a, b) => b.alignmentScore - a.alignmentScore);
           localStorage.setItem("apex_candidates", JSON.stringify(unique));
           return unique;
         });
@@ -274,7 +396,7 @@ export default function PipelinePage() {
   };
 
   const handleDelete = useCallback((id: string) => {
-    if (confirm("Delete this candidate from the pipeline?")) {
+    if (confirm(t("pipeline.candidate.deleteConfirm"))) {
       setCandidates((prev) => {
         const updated = prev.filter((c) => c.id !== id);
         localStorage.setItem("apex_candidates", JSON.stringify(updated));
@@ -282,7 +404,7 @@ export default function PipelinePage() {
       });
       setSelectedIds((prev) => prev.filter((i) => i !== id));
     }
-  }, []);
+  }, [t]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -369,16 +491,16 @@ export default function PipelinePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary">Step 2 of 4</Badge>
-            <h1 className="text-3xl font-bold">Talent Pipeline</h1>
+            <Badge className="mb-2 bg-primary/20 text-primary">{t("pipeline.step")}</Badge>
+            <h1 className="text-3xl font-bold">{t("pipeline.title")}</h1>
             {jobContext && (
               <>
                 <p className="text-muted-foreground mt-1">
-                  {jobContext.title} at {jobContext.company}
+                  {jobContext.title} {t("pipeline.candidate.at")} {jobContext.company}
                 </p>
                 {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground mr-1">Skills:</span>
+                    <span className="text-xs text-muted-foreground mr-1">{t("common.skills")}:</span>
                     {jobContext.requiredSkills.slice(0, 5).map((skill) => (
                       <Badge key={skill} variant="outline" className="text-xs">
                         {skill}
@@ -392,12 +514,12 @@ export default function PipelinePage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
               <FileText className="w-4 h-4 mr-2" />
-              Import
+              {t("pipeline.import")}
             </Button>
             <Link href="/intake">
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 mr-2" />
-                Edit Job
+                {t("pipeline.editJob")}
               </Button>
             </Link>
           </div>
@@ -411,13 +533,13 @@ export default function PipelinePage() {
                 <div>
                   <h3 className="font-medium flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                    Pipeline Intelligence
+                    {t("pipeline.intelligence.title")}
                   </h3>
-                  <p className="text-xs text-muted-foreground">Score distribution across {candidates.length} candidates</p>
+                  <p className="text-xs text-muted-foreground">{t("pipeline.intelligence.distribution").replace("{count}", candidates.length.toString())}</p>
                 </div>
                 <Badge variant="outline" className="gap-1">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
-                  Top Match: {candidates.filter((c) => c.alignmentScore >= 80).length}
+                  {t("pipeline.intelligence.topMatch")}: {candidates.filter((c) => c.alignmentScore >= 80).length}
                 </Badge>
               </div>
               <div className="h-32">
@@ -445,7 +567,7 @@ export default function PipelinePage() {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search GitHub developers (e.g., 'react copenhagen')"
+                  placeholder={t("pipeline.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -454,11 +576,11 @@ export default function PipelinePage() {
               </div>
               <Button onClick={handleSearch} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                <span className="ml-2">Add Candidates</span>
+                <span className="ml-2">{t("pipeline.addCandidates")}</span>
               </Button>
               <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
                 <Filter className="w-4 h-4 mr-2" />
-                Filters
+                {t("pipeline.filters")}
                 <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showFilters ? "rotate-180" : ""}`} />
               </Button>
             </div>
@@ -474,23 +596,23 @@ export default function PipelinePage() {
                 >
                   <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Sort:</span>
+                      <span className="text-sm text-muted-foreground">{t("pipeline.sort")}</span>
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                         className="text-sm bg-background border rounded px-2 py-1"
                       >
-                        <option value="score-desc">Score (High to Low)</option>
-                        <option value="score-asc">Score (Low to High)</option>
-                        <option value="name-asc">Name (A-Z)</option>
-                        <option value="name-desc">Name (Z-A)</option>
+                        <option value="score-desc">{t("pipeline.sortOptions.scoreDesc")}</option>
+                        <option value="score-asc">{t("pipeline.sortOptions.scoreAsc")}</option>
+                        <option value="name-asc">{t("pipeline.sortOptions.nameAsc")}</option>
+                        <option value="name-desc">{t("pipeline.sortOptions.nameDesc")}</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Score:</span>
+                      <span className="text-sm text-muted-foreground">{t("pipeline.scoreFilter")}</span>
                       <div className="flex gap-1">
                         {[
-                          { value: null, label: "All" },
+                          { value: null, label: t("pipeline.all") },
                           { value: "high", label: "80+" },
                           { value: "medium", label: "50-79" },
                           { value: "low", label: "<50" },
@@ -508,12 +630,12 @@ export default function PipelinePage() {
                     </div>
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
-                        <Badge>{selectedIds.length} selected</Badge>
+                        <Badge>{selectedIds.length} {t("common.selected")}</Badge>
                         <Button size="sm" onClick={() => setShowComparison(true)}>
-                          Compare
+                          {t("common.compare")}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-                          Clear
+                          {t("common.clear")}
                         </Button>
                       </div>
                     )}
@@ -531,9 +653,9 @@ export default function PipelinePage() {
               {loading ? (
                 <>
                   <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
-                  <h3 className="text-lg font-medium mb-2">Finding Candidates...</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.loading.title")}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Searching for developers matching your job requirements
+                    {t("pipeline.empty.loading.description")}
                   </p>
                   {jobContext?.requiredSkills && (
                     <div className="flex flex-wrap gap-1 justify-center">
@@ -546,14 +668,14 @@ export default function PipelinePage() {
               ) : (
                 <>
                   <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">No Candidates Yet</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.noResults.title")}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Search for developers on GitHub or import a resume
+                    {t("pipeline.empty.noResults.description")}
                   </p>
                   <div className="flex gap-2 justify-center">
                     <Button onClick={() => setShowImport(true)}>
                       <FileText className="w-4 h-4 mr-2" />
-                      Import Resume
+                      {t("pipeline.empty.noResults.importResume")}
                     </Button>
                   </div>
                 </>
@@ -608,7 +730,7 @@ export default function PipelinePage() {
                               <MapPin className="w-3 h-3" />
                               {candidate.location}
                             </span>
-                            {candidate.skills.length > 0 && (
+                            {candidate.skills && candidate.skills.length > 0 && (
                               <span>{candidate.skills.slice(0, 3).join(", ")}</span>
                             )}
                           </div>
@@ -619,14 +741,14 @@ export default function PipelinePage() {
                           <div className={`text-2xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
                             {candidate.alignmentScore}
                           </div>
-                          <div className="text-xs text-muted-foreground">Score</div>
+                          <div className="text-xs text-muted-foreground">{t("common.score")}</div>
                         </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-2">
                           <Link href={`/profile/${candidate.id}/deep`}>
                             <Button size="sm">
-                              Deep Profile
+                              {t("pipeline.candidate.deepProfile")}
                               <ArrowRight className="w-4 h-4 ml-1" />
                             </Button>
                           </Link>
@@ -675,23 +797,23 @@ export default function PipelinePage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Import Candidate</h2>
+                  <h2 className="text-xl font-bold">{t("pipeline.importModal.title")}</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowImport(false)}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Paste a resume, LinkedIn profile text, or any candidate information. Our AI will analyze and extract the relevant details.
+                  {t("pipeline.importModal.description")}
                 </p>
                 <textarea
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
-                  placeholder="Paste candidate information here..."
+                  placeholder={t("pipeline.importModal.placeholder")}
                   className="w-full h-64 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="outline" onClick={() => setShowImport(false)}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button onClick={handleImport} disabled={isImporting || !importText.trim()}>
                     {isImporting ? (
@@ -699,7 +821,7 @@ export default function PipelinePage() {
                     ) : (
                       <Sparkles className="w-4 h-4 mr-2" />
                     )}
-                    Analyze & Import
+                    {t("pipeline.importModal.analyzeImport")}
                   </Button>
                 </div>
               </motion.div>
@@ -725,7 +847,7 @@ export default function PipelinePage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">Compare Candidates</h2>
+                  <h2 className="text-xl font-bold">{t("pipeline.compareModal.title")}</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowComparison(false)}>
                     <X className="w-4 h-4" />
                   </Button>
@@ -747,19 +869,19 @@ export default function PipelinePage() {
                           <div className={`text-3xl font-bold ${getScoreColor(c.alignmentScore)}`}>
                             {c.alignmentScore}
                           </div>
-                          <div className="text-xs text-muted-foreground">Alignment Score</div>
+                          <div className="text-xs text-muted-foreground">{t("pipeline.compareModal.alignmentScore")}</div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Location</span>
+                            <span className="text-muted-foreground">{t("common.location")}</span>
                             <span>{c.location}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Company</span>
+                            <span className="text-muted-foreground">{t("common.company")}</span>
                             <span>{c.company}</span>
                           </div>
                         </div>
-                        {c.skills.length > 0 && (
+                        {c.skills && c.skills.length > 0 && (
                           <div className="mt-4 flex flex-wrap gap-1">
                             {c.skills.slice(0, 5).map((skill) => (
                               <Badge key={skill} variant="secondary" className="text-xs">
@@ -770,7 +892,7 @@ export default function PipelinePage() {
                         )}
                         <Link href={`/profile/${c.id}/deep`} className="block mt-4">
                           <Button className="w-full" size="sm">
-                            View Deep Profile
+                            {t("pipeline.compareModal.viewDeepProfile")}
                           </Button>
                         </Link>
                       </CardContent>

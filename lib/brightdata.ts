@@ -125,9 +125,16 @@ class BrightDataService {
   getApiKey(): string | null {
     if (this.apiKey) return this.apiKey;
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('brightdata_api_key');
+      // Check localStorage first, then NEXT_PUBLIC env var for client-side
+      const storedKey = localStorage.getItem('brightdata_api_key');
+      if (storedKey) return storedKey;
+      return process.env.NEXT_PUBLIC_BRIGHTDATA_API_KEY || null;
     }
     return process.env.BRIGHTDATA_API_KEY || null;
+  }
+
+  isConfigured(): boolean {
+    return !!this.getApiKey();
   }
 
   async triggerLinkedInScrape(linkedInUrl: string): Promise<string> {
@@ -242,6 +249,13 @@ class BrightDataService {
   }
 
   private parseLinkedInData(rawData: any): LinkedInProfile {
+    // Helper to safely get array from data
+    const toArray = (data: any): any[] => {
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object') return Object.values(data);
+      return [];
+    };
+
     // Parse BrightData response into our LinkedInProfile structure
     return {
       name: rawData.name || rawData.full_name || '',
@@ -252,9 +266,10 @@ class BrightDataService {
       currentRole: rawData.current_company?.title || rawData.title || '',
       profileUrl: rawData.url || rawData.profile_url || '',
       profileImage: rawData.profile_pic_url || rawData.avatar || '',
-      connectionCount: rawData.connections_count || rawData.connections || 0,
+      connectionCount: typeof rawData.connections_count === 'number' ? rawData.connections_count :
+                       typeof rawData.connections === 'number' ? rawData.connections : 0,
       followerCount: rawData.followers_count || rawData.followers || 0,
-      experience: (rawData.experience || rawData.positions || []).map((exp: any) => ({
+      experience: toArray(rawData.experience || rawData.positions).map((exp: any) => ({
         title: exp.title || '',
         company: exp.company_name || exp.company || '',
         companyLogo: exp.company_logo || '',
@@ -264,31 +279,31 @@ class BrightDataService {
         duration: exp.duration || '',
         description: exp.description || '',
       })),
-      education: (rawData.education || []).map((edu: any) => ({
+      education: toArray(rawData.education).map((edu: any) => ({
         school: edu.school_name || edu.school || '',
         degree: edu.degree_name || edu.degree || '',
         field: edu.field_of_study || edu.field || '',
         startYear: edu.start_year || null,
         endYear: edu.end_year || null,
       })),
-      skills: (rawData.skills || []).map((skill: any) => ({
+      skills: toArray(rawData.skills).map((skill: any) => ({
         name: typeof skill === 'string' ? skill : skill.name || '',
         endorsements: skill.endorsements || 0,
       })),
-      recommendations: (rawData.recommendations || []).map((rec: any) => ({
+      recommendations: toArray(rawData.recommendations).map((rec: any) => ({
         author: rec.recommender_name || rec.author || '',
         authorTitle: rec.recommender_title || '',
         relationship: rec.relationship || '',
         text: rec.text || rec.recommendation || '',
       })),
-      posts: (rawData.posts || rawData.activities || []).map((post: any) => ({
+      posts: toArray(rawData.posts || rawData.activities).map((post: any) => ({
         text: post.text || post.content || '',
         likes: post.likes || post.num_likes || 0,
         comments: post.comments || post.num_comments || 0,
         shares: post.shares || post.num_shares || 0,
         date: post.date || post.posted_at || '',
       })),
-      connections: (rawData.connections || rawData.people_also_viewed || []).map((conn: any) => ({
+      connections: toArray(rawData.people_also_viewed).map((conn: any) => ({
         name: conn.name || conn.full_name || '',
         headline: conn.headline || conn.title || '',
         profileUrl: conn.url || conn.profile_url || '',

@@ -1,30 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Terminal, Wand2, Zap } from "lucide-react";
-
-const quickSearches = [
-  "Kernel module developers",
-  "Binary instrumentation experts",
-  "Signal processing researchers",
-  "Database query optimizer experts",
-  "Virtual machine implementors",
-];
+import { useLanguage, useTranslatedArray } from "@/lib/i18n";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAdmin = searchParams.get("admin") !== null;
+  const { t } = useLanguage();
+  const quickSearches = useTranslatedArray("home.quickSearches");
 
   const handleSearch = () => {
     if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      const adminParam = isAdmin ? "&admin" : "";
+      router.push(`/search?q=${encodeURIComponent(query.trim())}${adminParam}`);
     }
   };
 
   const handleQuickSearch = (q: string) => {
-    router.push(`/search?q=${encodeURIComponent(q)}`);
+    const adminParam = isAdmin ? "&admin" : "";
+    router.push(`/search?q=${encodeURIComponent(q)}${adminParam}`);
   };
 
   return (
@@ -47,9 +46,12 @@ export default function Home() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-xl md:text-2xl text-muted-foreground mb-10 font-normal">
-            Find engineers and scientists shaping your domain
+          <h1 className="text-2xl md:text-3xl lg:text-4xl text-foreground mb-3 font-medium tracking-tight">
+            {t("home.headline")}
           </h1>
+          <p className="text-sm md:text-base text-muted-foreground mb-10">
+            {t("home.subheadline")}
+          </p>
 
           {/* Search Box */}
           <div className="mb-6">
@@ -59,7 +61,7 @@ export default function Home() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Who are you looking for?"
+                placeholder={t("home.searchPlaceholder")}
                 className="w-full bg-transparent px-4 py-4 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <button
@@ -71,8 +73,10 @@ export default function Home() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-primary">enter</span> to search,{" "}
-              <span className="text-primary">shift + enter</span> for new line
+              <span className="text-primary">{t("home.enter")}</span>{" "}
+              {t("home.lang") === "da" ? "for at søge" : "to search"},{" "}
+              <span className="text-primary">{t("home.shiftEnter")}</span>{" "}
+              {t("home.lang") === "da" ? "for ny linje" : "for new line"}
             </p>
           </div>
 
@@ -98,31 +102,30 @@ export default function Home() {
             {[
               {
                 icon: Terminal,
-                title: "search by capabilities",
-                description:
-                  "recruitos analyzes expertise demonstrated by real work",
+                titleKey: "home.features.searchByCapabilities.title",
+                descKey: "home.features.searchByCapabilities.description",
               },
               {
                 icon: Wand2,
-                title: "discover hidden experts",
-                description:
-                  "find elite but overlooked engineers from around the world",
+                titleKey: "home.features.discoverExperts.title",
+                descKey: "home.features.discoverExperts.description",
               },
               {
                 icon: Zap,
-                title: "hire faster",
-                description:
-                  "see real work, qualify engineers faster",
+                titleKey: "home.features.hireFaster.title",
+                descKey: "home.features.hireFaster.description",
               },
             ].map((feature) => (
               <div
-                key={feature.title}
+                key={feature.titleKey}
                 className="p-6 rounded-lg border border-border bg-card"
               >
                 <feature.icon className="w-5 h-5 text-muted-foreground mb-4" />
-                <h3 className="font-medium mb-2 lowercase">{feature.title}</h3>
+                <h3 className="font-medium mb-2 lowercase">
+                  {t(feature.titleKey)}
+                </h3>
                 <p className="text-sm text-muted-foreground lowercase">
-                  {feature.description}
+                  {t(feature.descKey)}
                 </p>
               </div>
             ))}
@@ -133,40 +136,50 @@ export default function Home() {
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-light mb-10 text-center">pricing</h2>
+          <h2 className="text-3xl md:text-4xl font-light mb-10 text-center">
+            {t("home.pricing.title")}
+          </h2>
 
           {/* Candidate on Demand */}
           <div className="p-8 rounded-lg border border-border bg-card text-center">
             <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">
-              CANDIDATE ON DEMAND
+              {t("home.pricing.candidateOnDemand")}
             </h3>
             <div className="flex items-baseline justify-center gap-2 mb-4">
               <span className="text-5xl font-light">$15</span>
-              <span className="text-muted-foreground">per search</span>
+              <span className="text-muted-foreground">
+                {t("home.pricing.perSearch")}
+              </span>
             </div>
             <p className="text-muted-foreground mb-6">
-              includes deep search and full profile analysis
+              {t("home.pricing.includesDeepSearch")}
             </p>
             <ul className="space-y-3 text-sm mb-8 text-left max-w-xs mx-auto">
               <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span> full candidate search
+                <span className="text-primary">✓</span>{" "}
+                {t("home.pricing.features.fullSearch")}
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span> deep profile analysis included
+                <span className="text-primary">✓</span>{" "}
+                {t("home.pricing.features.deepProfile")}
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span> skill breakdown & insights
+                <span className="text-primary">✓</span>{" "}
+                {t("home.pricing.features.skillBreakdown")}
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span> no subscription required
+                <span className="text-primary">✓</span>{" "}
+                {t("home.pricing.features.noSubscription")}
               </li>
             </ul>
-            <p className="text-sm text-primary mb-4">start with 1 free search</p>
+            <p className="text-sm text-primary mb-4">
+              {t("home.pricing.startFree")}
+            </p>
             <Link
               href="/search"
               className="inline-block w-full py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm transition-colors"
             >
-              try free search
+              {t("home.pricing.tryFreeSearch")}
             </Link>
           </div>
         </div>

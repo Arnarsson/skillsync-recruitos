@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Footer() {
+  const { t } = useLanguage();
+  const year = new Date().getFullYear();
+
   return (
     <footer className="border-t border-border bg-background">
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -8,14 +14,14 @@ export default function Footer() {
           {/* Logo */}
           <div>
             <Link href="/" className="font-medium tracking-tight lowercase">
-              recruitos
+              {t("header.logo")}
             </Link>
           </div>
 
           {/* Resources */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              resources
+              {t("footer.resources")}
             </h3>
             <ul className="space-y-3">
               <li>
@@ -23,7 +29,7 @@ export default function Footer() {
                   href="/about"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  about
+                  {t("footer.about")}
                 </Link>
               </li>
               <li>
@@ -31,7 +37,7 @@ export default function Footer() {
                   href="/contributors"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  contributors
+                  {t("footer.contributors")}
                 </Link>
               </li>
               <li>
@@ -39,7 +45,7 @@ export default function Footer() {
                   href="#pricing"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  pricing
+                  {t("footer.pricing")}
                 </Link>
               </li>
             </ul>
@@ -48,7 +54,7 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              company
+              {t("footer.company")}
             </h3>
             <ul className="space-y-3">
               <li>
@@ -56,15 +62,15 @@ export default function Footer() {
                   href="/contact"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  contact
+                  {t("footer.contact")}
                 </Link>
               </li>
               <li>
                 <a
-                  href="mailto:nars@recruitos.dev"
+                  href="mailto:letsgo@recruitos.xyz?subject=Contact%20Request"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  nars@recruitos.dev
+                  letsgo@recruitos.xyz
                 </a>
               </li>
             </ul>
@@ -76,9 +82,12 @@ export default function Footer() {
 
         <div className="flex items-center justify-between pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground lowercase">
-            © {new Date().getFullYear()} recruitos. all rights reserved.
+            {t("footer.copyright").replace("{year}", year.toString())}
           </p>
-          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             $
           </Link>
         </div>

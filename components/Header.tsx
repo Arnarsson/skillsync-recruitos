@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
+  const { t, lang, setLang } = useLanguage();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -15,19 +17,42 @@ export default function Header() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="font-medium tracking-tight lowercase">
-            recruitos
+            {t("header.logo")}
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <Link
-              href="https://cal.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            {/* Language Toggle */}
+            <div className="flex items-center gap-1 text-xs">
+              <button
+                onClick={() => setLang("en")}
+                className={`px-1.5 py-0.5 rounded transition-colors ${
+                  lang === "en"
+                    ? "text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                EN
+              </button>
+              <span className="text-muted-foreground">|</span>
+              <button
+                onClick={() => setLang("da")}
+                className={`px-1.5 py-0.5 rounded transition-colors ${
+                  lang === "da"
+                    ? "text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                DA
+              </button>
+            </div>
+
+            <a
+              href="mailto:letsgo@recruitos.xyz?subject=Demo%20Request"
               className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
             >
-              BOOK A DEMO
-            </Link>
+              {t("common.bookDemo")}
+            </a>
             <span className="text-muted-foreground">/</span>
 
             {status === "loading" ? (
@@ -38,14 +63,14 @@ export default function Header() {
                   href="/pipeline"
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 >
-                  PIPELINE
+                  {t("common.pipeline")}
                 </Link>
                 <span className="text-muted-foreground">/</span>
                 <button
                   onClick={() => signOut()}
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 >
-                  SIGN OUT
+                  {t("common.signOut")}
                 </button>
               </>
             ) : (
@@ -54,14 +79,14 @@ export default function Header() {
                   href="/login"
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 >
-                  SIGN IN
+                  {t("common.signIn")}
                 </Link>
                 <span className="text-muted-foreground">/</span>
                 <Link
                   href="/signup"
                   className="text-foreground hover:text-primary transition-colors uppercase tracking-wider font-medium"
                 >
-                  GET STARTED
+                  {t("common.getStarted")}
                 </Link>
               </>
             )}
@@ -84,15 +109,38 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4 text-sm">
-              <Link
-                href="https://cal.com"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Mobile Language Toggle */}
+              <div className="flex items-center gap-2 text-xs pb-2 border-b border-border">
+                <span className="text-muted-foreground">Language:</span>
+                <button
+                  onClick={() => setLang("en")}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    lang === "en"
+                      ? "bg-primary/20 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => setLang("da")}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    lang === "da"
+                      ? "bg-primary/20 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  DA
+                </button>
+              </div>
+
+              <a
+                href="mailto:letsgo@recruitos.xyz?subject=Demo%20Request"
                 className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 onClick={() => setIsMenuOpen(false)}
               >
-                BOOK A DEMO
-              </Link>
+                {t("common.bookDemo")}
+              </a>
 
               {session?.user ? (
                 <>
@@ -101,7 +149,7 @@ export default function Header() {
                     className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    PIPELINE
+                    {t("common.pipeline")}
                   </Link>
                   <button
                     onClick={() => {
@@ -110,7 +158,7 @@ export default function Header() {
                     }}
                     className="text-left text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                   >
-                    SIGN OUT
+                    {t("common.signOut")}
                   </button>
                 </>
               ) : (
@@ -120,14 +168,14 @@ export default function Header() {
                     className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    SIGN IN
+                    {t("common.signIn")}
                   </Link>
                   <Link
                     href="/signup"
                     className="text-foreground hover:text-primary transition-colors uppercase tracking-wider font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    GET STARTED
+                    {t("common.getStarted")}
                   </Link>
                 </>
               )}

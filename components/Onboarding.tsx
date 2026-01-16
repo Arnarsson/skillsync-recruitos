@@ -21,6 +21,7 @@ import {
   BarChart3,
   Send,
 } from "lucide-react";
+import { useLanguage, useTranslatedArray } from "@/lib/i18n";
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -38,127 +39,98 @@ interface Step {
   gradient: string;
 }
 
-const steps: Step[] = [
-  {
-    id: 0,
-    title: "Welcome to RecruitOS",
-    subtitle: "AI-Powered Recruiting",
-    description:
-      "Find elite engineers by analyzing their actual work on GitHub. No more resume screening - see what developers really build.",
-    icon: <Sparkles className="w-12 h-12" />,
-    features: [
-      "Search by capabilities, not keywords",
-      "AI-powered candidate scoring",
-      "Deep psychometric analysis",
-      "Personalized outreach generation",
-    ],
-    color: "text-primary",
-    gradient: "from-primary/20 to-purple-500/20",
-  },
-  {
-    id: 1,
-    title: "Step 1: Job Intake",
-    subtitle: "Define Your Ideal Candidate",
-    description:
-      "Start by providing context about the role. Paste a job URL or description, and our AI extracts key requirements automatically.",
-    icon: <Briefcase className="w-12 h-12" />,
-    features: [
-      "Paste job URL or description",
-      "AI extracts required skills",
-      "Add LinkedIn context for culture fit",
-      "Calibrate search parameters",
-    ],
-    color: "text-blue-500",
-    gradient: "from-blue-500/20 to-cyan-500/20",
-  },
-  {
-    id: 2,
-    title: "Step 2: Talent Pipeline",
-    subtitle: "Source & Score Candidates",
-    description:
-      "Search GitHub to find developers matching your requirements. Each candidate is scored based on their repositories and contributions.",
-    icon: <Users className="w-12 h-12" />,
-    features: [
-      "Natural language search",
-      "Real-time GitHub analysis",
-      "Alignment score (0-100)",
-      "Filter and compare candidates",
-    ],
-    color: "text-green-500",
-    gradient: "from-green-500/20 to-emerald-500/20",
-  },
-  {
-    id: 3,
-    title: "Step 3: Deep Profile",
-    subtitle: "Evidence-Based Analysis",
-    description:
-      "Dive deep into a candidate's work history, coding patterns, and psychometric profile based on their GitHub activity.",
-    icon: <Brain className="w-12 h-12" />,
-    features: [
-      "Psychometric profiling",
-      "Work style indicators",
-      "Green & red flags",
-      "Interview question suggestions",
-    ],
-    color: "text-purple-500",
-    gradient: "from-purple-500/20 to-pink-500/20",
-  },
-  {
-    id: 4,
-    title: "Step 4: Outreach",
-    subtitle: "Personalized Messaging",
-    description:
-      "Generate personalized outreach messages tailored to each candidate's archetype and communication preferences.",
-    icon: <MessageSquare className="w-12 h-12" />,
-    features: [
-      "AI-generated messages",
-      "Archetype-specific tone",
-      "Personalized hooks",
-      "Multi-channel templates",
-    ],
-    color: "text-orange-500",
-    gradient: "from-orange-500/20 to-yellow-500/20",
-  },
-  {
-    id: 5,
-    title: "You're All Set!",
-    subtitle: "Start Recruiting",
-    description:
-      "You're ready to find your next great hire. Start by setting up your first job intake, or explore the platform.",
-    icon: <CheckCircle className="w-12 h-12" />,
-    features: [
-      "No credit card required",
-      "GitHub sign-in for full features",
-      "Free search tier available",
-      "Premium analysis on demand",
-    ],
-    color: "text-green-500",
-    gradient: "from-green-500/20 to-primary/20",
-  },
+// Feature icons mapped by index for each step
+const featureIconsByStep = [
+  // welcome
+  [<Sparkles key="0-0" className="w-4 h-4" />, <Target key="0-1" className="w-4 h-4" />, <Brain key="0-2" className="w-4 h-4" />, <MessageSquare key="0-3" className="w-4 h-4" />],
+  // jobIntake
+  [<Target key="1-0" className="w-4 h-4" />, <Sparkles key="1-1" className="w-4 h-4" />, <Users key="1-2" className="w-4 h-4" />, <BarChart3 key="1-3" className="w-4 h-4" />],
+  // talentPipeline
+  [<Search key="2-0" className="w-4 h-4" />, <GitBranch key="2-1" className="w-4 h-4" />, <Target key="2-2" className="w-4 h-4" />, <Users key="2-3" className="w-4 h-4" />],
+  // deepProfile
+  [<Brain key="3-0" className="w-4 h-4" />, <BarChart3 key="3-1" className="w-4 h-4" />, <CheckCircle key="3-2" className="w-4 h-4" />, <MessageSquare key="3-3" className="w-4 h-4" />],
+  // outreach
+  [<Sparkles key="4-0" className="w-4 h-4" />, <Brain key="4-1" className="w-4 h-4" />, <Zap key="4-2" className="w-4 h-4" />, <Send key="4-3" className="w-4 h-4" />],
+  // complete
+  [<CheckCircle key="5-0" className="w-4 h-4" />, <GitBranch key="5-1" className="w-4 h-4" />, <Search key="5-2" className="w-4 h-4" />, <Sparkles key="5-3" className="w-4 h-4" />],
 ];
 
-const featureIcons: Record<string, React.ReactNode> = {
-  "Paste job URL or description": <Target className="w-4 h-4" />,
-  "AI extracts required skills": <Sparkles className="w-4 h-4" />,
-  "Add LinkedIn context for culture fit": <Users className="w-4 h-4" />,
-  "Calibrate search parameters": <BarChart3 className="w-4 h-4" />,
-  "Natural language search": <Search className="w-4 h-4" />,
-  "Real-time GitHub analysis": <GitBranch className="w-4 h-4" />,
-  "Alignment score (0-100)": <Target className="w-4 h-4" />,
-  "Filter and compare candidates": <Users className="w-4 h-4" />,
-  "Psychometric profiling": <Brain className="w-4 h-4" />,
-  "Work style indicators": <BarChart3 className="w-4 h-4" />,
-  "Green & red flags": <CheckCircle className="w-4 h-4" />,
-  "Interview question suggestions": <MessageSquare className="w-4 h-4" />,
-  "AI-generated messages": <Sparkles className="w-4 h-4" />,
-  "Archetype-specific tone": <Brain className="w-4 h-4" />,
-  "Personalized hooks": <Zap className="w-4 h-4" />,
-  "Multi-channel templates": <Send className="w-4 h-4" />,
-};
-
 export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
+  const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
+
+  // Get features for each step from translations
+  const welcomeFeatures = useTranslatedArray("onboarding.steps.welcome.features");
+  const jobIntakeFeatures = useTranslatedArray("onboarding.steps.jobIntake.features");
+  const talentPipelineFeatures = useTranslatedArray("onboarding.steps.talentPipeline.features");
+  const deepProfileFeatures = useTranslatedArray("onboarding.steps.deepProfile.features");
+  const outreachFeatures = useTranslatedArray("onboarding.steps.outreach.features");
+  const completeFeatures = useTranslatedArray("onboarding.steps.complete.features");
+
+  // Build steps with translations
+  const steps: Step[] = [
+    {
+      id: 0,
+      title: t("onboarding.steps.welcome.title"),
+      subtitle: t("onboarding.steps.welcome.subtitle"),
+      description: t("onboarding.steps.welcome.description"),
+      icon: <Sparkles className="w-12 h-12" />,
+      features: welcomeFeatures,
+      color: "text-primary",
+      gradient: "from-primary/20 to-purple-500/20",
+    },
+    {
+      id: 1,
+      title: t("onboarding.steps.jobIntake.title"),
+      subtitle: t("onboarding.steps.jobIntake.subtitle"),
+      description: t("onboarding.steps.jobIntake.description"),
+      icon: <Briefcase className="w-12 h-12" />,
+      features: jobIntakeFeatures,
+      color: "text-blue-500",
+      gradient: "from-blue-500/20 to-cyan-500/20",
+    },
+    {
+      id: 2,
+      title: t("onboarding.steps.talentPipeline.title"),
+      subtitle: t("onboarding.steps.talentPipeline.subtitle"),
+      description: t("onboarding.steps.talentPipeline.description"),
+      icon: <Users className="w-12 h-12" />,
+      features: talentPipelineFeatures,
+      color: "text-green-500",
+      gradient: "from-green-500/20 to-emerald-500/20",
+    },
+    {
+      id: 3,
+      title: t("onboarding.steps.deepProfile.title"),
+      subtitle: t("onboarding.steps.deepProfile.subtitle"),
+      description: t("onboarding.steps.deepProfile.description"),
+      icon: <Brain className="w-12 h-12" />,
+      features: deepProfileFeatures,
+      color: "text-purple-500",
+      gradient: "from-purple-500/20 to-pink-500/20",
+    },
+    {
+      id: 4,
+      title: t("onboarding.steps.outreach.title"),
+      subtitle: t("onboarding.steps.outreach.subtitle"),
+      description: t("onboarding.steps.outreach.description"),
+      icon: <MessageSquare className="w-12 h-12" />,
+      features: outreachFeatures,
+      color: "text-orange-500",
+      gradient: "from-orange-500/20 to-yellow-500/20",
+    },
+    {
+      id: 5,
+      title: t("onboarding.steps.complete.title"),
+      subtitle: t("onboarding.steps.complete.subtitle"),
+      description: t("onboarding.steps.complete.description"),
+      icon: <CheckCircle className="w-12 h-12" />,
+      features: completeFeatures,
+      color: "text-green-500",
+      gradient: "from-green-500/20 to-primary/20",
+    },
+  ];
 
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -307,14 +279,14 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
                 <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
                   {step.features.map((feature, i) => (
                     <motion.div
-                      key={feature}
+                      key={`${currentStep}-${i}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
                       className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm"
                     >
                       <span className={step.color}>
-                        {featureIcons[feature] || (
+                        {featureIconsByStep[currentStep]?.[i] || (
                           <CheckCircle className="w-4 h-4" />
                         )}
                       </span>
@@ -335,7 +307,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              {t("common.back")}
             </Button>
 
             <div className="text-sm text-muted-foreground">
@@ -345,12 +317,12 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
             <Button onClick={handleNext} className="gap-2">
               {currentStep === steps.length - 1 ? (
                 <>
-                  Get Started
+                  {t("onboarding.getStarted")}
                   <Sparkles className="w-4 h-4" />
                 </>
               ) : (
                 <>
-                  Next
+                  {t("common.next")}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -361,8 +333,11 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         {/* Keyboard hints */}
         <div className="px-8 pb-4 text-center">
           <p className="text-xs text-muted-foreground">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Enter</kbd> to continue
-            or <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Esc</kbd> to skip
+            {t("lang") === "da" ? "Tryk" : "Press"}{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">{t("onboarding.enterKey")}</kbd>{" "}
+            {t("lang") === "da" ? "for at fortsætte eller" : "to continue or"}{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">{t("onboarding.escKey")}</kbd>{" "}
+            {t("lang") === "da" ? "for at springe over" : "to skip"}
           </p>
         </div>
       </motion.div>

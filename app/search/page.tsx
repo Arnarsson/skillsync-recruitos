@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/lib/i18n";
 
 interface Developer {
   username: string;
@@ -47,6 +48,7 @@ const FREE_SEARCHES = 1;
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useLanguage();
   const query = searchParams.get("q") || "";
   const isAdmin = searchParams.get("admin") !== null;
   const [searchQuery, setSearchQuery] = useState(query);
@@ -170,7 +172,7 @@ function SearchResults() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search by capabilities... (e.g., 'React state management', 'Rust systems programming')"
+                  placeholder={t("search.placeholder")}
                   className="pl-12 h-14 text-base bg-card border-border focus:border-primary/50"
                 />
               </div>
@@ -186,29 +188,29 @@ function SearchResults() {
               ) : (
                 <Search className="w-5 h-5" />
               )}
-              Search
+              {t("common.search")}
             </Button>
           </div>
 
           {/* Results count */}
-          {query && !loading && (
+          {query && !loading && developers.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex items-center justify-between"
             >
               <p className="text-muted-foreground">
-                Found{" "}
+                {t("search.found")}{" "}
                 <span className="text-foreground font-semibold">
                   {total.toLocaleString()}
                 </span>{" "}
-                developers for:{" "}
+                {t("search.developers")}{" "}
                 <span className="text-primary">&ldquo;{query}&rdquo;</span>
               </p>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="gap-1">
                   <Sparkles className="w-3 h-3" />
-                  AI Scored
+                  {t("search.aiScored")}
                 </Badge>
               </div>
             </motion.div>
@@ -306,7 +308,7 @@ function SearchResults() {
                                 className={`${getScoreColor(dev.score)} border`}
                               >
                                 <Star className="w-3 h-3 mr-1" />
-                                {dev.score}% match
+                                {dev.score}% {t("search.match")}
                               </Badge>
                             </div>
                             <Button
@@ -314,7 +316,7 @@ function SearchResults() {
                               size="sm"
                               className="opacity-0 group-hover:opacity-100 transition-opacity gap-1"
                             >
-                              View Profile
+                              {t("search.viewProfile")}
                               <ArrowRight className="w-4 h-4" />
                             </Button>
                           </div>
@@ -345,15 +347,15 @@ function SearchResults() {
                             )}
                             <div className="flex items-center gap-1.5">
                               <Code2 className="w-4 h-4 text-green-400" />
-                              {dev.repos} repos
+                              {dev.repos} {t("search.repos")}
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Star className="w-4 h-4 text-yellow-400" />
-                              {formatNumber(dev.stars)} stars
+                              {formatNumber(dev.stars)} {t("search.stars")}
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Users className="w-4 h-4 text-pink-400" />
-                              {formatNumber(dev.followers)} followers
+                              {formatNumber(dev.followers)} {t("search.followers")}
                             </div>
                           </div>
 
@@ -371,7 +373,7 @@ function SearchResults() {
                               ))}
                               {dev.skills.length > 6 && (
                                 <Badge variant="outline" className="text-xs">
-                                  +{dev.skills.length - 6} more
+                                  +{dev.skills.length - 6} {t("search.more")}
                                 </Badge>
                               )}
                             </div>
@@ -396,10 +398,9 @@ function SearchResults() {
             <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
               <Search className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-2xl font-semibold mb-3">No results found</h3>
+            <h3 className="text-2xl font-semibold mb-3">{t("search.noResults.title")}</h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              We couldn&apos;t find any developers matching your search. Try
-              adjusting your terms or using different keywords.
+              {t("search.noResults.description")}
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Badge
@@ -442,15 +443,13 @@ function SearchResults() {
               <Sparkles className="w-10 h-10 text-primary" />
             </div>
             <h3 className="text-2xl font-semibold mb-3">
-              Search for developers
+              {t("search.initial.title")}
             </h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Enter a search query to find elite developers by their skills,
-              technologies, or contributions. Our AI will analyze GitHub
-              profiles to find the best matches.
+              {t("search.initial.description")}
             </p>
             <div className="flex flex-col items-center gap-4">
-              <p className="text-sm text-muted-foreground">Popular searches:</p>
+              <p className="text-sm text-muted-foreground">{t("search.initial.popularSearches")}</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {[
                   "React state management Copenhagen",
@@ -505,35 +504,35 @@ function SearchResults() {
                 </div>
 
                 <h3 className="text-2xl font-semibold mb-3">
-                  Free search used
+                  {t("search.modal.title")}
                 </h3>
 
                 <p className="text-muted-foreground mb-6">
-                  You&apos;ve used your free search. Sign up to continue finding elite developers with our AI-powered search.
+                  {t("search.modal.description")}
                 </p>
 
                 <div className="bg-muted/50 rounded-lg p-4 mb-6">
                   <div className="flex items-baseline justify-center gap-2 mb-2">
                     <span className="text-3xl font-light">$15</span>
-                    <span className="text-muted-foreground">per search</span>
+                    <span className="text-muted-foreground">{t("search.modal.perSearch")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Includes deep search & full profile analysis
+                    {t("search.modal.includesDeep")}
                   </p>
                 </div>
 
                 <ul className="text-sm text-left space-y-2 mb-6">
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">✓</span> Full candidate search results
+                    <span className="text-primary">✓</span> {t("search.modal.features.fullResults")}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">✓</span> Deep profile analysis included
+                    <span className="text-primary">✓</span> {t("search.modal.features.deepProfile")}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">✓</span> Skill breakdown & insights
+                    <span className="text-primary">✓</span> {t("search.modal.features.skillBreakdown")}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">✓</span> No subscription required
+                    <span className="text-primary">✓</span> {t("search.modal.features.noSubscription")}
                   </li>
                 </ul>
 
@@ -541,11 +540,11 @@ function SearchResults() {
                   className="w-full mb-3 bg-primary hover:bg-primary/90"
                   size="lg"
                 >
-                  Sign up to continue
+                  {t("search.modal.signUp")}
                 </Button>
 
                 <p className="text-xs text-muted-foreground">
-                  Pay per search. No commitment required.
+                  {t("search.modal.payPerSearch")}
                 </p>
               </div>
             </motion.div>
@@ -556,18 +555,21 @@ function SearchResults() {
   );
 }
 
+function SearchPageFallback() {
+  const { t } = useLanguage();
+  return (
+    <div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">{t("search.loadingSearch")}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function SearchPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading search...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<SearchPageFallback />}>
       <SearchResults />
     </Suspense>
   );
