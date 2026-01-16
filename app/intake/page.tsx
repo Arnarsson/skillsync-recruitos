@@ -97,7 +97,7 @@ export default function IntakePage() {
     if (calibration && !autoNavigating) {
       setAutoNavigating(true);
 
-      // Save job context immediately
+      // Save job context immediately (capture current values)
       const enrichedContext = {
         ...calibration,
         socialContext: {
@@ -108,14 +108,23 @@ export default function IntakePage() {
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
 
+      // Clear existing candidates and hash to force auto-search in pipeline
+      localStorage.removeItem("apex_candidates");
+      localStorage.removeItem("apex_job_context_hash");
+      // Set flag to indicate fresh intake just completed
+      localStorage.setItem("apex_pending_auto_search", "true");
+      console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
+
       // Show brief success state then navigate
       const timer = setTimeout(() => {
+        console.log("[Intake] Navigating to pipeline...");
         router.push(`/pipeline`);
       }, 1500); // 1.5 second delay to show success
 
       return () => clearTimeout(timer);
     }
-  }, [calibration, autoNavigating, companyUrl, managerUrl, benchmarkUrl, router, isAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calibration]); // Only depend on calibration to avoid clearing the timeout
 
   const handleLoadDemo = () => {
     setCalibration(DEMO_JOB_CONTEXT);
@@ -198,6 +207,13 @@ export default function IntakePage() {
         },
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
+
+      // Clear existing candidates and hash to force auto-search in pipeline
+      localStorage.removeItem("apex_candidates");
+      localStorage.removeItem("apex_job_context_hash");
+      // Set flag to indicate fresh intake just completed
+      localStorage.setItem("apex_pending_auto_search", "true");
+      console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
     }
     router.push(`/pipeline`);
   };
@@ -217,23 +233,23 @@ export default function IntakePage() {
   ];
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-4 sm:space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
-                <Badge className="mb-2 bg-primary/20 text-primary">{t("intake.step")}</Badge>
-                <h1 className="text-3xl font-bold mb-2">{t("intake.title")}</h1>
-                <p className="text-muted-foreground max-w-2xl">
+                <Badge className="mb-2 bg-primary/20 text-primary text-xs">{t("intake.step")}</Badge>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("intake.title")}</h1>
+                <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
                   {t("intake.description")}
                 </p>
               </div>
-              <Button variant="outline" size="sm" onClick={handleLoadDemo} className="gap-2">
+              <Button variant="outline" size="sm" onClick={handleLoadDemo} className="gap-2 self-start">
                 <FlaskConical className="w-4 h-4" />
-                {t("intake.loadDemo")}
+                <span className="sm:inline">{t("intake.loadDemo")}</span>
               </Button>
             </div>
 

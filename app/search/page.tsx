@@ -39,6 +39,7 @@ import {
   DEFAULT_FILTERS,
   AvailableFilters,
 } from "@/components/search/SearchFilters";
+import { SkillsCombobox } from "@/components/search/SkillsCombobox";
 import { OpenToWorkBadge, BehavioralBadges } from "@/components/BehavioralBadges";
 
 interface Developer {
@@ -107,6 +108,9 @@ function SearchResults() {
 
   // Filter state
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
+
+  // Skills tagging state
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
   // Load search count from localStorage
   useEffect(() => {
@@ -415,13 +419,16 @@ function SearchResults() {
   });
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
+    // Combine selected skills and text query
+    const combinedQuery = [...selectedSkills, searchQuery.trim()].filter(Boolean).join(" ");
+
+    if (combinedQuery) {
       if (isLocked) {
         setShowSignupModal(true);
         return;
       }
-      searchDevelopers(searchQuery.trim());
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      searchDevelopers(combinedQuery);
+      router.push(`/search?q=${encodeURIComponent(combinedQuery)}`);
     }
   };
 
@@ -439,7 +446,7 @@ function SearchResults() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
         {/* Search Header */}
         <motion.div
@@ -447,35 +454,53 @@ function SearchResults() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4">
             <div className="flex-1 relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
+                <SkillsCombobox
+                  selectedSkills={selectedSkills}
+                  onSkillsChange={setSelectedSkills}
+                  textQuery={searchQuery}
+                  onTextQueryChange={setSearchQuery}
+                  onSearch={handleSearch}
                   placeholder={t("search.placeholder")}
-                  className="pl-12 h-14 text-base bg-card border-border focus:border-primary/50"
+                  className="min-h-[48px] sm:min-h-[56px]"
                 />
               </div>
             </div>
             <Button
               onClick={handleSearch}
-              disabled={loading}
+              disabled={loading || (!searchQuery.trim() && selectedSkills.length === 0)}
               size="lg"
-              className="h-14 px-8 gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+              className="h-12 sm:h-14 px-6 sm:px-8 gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <Search className="w-5 h-5" />
               )}
-              {t("common.search")}
+              <span className="sm:inline">{t("common.search")}</span>
             </Button>
           </div>
+          {/* Selected Skills Display */}
+          {selectedSkills.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Searching for:</span>
+              <div className="flex flex-wrap gap-1">
+                {selectedSkills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="text-xs">
+                    {skill}
+                  </Badge>
+                ))}
+                {searchQuery && (
+                  <Badge variant="outline" className="text-xs">
+                    + &ldquo;{searchQuery}&rdquo;
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Main content with filters sidebar */}
@@ -650,36 +675,37 @@ function SearchResults() {
               >
                 <Link href={`/profile/${dev.username}`}>
                   <Card className="group overflow-hidden hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
                         {/* Avatar with rank badge */}
-                        <div className="relative">
-                          <Avatar className="w-16 h-16 ring-2 ring-border group-hover:ring-primary/50 transition-all">
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="w-12 h-12 sm:w-16 sm:h-16 ring-2 ring-border group-hover:ring-primary/50 transition-all">
                             <AvatarImage src={dev.avatar} alt={dev.name} />
-                            <AvatarFallback className="text-xl">
+                            <AvatarFallback className="text-lg sm:text-xl">
                               {dev.name.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                           {index < 3 && (
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-xs font-bold text-black">
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-[10px] sm:text-xs font-bold text-black">
                               {index + 1}
                             </div>
                           )}
                         </div>
 
                         {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
+                        <div className="flex-1 min-w-0 w-full">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                              <h3 className="text-base sm:text-lg font-semibold group-hover:text-primary transition-colors">
                                 {dev.name}
                               </h3>
                               {(() => {
                                 const scoreInfo = getScoreInfo(dev.score);
                                 return (
-                                  <Badge className={`${scoreInfo.bg} ${scoreInfo.color} ${scoreInfo.border} border`}>
+                                  <Badge className={`${scoreInfo.bg} ${scoreInfo.color} ${scoreInfo.border} border text-xs`}>
                                     <Star className="w-3 h-3 mr-1" />
-                                    {dev.score}% - {lang === "da" ? scoreInfo.labelDa : scoreInfo.label}
+                                    {dev.score}%
+                                    <span className="hidden sm:inline"> - {lang === "da" ? scoreInfo.labelDa : scoreInfo.label}</span>
                                   </Badge>
                                 );
                               })()}
@@ -688,7 +714,7 @@ function SearchResults() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity gap-1"
+                              className="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity gap-1"
                             >
                               {t("search.viewProfile")}
                               <ArrowRight className="w-4 h-4" />
@@ -700,54 +726,54 @@ function SearchResults() {
                           </p>
 
                           {dev.bio && (
-                            <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                            <p className="text-muted-foreground text-sm mb-3 sm:mb-4 line-clamp-2">
                               {dev.bio}
                             </p>
                           )}
 
                           {/* Meta info */}
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
                             {dev.location && (
-                              <div className="flex items-center gap-1.5">
-                                <MapPin className="w-4 h-4 text-blue-400" />
-                                {dev.location}
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
+                                <span className="truncate max-w-[100px] sm:max-w-none">{dev.location}</span>
                               </div>
                             )}
                             {dev.company && (
-                              <div className="flex items-center gap-1.5">
-                                <Building className="w-4 h-4 text-purple-400" />
-                                {dev.company}
+                              <div className="flex items-center gap-1">
+                                <Building className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />
+                                <span className="truncate max-w-[100px] sm:max-w-none">{dev.company}</span>
                               </div>
                             )}
-                            <div className="flex items-center gap-1.5">
-                              <Code2 className="w-4 h-4 text-green-400" />
-                              {dev.repos} {t("search.repos")}
+                            <div className="flex items-center gap-1">
+                              <Code2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
+                              {dev.repos}
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <Star className="w-4 h-4 text-yellow-400" />
-                              {formatNumber(dev.stars)} {t("search.stars")}
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400" />
+                              {formatNumber(dev.stars)}
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <Users className="w-4 h-4 text-pink-400" />
-                              {formatNumber(dev.followers)} {t("search.followers")}
+                            <div className="flex items-center gap-1">
+                              <Users className="w-3 h-3 sm:w-4 sm:h-4 text-pink-400" />
+                              {formatNumber(dev.followers)}
                             </div>
                           </div>
 
-                          {/* Skills */}
+                          {/* Skills - show 5 on desktop */}
                           {dev.skills.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {dev.skills.slice(0, 6).map((skill, i) => (
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                              {dev.skills.slice(0, 5).map((skill, i) => (
                                 <Badge
                                   key={skill}
                                   variant="secondary"
-                                  className="text-xs px-2.5 py-1"
+                                  className="text-[10px] sm:text-xs px-2 py-0.5 sm:px-2.5 sm:py-1"
                                 >
                                   {skill}
                                 </Badge>
                               ))}
-                              {dev.skills.length > 6 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{dev.skills.length - 6} {t("search.more")}
+                              {dev.skills.length > 5 && (
+                                <Badge variant="outline" className="text-[10px] sm:text-xs">
+                                  +{dev.skills.length - 5}
                                 </Badge>
                               )}
                             </div>

@@ -88,10 +88,19 @@ function parseSearchQuery(query: string): ParsedSearchQuery {
   // 5. Remove any remaining numeric patterns (like "5+", "10")
   filteredWords = filteredWords.filter(word => !/^\d+\+?$/.test(word));
 
-  // 6. Add framework keyword to search terms if detected (e.g., "react")
-  const keywords = frameworkKeyword
-    ? [frameworkKeyword, ...filteredWords.filter(w => w !== frameworkKeyword)]
-    : filteredWords;
+  // 6. Build keywords list
+  let keywords = [...filteredWords];
+
+  // 6a. Add framework keyword to search terms if detected (e.g., "react")
+  if (frameworkKeyword && !keywords.includes(frameworkKeyword)) {
+    keywords = [frameworkKeyword, ...keywords];
+  }
+
+  // 6b. If a skill was extracted but doesn't map to a GitHub language, include it as a keyword
+  // e.g., "kubernetes", "docker", "terraform" should still appear in the search
+  if (skill && !githubLanguage && !keywords.includes(skill)) {
+    keywords = [skill, ...keywords];
+  }
 
   console.log('[parseSearchQuery] Input:', query);
   console.log('[parseSearchQuery] Parsed:', {

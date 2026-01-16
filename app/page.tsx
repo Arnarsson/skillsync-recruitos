@@ -23,9 +23,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24 sm:pb-0">
       {/* Hero */}
-      <section className="pt-32 pb-20 px-4">
+      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4">
         <div className="max-w-2xl mx-auto text-center">
           {/* Logo */}
           <div className="flex justify-center mb-6">
@@ -42,10 +42,10 @@ export default function Home() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-2xl md:text-3xl lg:text-4xl text-foreground mb-3 font-medium tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-foreground mb-3 font-medium tracking-tight">
             {t("home.headline")}
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground mb-10">
+          <p className="text-sm md:text-base text-muted-foreground mb-8 sm:mb-10">
             {t("home.subheadline")}
           </p>
 

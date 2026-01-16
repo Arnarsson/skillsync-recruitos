@@ -91,9 +91,14 @@ lib/                       # Utilities
 └── utils.ts               # Helper functions
 
 components/                # React components
-├── ui/                    # shadcn/ui + Radix primitives
+├── ui/                    # shadcn/ui + Radix primitives + Cult UI
+│   ├── dock.tsx           # Mac-style dock navigation (Cult UI, modified)
+│   └── expandable.tsx     # Expandable cards with animations (Cult UI)
 ├── search/                # Search-related components
 │   └── SearchFilters.tsx  # Faceted filtering panel (location, language, experience)
+├── pipeline/              # Pipeline-specific components
+│   └── CandidatePipelineItem.tsx  # Expandable candidate cards with inline insights
+├── AdminDock.tsx          # Mac-style bottom dock navigation (uses ui/dock.tsx)
 ├── BehavioralBadges.tsx   # OpenToWorkBadge, engagement indicators
 └── [feature components]   # Header, Footer, SearchBar, ScoreBadge, etc.
 ```
@@ -105,8 +110,30 @@ components/                # React components
 - `apex_logs`: Audit event history
 - `apex_job_context`: Job description text
 - `recruitos_search_count`: Free search tracking
+- `recruitos_admin_mode`: Admin mode toggle state
 
 **API Keys**: Retrieved from `localStorage` first, then `process.env`
+
+### Admin Mode
+
+**Context-based admin mode** (`lib/adminContext.tsx`):
+- Toggle via `Ctrl+Shift+A` keyboard shortcut (works on Linux/Windows/Mac)
+- State persisted in localStorage (`recruitos_admin_mode`)
+- Access via `useAdmin()` hook: `{ isAdmin, toggleAdmin }`
+
+**AdminDock** (`components/AdminDock.tsx`):
+- Mac-style dock at bottom center when admin mode enabled
+- Navigation: Home, Intake, Search, Pipeline + Power toggle
+- Uses Cult UI Dock component with custom icon support
+- Responsive: scales to 90% on mobile, hidden keyboard hint
+
+```typescript
+// Usage in components
+const { isAdmin } = useAdmin();
+if (isAdmin) {
+  // Show admin-only features
+}
+```
 
 ### Core Services
 
@@ -256,3 +283,49 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - Lint & Type Check
 - Build verification
 - Security scan (npm audit, TruffleHog)
+
+## UI Patterns
+
+### Cult UI Components
+
+Components from [cult-ui.com](https://cult-ui.com) installed via shadcn CLI:
+
+**Dock** (`components/ui/dock.tsx`):
+- Mac-style dock with spring animations
+- Modified to support custom icon content (not just images)
+- Props: `onClick`, `className` added to `DockCardInner`
+- Install: `npx shadcn@latest add https://cult-ui.com/r/dock.json`
+
+**Expandable** (`components/ui/expandable.tsx`):
+- Cards that expand in place with smooth animations
+- `onExpandStart` callback for lazy-loading content
+- Animation presets: `blur-md`, `scale-up`, `fade`, `slide-up`, `slide-down`
+- Install: `npx shadcn@latest add https://cult-ui.com/r/expandable.json`
+- Requires: `npm install react-use-measure`
+
+### Inline Insights Pattern
+
+Eliminates "pogo-sticking" (click → new page → back) for candidate analysis:
+
+```typescript
+// CandidatePipelineItem.tsx pattern
+<Expandable
+  onExpandStart={() => fetchDeepProfile(candidate.id)}
+  expandDirection="vertical"
+  animationPreset="blur-md"
+>
+  {/* Collapsed: avatar, name, score */}
+  {/* Expanded: AI analysis, psychometric profile, interview guide */}
+</Expandable>
+```
+
+### Responsive Design Patterns
+
+Standard responsive classes used throughout:
+- **Container padding**: `px-3 sm:px-4` (tighter on mobile)
+- **Top padding**: `pt-20 sm:pt-24` (account for header)
+- **Bottom padding**: `pb-24 sm:pb-16` (account for dock on mobile)
+- **Text scaling**: `text-base sm:text-lg`, `text-xl sm:text-2xl md:text-3xl`
+- **Flex direction**: `flex-col sm:flex-row` (stack on mobile)
+- **Hidden elements**: `hidden sm:inline`, `hidden sm:flex` (show on desktop only)
+- **Truncation**: `truncate max-w-[100px] sm:max-w-none`

@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import AdminToolbar from "@/components/AdminToolbar";
+import AdminDock from "@/components/AdminDock";
 import Providers from "@/components/Providers";
 import { Toaster } from "sonner";
 
@@ -40,7 +40,7 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
-          <AdminToolbar />
+          <AdminDock />
           <Toaster position="bottom-right" theme="dark" richColors />
         </Providers>
       </body>

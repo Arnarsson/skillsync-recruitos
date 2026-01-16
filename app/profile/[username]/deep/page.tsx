@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
+import { GitHubLoadingScramble, AnalysisLoadingScramble } from "@/components/ui/loading-scramble";
 import {
   ArrowLeft,
   Loader2,
@@ -27,6 +29,11 @@ import {
   Lightbulb,
   Globe,
   Info,
+  Linkedin,
+  Link as LinkIcon,
+  Plus,
+  HelpCircle,
+  ClipboardList,
 } from "lucide-react";
 import {
   Tooltip as UITooltip,
@@ -51,8 +58,17 @@ import {
 
 interface EvidenceItem {
   claim: string;
-  source: 'github_profile' | 'repositories' | 'contributions' | 'bio' | 'inferred' | 'location_data';
+  source: 'github_profile' | 'repositories' | 'contributions' | 'bio' | 'inferred' | 'location_data' | 'linkedin' | 'portfolio' | 'certificate';
   sourceDetail?: string;
+  sourceUrl?: string;
+  interviewQuestion?: string;
+}
+
+// Data coverage status
+interface DataCoverage {
+  github: 'connected' | 'partial' | 'missing';
+  linkedin: 'connected' | 'partial' | 'missing';
+  portfolio: 'connected' | 'partial' | 'missing';
 }
 
 interface GitHubDeepAnalysis {
@@ -349,8 +365,8 @@ export default function DeepProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen pt-24 pb-16 px-4 flex flex-col items-center justify-center">
+        <AnalysisLoadingScramble />
       </div>
     );
   }
@@ -395,8 +411,8 @@ export default function DeepProfilePage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <Badge className="mb-2 bg-primary/20 text-primary">Step 3 of 4</Badge>
-            <h1 className="text-3xl font-bold">Deep Profile</h1>
+            <Badge className="mb-2 bg-primary/20 text-primary">Trin 3 af 4</Badge>
+            <h1 className="text-3xl font-bold">Dybdeprofil</h1>
           </div>
           <div className="flex gap-2">
             <Button
@@ -410,14 +426,14 @@ export default function DeepProfilePage() {
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              {candidate.persona ? "Refresh Analysis" : "Run AI Analysis"}
+              {candidate.persona ? "Opdatér analyse" : "Kør AI-analyse"}
             </Button>
             <Button
               onClick={() => setShowOutreach(true)}
               className="gap-2"
             >
               <Send className="w-4 h-4" />
-              Generate Outreach
+              Lav outreach
             </Button>
           </div>
         </div>
@@ -445,7 +461,19 @@ export default function DeepProfilePage() {
                     >
                       {candidate.alignmentScore}
                     </div>
-                    <p className="text-xs text-muted-foreground">Alignment Score</p>
+                    <TooltipProvider>
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <button className="text-xs text-primary hover:underline flex items-center gap-1">
+                            <HelpCircle className="w-3 h-3" />
+                            Hvorfor {candidate.alignmentScore}?
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p className="text-xs">Klik for at se score-fordeling og kvitteringer</p>
+                        </TooltipContent>
+                      </UITooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
@@ -472,23 +500,87 @@ export default function DeepProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Data Coverage Indicator */}
+        <Card className="mb-6 bg-muted/30">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Datadækning:</span>
+                <div className="flex items-center gap-3">
+                  {/* GitHub */}
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5">
+                          <GitBranch className="w-4 h-4 text-green-500" />
+                          <span className="text-xs text-green-500">GitHub</span>
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Forbundet - repos, commits, PRs</p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+
+                  {/* LinkedIn */}
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <button className="flex items-center gap-1.5 hover:opacity-80">
+                          <Linkedin className="w-4 h-4 text-yellow-500" />
+                          <span className="text-xs text-yellow-500">LinkedIn</span>
+                          <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Mangler - tilføj for bedre kontekst</p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+
+                  {/* Portfolio */}
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <button className="flex items-center gap-1.5 hover:opacity-80">
+                          <LinkIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Portfolio</span>
+                          <Plus className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Tilføj portfolio/cases</p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+                <Plus className="w-3 h-3" />
+                Tilføj kilde
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <Button
             variant={activeTab === "overview" ? "default" : "ghost"}
             onClick={() => setActiveTab("overview")}
             className="gap-2"
           >
             <TrendingUp className="w-4 h-4" />
-            Overview
+            Overblik
           </Button>
           <Button
             variant={activeTab === "questions" ? "default" : "ghost"}
             onClick={() => setActiveTab("questions")}
             className="gap-2"
           >
-            <MessageSquare className="w-4 h-4" />
-            Interview Guide
+            <ClipboardList className="w-4 h-4" />
+            Interviewguide
           </Button>
           <Button
             variant={activeTab === "persona" ? "default" : "ghost"}
@@ -504,29 +596,155 @@ export default function DeepProfilePage() {
             className="gap-2"
           >
             <GitBranch className="w-4 h-4" />
-            GitHub Activity
+            GitHub-aktivitet
           </Button>
         </div>
 
         {/* Content */}
         {activeTab === "overview" && (
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Radar Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Alignment Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {radarData.length > 0 ? (
-                  <div className="h-64">
+          <BentoGrid className="auto-rows-[minmax(140px,_1fr)]">
+            {/* Key Evidence - Large Card (2x2) */}
+            <BentoCard colSpan={2} rowSpan={2} className="bg-gradient-to-br from-green-500/5 to-transparent">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Stærkeste beviser</h3>
+                  <p className="text-xs text-muted-foreground">Baseret på GitHub + LinkedIn + øvrige kilder</p>
+                </div>
+              </div>
+              <TooltipProvider>
+                {candidate.keyEvidenceWithSources && candidate.keyEvidenceWithSources.length > 0 ? (
+                  <ul className="space-y-3">
+                    {candidate.keyEvidenceWithSources.map((item, i) => {
+                      const sourceInfo = getSourceInfo(item.source);
+                      return (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span>{item.claim}</span>
+                            <UITooltip>
+                              <TooltipTrigger asChild>
+                                <button className={`ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${sourceInfo.color} bg-muted hover:bg-muted/80`}>
+                                  {sourceInfo.icon}
+                                  <span>{sourceInfo.label}</span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-medium">{sourceInfo.label}</p>
+                                {item.sourceDetail && <p className="text-xs text-muted-foreground">{item.sourceDetail}</p>}
+                              </TooltipContent>
+                            </UITooltip>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : candidate.keyEvidence && candidate.keyEvidence.length > 0 ? (
+                  <ul className="space-y-3">
+                    {candidate.keyEvidence.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Run AI Analysis to see evidence
+                  </p>
+                )}
+              </TooltipProvider>
+            </BentoCard>
+
+            {/* Alignment Score - Small Card (1x1) */}
+            <BentoCard colSpan={1} rowSpan={1} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent">
+              <div className={`text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
+                {candidate.alignmentScore}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Alignment Score</p>
+              {candidate.persona?.archetype && (
+                <Badge className="mt-2" variant="outline">
+                  {candidate.persona.archetype.split(" ").slice(0, 2).join(" ")}
+                </Badge>
+              )}
+            </BentoCard>
+
+            {/* Potential Gaps - Tall Card (1x2) */}
+            <BentoCard colSpan={1} rowSpan={2} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-yellow-500/10">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Uklarheder at afklare</h3>
+                  <p className="text-xs text-muted-foreground">Ting vi mangler bevis for</p>
+                </div>
+              </div>
+              <TooltipProvider>
+                {candidate.risksWithSources && candidate.risksWithSources.length > 0 ? (
+                  <ul className="space-y-3">
+                    {candidate.risksWithSources.slice(0, 4).map((item, i) => {
+                      const sourceInfo = getSourceInfo(item.source);
+                      return (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="line-clamp-2">{item.claim}</span>
+                            <UITooltip>
+                              <TooltipTrigger asChild>
+                                <button className={`ml-1 inline-flex items-center gap-0.5 px-1 py-0 rounded text-[10px] ${sourceInfo.color} bg-muted hover:bg-muted/80`}>
+                                  {sourceInfo.icon}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-medium">{sourceInfo.label}</p>
+                              </TooltipContent>
+                            </UITooltip>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : candidate.risks && candidate.risks.length > 0 ? (
+                  <ul className="space-y-3">
+                    {candidate.risks.slice(0, 4).map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 flex-shrink-0" />
+                        <span className="line-clamp-2">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    No gaps identified
+                  </p>
+                )}
+              </TooltipProvider>
+            </BentoCard>
+
+            {/* Score Breakdown / Radar - Wide Card (3x1) */}
+            <BentoCard colSpan={3} rowSpan={1}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Score-fordeling</h3>
+                  <p className="text-xs text-muted-foreground">Klik for at se vægtning + kilder pr. kategori</p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Radar Chart */}
+                <div className="h-40">
+                  {radarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart data={radarData}>
                         <PolarGrid stroke="hsl(var(--border))" />
                         <PolarAngleAxis
                           dataKey="subject"
-                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
                         />
                         <Radar
                           name="Score"
@@ -538,161 +756,53 @@ export default function DeepProfilePage() {
                         <Tooltip />
                       </RadarChart>
                     </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                      Run AI Analysis to see chart
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress Bars */}
+                {candidate.scoreBreakdown ? (
+                  <div className="space-y-3">
+                    {[
+                      { key: "skills", label: "Skills", labelDa: "Kompetencer" },
+                      { key: "experience", label: "Experience", labelDa: "Erfaring" },
+                      { key: "industry", label: "Industry", labelDa: "Branche" },
+                      { key: "seniority", label: "Seniority", labelDa: "Senioritet" },
+                      { key: "location", label: "Location", labelDa: "Lokation" },
+                    ].map(({ key, label, labelDa }) => {
+                      const component =
+                        candidate.scoreBreakdown?.[
+                          key as keyof typeof candidate.scoreBreakdown
+                        ];
+                      if (!component) return null;
+                      return (
+                        <div key={key}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">{labelDa}</span>
+                            <span className={getScoreColor(component.percentage)}>
+                              {component.percentage}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={component.percentage}
+                            className="h-1.5"
+                            indicatorClassName={getScoreBarColor(component.percentage)}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    Run AI Analysis to see score breakdown
+                  <div className="flex items-center justify-center text-muted-foreground text-sm">
+                    Kør AI-analyse for at se fordeling
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Evidence */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Key Evidence
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TooltipProvider>
-                  {candidate.keyEvidenceWithSources && candidate.keyEvidenceWithSources.length > 0 ? (
-                    <ul className="space-y-3">
-                      {candidate.keyEvidenceWithSources.map((item, i) => {
-                        const sourceInfo = getSourceInfo(item.source);
-                        return (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <span>{item.claim}</span>
-                              <UITooltip>
-                                <TooltipTrigger asChild>
-                                  <button className={`ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${sourceInfo.color} bg-muted hover:bg-muted/80`}>
-                                    {sourceInfo.icon}
-                                    <span>{sourceInfo.label}</span>
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-medium">{sourceInfo.label}</p>
-                                  {item.sourceDetail && <p className="text-xs text-muted-foreground">{item.sourceDetail}</p>}
-                                </TooltipContent>
-                              </UITooltip>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : candidate.keyEvidence && candidate.keyEvidence.length > 0 ? (
-                    <ul className="space-y-3">
-                      {candidate.keyEvidence.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      Run AI Analysis to see evidence
-                    </p>
-                  )}
-                </TooltipProvider>
-              </CardContent>
-            </Card>
-
-            {/* Risks */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Potential Gaps
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TooltipProvider>
-                  {candidate.risksWithSources && candidate.risksWithSources.length > 0 ? (
-                    <ul className="space-y-3">
-                      {candidate.risksWithSources.map((item, i) => {
-                        const sourceInfo = getSourceInfo(item.source);
-                        return (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <span>{item.claim}</span>
-                              <UITooltip>
-                                <TooltipTrigger asChild>
-                                  <button className={`ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${sourceInfo.color} bg-muted hover:bg-muted/80`}>
-                                    {sourceInfo.icon}
-                                    <span>{sourceInfo.label}</span>
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-medium">{sourceInfo.label}</p>
-                                  {item.sourceDetail && <p className="text-xs text-muted-foreground">{item.sourceDetail}</p>}
-                                </TooltipContent>
-                              </UITooltip>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : candidate.risks && candidate.risks.length > 0 ? (
-                    <ul className="space-y-3">
-                      {candidate.risks.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      Run AI Analysis to see gaps
-                    </p>
-                  )}
-                </TooltipProvider>
-              </CardContent>
-            </Card>
-
-            {/* Score Breakdown */}
-            {candidate.scoreBreakdown && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Score Breakdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    { key: "skills", label: "Technical Skills" },
-                    { key: "experience", label: "Experience" },
-                    { key: "industry", label: "Industry Fit" },
-                    { key: "seniority", label: "Seniority Match" },
-                    { key: "location", label: "Location" },
-                  ].map(({ key, label }) => {
-                    const component =
-                      candidate.scoreBreakdown?.[
-                        key as keyof typeof candidate.scoreBreakdown
-                      ];
-                    if (!component) return null;
-                    return (
-                      <div key={key}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>{label}</span>
-                          <span className={getScoreColor(component.percentage)}>
-                            {component.percentage}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={component.percentage}
-                          className="h-2"
-                        />
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
-          </div>
+              </div>
+            </BentoCard>
+          </BentoGrid>
         )}
 
         {activeTab === "questions" && (
@@ -1111,9 +1221,8 @@ export default function DeepProfilePage() {
           <div className="space-y-6">
             {loadingGithub ? (
               <Card>
-                <CardContent className="py-12 text-center">
-                  <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Loading GitHub activity...</p>
+                <CardContent className="py-12 flex flex-col items-center justify-center">
+                  <GitHubLoadingScramble />
                 </CardContent>
               </Card>
             ) : githubAnalysis ? (

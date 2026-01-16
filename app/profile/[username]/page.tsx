@@ -88,6 +88,7 @@ export default function ProfilePage({
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null);
   const [linkedInLoading, setLinkedInLoading] = useState(false);
+  const [linkedInError, setLinkedInError] = useState<string | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
 
   useEffect(() => {
@@ -143,20 +144,37 @@ export default function ProfilePage({
   const handleLinkedInEnrich = async () => {
     if (!linkedInUrl.trim()) return;
 
+    // Clear previous error
+    setLinkedInError(null);
+
     // Check if BrightData is configured
     if (!brightDataService.isConfigured()) {
-      console.warn("LinkedIn enrichment requires BRIGHTDATA_API_KEY to be configured");
+      setLinkedInError("LinkedIn enrichment requires BRIGHTDATA_API_KEY to be configured in environment variables.");
+      return;
+    }
+
+    // Normalize URL - add https:// if missing
+    let normalizedUrl = linkedInUrl.trim();
+    if (!normalizedUrl.startsWith("http")) {
+      normalizedUrl = `https://${normalizedUrl}`;
+    }
+    if (!normalizedUrl.includes("linkedin.com/in/")) {
+      setLinkedInError("Please enter a valid LinkedIn profile URL (e.g., linkedin.com/in/username)");
       return;
     }
 
     setLinkedInLoading(true);
     try {
-      const linkedIn = await brightDataService.scrapeLinkedInProfile(linkedInUrl);
+      const linkedIn = await brightDataService.scrapeLinkedInProfile(normalizedUrl);
       if (linkedIn) {
         setLinkedInProfile(linkedIn);
+        setLinkedInError(null);
+      } else {
+        setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
       }
     } catch (err) {
       console.error("LinkedIn scrape error:", err);
+      setLinkedInError(err instanceof Error ? err.message : "Failed to fetch LinkedIn profile. Please try again.");
     } finally {
       setLinkedInLoading(false);
     }
@@ -276,26 +294,49 @@ export default function ProfilePage({
 
         {/* LinkedIn Enrich Bar */}
         {!linkedInProfile && (
-          <Card className="mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+          <Card className={`mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 ${linkedInError ? 'border-red-500/40' : 'border-blue-500/20'}`}>
             <CardContent className="py-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <Linkedin className="w-6 h-6 text-blue-500" />
-                <div className="flex-1">
+                <div className="flex-1 min-w-[200px]">
                   <p className="text-sm font-medium">Enrich with LinkedIn</p>
                   <p className="text-xs text-muted-foreground">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center flex-wrap">
                   <Input
                     placeholder="linkedin.com/in/username"
                     value={linkedInUrl}
-                    onChange={(e) => setLinkedInUrl(e.target.value)}
-                    className="w-64"
+                    onChange={(e) => {
+                      setLinkedInUrl(e.target.value);
+                      setLinkedInError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && linkedInUrl.trim()) {
+                        handleLinkedInEnrich();
+                      }
+                    }}
+                    className={`w-64 ${linkedInError ? 'border-red-500' : ''}`}
                   />
                   <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                    {linkedInLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enrich"}
+                    {linkedInLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Fetching...
+                      </>
+                    ) : "Enrich"}
                   </Button>
                 </div>
               </div>
+              {linkedInError && (
+                <div className="mt-3 p-2 rounded bg-red-500/10 border border-red-500/20">
+                  <p className="text-xs text-red-500">{linkedInError}</p>
+                </div>
+              )}
+              {linkedInLoading && (
+                <div className="mt-3 p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                  <p className="text-xs text-blue-500">Fetching LinkedIn profile... This may take up to 60 seconds.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -491,16 +532,40 @@ export default function ProfilePage({
                 <CardContent className="py-12 text-center">
                   <Network className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground mb-4">Add LinkedIn profile to view network map</p>
-                  <div className="flex gap-2 justify-center items-center max-w-md mx-auto">
+                  <div className="flex gap-2 justify-center items-center max-w-md mx-auto flex-wrap">
                     <Input
                       placeholder="linkedin.com/in/username"
                       value={linkedInUrl}
-                      onChange={(e) => setLinkedInUrl(e.target.value)}
+                      onChange={(e) => {
+                        setLinkedInUrl(e.target.value);
+                        setLinkedInError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && linkedInUrl.trim()) {
+                          handleLinkedInEnrich();
+                        }
+                      }}
+                      className={linkedInError ? 'border-red-500' : ''}
                     />
                     <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                      {linkedInLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Load"}
+                      {linkedInLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Loading...
+                        </>
+                      ) : "Load"}
                     </Button>
                   </div>
+                  {linkedInError && (
+                    <div className="mt-4 p-2 rounded bg-red-500/10 border border-red-500/20 max-w-md mx-auto">
+                      <p className="text-xs text-red-500">{linkedInError}</p>
+                    </div>
+                  )}
+                  {linkedInLoading && (
+                    <div className="mt-4 p-2 rounded bg-blue-500/10 border border-blue-500/20 max-w-md mx-auto">
+                      <p className="text-xs text-blue-500">Fetching LinkedIn profile... This may take up to 60 seconds.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

@@ -14,7 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnalysisLoadingScramble } from "@/components/ui/loading-scramble";
 import ScoreBadge from "@/components/ScoreBadge";
+import { BuildprintStrip } from "@/components/pipeline/BuildprintStrip";
+import { ScoreExplainer } from "@/components/ScoreExplainer";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import {
   MapPin,
@@ -83,6 +86,7 @@ interface CandidatePipelineItemProps {
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onOutreach: (candidate: Candidate) => void;
+  compact?: boolean;
 }
 
 export function CandidatePipelineItem({
@@ -91,11 +95,14 @@ export function CandidatePipelineItem({
   onToggleSelect,
   onDelete,
   onOutreach,
+  compact = false,
 }: CandidatePipelineItemProps) {
   const { t } = useLanguage();
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
+  const [showScoreExplainer, setShowScoreExplainer] = useState(false);
+  const [githubAnalysis, setGithubAnalysis] = useState<any>(null);
 
   // Fetch deep analysis when card expands
   const handleExpandStart = useCallback(async () => {
@@ -103,9 +110,14 @@ export function CandidatePipelineItem({
 
     setIsLoadingAnalysis(true);
     try {
-      const response = await fetch(`/api/developers/${candidate.id}?deep=true`);
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch both developer profile and GitHub deep analysis in parallel
+      const [profileRes, githubRes] = await Promise.all([
+        fetch(`/api/developers/${candidate.id}?deep=true`),
+        fetch(`/api/github/deep?username=${candidate.id}`),
+      ]);
+
+      if (profileRes.ok) {
+        const data = await profileRes.json();
         setDeepAnalysis({
           psychometricText: data.persona?.psychometricProfile || data.bio,
           archetype: data.persona?.archetype || candidate.persona?.archetype,
@@ -116,6 +128,11 @@ export function CandidatePipelineItem({
           managementStyle: data.persona?.managementStyle,
         });
       }
+
+      if (githubRes.ok) {
+        const githubData = await githubRes.json();
+        setGithubAnalysis(githubData);
+      }
     } catch (error) {
       console.error("Failed to fetch deep analysis:", error);
     } finally {
@@ -124,7 +141,68 @@ export function CandidatePipelineItem({
     }
   }, [candidate.id, hasLoadedAnalysis, isLoadingAnalysis, candidate.persona?.archetype, candidate.keyEvidence, candidate.risks]);
 
+  // In compact mode, render a simplified non-expandable version
+  if (compact) {
+    return (
+      <div className="w-full bg-card border rounded-xl transition-all duration-300 border-border hover:border-primary/30">
+        <div className="flex items-center gap-3 p-3">
+          {/* Checkbox */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect(candidate.id);
+            }}
+            className="text-muted-foreground hover:text-foreground flex-shrink-0"
+          >
+            {isSelected ? (
+              <CheckSquare className="w-4 h-4 text-primary" />
+            ) : (
+              <Square className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Avatar */}
+          <img
+            src={candidate.avatar}
+            alt={candidate.name}
+            className="w-10 h-10 rounded-full flex-shrink-0"
+          />
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-sm truncate">{candidate.name}</h3>
+            <p className="text-xs text-muted-foreground truncate">
+              {candidate.currentRole}
+            </p>
+          </div>
+
+          {/* Score */}
+          <div className="flex-shrink-0">
+            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} />
+          </div>
+        </div>
+
+        {/* Compact Skills Preview */}
+        {candidate.skills && candidate.skills.length > 0 && (
+          <div className="px-3 pb-3 flex flex-wrap gap-1">
+            {candidate.skills.slice(0, 3).map((skill) => (
+              <Badge key={skill} variant="secondary" className="text-[10px] px-1.5 py-0">
+                {skill}
+              </Badge>
+            ))}
+            {candidate.skills.length > 3 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                +{candidate.skills.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
+    <>
     <Expandable
       expandDirection="vertical"
       expandBehavior="push"
@@ -177,21 +255,42 @@ export function CandidatePipelineItem({
                   <p className="text-sm text-muted-foreground truncate">
                     {candidate.currentRole} at {candidate.company}
                   </p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       {candidate.location}
                     </span>
-                    {candidate.skills && candidate.skills.length > 0 && (
-                      <span className="hidden sm:inline">{candidate.skills.slice(0, 3).join(", ")}</span>
-                    )}
                   </div>
+                  {/* Skill Badges on collapsed card */}
+                  {candidate.skills && candidate.skills.length > 0 && (
+                    <div className="hidden sm:flex flex-wrap gap-1 mt-2">
+                      {candidate.skills.slice(0, 3).map((skill) => (
+                        <Badge key={skill} variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {skill}
+                        </Badge>
+                      ))}
+                      {candidate.skills.length > 3 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          +{candidate.skills.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   <BehavioralBadges username={candidate.id} compact className="mt-2" />
                 </div>
 
-                {/* Score */}
+                {/* Score - Clickable for explainer */}
                 <div className="flex-shrink-0">
-                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowScoreExplainer(true);
+                    }}
+                    className="hover:scale-105 transition-transform cursor-pointer"
+                    title="Click to see score breakdown"
+                  >
+                    <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
+                  </button>
                 </div>
 
                 {/* Expand Indicator */}
@@ -206,8 +305,18 @@ export function CandidatePipelineItem({
 
               {/* Expanded Content */}
               <ExpandableContent preset="blur-md" className="px-4 pb-4">
+                {/* Buildprint Strip */}
+                {githubAnalysis && (
+                  <div className="pt-2 pb-3 border-t mb-3">
+                    <BuildprintStrip
+                      githubAnalysis={githubAnalysis}
+                      userProfile={{ totalStars: candidate.skills?.length || 0 }}
+                    />
+                  </div>
+                )}
+
                 {/* Quick Tags */}
-                <div className="flex flex-wrap gap-2 mb-4 pt-2 border-t">
+                <div className={`flex flex-wrap gap-2 mb-4 ${!githubAnalysis ? "pt-2 border-t" : ""}`}>
                   {candidate.skills?.slice(0, 6).map((skill) => (
                     <Badge key={skill} variant="secondary" className="text-xs">
                       {skill}
@@ -293,10 +402,8 @@ export function CandidatePipelineItem({
                       Psychometric Profile
                     </h4>
                     {isLoadingAnalysis ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-4 w-5/6" />
+                      <div className="py-2">
+                        <AnalysisLoadingScramble />
                       </div>
                     ) : deepAnalysis?.psychometricText ? (
                       <p className="text-sm text-muted-foreground line-clamp-4">
@@ -322,10 +429,8 @@ export function CandidatePipelineItem({
                       Interview Guide
                     </h4>
                     {isLoadingAnalysis ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-4/5" />
-                        <Skeleton className="h-4 w-3/4" />
+                      <div className="py-2">
+                        <AnalysisLoadingScramble />
                       </div>
                     ) : deepAnalysis?.interviewTips && deepAnalysis.interviewTips.length > 0 ? (
                       <ul className="text-sm text-muted-foreground space-y-1">
@@ -420,5 +525,13 @@ export function CandidatePipelineItem({
         </div>
       )}
     </Expandable>
+
+    {/* Score Explainer Sheet */}
+    <ScoreExplainer
+      candidate={candidate}
+      isOpen={showScoreExplainer}
+      onClose={() => setShowScoreExplainer(false)}
+    />
+    </>
   );
 }

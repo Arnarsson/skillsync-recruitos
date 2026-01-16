@@ -25,12 +25,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Keyboard shortcut: Cmd/Ctrl + Shift + A
+  // Keyboard shortcut: Ctrl + Shift + A (works on all platforms)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "a") {
+      // Use ctrlKey for Linux/Windows, metaKey for Mac
+      const modifierPressed = e.ctrlKey || e.metaKey;
+      if (modifierPressed && e.shiftKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
-        toggleAdmin();
+        setIsAdmin((prev) => {
+          const newValue = !prev;
+          localStorage.setItem("recruitos_admin_mode", String(newValue));
+          return newValue;
+        });
       }
     };
 

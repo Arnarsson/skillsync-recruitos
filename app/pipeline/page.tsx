@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAdmin } from "@/lib/adminContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,6 +39,8 @@ import OutreachModal from "@/components/OutreachModal";
 import ScoreBadge from "@/components/ScoreBadge";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { CandidatePipelineItem } from "@/components/pipeline/CandidatePipelineItem";
+import { PipelineSplitView } from "@/components/pipeline/PipelineSplitView";
+import { PipelineLoadingScramble } from "@/components/ui/loading-scramble";
 import {
   ResponsiveContainer,
   BarChart,
@@ -95,7 +97,7 @@ export default function PipelinePage() {
     requiredSkills?: string[];
     location?: string;
   } | null>(null);
-  const [autoSearched, setAutoSearched] = useState(false);
+  const autoSearchedRef = useRef(false);
 
   // Import modal state
   const [showImport, setShowImport] = useState(false);
@@ -107,6 +109,13 @@ export default function PipelinePage() {
   const [filterScore, setFilterScore] = useState<"high" | "medium" | "low" | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Histogram filter state
+  const [filterRange, setFilterRange] = useState<string | null>(null);
+
+  // Split view state
+  const [viewMode, setViewMode] = useState<"list" | "split">("list");
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+
   // Multi-select for comparison
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
@@ -117,7 +126,14 @@ export default function PipelinePage() {
 
   // Note: expandedExplanation state moved to CandidatePipelineItem component
 
+  // Load job context and candidates on mount
   useEffect(() => {
+    // Prevent double execution in React strict mode
+    if (autoSearchedRef.current) {
+      console.log("[Pipeline] Already initialized, skipping...");
+      return;
+    }
+
     const stored = localStorage.getItem("apex_job_context");
     let parsedJobContext = null;
     if (stored) {
@@ -128,6 +144,11 @@ export default function PipelinePage() {
         // Ignore
       }
     }
+
+    // Check if we just came from intake (fresh job context)
+    const pendingAutoSearch = localStorage.getItem("apex_pending_auto_search");
+    const freshFromIntake = pendingAutoSearch === "true";
+    console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
 
     // Create a hash of job context to detect changes
     const jobContextHash = parsedJobContext
@@ -140,31 +161,41 @@ export default function PipelinePage() {
     const storedJobHash = localStorage.getItem("apex_job_context_hash");
 
     // Check if job context changed - if so, clear old candidates
-    const jobContextChanged = jobContextHash && storedJobHash !== jobContextHash;
+    const jobContextChanged = !!(jobContextHash && storedJobHash !== jobContextHash);
 
     const storedCandidates = localStorage.getItem("apex_candidates");
     let existingCandidates: Candidate[] = [];
-    if (storedCandidates && !jobContextChanged) {
+
+    // Load existing candidates ONLY if not fresh from intake and job hasn't changed
+    if (storedCandidates && !jobContextChanged && !freshFromIntake) {
       try {
         existingCandidates = JSON.parse(storedCandidates);
         setCandidates(existingCandidates);
+        console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates");
       } catch {
         // Ignore
       }
-    } else if (jobContextChanged) {
-      // Clear old candidates when job context changes
+    } else if (jobContextChanged || freshFromIntake) {
+      // Clear old candidates when job context changes or fresh from intake
       localStorage.removeItem("apex_candidates");
       setCandidates([]);
+      console.log("[Pipeline] Cleared old candidates - jobContextChanged:", jobContextChanged, "freshFromIntake:", freshFromIntake);
     }
 
-    // Auto-search for candidates based on job requirements
-    const shouldAutoSearch =
-      parsedJobContext?.requiredSkills?.length > 0 &&
-      (existingCandidates.length === 0 || jobContextChanged) &&
-      !autoSearched;
+    // Determine if we should auto-search
+    const hasRequiredSkills = parsedJobContext?.requiredSkills?.length > 0;
+    const needsCandidates = existingCandidates.length === 0 || jobContextChanged || freshFromIntake;
+    const shouldAutoSearch = hasRequiredSkills && needsCandidates;
 
-    if (shouldAutoSearch) {
-      setAutoSearched(true);
+    console.log("[Pipeline] shouldAutoSearch:", shouldAutoSearch, "| hasSkills:", hasRequiredSkills, "| needsCandidates:", needsCandidates);
+
+    if (shouldAutoSearch && parsedJobContext?.requiredSkills) {
+      // Mark as searched to prevent re-runs
+      autoSearchedRef.current = true;
+
+      // Clear the pending flag
+      localStorage.removeItem("apex_pending_auto_search");
+
       // Store the new job context hash
       if (jobContextHash) {
         localStorage.setItem("apex_job_context_hash", jobContextHash);
@@ -172,18 +203,109 @@ export default function PipelinePage() {
 
       // Use only top 2 skills for search - more specific queries return 0 results from GitHub
       const skills = parsedJobContext.requiredSkills.slice(0, 2);
-      // Don't include location in search query - it makes GitHub search too restrictive
-      // Location is still used for scoring candidates
       const query = skills.join(" ");
+      console.log("[Pipeline] Auto-searching with query:", query);
 
       if (query) {
         setSearchQuery(query);
-        // Auto-trigger search immediately
         setLoading(true);
-        autoSearchCandidates(query);
+
+        // Call auto-search function
+        (async () => {
+          try {
+            const response = await fetch(
+              `/api/search?q=${encodeURIComponent(query)}&perPage=15`
+            );
+            const data = await response.json();
+            console.log("[Pipeline] Search returned", data.users?.length || 0, "users");
+
+            if (data.users && data.users.length > 0) {
+              // Get job context for scoring
+              const jobReqs = parsedJobContext || {};
+
+              const newCandidates = data.users.map((user: {
+                username: string;
+                name: string;
+                avatar: string;
+                bio: string;
+                location: string;
+                company: string;
+                skills: string[];
+                score: number;
+              }) => {
+                // Calculate alignment score based on job requirements
+                const userSkills = user.skills || [];
+                const userBio = user.bio || "";
+
+                // Simple inline scoring
+                const requiredSkills = jobReqs.requiredSkills || [];
+                const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
+                const userBioLower = userBio.toLowerCase();
+
+                let matchedRequired: string[] = [];
+                requiredSkills.forEach((skill: string) => {
+                  const skillLower = skill.toLowerCase();
+                  if (
+                    userSkillsLower.some((s: string) => s.includes(skillLower) || skillLower.includes(s)) ||
+                    userBioLower.includes(skillLower)
+                  ) {
+                    matchedRequired.push(skill);
+                  }
+                });
+
+                const baseScore = 50;
+                const skillsScore = requiredSkills.length > 0
+                  ? Math.round((matchedRequired.length / requiredSkills.length) * 35)
+                  : 0;
+                const score = Math.min(99, Math.max(30, baseScore + skillsScore));
+
+                return {
+                  id: user.username,
+                  name: user.name || user.username,
+                  currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
+                  company: user.company || "Independent",
+                  location: user.location || "Remote",
+                  alignmentScore: score,
+                  scoreBreakdown: {
+                    requiredMatched: matchedRequired,
+                    requiredMissing: requiredSkills.filter((s: string) => !matchedRequired.includes(s)),
+                    preferredMatched: [],
+                    locationMatch: "none" as const,
+                    baseScore,
+                    skillsScore,
+                    preferredScore: 0,
+                    locationScore: 0,
+                  },
+                  avatar: user.avatar,
+                  skills: user.skills || [],
+                  createdAt: new Date().toISOString(),
+                };
+              });
+
+              // Sort by alignment score
+              newCandidates.sort((a: Candidate, b: Candidate) => b.alignmentScore - a.alignmentScore);
+
+              setCandidates(newCandidates);
+              localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
+              console.log("[Pipeline] Saved", newCandidates.length, "candidates");
+            }
+          } catch (error) {
+            console.error("[Pipeline] Auto-search error:", error);
+          } finally {
+            setLoading(false);
+          }
+        })();
       }
+    } else {
+      // Clear flag even if no auto-search needed
+      if (freshFromIntake) {
+        localStorage.removeItem("apex_pending_auto_search");
+      }
+      // Still mark as initialized to prevent re-runs
+      autoSearchedRef.current = true;
     }
-  }, [autoSearched]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - run only on mount
 
   // Calculate alignment score based on job requirements
   const calculateAlignmentScore = (
@@ -488,20 +610,47 @@ export default function PipelinePage() {
 
   // Filtering
   const filteredCandidates = useMemo(() => {
-    if (!filterScore) return sortedCandidates;
-    switch (filterScore) {
-      case "high":
-        return sortedCandidates.filter((c) => c.alignmentScore >= 80);
-      case "medium":
-        return sortedCandidates.filter(
-          (c) => c.alignmentScore >= 50 && c.alignmentScore < 80
-        );
-      case "low":
-        return sortedCandidates.filter((c) => c.alignmentScore < 50);
-      default:
-        return sortedCandidates;
+    let filtered = sortedCandidates;
+
+    // Apply histogram range filter
+    if (filterRange) {
+      filtered = filtered.filter((c) => {
+        switch (filterRange) {
+          case "90-100":
+            return c.alignmentScore >= 90;
+          case "80-89":
+            return c.alignmentScore >= 80 && c.alignmentScore < 90;
+          case "70-79":
+            return c.alignmentScore >= 70 && c.alignmentScore < 80;
+          case "60-69":
+            return c.alignmentScore >= 60 && c.alignmentScore < 70;
+          case "0-59":
+            return c.alignmentScore < 60;
+          default:
+            return true;
+        }
+      });
     }
-  }, [sortedCandidates, filterScore]);
+
+    // Apply preset score filter
+    if (filterScore) {
+      switch (filterScore) {
+        case "high":
+          filtered = filtered.filter((c) => c.alignmentScore >= 80);
+          break;
+        case "medium":
+          filtered = filtered.filter(
+            (c) => c.alignmentScore >= 50 && c.alignmentScore < 80
+          );
+          break;
+        case "low":
+          filtered = filtered.filter((c) => c.alignmentScore < 50);
+          break;
+      }
+    }
+
+    return filtered;
+  }, [sortedCandidates, filterScore, filterRange]);
 
   // Score distribution for chart
   const scoreDistribution = useMemo(() => {
@@ -537,26 +686,31 @@ export default function PipelinePage() {
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.id));
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary">{t("pipeline.step")}</Badge>
-            <h1 className="text-3xl font-bold">{t("pipeline.title")}</h1>
+            <Badge className="mb-2 bg-primary/20 text-primary text-xs">{t("pipeline.step")}</Badge>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("pipeline.title")}</h1>
             {jobContext && (
               <>
-                <p className="text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                   {jobContext.title} {t("pipeline.candidate.at")} {jobContext.company}
                 </p>
                 {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     <span className="text-xs text-muted-foreground mr-1">{t("common.skills")}:</span>
-                    {jobContext.requiredSkills.slice(0, 5).map((skill) => (
+                    {jobContext.requiredSkills.slice(0, 4).map((skill) => (
                       <Badge key={skill} variant="outline" className="text-xs">
                         {skill}
                       </Badge>
                     ))}
+                    {jobContext.requiredSkills.length > 4 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{jobContext.requiredSkills.length - 4}
+                      </Badge>
+                    )}
                   </div>
                 )}
               </>
@@ -564,19 +718,19 @@ export default function PipelinePage() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-              <FileText className="w-4 h-4 mr-2" />
-              {t("pipeline.import")}
+              <FileText className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t("pipeline.import")}</span>
             </Button>
             <Link href={`/intake${adminSuffix}`}>
               <Button variant="outline" size="sm">
-                <Briefcase className="w-4 h-4 mr-2" />
-                {t("pipeline.editJob")}
+                <Briefcase className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t("pipeline.editJob")}</span>
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Score Distribution Chart */}
+        {/* Score Distribution Chart - Interactive Histogram */}
         {candidates.length > 0 && (
           <Card className="mb-6">
             <CardContent className="pt-6">
@@ -586,27 +740,80 @@ export default function PipelinePage() {
                     <BarChart3 className="w-4 h-4 text-muted-foreground" />
                     {t("pipeline.intelligence.title")}
                   </h3>
-                  <p className="text-xs text-muted-foreground">{t("pipeline.intelligence.distribution").replace("{count}", candidates.length.toString())}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {filterRange
+                      ? `Showing ${filteredCandidates.length} candidates in ${filterRange} range`
+                      : t("pipeline.intelligence.distribution").replace("{count}", candidates.length.toString())
+                    }
+                  </p>
                 </div>
-                <Badge variant="outline" className="gap-1">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  {t("pipeline.intelligence.topMatch")}: {candidates.filter((c) => c.alignmentScore >= 80).length}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {filterRange && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFilterRange(null)}
+                      className="text-xs h-7 gap-1"
+                    >
+                      <X className="w-3 h-3" />
+                      Clear filter
+                    </Button>
+                  )}
+                  <Badge variant="outline" className="gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
+                    {t("pipeline.intelligence.topMatch")}: {candidates.filter((c) => c.alignmentScore >= 80).length}
+                  </Badge>
+                </div>
               </div>
               <div className="h-32">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={scoreDistribution}>
                     <XAxis dataKey="range" tick={{ fontSize: 11 }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-popover border rounded-md shadow-md px-3 py-2 text-sm">
+                              <p className="font-medium">{data.range}</p>
+                              <p className="text-muted-foreground">{data.count} candidates</p>
+                              <p className="text-xs text-primary mt-1">Click to filter</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      radius={[4, 4, 0, 0]}
+                      className="cursor-pointer"
+                      onClick={(data) => {
+                        if (data && data.range) {
+                          setFilterRange(filterRange === data.range ? null : data.range);
+                        }
+                      }}
+                    >
                       {scoreDistribution.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
+                        <Cell
+                          key={index}
+                          fill={filterRange === entry.range
+                            ? entry.color
+                            : (filterRange ? `${entry.color}40` : entry.color)
+                          }
+                          className="cursor-pointer transition-all duration-200 hover:opacity-80"
+                        />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              {filterRange && (
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  Click the same bar again or use &quot;Clear filter&quot; to show all candidates
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -697,12 +904,11 @@ export default function PipelinePage() {
           </CardContent>
         </Card>
 
-        {/* Skeleton Loader for Loading State */}
+        {/* Loading State with Text Scramble */}
         {loading && candidates.length === 0 && (
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-2 mb-4">
-              <Loader2 className="w-4 h-4 text-primary animate-spin" />
-              <span className="text-sm text-muted-foreground">{t("pipeline.empty.loading.title")}</span>
+              <PipelineLoadingScramble />
               {jobContext?.requiredSkills && (
                 <div className="flex gap-1 ml-2">
                   {jobContext.requiredSkills.slice(0, 3).map((skill) => (
@@ -746,7 +952,7 @@ export default function PipelinePage() {
           </div>
         )}
 
-        {/* Candidates List */}
+        {/* Candidates List with Split View */}
         {!loading && filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
@@ -764,30 +970,38 @@ export default function PipelinePage() {
             </CardContent>
           </Card>
         ) : filteredCandidates.length > 0 ? (
-          <div className="space-y-3">
-            <AnimatePresence>
-              {filteredCandidates.map((candidate) => (
-                <motion.div
-                  key={candidate.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  layout
-                >
-                  <CandidatePipelineItem
-                    candidate={candidate}
-                    isSelected={selectedIds.includes(candidate.id)}
-                    onToggleSelect={toggleSelect}
-                    onDelete={handleDelete}
-                    onOutreach={(c) => {
-                      setOutreachCandidate(c);
-                      setShowOutreach(true);
-                    }}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+          <PipelineSplitView
+            candidates={filteredCandidates}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            selectedCandidateId={selectedCandidateId}
+            onSelectCandidate={setSelectedCandidateId}
+            onOutreach={(c) => {
+              setOutreachCandidate(c);
+              setShowOutreach(true);
+            }}
+            renderListItem={(candidate, isCompact) => (
+              <motion.div
+                key={candidate.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                layout
+              >
+                <CandidatePipelineItem
+                  candidate={candidate}
+                  isSelected={selectedIds.includes(candidate.id)}
+                  onToggleSelect={toggleSelect}
+                  onDelete={handleDelete}
+                  onOutreach={(c) => {
+                    setOutreachCandidate(c);
+                    setShowOutreach(true);
+                  }}
+                  compact={isCompact}
+                />
+              </motion.div>
+            )}
+          />
         ) : null}
 
         {/* Import Modal */}
