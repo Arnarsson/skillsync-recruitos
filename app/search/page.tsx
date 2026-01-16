@@ -278,7 +278,7 @@ function SearchResults() {
                   visible: { opacity: 1, y: 0 },
                 }}
               >
-                <Link href={`/profile/${dev.username}`}>
+                <Link href={`/profile/${dev.username}${isAdmin ? '?admin' : ''}`}>
                   <Card className="group overflow-hidden hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">

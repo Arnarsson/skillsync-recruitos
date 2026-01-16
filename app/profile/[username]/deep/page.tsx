@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,9 @@ interface Candidate {
 export default function DeepProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAdmin = searchParams.get("admin") !== null;
+  const adminSuffix = isAdmin ? "?admin" : "";
   const username = params.username as string;
 
   const [candidate, setCandidate] = useState<Candidate | null>(null);
@@ -243,7 +246,7 @@ export default function DeepProfilePage() {
           <p className="text-muted-foreground mb-6">
             This candidate is not in your pipeline.
           </p>
-          <Link href="/pipeline">
+          <Link href={`/pipeline${adminSuffix}`}>
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Pipeline
@@ -269,7 +272,7 @@ export default function DeepProfilePage() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/pipeline">
+          <Link href={`/pipeline${adminSuffix}`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="w-5 h-5" />
             </Button>

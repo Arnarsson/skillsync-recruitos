@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,6 +65,9 @@ interface Candidate {
 
 export default function PipelinePage() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const isAdmin = searchParams.get("admin") !== null;
+  const adminSuffix = isAdmin ? "?admin" : "";
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -518,7 +522,7 @@ export default function PipelinePage() {
               <FileText className="w-4 h-4 mr-2" />
               {t("pipeline.import")}
             </Button>
-            <Link href="/intake">
+            <Link href={`/intake${adminSuffix}`}>
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 mr-2" />
                 {t("pipeline.editJob")}
@@ -748,7 +752,7 @@ export default function PipelinePage() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-2">
-                          <Link href={`/profile/${candidate.id}/deep`}>
+                          <Link href={`/profile/${candidate.id}/deep${adminSuffix}`}>
                             <Button size="sm">
                               {t("pipeline.candidate.deepProfile")}
                               <ArrowRight className="w-4 h-4 ml-1" />
@@ -892,7 +896,7 @@ export default function PipelinePage() {
                             ))}
                           </div>
                         )}
-                        <Link href={`/profile/${c.id}/deep`} className="block mt-4">
+                        <Link href={`/profile/${c.id}/deep${adminSuffix}`} className="block mt-4">
                           <Button className="w-full" size="sm">
                             {t("pipeline.compareModal.viewDeepProfile")}
                           </Button>
