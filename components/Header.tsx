@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, X, Shield } from "lucide-react";
+import { Menu, X, Shield, Settings } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { useAdmin } from "@/lib/adminContext";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +91,14 @@ export default function Header() {
                   {t("common.pipeline")}
                 </Link>
                 <span className="text-muted-foreground">/</span>
+                <Link
+                  href="/settings"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
+                <span className="text-muted-foreground">/</span>
                 <button
                   onClick={() => signOut()}
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
@@ -175,6 +183,14 @@ export default function Header() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t("common.pipeline")}
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider flex items-center gap-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Settings className="w-4 h-4" />
+                    SETTINGS
                   </Link>
                   <button
                     onClick={() => {

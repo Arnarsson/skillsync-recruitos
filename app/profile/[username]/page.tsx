@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import PsychometricCard from "@/components/PsychometricCard";
 import NetworkMap from "@/components/NetworkMap";
+import GitHubConnectionPath from "@/components/GitHubConnectionPath";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
 
@@ -365,7 +366,10 @@ export default function ProfilePage({
               <Brain className="w-4 h-4" />
               Psychometric
             </TabsTrigger>
-{/* Network tab removed - will be replaced with proper "connection path" feature showing how YOU are connected to the candidate */}
+            <TabsTrigger value="connection" className="gap-2">
+              <Users className="w-4 h-4" />
+              Connection
+            </TabsTrigger>
             <TabsTrigger value="outreach" className="gap-2">
               <ExternalLink className="w-4 h-4" />
               Outreach
@@ -494,11 +498,14 @@ export default function ProfilePage({
             )}
           </TabsContent>
 
-{/* Network Tab removed - will be replaced with "Connection Path" feature showing:
-   - Degree of connection between recruiter and candidate
-   - Mutual connections
-   - Shortest path to reach candidate via warm introductions
-*/}
+          {/* Connection Path Tab */}
+          <TabsContent value="connection">
+            <GitHubConnectionPath
+              candidateUsername={user.login}
+              candidateName={user.name || undefined}
+              candidateAvatar={user.avatar_url}
+            />
+          </TabsContent>
 
           {/* Outreach Tab */}
           <TabsContent value="outreach">

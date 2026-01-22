@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/tooltip";
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
+import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -242,6 +243,8 @@ interface Candidate {
   keyEvidenceWithSources?: EvidenceItem[];
   risks?: string[];
   risksWithSources?: EvidenceItem[];
+  linkedinUrl?: string; // LinkedIn profile URL for connection path feature
+  sourceUrl?: string; // Original source URL (LinkedIn, GitHub, etc.)
   scoreBreakdown?: {
     // New format from AI analysis
     skills?: { value: number; max: number; percentage: number };
@@ -1881,6 +1884,14 @@ export default function DeepProfilePage() {
                   </Card>
                 </div>
 
+                {/* LinkedIn Connection Path - Real network intelligence */}
+                {candidate.linkedinUrl && (
+                  <LinkedInConnectionPath
+                    candidateLinkedInUrl={candidate.linkedinUrl}
+                    candidateName={candidate.name}
+                  />
+                )}
+
                 {/* Objection Handling */}
                 <Card>
                   <CardHeader>
@@ -1995,30 +2006,43 @@ export default function DeepProfilePage() {
                 </p>
               </>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Phone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">Kontaktstrategi ikke tilgængelig</h3>
-                  <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                    Kontaktstrategi genereres kun for shortlistede kandidater (Trin 3).
-                    {!candidate.isShortlisted && (
-                      <span className="block mt-2 text-yellow-500">
-                        Denne kandidat er ikke shortlistet endnu.
-                      </span>
-                    )}
-                  </p>
-                  {candidate.isShortlisted && (
-                    <Button onClick={runDeepAnalysis} disabled={analyzing}>
-                      {analyzing ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
+              <div className="space-y-6">
+                {/* LinkedIn Connection Path - Available even without full dossier */}
+                {candidate.linkedinUrl && (
+                  <LinkedInConnectionPath
+                    candidateLinkedInUrl={candidate.linkedinUrl}
+                    candidateName={candidate.name}
+                  />
+                )}
+
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Phone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-medium mb-2">Fuld kontaktstrategi ikke tilgængelig</h3>
+                    <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                      {candidate.linkedinUrl
+                        ? "Brug LinkedIn-forbindelsesstien ovenfor til at finde en vej ind. Fuld kontaktstrategi genereres kun for shortlistede kandidater."
+                        : "Kontaktstrategi genereres kun for shortlistede kandidater (Trin 3)."
+                      }
+                      {!candidate.isShortlisted && (
+                        <span className="block mt-2 text-yellow-500">
+                          Denne kandidat er ikke shortlistet endnu.
+                        </span>
                       )}
-                      Generer kontaktstrategi
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                    </p>
+                    {candidate.isShortlisted && (
+                      <Button onClick={runDeepAnalysis} disabled={analyzing}>
+                        {analyzing ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                        )}
+                        Generer kontaktstrategi
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         )}
