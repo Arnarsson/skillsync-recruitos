@@ -104,21 +104,74 @@ export default function GitHubConnectionPath({
     }
   }, [status, fetchConnectionPath]);
 
-  // Not logged in state
-  if (status === "unauthenticated") {
+  // Manual username input for unauthenticated users
+  const [manualUsername, setManualUsername] = useState("");
+  const [useManualMode, setUseManualMode] = useState(false);
+
+  const fetchConnectionPathManual = useCallback(async (username: string) => {
+    if (!username.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/github/connection-path?candidate=${encodeURIComponent(candidateUsername)}&recruiter=${encodeURIComponent(username.trim())}`
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to analyze connection");
+      }
+
+      const data = await response.json();
+      setConnectionPath(data.connectionPath);
+      setRecruiterUsername(username.trim());
+      setUseManualMode(true);
+    } catch (err) {
+      console.error("Connection path error:", err);
+      setError(err instanceof Error ? err.message : "Failed to analyze connection path");
+    } finally {
+      setLoading(false);
+    }
+  }, [candidateUsername]);
+
+  // Not logged in state - allow manual username input
+  if (status === "unauthenticated" && !useManualMode && !connectionPath) {
     return (
       <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
         <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center text-center py-8">
-            <LogIn className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Sign in to see your connection</h3>
+            <Users className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">See your connection path</h3>
             <p className="text-muted-foreground text-sm mb-4 max-w-md">
-              Sign in with GitHub to discover how you&apos;re connected to {candidateName || candidateUsername}
+              Enter your GitHub username to discover how you&apos;re connected to {candidateName || candidateUsername}
               through mutual follows, shared repositories, and organizations.
             </p>
-            <Button asChild>
-              <a href="/login">Sign in with GitHub</a>
-            </Button>
+            <div className="flex gap-2 w-full max-w-sm">
+              <input
+                type="text"
+                placeholder="Your GitHub username"
+                value={manualUsername}
+                onChange={(e) => setManualUsername(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && manualUsername.trim()) {
+                    fetchConnectionPathManual(manualUsername);
+                  }
+                }}
+                className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <Button
+                onClick={() => fetchConnectionPathManual(manualUsername)}
+                disabled={!manualUsername.trim() || loading}
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Analyze"
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

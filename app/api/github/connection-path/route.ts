@@ -21,23 +21,23 @@ export interface DirectConnectionResponse {
 }
 
 /**
- * GET /api/github/connection-path?candidate=<username>&quick=<boolean>
+ * GET /api/github/connection-path?candidate=<username>&recruiter=<username>&quick=<boolean>
  *
- * Analyzes the connection path between the logged-in recruiter
- * and a candidate through GitHub's social graph.
+ * Analyzes the connection path between a recruiter and a candidate
+ * through GitHub's social graph.
  *
  * Query params:
  * - candidate: Required. The GitHub username of the candidate.
+ * - recruiter: Optional. The recruiter's GitHub username. If not provided, uses session.
  * - quick: Optional. If "true", only checks direct connections (faster).
  *
  * Returns connection degree (1st/2nd/3rd), mutual connections,
  * shared repos, shared orgs, and the shortest path description.
- *
- * Requires authentication - the recruiter must be logged in via GitHub OAuth.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const candidateUsername = searchParams.get("candidate");
+  const manualRecruiterUsername = searchParams.get("recruiter");
   const quickMode = searchParams.get("quick") === "true";
 
   if (!candidateUsername) {
@@ -47,26 +47,30 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Get the logged-in user's session
-  const session = await getServerSession(authOptions);
+  let recruiterUsername: string | null = manualRecruiterUsername;
+  let accessToken: string | undefined;
 
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "Authentication required. Please sign in with GitHub." },
-      { status: 401 }
-    );
+  // If no manual recruiter username provided, try to get from session
+  if (!recruiterUsername) {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Please provide a recruiter username or sign in with GitHub." },
+        { status: 401 }
+      );
+    }
+
+    // Extract recruiter's GitHub username from session
+    const sessionUser = session.user as { name?: string; login?: string };
+    const sessionWithToken = session as { accessToken?: string };
+    recruiterUsername = sessionUser.name || sessionUser.login || null;
+    accessToken = sessionWithToken.accessToken;
   }
-
-  // Extract recruiter's GitHub username from session
-  // NextAuth stores it in the user object when using GitHub provider
-  const sessionUser = session.user as { name?: string; login?: string };
-  const sessionWithToken = session as { accessToken?: string };
-  const recruiterUsername = sessionUser.name || sessionUser.login;
-  const accessToken = sessionWithToken.accessToken;
 
   if (!recruiterUsername) {
     return NextResponse.json(
-      { error: "Could not determine your GitHub username from session" },
+      { error: "Could not determine recruiter GitHub username" },
       { status: 400 }
     );
   }
