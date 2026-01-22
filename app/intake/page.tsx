@@ -140,8 +140,17 @@ export default function IntakePage() {
     summary: string;
   } | null>(null);
   const [autoNavigating, setAutoNavigating] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState<string | null>(null);
 
-  // Auto-navigate to skills-review after successful analysis
+  // Check for pending search from homepage
+  useEffect(() => {
+    const pending = localStorage.getItem("recruitos_pending_search");
+    if (pending) {
+      setPendingSearch(pending);
+    }
+  }, []);
+
+  // Auto-navigate after successful analysis
   useEffect(() => {
     if (calibration && !autoNavigating) {
       setAutoNavigating(true);
@@ -164,10 +173,18 @@ export default function IntakePage() {
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
 
-      // Show brief success state then navigate to skills review
+      // Show brief success state then navigate
       const timer = setTimeout(() => {
-        console.log("[Intake] Navigating to skills review...");
-        router.push(`/skills-review`);
+        // Check for pending search from homepage
+        const pending = localStorage.getItem("recruitos_pending_search");
+        if (pending) {
+          console.log("[Intake] Navigating to search with query:", pending);
+          localStorage.removeItem("recruitos_pending_search");
+          router.push(`/search?q=${encodeURIComponent(pending)}`);
+        } else {
+          console.log("[Intake] Navigating to skills review...");
+          router.push(`/skills-review`);
+        }
       }, 1500); // 1.5 second delay to show success
 
       return () => clearTimeout(timer);
@@ -264,7 +281,15 @@ export default function IntakePage() {
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
     }
-    router.push(`/skills-review`);
+
+    // Check for pending search from homepage
+    const pending = localStorage.getItem("recruitos_pending_search");
+    if (pending) {
+      localStorage.removeItem("recruitos_pending_search");
+      router.push(`/search?q=${encodeURIComponent(pending)}`);
+    } else {
+      router.push(`/skills-review`);
+    }
   };
 
   const loadingSteps = [
@@ -295,6 +320,15 @@ export default function IntakePage() {
                 <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
                   {t("intake.description")}
                 </p>
+                {pendingSearch && (
+                  <div className="mt-3 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-sm">
+                      <span className="text-muted-foreground">{t("home.lang") === "da" ? "Søger efter:" : "Searching for:"}</span>{" "}
+                      <span className="font-medium text-primary">{pendingSearch}</span>
+                    </span>
+                  </div>
+                )}
               </div>
               <Button variant="outline" size="sm" onClick={handleLoadDemo} className="gap-2 self-start">
                 <FlaskConical className="w-4 h-4" />

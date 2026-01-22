@@ -147,12 +147,6 @@ export default function ProfilePage({
     // Clear previous error
     setLinkedInError(null);
 
-    // Check if BrightData is configured
-    if (!brightDataService.isConfigured()) {
-      setLinkedInError("LinkedIn enrichment requires BRIGHTDATA_API_KEY to be configured in environment variables.");
-      return;
-    }
-
     // Normalize URL - add https:// if missing
     let normalizedUrl = linkedInUrl.trim();
     if (!normalizedUrl.startsWith("http")) {
