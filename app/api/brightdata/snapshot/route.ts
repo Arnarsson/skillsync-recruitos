@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 // BrightData Web Scraper API - Get snapshot data
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey, snapshotId } = await request.json();
+    const { apiKey: clientApiKey, snapshotId } = await request.json();
+
+    // Use server-side env var, fallback to client-provided key
+    const apiKey = process.env.BRIGHTDATA_API_KEY || clientApiKey;
 
     if (!apiKey) {
       return NextResponse.json(
