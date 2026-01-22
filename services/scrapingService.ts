@@ -3,6 +3,7 @@
 import { type EnrichedProfile } from './enrichmentServiceLegacy';
 import { enrichCandidatePersona } from './enrichmentServiceV2';
 import { CandidatePersona } from '../types'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { normalizeLinkedInUrl } from '../lib/urlNormalizer';
 
 import { callOpenRouter } from './geminiService';
 
@@ -799,6 +800,21 @@ const scrapeLinkedInWithBrightData = async (url: string, jobContext: string = 'S
     throw new Error("BrightData API Key is missing. Please configure it in Settings or use Quick Paste.");
   }
 
+  // ===== NORMALIZE URL FIRST =====
+  // Handle mobile URLs, tracking params, localized domains, etc.
+  const normalizeResult = normalizeLinkedInUrl(url);
+
+  if (normalizeResult.type === 'invalid') {
+    throw new Error("Invalid LinkedIn URL format. Please enter a valid profile URL (linkedin.com/in/username).");
+  }
+
+  // Use the normalized URL
+  const normalizedUrl = normalizeResult.normalized;
+
+  if (process.env.NODE_ENV === 'development' && normalizeResult.wasModified) {
+    console.log('[BrightData] URL normalized:', url, '->', normalizedUrl);
+  }
+
   // ===== MULTI-URL ENRICHMENT PIPELINE =====
   // Strategy: Try multiple LinkedIn URL variants and merge results
   const urlsToTry: string[] = [];
@@ -807,12 +823,12 @@ const scrapeLinkedInWithBrightData = async (url: string, jobContext: string = 'S
   try {
     if (process.env.NODE_ENV === 'development') {
       console.log('[BrightData] ===== MULTI-URL ENRICHMENT PIPELINE =====');
-      console.log('[BrightData] Base URL:', url);
+      console.log('[BrightData] Base URL:', normalizedUrl);
     }
 
     // Build URL variants
     // Optimization: Only use the main profile URL to save costs (no variants)
-    const baseUrl = url.replace(/\/$/, ''); // Remove trailing slash
+    const baseUrl = normalizedUrl.replace(/\/$/, ''); // Remove trailing slash
 
     // Main profile only
     urlsToTry.push(baseUrl);

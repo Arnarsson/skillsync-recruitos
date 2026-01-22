@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAdmin } from "@/lib/adminContext";
+import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,9 @@ import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { CandidatePipelineItem } from "@/components/pipeline/CandidatePipelineItem";
 import { PipelineSplitView } from "@/components/pipeline/PipelineSplitView";
 import { PipelineLoadingScramble } from "@/components/ui/loading-scramble";
+import { ShortlistPanel } from "@/components/pipeline/ShortlistPanel";
+import ScoreLegend from "@/components/ScoreLegend";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   BarChart,
@@ -61,6 +66,19 @@ interface ScoreBreakdown {
   skillsScore: number;
   preferredScore: number;
   locationScore: number;
+}
+
+// Skills config from skills-review page
+interface SkillsConfigItem {
+  name: string;
+  tier: "must-have" | "nice-to-have" | "bonus";
+  weight: number;
+  order: number;
+}
+
+interface SkillsConfig {
+  skills: SkillsConfigItem[];
+  customSkills: string[];
 }
 
 interface Candidate {
@@ -87,6 +105,8 @@ interface Candidate {
 export default function PipelinePage() {
   const { t } = useLanguage();
   const { isAdmin } = useAdmin();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const adminSuffix = ""; // No longer needed with context-based admin
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -98,27 +118,62 @@ export default function PipelinePage() {
     location?: string;
   } | null>(null);
   const autoSearchedRef = useRef(false);
+  const urlStateInitialized = useRef(false);
 
   // Import modal state
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  // Sorting & Filtering
-  const [sortBy, setSortBy] = useState<"score-desc" | "score-asc" | "name-asc" | "name-desc">("score-desc");
-  const [filterScore, setFilterScore] = useState<"high" | "medium" | "low" | null>(null);
+  // Initialize state from URL params
+  const initialUrlState = useMemo(() => {
+    return deserializePipelineState(searchParams);
+  }, [searchParams]);
+
+  // Sorting & Filtering - initialized from URL state
+  const [sortBy, setSortBy] = useState<"score-desc" | "score-asc" | "name-asc" | "name-desc">(initialUrlState.sort);
+  const [filterScore, setFilterScore] = useState<"high" | "medium" | "low" | null>(initialUrlState.filter);
   const [showFilters, setShowFilters] = useState(false);
 
   // Histogram filter state
-  const [filterRange, setFilterRange] = useState<string | null>(null);
+  const [filterRange, setFilterRange] = useState<string | null>(initialUrlState.filterRange);
 
   // Split view state
-  const [viewMode, setViewMode] = useState<"list" | "split">("list");
+  const [viewMode, setViewMode] = useState<"list" | "split">(initialUrlState.viewMode);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
 
-  // Multi-select for comparison
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Multi-select for comparison - initialized from URL state
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialUrlState.selected);
   const [showComparison, setShowComparison] = useState(false);
+
+  // Scroll to candidate from URL state
+  useEffect(() => {
+    if (initialUrlState.scrollTo && candidates.length > 0 && !urlStateInitialized.current) {
+      urlStateInitialized.current = true;
+      const element = document.getElementById(`candidate-${initialUrlState.scrollTo}`);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  }, [initialUrlState.scrollTo, candidates]);
+
+  // Update URL when filter/sort state changes (shallow routing)
+  useEffect(() => {
+    if (!urlStateInitialized.current && candidates.length === 0) return;
+
+    const params = serializePipelineState({
+      sort: sortBy,
+      filter: filterScore,
+      filterRange,
+      selected: selectedIds,
+      viewMode,
+    });
+
+    const newUrl = params.toString() ? `/pipeline?${params.toString()}` : '/pipeline';
+    router.replace(newUrl, { scroll: false });
+  }, [sortBy, filterScore, filterRange, selectedIds, viewMode, router, candidates.length]);
 
   // Outreach modal state
   const [showOutreach, setShowOutreach] = useState(false);
@@ -307,52 +362,103 @@ export default function PipelinePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - run only on mount
 
-  // Calculate alignment score based on job requirements
+  // Calculate alignment score based on job requirements and skills config
   const calculateAlignmentScore = (
     user: { skills: string[]; bio: string; location: string },
     jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
   ): { score: number; breakdown: ScoreBreakdown } => {
-    const baseScore = 50;
+    const baseScore = 40;
     let skillsScore = 0;
     let preferredScore = 0;
     let locationScore = 0;
 
-    const requiredSkills = jobRequirements.requiredSkills || [];
-    const preferredSkills = jobRequirements.preferredSkills || [];
     const userSkillsLower = user.skills.map((s) => s.toLowerCase());
     const userBioLower = (user.bio || "").toLowerCase();
 
-    // Track matched and missing required skills
+    // Helper to check if user has a skill
+    const userHasSkill = (skillName: string): boolean => {
+      const skillLower = skillName.toLowerCase();
+      return (
+        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
+        userBioLower.includes(skillLower)
+      );
+    };
+
+    // Try to use skills config from skills-review page (has tier weights)
+    const skillsConfigStr = typeof window !== "undefined"
+      ? localStorage.getItem("apex_skills_config")
+      : null;
+
     const requiredMatched: string[] = [];
     const requiredMissing: string[] = [];
-    requiredSkills.forEach((skill) => {
-      const skillLower = skill.toLowerCase();
-      if (
-        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
-        userBioLower.includes(skillLower)
-      ) {
-        requiredMatched.push(skill);
-      } else {
-        requiredMissing.push(skill);
-      }
-    });
-    if (requiredSkills.length > 0) {
-      skillsScore = Math.round((requiredMatched.length / requiredSkills.length) * 35);
-    }
-
-    // Track matched preferred skills
     const preferredMatched: string[] = [];
-    preferredSkills.forEach((skill) => {
-      const skillLower = skill.toLowerCase();
-      if (
-        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
-        userBioLower.includes(skillLower)
-      ) {
-        preferredMatched.push(skill);
+
+    if (skillsConfigStr) {
+      // Use tiered scoring from skills config
+      try {
+        const skillsConfig: SkillsConfig = JSON.parse(skillsConfigStr);
+        const mustHaves = skillsConfig.skills.filter(s => s.tier === "must-have");
+        const niceToHaves = skillsConfig.skills.filter(s => s.tier === "nice-to-have");
+        const bonuses = skillsConfig.skills.filter(s => s.tier === "bonus");
+
+        // Weighted scoring:
+        // must-have match: +8 points each (max ~32 for 4 skills)
+        // must-have MISS: -5 points each (penalty)
+        // nice-to-have match: +4 points each (max ~16 for 4 skills)
+        // bonus match: +2 points each (max ~6 for 3 skills)
+
+        mustHaves.forEach(skill => {
+          if (userHasSkill(skill.name)) {
+            skillsScore += 8;
+            requiredMatched.push(skill.name);
+          } else {
+            skillsScore -= 5; // Penalty for missing must-have
+            requiredMissing.push(skill.name);
+          }
+        });
+
+        niceToHaves.forEach(skill => {
+          if (userHasSkill(skill.name)) {
+            preferredScore += 4;
+            preferredMatched.push(skill.name);
+          }
+        });
+
+        bonuses.forEach(skill => {
+          if (userHasSkill(skill.name)) {
+            preferredScore += 2;
+            preferredMatched.push(skill.name);
+          }
+        });
+
+      } catch (e) {
+        console.error("Failed to parse skills config:", e);
+        // Fall through to legacy scoring
       }
-    });
-    if (preferredSkills.length > 0) {
-      preferredScore = Math.round((preferredMatched.length / preferredSkills.length) * 15);
+    } else {
+      // Legacy scoring: use job requirements directly
+      const requiredSkills = jobRequirements.requiredSkills || [];
+      const preferredSkills = jobRequirements.preferredSkills || [];
+
+      requiredSkills.forEach((skill) => {
+        if (userHasSkill(skill)) {
+          requiredMatched.push(skill);
+        } else {
+          requiredMissing.push(skill);
+        }
+      });
+      if (requiredSkills.length > 0) {
+        skillsScore = Math.round((requiredMatched.length / requiredSkills.length) * 35);
+      }
+
+      preferredSkills.forEach((skill) => {
+        if (userHasSkill(skill)) {
+          preferredMatched.push(skill);
+        }
+      });
+      if (preferredSkills.length > 0) {
+        preferredScore = Math.round((preferredMatched.length / preferredSkills.length) * 15);
+      }
     }
 
     // Location match
@@ -584,9 +690,7 @@ export default function PipelinePage() {
       if (prev.includes(id)) {
         return prev.filter((i) => i !== id);
       }
-      if (prev.length >= 3) {
-        return prev;
-      }
+      // No limit on selection - users can select as many candidates as needed
       return [...prev, id];
     });
   }, []);
@@ -688,6 +792,11 @@ export default function PipelinePage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Workflow Stepper */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={3} />
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -816,6 +925,11 @@ export default function PipelinePage() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Score Legend - How alignment scores work */}
+        {candidates.length > 0 && (
+          <ScoreLegend className="mb-6" />
         )}
 
         {/* Search & Filters */}
@@ -1147,6 +1261,22 @@ export default function PipelinePage() {
           />
         )}
       </div>
+
+      {/* Shortlist Panel - Fixed bottom selection bar */}
+      <ShortlistPanel
+        selectedCandidates={selectedCandidates}
+        totalCandidates={candidates.length}
+        onCompare={() => setShowComparison(true)}
+        onClearSelection={() => setSelectedIds([])}
+        onMoveToDeepDive={() => {
+          // Save selected IDs to localStorage and navigate to shortlist page
+          if (selectedCandidates.length > 0) {
+            localStorage.setItem("apex_shortlist", JSON.stringify(selectedIds));
+            router.push("/shortlist");
+          }
+        }}
+        onRemoveCandidate={(id) => setSelectedIds((prev) => prev.filter((i) => i !== id))}
+      />
     </div>
   );
 }

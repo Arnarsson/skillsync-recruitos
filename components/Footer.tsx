@@ -76,8 +76,30 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Empty for alignment */}
-          <div />
+          {/* Legal */}
+          <div>
+            <h3 className="text-sm text-muted-foreground mb-4 lowercase">
+              {t("footer.legal")}
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
+                >
+                  {t("footer.privacy")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
+                >
+                  {t("footer.terms")}
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="flex items-center justify-between pt-8 border-t border-border">

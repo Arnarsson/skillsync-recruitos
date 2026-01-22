@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Terminal, Wand2, Zap, Brain, Globe, Sparkles } from "lucide-react";
+import { ArrowRight, Brain, Globe, Sparkles, Check, AlertCircle, Search, Microscope, Mail } from "lucide-react";
 import { useLanguage, useTranslatedArray } from "@/lib/i18n";
+import { HowItWorksSection } from "@/components/HowItWorksSection";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -129,54 +130,138 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How It Works */}
+      <HowItWorksSection />
+
       {/* Pricing */}
-      <section id="pricing" className="py-20 px-4">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-light mb-10 text-center">
+      <section id="pricing" className="py-16 sm:py-20 px-4 border-t border-border">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-light mb-2 text-center lowercase">
             {t("home.pricing.title")}
           </h2>
+          <p className="text-muted-foreground text-center mb-10 lowercase">
+            {t("home.pricing.subtitle")}
+          </p>
 
-          {/* Candidate on Demand */}
-          <div className="p-8 rounded-lg border border-border bg-card text-center">
-            <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">
-              {t("home.pricing.candidateOnDemand")}
+          {/* Stage-Gated Credits */}
+          <div className="p-6 sm:p-8 rounded-lg border border-border bg-card mb-8">
+            <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-6 text-center">
+              {t("home.pricing.stageGated.title")}
             </h3>
-            <div className="flex items-baseline justify-center gap-2 mb-4">
-              <span className="text-5xl font-light">$15</span>
-              <span className="text-muted-foreground">
-                {t("home.pricing.perSearch")}
-              </span>
+
+            {/* Three Stages */}
+            <div className="grid sm:grid-cols-3 gap-4 mb-6">
+              {/* Stage 1: Search */}
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Search className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-sm">
+                    {t("home.pricing.stageGated.stages.search.title")}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t("home.pricing.stageGated.stages.search.desc")}
+                </p>
+                <p className="text-xs font-medium text-primary">
+                  {t("home.pricing.stageGated.stages.search.credits")}
+                </p>
+              </div>
+
+              {/* Stage 2: Deep Dive */}
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Microscope className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-sm">
+                    {t("home.pricing.stageGated.stages.deepDive.title")}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t("home.pricing.stageGated.stages.deepDive.desc")}
+                </p>
+                <p className="text-xs font-medium text-primary">
+                  {t("home.pricing.stageGated.stages.deepDive.credits")}
+                </p>
+              </div>
+
+              {/* Stage 3: Outreach */}
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-sm">
+                    {t("home.pricing.stageGated.stages.outreach.title")}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t("home.pricing.stageGated.stages.outreach.desc")}
+                </p>
+                <p className="text-xs font-medium text-primary">
+                  {t("home.pricing.stageGated.stages.outreach.credits")}
+                </p>
+              </div>
             </div>
-            <p className="text-muted-foreground mb-6">
-              {t("home.pricing.includesDeepSearch")}
+
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              {t("home.pricing.stageGated.description")}
             </p>
-            <ul className="space-y-3 text-sm mb-8 text-left max-w-xs mx-auto">
-              <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span>{" "}
-                {t("home.pricing.features.fullSearch")}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span>{" "}
-                {t("home.pricing.features.deepProfile")}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span>{" "}
-                {t("home.pricing.features.skillBreakdown")}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-primary">✓</span>{" "}
-                {t("home.pricing.features.noSubscription")}
-              </li>
-            </ul>
-            <p className="text-sm text-primary mb-4">
-              {t("home.pricing.startFree")}
-            </p>
-            <Link
-              href="/search"
-              className="inline-block w-full py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm transition-colors"
-            >
-              {t("home.pricing.tryFreeSearch")}
-            </Link>
+
+            <div className="text-center">
+              <p className="text-sm text-primary mb-4">
+                {t("home.pricing.startFree")}
+              </p>
+              <Link
+                href="/intake"
+                className="inline-block w-full sm:w-auto px-8 py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm transition-colors"
+              >
+                {t("home.pricing.tryFreeSearch")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Data Transparency */}
+      <section className="py-16 sm:py-20 px-4 border-t border-border bg-muted/20">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-light mb-4 text-center lowercase">
+            {t("home.dataTransparency.title")}
+          </h2>
+          <p className="text-muted-foreground text-center mb-10">
+            {t("home.dataTransparency.description")}
+          </p>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            {/* What We Analyze */}
+            <div className="p-6 rounded-lg border border-border bg-card">
+              <h3 className="font-medium mb-4 flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-500" />
+                {t("home.dataTransparency.sources.title")}
+              </h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Open source contributions
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Repository activity patterns
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Code quality signals
+                </li>
+              </ul>
+            </div>
+
+            {/* Limitations */}
+            <div className="p-6 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+              <h3 className="font-medium mb-4 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-500" />
+                {t("home.dataTransparency.limitations.title")}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t("home.dataTransparency.limitations.note")}
+              </p>
+            </div>
           </div>
         </div>
       </section>

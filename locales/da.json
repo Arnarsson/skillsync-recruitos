@@ -33,6 +33,9 @@
     "pricing": "priser",
     "company": "virksomhed",
     "contact": "kontakt",
+    "privacy": "privatlivspolitik",
+    "terms": "servicevilkår",
+    "legal": "juridisk",
     "copyright": "© {year} recruitos. alle rettigheder forbeholdes."
   },
   "home": {
@@ -104,8 +107,56 @@
       "low": "Lav konfidens",
       "dataQuality": "Datakvalitet"
     },
+    "howItWorks": {
+      "title": "sådan virker det",
+      "subtitle": "5 trin fra jobbeskrivelse til personlig outreach",
+      "steps": {
+        "pasteJd": {
+          "title": "indsæt jobbeskrivelse",
+          "desc": "indsæt din JD eller jobopslag-URL"
+        },
+        "skillsReview": {
+          "title": "skills review",
+          "desc": "rediger & prioriter: must-have / nice-to-have / bonus"
+        },
+        "candidates": {
+          "title": "kandidatliste",
+          "desc": "se scorede kandidater fra GitHub"
+        },
+        "shortlist": {
+          "title": "shortlist",
+          "desc": "vælg 1-10 kandidater til dybdeanalyse"
+        },
+        "outreach": {
+          "title": "outreach-pakke",
+          "desc": "persona + interviewguide + kontaktinfo"
+        }
+      }
+    },
     "pricing": {
       "title": "priser",
+      "subtitle": "betal for det du bruger",
+      "stageGated": {
+        "title": "trin-baserede credits",
+        "description": "Køb credits én gang, brug dem under ansættelsessprints. Ingen månedligt abonnement.",
+        "stages": {
+          "search": {
+            "title": "Søgning",
+            "desc": "find top-kandidater",
+            "credits": "5 credits/kandidat"
+          },
+          "deepDive": {
+            "title": "Dybdeanalyse",
+            "desc": "AI-analyse af udvalgte",
+            "credits": "25 credits/kandidat"
+          },
+          "outreach": {
+            "title": "Outreach-pakke",
+            "desc": "persona + guide + kontakt",
+            "credits": "50 credits/kandidat"
+          }
+        }
+      },
       "candidateOnDemand": "KANDIDAT ON DEMAND",
       "perSearch": "per søgning",
       "includesDeepSearch": "inkluderer dyb søgning og fuld profilanalyse",
@@ -117,6 +168,22 @@
       },
       "startFree": "Start med 1 gratis søgning — intet kort påkrævet",
       "tryFreeSearch": "Find din første ansættelse gratis"
+    },
+    "dataTransparency": {
+      "title": "datakilder & begrænsninger",
+      "description": "Vi analyserer offentlig GitHub-aktivitet for at finde kandidater.",
+      "sources": {
+        "title": "hvad vi analyserer",
+        "items": [
+          "Open source-bidrag",
+          "Repository-aktivitetsmønstre",
+          "Kodekvalitetssignaler"
+        ]
+      },
+      "limitations": {
+        "title": "vigtige begrænsninger",
+        "note": "Private repos og enterprise-arbejde er ikke synligt. '0 commits' betyder ikke dårlig udvikler — de arbejder muligvis på private/enterprise-projekter."
+      }
     }
   },
   "search": {

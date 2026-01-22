@@ -35,6 +35,8 @@ import {
   Loader2,
   User,
   Briefcase,
+  Github,
+  Linkedin,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
@@ -72,6 +74,7 @@ interface Candidate {
   risks?: string[];
   keyEvidence?: string[];
   scoreBreakdown?: ScoreBreakdown;
+  source?: "github" | "linkedin" | "import";
   persona?: {
     archetype?: string;
     riskAssessment?: {
@@ -259,6 +262,20 @@ export function CandidatePipelineItem({
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       {candidate.location}
+                    </span>
+                    {/* Source Badge */}
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/50 text-[10px]">
+                      {(candidate.source === "linkedin") ? (
+                        <>
+                          <Linkedin className="w-2.5 h-2.5" />
+                          LinkedIn
+                        </>
+                      ) : (
+                        <>
+                          <Github className="w-2.5 h-2.5" />
+                          GitHub
+                        </>
+                      )}
                     </span>
                   </div>
                   {/* Skill Badges on collapsed card */}

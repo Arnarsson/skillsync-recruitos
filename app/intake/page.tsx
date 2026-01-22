@@ -25,8 +25,11 @@ import {
   MessageSquare,
   FlaskConical,
   Coins,
+  Check,
+  X,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
 
 const DEMO_JOB_CONTEXT = {
   title: "Senior Full-Stack Engineer",
@@ -76,10 +79,56 @@ export default function IntakePage() {
     }
   }, [loading]);
 
-  // Social context fields
+  // Social context fields with validation
   const [companyUrl, setCompanyUrl] = useState("");
   const [managerUrl, setManagerUrl] = useState("");
   const [benchmarkUrl, setBenchmarkUrl] = useState("");
+
+  // LinkedIn URL validation states
+  const [companyUrlValidation, setCompanyUrlValidation] = useState<LinkedInValidationResult | null>(null);
+  const [managerUrlValidation, setManagerUrlValidation] = useState<LinkedInValidationResult | null>(null);
+  const [benchmarkUrlValidation, setBenchmarkUrlValidation] = useState<LinkedInValidationResult | null>(null);
+
+  // Validate LinkedIn URLs on change
+  const handleCompanyUrlChange = (value: string) => {
+    setCompanyUrl(value);
+    if (value.trim()) {
+      const validation = validateLinkedInUrl(value, 'company');
+      setCompanyUrlValidation(validation);
+      if (validation.isValid && validation.normalizedUrl && validation.normalizedUrl !== value) {
+        // Auto-normalize after a brief delay
+        setTimeout(() => setCompanyUrl(validation.normalizedUrl!), 500);
+      }
+    } else {
+      setCompanyUrlValidation(null);
+    }
+  };
+
+  const handleManagerUrlChange = (value: string) => {
+    setManagerUrl(value);
+    if (value.trim()) {
+      const validation = validateLinkedInUrl(value, 'person');
+      setManagerUrlValidation(validation);
+      if (validation.isValid && validation.normalizedUrl && validation.normalizedUrl !== value) {
+        setTimeout(() => setManagerUrl(validation.normalizedUrl!), 500);
+      }
+    } else {
+      setManagerUrlValidation(null);
+    }
+  };
+
+  const handleBenchmarkUrlChange = (value: string) => {
+    setBenchmarkUrl(value);
+    if (value.trim()) {
+      const validation = validateLinkedInUrl(value, 'person');
+      setBenchmarkUrlValidation(validation);
+      if (validation.isValid && validation.normalizedUrl && validation.normalizedUrl !== value) {
+        setTimeout(() => setBenchmarkUrl(validation.normalizedUrl!), 500);
+      }
+    } else {
+      setBenchmarkUrlValidation(null);
+    }
+  };
 
   const [calibration, setCalibration] = useState<{
     title: string;
@@ -92,7 +141,7 @@ export default function IntakePage() {
   } | null>(null);
   const [autoNavigating, setAutoNavigating] = useState(false);
 
-  // Auto-navigate to pipeline after successful analysis
+  // Auto-navigate to skills-review after successful analysis
   useEffect(() => {
     if (calibration && !autoNavigating) {
       setAutoNavigating(true);
@@ -115,10 +164,10 @@ export default function IntakePage() {
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
 
-      // Show brief success state then navigate
+      // Show brief success state then navigate to skills review
       const timer = setTimeout(() => {
-        console.log("[Intake] Navigating to pipeline...");
-        router.push(`/pipeline`);
+        console.log("[Intake] Navigating to skills review...");
+        router.push(`/skills-review`);
       }, 1500); // 1.5 second delay to show success
 
       return () => clearTimeout(timer);
@@ -215,7 +264,7 @@ export default function IntakePage() {
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
     }
-    router.push(`/pipeline`);
+    router.push(`/skills-review`);
   };
 
   const loadingSteps = [
@@ -276,10 +325,25 @@ export default function IntakePage() {
                     <Input
                       placeholder="https://linkedin.com/company/..."
                       value={companyUrl}
-                      onChange={(e) => setCompanyUrl(e.target.value)}
-                      className="pl-10"
+                      onChange={(e) => handleCompanyUrlChange(e.target.value)}
+                      className={`pl-10 pr-10 ${companyUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : companyUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                     />
+                    {companyUrlValidation && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {companyUrlValidation.isValid ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <X className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    )}
                   </div>
+                  {companyUrlValidation?.error && (
+                    <p className="text-xs text-red-500 mt-1">{companyUrlValidation.error}</p>
+                  )}
+                  {companyUrlValidation?.warning && (
+                    <p className="text-xs text-yellow-500 mt-1">{companyUrlValidation.warning}</p>
+                  )}
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
@@ -291,10 +355,25 @@ export default function IntakePage() {
                       <Input
                         placeholder="https://linkedin.com/in/..."
                         value={managerUrl}
-                        onChange={(e) => setManagerUrl(e.target.value)}
-                        className="pl-10"
+                        onChange={(e) => handleManagerUrlChange(e.target.value)}
+                        className={`pl-10 pr-10 ${managerUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : managerUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                       />
+                      {managerUrlValidation && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {managerUrlValidation.isValid ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <X className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      )}
                     </div>
+                    {managerUrlValidation?.error && (
+                      <p className="text-xs text-red-500 mt-1">{managerUrlValidation.error}</p>
+                    )}
+                    {managerUrlValidation?.warning && (
+                      <p className="text-xs text-yellow-500 mt-1">{managerUrlValidation.warning}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">
@@ -305,10 +384,25 @@ export default function IntakePage() {
                       <Input
                         placeholder="https://linkedin.com/in/..."
                         value={benchmarkUrl}
-                        onChange={(e) => setBenchmarkUrl(e.target.value)}
-                        className="pl-10"
+                        onChange={(e) => handleBenchmarkUrlChange(e.target.value)}
+                        className={`pl-10 pr-10 ${benchmarkUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : benchmarkUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                       />
+                      {benchmarkUrlValidation && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {benchmarkUrlValidation.isValid ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <X className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      )}
                     </div>
+                    {benchmarkUrlValidation?.error && (
+                      <p className="text-xs text-red-500 mt-1">{benchmarkUrlValidation.error}</p>
+                    )}
+                    {benchmarkUrlValidation?.warning && (
+                      <p className="text-xs text-yellow-500 mt-1">{benchmarkUrlValidation.warning}</p>
+                    )}
                   </div>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg flex items-start gap-2">

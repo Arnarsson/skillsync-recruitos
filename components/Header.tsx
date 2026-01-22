@@ -3,22 +3,47 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Shield } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useAdmin } from "@/lib/adminContext";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
   const { t, lang, setLang } = useLanguage();
+  const { isAdmin } = useAdmin();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <nav className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="font-medium tracking-tight lowercase">
-            {t("header.logo")}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="font-medium tracking-tight lowercase">
+              {t("header.logo")}
+            </Link>
+            {isAdmin && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
+                      <Shield className="w-3 h-3 mr-1" /> Admin
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Admin mode uses owner API credits</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6 text-sm">

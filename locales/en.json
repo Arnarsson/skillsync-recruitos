@@ -33,6 +33,9 @@
     "pricing": "pricing",
     "company": "company",
     "contact": "contact",
+    "privacy": "privacy policy",
+    "terms": "terms of service",
+    "legal": "legal",
     "copyright": "© {year} recruitos. all rights reserved."
   },
   "home": {
@@ -104,8 +107,56 @@
       "low": "Low confidence",
       "dataQuality": "Data quality"
     },
+    "howItWorks": {
+      "title": "how it works",
+      "subtitle": "5 steps from job description to personalized outreach",
+      "steps": {
+        "pasteJd": {
+          "title": "paste job description",
+          "desc": "drop in your JD or job posting URL"
+        },
+        "skillsReview": {
+          "title": "skills review",
+          "desc": "edit & prioritize: must-have / nice-to-have / bonus"
+        },
+        "candidates": {
+          "title": "candidate list",
+          "desc": "see scored candidates from GitHub"
+        },
+        "shortlist": {
+          "title": "shortlist",
+          "desc": "select 1-10 candidates for deep analysis"
+        },
+        "outreach": {
+          "title": "outreach pack",
+          "desc": "persona + interview guide + how to reach them"
+        }
+      }
+    },
     "pricing": {
       "title": "pricing",
+      "subtitle": "pay for what you use",
+      "stageGated": {
+        "title": "stage-gated credits",
+        "description": "Buy credits once, use during hiring sprints. No monthly subscription.",
+        "stages": {
+          "search": {
+            "title": "Search",
+            "desc": "find top candidates",
+            "credits": "5 credits/candidate"
+          },
+          "deepDive": {
+            "title": "Deep Dive",
+            "desc": "AI analysis on selected",
+            "credits": "25 credits/candidate"
+          },
+          "outreach": {
+            "title": "Outreach Pack",
+            "desc": "persona + guide + reach",
+            "credits": "50 credits/candidate"
+          }
+        }
+      },
       "candidateOnDemand": "CANDIDATE ON DEMAND",
       "perSearch": "per search",
       "includesDeepSearch": "includes deep search and full profile analysis",
@@ -117,6 +168,22 @@
       },
       "startFree": "Start with 1 free search — no card required",
       "tryFreeSearch": "Find your first hire free"
+    },
+    "dataTransparency": {
+      "title": "data sources & limitations",
+      "description": "We analyze public GitHub activity to find candidates.",
+      "sources": {
+        "title": "what we analyze",
+        "items": [
+          "Open source contributions",
+          "Repository activity patterns",
+          "Code quality signals"
+        ]
+      },
+      "limitations": {
+        "title": "important limitations",
+        "note": "Private repos and enterprise work aren't visible. '0 commits' doesn't mean bad developer — they may work on private/enterprise projects."
+      }
     }
   },
   "search": {
