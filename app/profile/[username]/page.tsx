@@ -90,6 +90,7 @@ export default function ProfilePage({
   const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null);
   const [linkedInLoading, setLinkedInLoading] = useState(false);
   const [linkedInError, setLinkedInError] = useState<string | null>(null);
+  const [linkedInProgress, setLinkedInProgress] = useState<string | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
 
   useEffect(() => {
@@ -145,8 +146,9 @@ export default function ProfilePage({
   const handleLinkedInEnrich = async () => {
     if (!linkedInUrl.trim()) return;
 
-    // Clear previous error
+    // Clear previous error and progress
     setLinkedInError(null);
+    setLinkedInProgress(null);
 
     // Normalize URL - add https:// if missing
     let normalizedUrl = linkedInUrl.trim();
@@ -159,17 +161,26 @@ export default function ProfilePage({
     }
 
     setLinkedInLoading(true);
+    setLinkedInProgress("Starting LinkedIn scrape...");
     try {
-      const linkedIn = await brightDataService.scrapeLinkedInProfile(normalizedUrl);
+      const linkedIn = await brightDataService.scrapeLinkedInProfile(
+        normalizedUrl,
+        (status, attempt, maxAttempts) => {
+          setLinkedInProgress(`Fetching profile... (${attempt}/${maxAttempts})`);
+        }
+      );
       if (linkedIn) {
         setLinkedInProfile(linkedIn);
         setLinkedInError(null);
+        setLinkedInProgress(null);
       } else {
         setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
+        setLinkedInProgress(null);
       }
     } catch (err) {
       console.error("LinkedIn scrape error:", err);
       setLinkedInError(err instanceof Error ? err.message : "Failed to fetch LinkedIn profile. Please try again.");
+      setLinkedInProgress(null);
     } finally {
       setLinkedInLoading(false);
     }
@@ -329,7 +340,10 @@ export default function ProfilePage({
               )}
               {linkedInLoading && (
                 <div className="mt-3 p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                  <p className="text-xs text-blue-500">Fetching LinkedIn profile... This may take up to 60 seconds.</p>
+                  <p className="text-xs text-blue-500">
+                    {linkedInProgress || "Initializing LinkedIn scrape..."}
+                  </p>
+                  <p className="text-xs text-blue-500/70 mt-1">This may take up to 3 minutes for some profiles.</p>
                 </div>
               )}
             </CardContent>

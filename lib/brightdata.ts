@@ -216,36 +216,64 @@ class BrightDataService {
     return data.data?.[0] || null;
   }
 
-  async scrapeLinkedInProfile(linkedInUrl: string): Promise<LinkedInProfile | null> {
+  async scrapeLinkedInProfile(
+    linkedInUrl: string,
+    onProgress?: (status: string, attempt: number, maxAttempts: number) => void
+  ): Promise<LinkedInProfile | null> {
     try {
       // Trigger the scrape
+      console.log('[BrightData] Triggering scrape for:', linkedInUrl);
       const snapshotId = await this.triggerLinkedInScrape(linkedInUrl);
+      console.log('[BrightData] Got snapshot ID:', snapshotId);
 
-      // Poll for completion (max 60 seconds)
-      const maxAttempts = 30;
+      // Poll for completion (max 180 seconds - BrightData can be slow)
+      const maxAttempts = 60; // 60 attempts × 3 seconds = 180 seconds max
       let attempts = 0;
 
       while (attempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        const progress = await this.checkProgress(snapshotId);
-
-        if (progress.status === 'ready') {
-          const rawData = await this.getSnapshot(snapshotId);
-          return this.parseLinkedInData(rawData);
-        }
-
-        if (progress.status === 'failed') {
-          throw new Error('LinkedIn scrape failed');
-        }
-
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         attempts++;
+
+        try {
+          const progress = await this.checkProgress(snapshotId);
+
+          // Report progress
+          const statusMsg = progress.progress
+            ? `${progress.status} (${Math.round(progress.progress * 100)}%)`
+            : progress.status;
+          console.log(`[BrightData] Progress check ${attempts}/${maxAttempts}: ${statusMsg}`);
+          onProgress?.(statusMsg, attempts, maxAttempts);
+
+          if (progress.status === 'ready') {
+            console.log('[BrightData] Scrape ready, fetching data...');
+            const rawData = await this.getSnapshot(snapshotId);
+            if (rawData) {
+              console.log('[BrightData] Successfully retrieved profile data');
+              return this.parseLinkedInData(rawData);
+            } else {
+              console.warn('[BrightData] Scrape ready but no data returned');
+              return null;
+            }
+          }
+
+          if (progress.status === 'failed') {
+            console.error('[BrightData] Scrape failed');
+            throw new Error('LinkedIn scrape failed - the profile may be private or the URL may be incorrect');
+          }
+        } catch (progressError) {
+          // Log but continue polling - transient errors are common
+          console.warn('[BrightData] Progress check error:', progressError);
+        }
       }
 
-      throw new Error('LinkedIn scrape timed out');
+      throw new Error('LinkedIn scrape timed out after 180 seconds. The profile may be private or BrightData may be experiencing delays.');
     } catch (error) {
       console.error('BrightData scrape error:', error);
-      return null;
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to scrape LinkedIn profile');
     }
   }
 

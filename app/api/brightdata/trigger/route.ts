@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
+    console.log("[BrightData] Trigger response:", JSON.stringify(data));
     return NextResponse.json(data);
   } catch (error) {
     console.error("BrightData trigger error:", error);

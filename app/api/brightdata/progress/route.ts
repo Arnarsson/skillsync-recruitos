@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
+    console.log("[BrightData] Progress response:", JSON.stringify(data));
     return NextResponse.json(data);
   } catch (error) {
     console.error("BrightData progress error:", error);

@@ -42,7 +42,15 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    return NextResponse.json({ data: Array.isArray(data) ? data : [data], status: "ready" });
+    console.log("[BrightData] Snapshot response type:", typeof data);
+    console.log("[BrightData] Snapshot is array:", Array.isArray(data));
+    console.log("[BrightData] Snapshot data length:", Array.isArray(data) ? data.length : 'N/A');
+
+    // BrightData returns an array of profiles, or a single profile object
+    const profiles = Array.isArray(data) ? data : [data];
+    console.log("[BrightData] Returning", profiles.length, "profile(s)");
+
+    return NextResponse.json({ data: profiles, status: "ready" });
   } catch (error) {
     console.error("BrightData snapshot error:", error);
     return NextResponse.json(
