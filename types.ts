@@ -555,3 +555,7 @@ export interface ShortlistState {
   candidateIds: string[];
   stage: 'selection' | 'deep-dive' | 'outreach';
 }
+
+// ===== SOCIAL MATRIX (6 Degrees Connection Graph) =====
+// Re-export all Social Matrix types for unified access
+export * from './types/socialMatrix';

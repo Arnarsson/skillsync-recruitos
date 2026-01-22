@@ -832,3 +832,90 @@ export const generateNetworkDossier = async (candidate: Candidate, jobContext: s
     throw new Error("Dossier generation failed.");
   }
 };
+
+// ===== SOCIAL MATRIX AI FUNCTIONS =====
+
+/**
+ * Analyze a connection path and generate insights
+ */
+export const analyzeConnectionPath = async (
+  pathData: {
+    nodes: Array<{ name: string; type: string; metadata?: Record<string, unknown> }>;
+    edges: Array<{ type: string; context?: string }>;
+  }
+): Promise<{
+  shortExplanation: string;
+  detailedExplanation: string;
+  outreachHook: string;
+  introRequest: string;
+  commonGround: string[];
+}> => {
+  const prompt = `
+You are a professional recruiter explaining the connection path between yourself and a candidate.
+
+CONNECTION PATH:
+${JSON.stringify(pathData, null, 2)}
+
+Generate a natural, professional explanation of this connection that could be used:
+1. In an outreach message
+2. To explain the relationship to the candidate
+3. To request a warm introduction
+
+Return JSON:
+{
+  "shortExplanation": "One sentence summary (max 15 words)",
+  "detailedExplanation": "2-3 sentences with context",
+  "outreachHook": "How to mention this connection in an outreach message",
+  "introRequest": "Template for requesting introduction from the connector",
+  "commonGround": ["List of shared interests/experiences to discuss"]
+}
+  `;
+
+  try {
+    const responseText = await callOpenRouter(prompt);
+    return parseJsonSafe(responseText);
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[OpenRouter] Path analysis error:', error);
+    throw new Error("Connection path analysis failed.");
+  }
+};
+
+/**
+ * Explain a relationship between two people
+ */
+export const explainRelationship = async (
+  personA: { name: string; role?: string; company?: string },
+  personB: { name: string; role?: string; company?: string },
+  connectionContext: string
+): Promise<{
+  relationshipSummary: string;
+  connectionStrength: 'strong' | 'moderate' | 'weak';
+  suggestedApproach: string;
+  talkingPoints: string[];
+}> => {
+  const prompt = `
+Analyze the professional relationship between these two people:
+
+PERSON A: ${personA.name}${personA.role ? `, ${personA.role}` : ''}${personA.company ? ` at ${personA.company}` : ''}
+PERSON B: ${personB.name}${personB.role ? `, ${personB.role}` : ''}${personB.company ? ` at ${personB.company}` : ''}
+
+CONNECTION CONTEXT:
+${connectionContext}
+
+Return JSON:
+{
+  "relationshipSummary": "Brief description of how they're connected",
+  "connectionStrength": "strong" | "moderate" | "weak",
+  "suggestedApproach": "How to leverage this connection for recruitment",
+  "talkingPoints": ["List of topics they could discuss based on shared experience"]
+}
+  `;
+
+  try {
+    const responseText = await callOpenRouter(prompt);
+    return parseJsonSafe(responseText);
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[OpenRouter] Relationship explanation error:', error);
+    throw new Error("Relationship explanation failed.");
+  }
+};
