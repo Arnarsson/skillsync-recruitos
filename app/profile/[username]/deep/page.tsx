@@ -34,6 +34,18 @@ import {
   Plus,
   HelpCircle,
   ClipboardList,
+  DollarSign,
+  TrendingDown,
+  Coins,
+  Target,
+  Phone,
+  Mail,
+  Users,
+  Clock,
+  Shield,
+  MessageCircle,
+  Route,
+  Zap,
 } from "lucide-react";
 import {
   Tooltip as UITooltip,
@@ -176,6 +188,43 @@ interface Persona {
     unexplainedGaps: boolean;
     compensationRiskLevel: "low" | "moderate" | "high";
   };
+  compensationIntelligence?: {
+    impliedSalaryBand: { min: number; max: number; currency: string };
+    compensationGrowthRate: "aggressive" | "steady" | "flat";
+    equityIndicators: boolean;
+    likelySalaryExpectation: number;
+  };
+}
+
+// Network Dossier for Contact Strategy (Stage 3 only)
+interface NetworkDossier {
+  strategyContext: {
+    industryPosition: string;
+    companyDynamics: string;
+    marketTiming: string;
+    competitiveIntel: string;
+  };
+  networkIntelligence: {
+    inferredConnections: string[];
+    introductionPaths: string[];
+    professionalCommunities: string[];
+    thoughtLeadership: string;
+  };
+  culturalFit: {
+    currentCultureProfile: string;
+    targetCultureMatch: string;
+    adaptationChallenges: string[];
+    motivationalDrivers: string[];
+  };
+  engagementPlaybook: {
+    primaryApproach: string;
+    conversationStarters: string[];
+    timingConsiderations: string;
+    objectionHandling: Array<{ objection: string; response: string }>;
+    bestContactMethod: 'linkedin' | 'email' | 'github' | 'referral';
+    redFlagsToAvoid: string[];
+  };
+  generatedAt: string;
 }
 
 interface Candidate {
@@ -212,6 +261,8 @@ interface Candidate {
   };
   persona?: Persona;
   deepProfile?: DeepProfile;
+  networkDossier?: NetworkDossier;
+  isShortlisted?: boolean;
 }
 
 export default function DeepProfilePage() {
@@ -222,7 +273,7 @@ export default function DeepProfilePage() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "questions" | "persona" | "github">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "questions" | "persona" | "github" | "contact">("overview");
   const [githubAnalysis, setGithubAnalysis] = useState<GitHubDeepAnalysis | null>(null);
   const [loadingGithub, setLoadingGithub] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
@@ -267,6 +318,9 @@ export default function DeepProfilePage() {
     setAnalyzing(true);
 
     try {
+      // Check if candidate is shortlisted (Stage 3) to determine if we should generate network dossier
+      const isShortlisted = candidate.isShortlisted || false;
+
       const response = await fetch("/api/profile/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -277,6 +331,7 @@ export default function DeepProfilePage() {
           company: candidate.company,
           location: candidate.location,
           skills: candidate.skills,
+          isShortlisted, // Pass flag to trigger network dossier generation for Stage 3
         }),
       });
 
@@ -291,6 +346,7 @@ export default function DeepProfilePage() {
           keyEvidenceWithSources: data.keyEvidenceWithSources,
           risks: data.risks,
           risksWithSources: data.risksWithSources,
+          networkDossier: data.networkDossier, // Will be null for non-shortlisted
         };
         setCandidate(updatedCandidate);
 
@@ -646,6 +702,14 @@ export default function DeepProfilePage() {
           >
             <GitBranch className="w-4 h-4" />
             GitHub-aktivitet
+          </Button>
+          <Button
+            variant={activeTab === "contact" ? "default" : "ghost"}
+            onClick={() => setActiveTab("contact")}
+            className="gap-2"
+          >
+            <Phone className="w-4 h-4" />
+            Kontaktstrategi
           </Button>
         </div>
 
@@ -1061,6 +1125,147 @@ export default function DeepProfilePage() {
                   )}
                 </div>
 
+                {/* Compensation Intelligence */}
+                {candidate.persona.compensationIntelligence && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <DollarSign className="w-4 h-4" />
+                        Compensation Intelligence
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Salary Range Visualization */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-muted-foreground">Implied Salary Band</span>
+                          <span className="font-medium">
+                            {candidate.persona.compensationIntelligence.impliedSalaryBand.currency}{' '}
+                            {candidate.persona.compensationIntelligence.impliedSalaryBand.min.toLocaleString()} - {candidate.persona.compensationIntelligence.impliedSalaryBand.max.toLocaleString()}
+                          </span>
+                        </div>
+                        {/* Range Bar Visualization */}
+                        <div className="relative h-8 rounded-lg bg-muted/50 overflow-hidden">
+                          {/* Background gradient to show range context */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-yellow-500/20 to-red-500/20" />
+                          {/* The salary range indicator */}
+                          {(() => {
+                            const min = candidate.persona.compensationIntelligence!.impliedSalaryBand.min;
+                            const max = candidate.persona.compensationIntelligence!.impliedSalaryBand.max;
+                            const expected = candidate.persona.compensationIntelligence!.likelySalaryExpectation;
+                            // Assume a reasonable market range for visualization (e.g., 50k-300k)
+                            const marketMin = Math.max(0, min * 0.5);
+                            const marketMax = max * 1.5;
+                            const range = marketMax - marketMin;
+                            const leftPct = ((min - marketMin) / range) * 100;
+                            const widthPct = ((max - min) / range) * 100;
+                            const expectedPct = ((expected - marketMin) / range) * 100;
+                            return (
+                              <>
+                                {/* Salary band range */}
+                                <div
+                                  className="absolute top-1 bottom-1 rounded bg-primary/60"
+                                  style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                                />
+                                {/* Expected salary marker */}
+                                {expected > 0 && (
+                                  <div
+                                    className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
+                                    style={{ left: `${Math.min(95, Math.max(5, expectedPct))}%` }}
+                                  >
+                                    <TooltipProvider>
+                                      <UITooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="absolute -top-1 -left-1.5 w-4 h-4 rounded-full bg-white border-2 border-primary shadow cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-xs">
+                                            Likely Expectation: {candidate.persona.compensationIntelligence!.impliedSalaryBand.currency}{' '}
+                                            {expected.toLocaleString()}
+                                          </p>
+                                        </TooltipContent>
+                                      </UITooltip>
+                                    </TooltipProvider>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                        {/* Range labels */}
+                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                          <span>{candidate.persona.compensationIntelligence.impliedSalaryBand.currency} {candidate.persona.compensationIntelligence.impliedSalaryBand.min.toLocaleString()}</span>
+                          <span>{candidate.persona.compensationIntelligence.impliedSalaryBand.currency} {candidate.persona.compensationIntelligence.impliedSalaryBand.max.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Metrics Grid */}
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Growth Rate */}
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            {candidate.persona.compensationIntelligence.compensationGrowthRate === 'aggressive' ? (
+                              <TrendingUp className="w-4 h-4 text-green-500" />
+                            ) : candidate.persona.compensationIntelligence.compensationGrowthRate === 'steady' ? (
+                              <TrendingUp className="w-4 h-4 text-yellow-500 rotate-[-15deg]" />
+                            ) : (
+                              <TrendingDown className="w-4 h-4 text-orange-500" />
+                            )}
+                          </div>
+                          <div className={`text-sm font-bold capitalize ${
+                            candidate.persona.compensationIntelligence.compensationGrowthRate === 'aggressive'
+                              ? 'text-green-500'
+                              : candidate.persona.compensationIntelligence.compensationGrowthRate === 'steady'
+                              ? 'text-yellow-500'
+                              : 'text-orange-500'
+                          }`}>
+                            {candidate.persona.compensationIntelligence.compensationGrowthRate}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Growth Rate</div>
+                        </div>
+
+                        {/* Likely Expectation */}
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <Target className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="text-sm font-bold text-primary">
+                            {candidate.persona.compensationIntelligence.impliedSalaryBand.currency}{' '}
+                            {candidate.persona.compensationIntelligence.likelySalaryExpectation.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Likely Expectation</div>
+                        </div>
+
+                        {/* Equity Indicators */}
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <Coins className="w-4 h-4 text-purple-500" />
+                          </div>
+                          <div className={`text-sm font-bold ${
+                            candidate.persona.compensationIntelligence.equityIndicators
+                              ? 'text-purple-500'
+                              : 'text-muted-foreground'
+                          }`}>
+                            {candidate.persona.compensationIntelligence.equityIndicators ? 'Yes' : 'No'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Equity Expected</div>
+                        </div>
+                      </div>
+
+                      {/* Context Note */}
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">
+                          Compensation estimates are based on role seniority, location, and industry benchmarks.
+                          {candidate.persona.compensationIntelligence.equityIndicators && (
+                            <> Startup experience suggests equity expectations may be part of total compensation package.</>
+                          )}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Flags */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card>
@@ -1275,6 +1480,19 @@ export default function DeepProfilePage() {
 
         {activeTab === "github" && (
           <div className="space-y-6">
+            {/* GitHub Data Context Banner */}
+            <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-500">Public Activity Only</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This analysis reflects public GitHub activity only. Private repositories and
+                  enterprise work are not included. Contribution data may underrepresent actual
+                  coding activity.
+                </p>
+              </div>
+            </div>
+
             {loadingGithub ? (
               <Card>
                 <CardContent className="py-12 flex flex-col items-center justify-center">
@@ -1522,6 +1740,283 @@ export default function DeepProfilePage() {
                   <p className="text-muted-foreground">
                     Unable to fetch GitHub activity data for this user
                   </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {activeTab === "contact" && (
+          <div className="space-y-6">
+            {candidate.networkDossier ? (
+              <>
+                {/* Best Contact Method Hero */}
+                <Card className="bg-gradient-to-br from-primary/10 to-transparent">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-4 rounded-xl ${
+                        candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin'
+                          ? 'bg-blue-500/20'
+                          : candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email'
+                          ? 'bg-green-500/20'
+                          : candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github'
+                          ? 'bg-purple-500/20'
+                          : 'bg-orange-500/20'
+                      }`}>
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && <Linkedin className="w-8 h-8 text-blue-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && <Mail className="w-8 h-8 text-green-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && <GitBranch className="w-8 h-8 text-purple-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && <Users className="w-8 h-8 text-orange-500" />}
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Anbefalet kontaktmetode</p>
+                        <p className="text-2xl font-bold capitalize">
+                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && 'LinkedIn'}
+                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && 'E-mail'}
+                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && 'GitHub'}
+                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && 'Warm Intro'}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {candidate.networkDossier.engagementPlaybook.primaryApproach}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Conversation Starters */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <MessageCircle className="w-4 h-4" />
+                      Samtalestartere
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {candidate.networkDossier.engagementPlaybook.conversationStarters.map((starter, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                          <div className="p-1.5 rounded-full bg-primary/20 text-primary shrink-0">
+                            <Zap className="w-3 h-3" />
+                          </div>
+                          <p className="text-sm">{starter}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Connection Paths */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Route className="w-4 h-4" />
+                        Forbindelsesveje
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {candidate.networkDossier.networkIntelligence.introductionPaths.map((path, i) => (
+                          <div key={i} className="flex items-start gap-2 text-sm">
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                              i === 0 ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {i + 1}
+                            </span>
+                            <span>{path}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {candidate.networkDossier.networkIntelligence.inferredConnections.length > 0 && (
+                        <div className="mt-4 pt-4 border-t">
+                          <p className="text-xs text-muted-foreground mb-2">Mulige fælles forbindelser</p>
+                          <div className="flex flex-wrap gap-2">
+                            {candidate.networkDossier.networkIntelligence.inferredConnections.map((conn, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                <Users className="w-3 h-3 mr-1" />
+                                {conn}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Timing & Communities */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        Timing & Kanaler
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                          <p className="text-xs text-blue-500 font-medium mb-1">Optimal timing</p>
+                          <p className="text-sm">{candidate.networkDossier.engagementPlaybook.timingConsiderations}</p>
+                        </div>
+                        {candidate.networkDossier.networkIntelligence.professionalCommunities.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-2">Professionelle fællesskaber</p>
+                            <div className="flex flex-wrap gap-2">
+                              {candidate.networkDossier.networkIntelligence.professionalCommunities.map((community, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {community}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {candidate.networkDossier.networkIntelligence.thoughtLeadership && (
+                          <div className="p-3 rounded-lg bg-muted/30">
+                            <p className="text-xs text-muted-foreground mb-1">Thought Leadership</p>
+                            <p className="text-sm">{candidate.networkDossier.networkIntelligence.thoughtLeadership}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Objection Handling */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Shield className="w-4 h-4" />
+                      Indvendingshåndtering
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {candidate.networkDossier.engagementPlaybook.objectionHandling.map((item, i) => (
+                        <div key={i} className="p-4 rounded-lg border">
+                          <div className="flex items-start gap-3">
+                            <div className="p-1.5 rounded-full bg-orange-500/20 shrink-0">
+                              <AlertTriangle className="w-3 h-3 text-orange-500" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-orange-500 mb-2">&quot;{item.objection}&quot;</p>
+                              <div className="p-3 rounded bg-green-500/10 border border-green-500/20">
+                                <p className="text-sm text-green-400">{item.response}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Red Flags to Avoid + Cultural Fit */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Red Flags to Avoid */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-red-500">
+                        <AlertTriangle className="w-4 h-4" />
+                        Emner at undgå
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {candidate.networkDossier.engagementPlaybook.redFlagsToAvoid.map((flag, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0" />
+                            {flag}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+
+                  {/* Motivational Drivers */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-green-500">
+                        <Target className="w-4 h-4" />
+                        Motivationsfaktorer
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {candidate.networkDossier.culturalFit.motivationalDrivers.map((driver, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0" />
+                            {driver}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Strategic Context */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Info className="w-4 h-4" />
+                      Strategisk kontekst
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg bg-muted/30">
+                        <p className="text-xs text-muted-foreground mb-1">Brancheposition</p>
+                        <p className="text-sm">{candidate.networkDossier.strategyContext.industryPosition}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30">
+                        <p className="text-xs text-muted-foreground mb-1">Virksomhedsdynamik</p>
+                        <p className="text-sm">{candidate.networkDossier.strategyContext.companyDynamics}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30">
+                        <p className="text-xs text-muted-foreground mb-1">Markedstiming</p>
+                        <p className="text-sm">{candidate.networkDossier.strategyContext.marketTiming}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30">
+                        <p className="text-xs text-muted-foreground mb-1">Konkurrenceanalyse</p>
+                        <p className="text-sm">{candidate.networkDossier.strategyContext.competitiveIntel}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Generation timestamp */}
+                <p className="text-xs text-muted-foreground text-center">
+                  Dossier genereret: {new Date(candidate.networkDossier.generatedAt).toLocaleDateString('da-DK', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Phone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">Kontaktstrategi ikke tilgængelig</h3>
+                  <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                    Kontaktstrategi genereres kun for shortlistede kandidater (Trin 3).
+                    {!candidate.isShortlisted && (
+                      <span className="block mt-2 text-yellow-500">
+                        Denne kandidat er ikke shortlistet endnu.
+                      </span>
+                    )}
+                  </p>
+                  {candidate.isShortlisted && (
+                    <Button onClick={runDeepAnalysis} disabled={analyzing}>
+                      {analyzing ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      Generer kontaktstrategi
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}

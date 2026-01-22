@@ -380,6 +380,99 @@ Return ONLY the message text, no JSON.`;
   return await callOpenRouter(prompt);
 }
 
+// Network Dossier Types for Contact Strategy
+export interface NetworkDossier {
+  strategyContext: {
+    industryPosition: string;
+    companyDynamics: string;
+    marketTiming: string;
+    competitiveIntel: string;
+  };
+  networkIntelligence: {
+    inferredConnections: string[];
+    introductionPaths: string[];
+    professionalCommunities: string[];
+    thoughtLeadership: string;
+  };
+  culturalFit: {
+    currentCultureProfile: string;
+    targetCultureMatch: string;
+    adaptationChallenges: string[];
+    motivationalDrivers: string[];
+  };
+  engagementPlaybook: {
+    primaryApproach: string;
+    conversationStarters: string[];
+    timingConsiderations: string;
+    objectionHandling: Array<{ objection: string; response: string }>;
+    bestContactMethod: 'linkedin' | 'email' | 'github' | 'referral';
+    redFlagsToAvoid: string[];
+  };
+  generatedAt: string;
+}
+
+// Generate Network Dossier for strategic candidate engagement (Stage 3 only)
+export async function generateNetworkDossier(
+  candidate: CandidateAnalysis,
+  jobContext: string
+): Promise<NetworkDossier> {
+  const systemPrompt = `You are a strategic recruitment intelligence analyst. You specialize in creating actionable engagement strategies for high-value candidates. Always respond with valid JSON only.`;
+
+  const prompt = `
+Generate a comprehensive Network Pathfinding Dossier for this candidate.
+This is for Stage 3 (shortlisted) candidates only - used to inform outreach strategy.
+
+Candidate Profile:
+${JSON.stringify(candidate)}
+
+Target Role / Job Context:
+${jobContext}
+
+Return JSON only:
+{
+  "strategyContext": {
+    "industryPosition": "string (Where does their current company sit in the tech ecosystem? Startup, scale-up, enterprise?)",
+    "companyDynamics": "string (Current challenges/opportunities at their company - layoffs, growth, pivots?)",
+    "marketTiming": "string (Is now a good time to approach? Recent changes, tenure milestones, market conditions)",
+    "competitiveIntel": "string (What competitors might also be targeting this person? What's our advantage?)"
+  },
+  "networkIntelligence": {
+    "inferredConnections": ["string (Likely mutual connections based on company history, location, industry)"],
+    "introductionPaths": ["string (Ranked pathways to reach them: warm intro > event > direct)"],
+    "professionalCommunities": ["string (Communities/groups/Slacks they likely engage with based on their stack)"],
+    "thoughtLeadership": "string (Do they speak at conferences, write blogs, have public presence?)"
+  },
+  "culturalFit": {
+    "currentCultureProfile": "string (What's the work culture like at their current company?)",
+    "targetCultureMatch": "string (How would they fit your company's culture based on their background?)",
+    "adaptationChallenges": ["string (Potential friction points in culture transition)"],
+    "motivationalDrivers": ["string (What would make them consider moving? Growth, tech stack, mission, compensation?)"]
+  },
+  "engagementPlaybook": {
+    "primaryApproach": "string (Best angle: technical challenge, growth opportunity, mission alignment, team quality, etc.)",
+    "conversationStarters": ["string (3-5 evidence-backed openers specific to this person's background)"],
+    "timingConsiderations": "string (When to reach out: after recent project, before anniversary, during hiring season)",
+    "objectionHandling": [
+      { "objection": "I'm happy where I am", "response": "string (Strategic response)" },
+      { "objection": "Company size/stage concern", "response": "string" },
+      { "objection": "Location/remote concern", "response": "string" }
+    ],
+    "bestContactMethod": "linkedin|email|github|referral (based on their online presence)",
+    "redFlagsToAvoid": ["string (Topics to skip, sensitive areas based on their profile)"]
+  }
+}
+
+Be specific and actionable. Base everything on the candidate's actual profile data.`;
+
+  const text = await callOpenRouter(prompt, systemPrompt);
+  const data = parseJsonSafe(text) as NetworkDossier;
+
+  return {
+    ...data,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 // Analyze job description (supports Danish and English)
 export async function analyzeJobDescription(jobText: string): Promise<{
   title: string;
