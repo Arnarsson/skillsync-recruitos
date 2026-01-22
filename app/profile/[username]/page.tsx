@@ -365,10 +365,7 @@ export default function ProfilePage({
               <Brain className="w-4 h-4" />
               Psychometric
             </TabsTrigger>
-            <TabsTrigger value="network" className="gap-2" disabled={!linkedInProfile}>
-              <Network className="w-4 h-4" />
-              Network
-            </TabsTrigger>
+{/* Network tab removed - will be replaced with proper "connection path" feature showing how YOU are connected to the candidate */}
             <TabsTrigger value="outreach" className="gap-2">
               <ExternalLink className="w-4 h-4" />
               Outreach
@@ -497,73 +494,11 @@ export default function ProfilePage({
             )}
           </TabsContent>
 
-          {/* Network Tab */}
-          <TabsContent value="network">
-            {networkGraph ? (
-              <div className="space-y-6">
-                <NetworkMap graph={networkGraph} />
-
-                {linkedInProfile && linkedInProfile.recommendations.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Recommendations ({linkedInProfile.recommendations.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {linkedInProfile.recommendations.slice(0, 3).map((rec, i) => (
-                        <div key={i} className="border-l-2 border-primary pl-4">
-                          <p className="text-sm italic mb-2">&ldquo;{rec.text.slice(0, 200)}...&rdquo;</p>
-                          <p className="text-xs text-muted-foreground">
-                            — {rec.author}, {rec.authorTitle}
-                          </p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Network className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">Add LinkedIn profile to view network map</p>
-                  <div className="flex gap-2 justify-center items-center max-w-md mx-auto flex-wrap">
-                    <Input
-                      placeholder="linkedin.com/in/username"
-                      value={linkedInUrl}
-                      onChange={(e) => {
-                        setLinkedInUrl(e.target.value);
-                        setLinkedInError(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && linkedInUrl.trim()) {
-                          handleLinkedInEnrich();
-                        }
-                      }}
-                      className={linkedInError ? 'border-red-500' : ''}
-                    />
-                    <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                      {linkedInLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Loading...
-                        </>
-                      ) : "Load"}
-                    </Button>
-                  </div>
-                  {linkedInError && (
-                    <div className="mt-4 p-2 rounded bg-red-500/10 border border-red-500/20 max-w-md mx-auto">
-                      <p className="text-xs text-red-500">{linkedInError}</p>
-                    </div>
-                  )}
-                  {linkedInLoading && (
-                    <div className="mt-4 p-2 rounded bg-blue-500/10 border border-blue-500/20 max-w-md mx-auto">
-                      <p className="text-xs text-blue-500">Fetching LinkedIn profile... This may take up to 60 seconds.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+{/* Network Tab removed - will be replaced with "Connection Path" feature showing:
+   - Degree of connection between recruiter and candidate
+   - Mutual connections
+   - Shortest path to reach candidate via warm introductions
+*/}
 
           {/* Outreach Tab */}
           <TabsContent value="outreach">
