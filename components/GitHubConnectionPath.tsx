@@ -15,6 +15,8 @@ import {
   UserPlus,
   Link as LinkIcon,
   ExternalLink,
+  MessageCircle,
+  Handshake,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import type {
   GitHubConnectionPath,
+  BridgeConnection,
   MutualConnection,
   SharedRepo,
   SharedOrg,
@@ -351,12 +354,19 @@ export default function GitHubConnectionPath({
             )}
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
+              <Card className={connectionPath.totalBridgeConnections > 0 ? "border-green-500/30 bg-green-500/5" : ""}>
+                <CardContent className="p-4 text-center">
+                  <Handshake className="w-5 h-5 mx-auto mb-2 text-green-400" />
+                  <div className="text-2xl font-bold">{connectionPath.totalBridgeConnections || 0}</div>
+                  <div className="text-xs text-muted-foreground">Can Introduce</div>
+                </CardContent>
+              </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <Users className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
                   <div className="text-2xl font-bold">{connectionPath.totalMutualFollows}</div>
-                  <div className="text-xs text-muted-foreground">Mutual Connections</div>
+                  <div className="text-xs text-muted-foreground">Shared Follows</div>
                 </CardContent>
               </Card>
               <Card>
@@ -377,14 +387,39 @@ export default function GitHubConnectionPath({
           </CardContent>
         </Card>
 
-        {/* Mutual Connections */}
+        {/* Bridge Connections - People who can introduce you */}
+        {connectionPath.bridgeConnections && connectionPath.bridgeConnections.length > 0 && (
+          <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 to-emerald-500/5">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-green-400">
+                <Handshake className="w-5 h-5" />
+                Ask for Introduction ({connectionPath.bridgeConnections.length})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                These people can introduce you to {candidateName || candidateUsername}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {connectionPath.bridgeConnections.map((bridge) => (
+                  <BridgeConnectionCard key={bridge.username} bridge={bridge} candidateName={candidateName || candidateUsername} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Mutual Connections (Shared Follows) */}
         {mutualConnections.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Mutual Connections ({mutualConnections.length})
+                Shared Follows ({mutualConnections.length})
               </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                People you both follow (shared interests)
+              </p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -533,5 +568,54 @@ function SharedOrgCard({ org }: { org: SharedOrg }) {
       <span className="font-medium text-sm">{org.name || org.login}</span>
       <ExternalLink className="w-3 h-3 text-muted-foreground" />
     </a>
+  );
+}
+
+function BridgeConnectionCard({ bridge, candidateName }: { bridge: BridgeConnection; candidateName: string }) {
+  const isType1 = bridge.connectionType === 'you_follow_they_follow_candidate';
+
+  return (
+    <div className="flex items-start gap-3 p-4 rounded-lg border border-green-500/30 bg-green-500/5 hover:bg-green-500/10 transition-colors">
+      <a
+        href={`https://github.com/${bridge.username}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-shrink-0"
+      >
+        <Avatar className="w-12 h-12 border-2 border-green-500/50">
+          <AvatarImage src={bridge.avatarUrl} />
+          <AvatarFallback>{bridge.username.charAt(0)}</AvatarFallback>
+        </Avatar>
+      </a>
+      <div className="flex-1 min-w-0">
+        <a
+          href={`https://github.com/${bridge.username}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 hover:underline"
+        >
+          <p className="font-semibold text-sm truncate text-green-400">
+            {bridge.name || bridge.username}
+          </p>
+          <ExternalLink className="w-3 h-3 text-green-400/70 flex-shrink-0" />
+        </a>
+        <p className="text-xs text-muted-foreground">@{bridge.username}</p>
+        {bridge.bio && (
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{bridge.bio}</p>
+        )}
+        <div className="mt-2 flex items-center gap-1.5 text-xs">
+          <MessageCircle className="w-3.5 h-3.5 text-green-400" />
+          {isType1 ? (
+            <span className="text-muted-foreground">
+              <span className="text-green-400">You follow them</span> → they follow <span className="text-purple-400">{candidateName}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              <span className="text-purple-400">{candidateName}</span> follows them → <span className="text-green-400">they follow you</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

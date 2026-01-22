@@ -16,6 +16,17 @@ export interface MutualConnection {
   bio: string | null;
 }
 
+// Bridge connection = someone who can introduce you to the candidate
+export interface BridgeConnection {
+  username: string;
+  avatarUrl: string;
+  name: string | null;
+  bio: string | null;
+  connectionType: 'you_follow_they_follow_candidate' | 'candidate_follows_they_follow_you';
+  // "you_follow_they_follow_candidate" = You follow this person, and they follow the candidate
+  // "candidate_follows_they_follow_you" = The candidate follows this person, and they follow you
+}
+
 export interface SharedRepo {
   name: string;
   fullName: string;
@@ -44,13 +55,15 @@ export interface DirectConnection {
 }
 
 export interface GitHubConnectionPath {
-  connectionDegree: 1 | 2 | 3 | null; // 1st = direct, 2nd = mutual, 3rd = distant
+  connectionDegree: 1 | 2 | 3 | null; // 1st = direct, 2nd = through bridge, 3rd = distant/shared interest
   directConnection: DirectConnection;
-  mutualConnections: MutualConnection[];
+  bridgeConnections: BridgeConnection[]; // People who can introduce you (2nd degree)
+  mutualConnections: MutualConnection[]; // People you both follow (shared interests)
   sharedRepos: SharedRepo[];
   sharedOrgs: SharedOrg[];
   contributorOverlap: ContributorOverlap[];
   shortestPath: string; // "Direct" | "Via @username" | "Via repo/name" | "No connection found"
+  totalBridgeConnections: number;
   totalMutualFollows: number;
   totalSharedRepos: number;
   totalSharedOrgs: number;
@@ -322,7 +335,41 @@ export async function analyzeConnectionPath(
     candidateFollowsRecruiter,
   };
 
-  // Find mutual follows (people both follow)
+  // ===== BRIDGE CONNECTIONS (2nd degree - people who can introduce you) =====
+  // Type 1: You follow someone who follows the candidate
+  // recruiterFollowing ∩ candidateFollowers = people you follow who also follow the candidate
+  const bridgeType1Usernames: string[] = [];
+  recruiterFollowing.forEach(user => {
+    if (candidateFollowers.has(user)) {
+      bridgeType1Usernames.push(user);
+    }
+  });
+
+  // Type 2: Someone follows you who the candidate also follows
+  // recruiterFollowers ∩ candidateFollowing = people who follow you and whom the candidate follows
+  const bridgeType2Usernames: string[] = [];
+  recruiterFollowers.forEach(user => {
+    if (candidateFollowing.has(user)) {
+      bridgeType2Usernames.push(user);
+    }
+  });
+
+  // Get details for bridge connections (prioritize type 1 - more actionable)
+  const bridgeType1Details = await getUserDetails(octokit, bridgeType1Usernames, 5);
+  const bridgeType2Details = await getUserDetails(octokit, bridgeType2Usernames, 5);
+
+  const bridgeConnections: BridgeConnection[] = [
+    ...bridgeType1Details.map(user => ({
+      ...user,
+      connectionType: 'you_follow_they_follow_candidate' as const,
+    })),
+    ...bridgeType2Details.map(user => ({
+      ...user,
+      connectionType: 'candidate_follows_they_follow_you' as const,
+    })),
+  ];
+
+  // ===== MUTUAL CONNECTIONS (shared interests - people you both follow) =====
   const mutualFollowUsernames: string[] = [];
   recruiterFollowing.forEach(user => {
     if (candidateFollowing.has(user)) {
@@ -386,18 +433,23 @@ export async function analyzeConnectionPath(
     } else {
       shortestPath = "Direct (they follow you)";
     }
-  } else if (mutualConnections.length > 0) {
-    // 2nd degree: Connected through mutual connections
+  } else if (bridgeConnections.length > 0) {
+    // 2nd degree: Connected through a bridge person who can introduce you
     connectionDegree = 2;
-    shortestPath = `Via @${mutualConnections[0].username}`;
+    const bridge = bridgeConnections[0];
+    if (bridge.connectionType === 'you_follow_they_follow_candidate') {
+      shortestPath = `Ask @${bridge.username} (you follow them, they follow candidate)`;
+    } else {
+      shortestPath = `Via @${bridge.username} (candidate follows them, they follow you)`;
+    }
   } else if (sharedOrgs.length > 0) {
     // 2nd degree: Same organization
     connectionDegree = 2;
     shortestPath = `Via ${sharedOrgs[0].name || sharedOrgs[0].login} (shared org)`;
   } else if (topSharedRepos.length > 0) {
-    // 3rd degree: Share interest in same repos
+    // 3rd degree: Share interest in same repos (no direct path)
     connectionDegree = 3;
-    shortestPath = `Via ${topSharedRepos[0].fullName} (shared interest)`;
+    shortestPath = `Via ${topSharedRepos[0].fullName} (shared interest only)`;
   } else if (commonRepos.length > 0) {
     // 3rd degree: Both contribute to same repos
     connectionDegree = 3;
@@ -407,11 +459,13 @@ export async function analyzeConnectionPath(
   return {
     connectionDegree,
     directConnection,
+    bridgeConnections,
     mutualConnections,
     sharedRepos: topSharedRepos,
     sharedOrgs,
     contributorOverlap: [], // Would require additional API calls to analyze contributors
     shortestPath,
+    totalBridgeConnections: bridgeConnections.length,
     totalMutualFollows: allMutualUsernames.length,
     totalSharedRepos: sharedRepos.length,
     totalSharedOrgs: sharedOrgs.length,
