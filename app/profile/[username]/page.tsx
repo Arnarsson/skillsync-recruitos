@@ -29,6 +29,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import PsychometricCard from "@/components/PsychometricCard";
 import NetworkMap from "@/components/NetworkMap";
+import GitHubConnectionPath from "@/components/GitHubConnectionPath";
+import { ConnectionPathCard } from "@/components/SocialMatrix";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
 
@@ -88,6 +90,8 @@ export default function ProfilePage({
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null);
   const [linkedInLoading, setLinkedInLoading] = useState(false);
+  const [linkedInError, setLinkedInError] = useState<string | null>(null);
+  const [linkedInProgress, setLinkedInProgress] = useState<string | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
 
   useEffect(() => {
@@ -135,41 +139,49 @@ export default function ProfilePage({
     }
   }, [linkedInProfile, profile]);
 
-  const handleUnlockDeepProfile = async () => {
-    setUnlocking(true);
-    try {
-      const response = await fetch(`/api/developers/${username}?deep=true`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to unlock profile");
-      }
-
-      setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to unlock profile");
-    } finally {
-      setUnlocking(false);
-    }
+  const handleUnlockDeepProfile = () => {
+    // Navigate to the deep profile page which has full AI analysis
+    window.location.href = `/profile/${username}/deep`;
   };
 
   const handleLinkedInEnrich = async () => {
     if (!linkedInUrl.trim()) return;
 
-    // Check if BrightData is configured
-    if (!brightDataService.isConfigured()) {
-      console.warn("LinkedIn enrichment requires BRIGHTDATA_API_KEY to be configured");
+    // Clear previous error and progress
+    setLinkedInError(null);
+    setLinkedInProgress(null);
+
+    // Normalize URL - add https:// if missing
+    let normalizedUrl = linkedInUrl.trim();
+    if (!normalizedUrl.startsWith("http")) {
+      normalizedUrl = `https://${normalizedUrl}`;
+    }
+    if (!normalizedUrl.includes("linkedin.com/in/")) {
+      setLinkedInError("Please enter a valid LinkedIn profile URL (e.g., linkedin.com/in/username)");
       return;
     }
 
     setLinkedInLoading(true);
+    setLinkedInProgress("Starting LinkedIn scrape...");
     try {
-      const linkedIn = await brightDataService.scrapeLinkedInProfile(linkedInUrl);
+      const linkedIn = await brightDataService.scrapeLinkedInProfile(
+        normalizedUrl,
+        (status, attempt, maxAttempts) => {
+          setLinkedInProgress(`Fetching profile... (${attempt}/${maxAttempts})`);
+        }
+      );
       if (linkedIn) {
         setLinkedInProfile(linkedIn);
+        setLinkedInError(null);
+        setLinkedInProgress(null);
+      } else {
+        setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
+        setLinkedInProgress(null);
       }
     } catch (err) {
       console.error("LinkedIn scrape error:", err);
+      setLinkedInError(err instanceof Error ? err.message : "Failed to fetch LinkedIn profile. Please try again.");
+      setLinkedInProgress(null);
     } finally {
       setLinkedInLoading(false);
     }
@@ -289,26 +301,52 @@ export default function ProfilePage({
 
         {/* LinkedIn Enrich Bar */}
         {!linkedInProfile && (
-          <Card className="mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+          <Card className={`mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 ${linkedInError ? 'border-red-500/40' : 'border-blue-500/20'}`}>
             <CardContent className="py-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <Linkedin className="w-6 h-6 text-blue-500" />
-                <div className="flex-1">
+                <div className="flex-1 min-w-[200px]">
                   <p className="text-sm font-medium">Enrich with LinkedIn</p>
                   <p className="text-xs text-muted-foreground">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center flex-wrap">
                   <Input
                     placeholder="linkedin.com/in/username"
                     value={linkedInUrl}
-                    onChange={(e) => setLinkedInUrl(e.target.value)}
-                    className="w-64"
+                    onChange={(e) => {
+                      setLinkedInUrl(e.target.value);
+                      setLinkedInError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && linkedInUrl.trim()) {
+                        handleLinkedInEnrich();
+                      }
+                    }}
+                    className={`w-64 ${linkedInError ? 'border-red-500' : ''}`}
                   />
                   <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                    {linkedInLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enrich"}
+                    {linkedInLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Fetching...
+                      </>
+                    ) : "Enrich"}
                   </Button>
                 </div>
               </div>
+              {linkedInError && (
+                <div className="mt-3 p-2 rounded bg-red-500/10 border border-red-500/20">
+                  <p className="text-xs text-red-500">{linkedInError}</p>
+                </div>
+              )}
+              {linkedInLoading && (
+                <div className="mt-3 p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                  <p className="text-xs text-blue-500">
+                    {linkedInProgress || "Initializing LinkedIn scrape..."}
+                  </p>
+                  <p className="text-xs text-blue-500/70 mt-1">This may take up to 3 minutes for some profiles.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -343,9 +381,9 @@ export default function ProfilePage({
               <Brain className="w-4 h-4" />
               Psychometric
             </TabsTrigger>
-            <TabsTrigger value="network" className="gap-2" disabled={!linkedInProfile}>
-              <Network className="w-4 h-4" />
-              Network
+            <TabsTrigger value="connection" className="gap-2">
+              <Users className="w-4 h-4" />
+              Connection
             </TabsTrigger>
             <TabsTrigger value="outreach" className="gap-2">
               <ExternalLink className="w-4 h-4" />
@@ -412,27 +450,24 @@ export default function ProfilePage({
             )}
 
             {/* Deep Profile CTA */}
-            {!deep && (
-              <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lock className="w-5 h-5 text-primary" />
-                        <h3 className="font-semibold">Unlock Deep Profile</h3>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        Get contact info, detailed contribution analysis, and code quality metrics.
-                      </p>
+            <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Brain className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold">View Deep Profile</h3>
                     </div>
-                    <Button onClick={handleUnlockDeepProfile} disabled={unlocking}>
-                      {unlocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Use 1 Credit
-                    </Button>
+                    <p className="text-muted-foreground text-sm">
+                      AI-powered analysis with contribution patterns, code quality metrics, and interview guide.
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <Button onClick={handleUnlockDeepProfile}>
+                    View Analysis
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {deep && contact && (
               <Card>
@@ -478,48 +513,23 @@ export default function ProfilePage({
             )}
           </TabsContent>
 
-          {/* Network Tab */}
-          <TabsContent value="network">
-            {networkGraph ? (
-              <div className="space-y-6">
-                <NetworkMap graph={networkGraph} />
+          {/* Connection Path Tab */}
+          <TabsContent value="connection" className="space-y-6">
+            {/* Social Matrix - Unified Connection Path */}
+            <ConnectionPathCard
+              recruiterId="recruiter"
+              candidateId={user.login}
+              candidateName={user.name || user.login}
+              candidateLinkedInUrl={linkedInProfile?.profileUrl}
+              candidateGitHubUsername={user.login}
+            />
 
-                {linkedInProfile && linkedInProfile.recommendations.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Recommendations ({linkedInProfile.recommendations.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {linkedInProfile.recommendations.slice(0, 3).map((rec, i) => (
-                        <div key={i} className="border-l-2 border-primary pl-4">
-                          <p className="text-sm italic mb-2">&ldquo;{rec.text.slice(0, 200)}...&rdquo;</p>
-                          <p className="text-xs text-muted-foreground">
-                            — {rec.author}, {rec.authorTitle}
-                          </p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Network className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">Add LinkedIn profile to view network map</p>
-                  <div className="flex gap-2 justify-center items-center max-w-md mx-auto">
-                    <Input
-                      placeholder="linkedin.com/in/username"
-                      value={linkedInUrl}
-                      onChange={(e) => setLinkedInUrl(e.target.value)}
-                    />
-                    <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                      {linkedInLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Load"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* GitHub Connection Details */}
+            <GitHubConnectionPath
+              candidateUsername={user.login}
+              candidateName={user.name || undefined}
+              candidateAvatar={user.avatar_url}
+            />
           </TabsContent>
 
           {/* Outreach Tab */}

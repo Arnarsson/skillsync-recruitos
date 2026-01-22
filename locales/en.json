@@ -33,11 +33,14 @@
     "pricing": "pricing",
     "company": "company",
     "contact": "contact",
+    "privacy": "privacy policy",
+    "terms": "terms of service",
+    "legal": "legal",
     "copyright": "© {year} recruitos. all rights reserved."
   },
   "home": {
-    "headline": "Hire by what they've built, not what they claim",
-    "subheadline": "AI-powered candidate intelligence from real GitHub contributions",
+    "headline": "See what candidates have done — not what they claim",
+    "subheadline": "AI-powered insights from GitHub, LinkedIn and portfolio. Verify skills with receipts — before the interview.",
     "searchPlaceholder": "Senior React developer, ML engineer, Go backend...",
     "searchHint": "{enter} to search, {shiftEnter} for new line",
     "enter": "enter",
@@ -51,29 +54,109 @@
     ],
     "features": {
       "searchByCapabilities": {
-        "title": "search by capabilities",
-        "description": "recruitos analyzes expertise demonstrated through open source work"
+        "title": "multi-source intelligence",
+        "description": "Combine GitHub activity, LinkedIn history and portfolio cases into one unified profile"
       },
       "discoverExperts": {
-        "title": "discover hidden experts",
-        "description": "find elite but overlooked engineers from around the world"
+        "title": "buildprint fingerprint",
+        "description": "5 behavioral metrics: Impact, Collaboration, Consistency, Complexity, Ownership"
       },
       "hireFaster": {
-        "title": "hire faster",
-        "description": "see real work, qualify engineers faster"
+        "title": "receipts, not buzzwords",
+        "description": "Every claim links to its source — repo, PR, article or endorsement"
       }
     },
     "buildInPublic": {
       "title": "#buildinpublic",
-      "description1": "open source software drives the internet. but the builders who make it happen often remain invisible. traditional metrics reduce engineers to numbers, commits, prs, lines of code. but that doesn't paint the {whole} picture.",
-      "description2": "recruitos uncovers what's unique about each creator: how they solve problems, and apply domain expertise where it matters. no forms. no questionnaires. only signal from real work.",
+      "description1": "Traditional profiles reduce engineers to numbers — commits, PRs, lines of code. That doesn't paint the {whole} picture.",
+      "description2": "recruitos gathers signal from GitHub, LinkedIn and portfolio. We show what the candidate has built, who they've collaborated with, and how they work — with links to the evidence.",
       "whole": "whole",
       "exploreProfiles": "explore individual developer profiles",
       "profilePlaceholder": "https://recruitos.dev/github_username",
       "tryNow": "try now"
     },
+    "signals": {
+      "sources": "Sources",
+      "github": "GitHub",
+      "linkedin": "LinkedIn",
+      "portfolio": "Portfolio",
+      "verified": "Verified",
+      "partialData": "Partial data",
+      "noData": "No data"
+    },
+    "buildprint": {
+      "title": "Buildprint",
+      "impact": "Impact",
+      "collaboration": "Collaboration",
+      "consistency": "Consistency",
+      "complexity": "Complexity",
+      "ownership": "Ownership",
+      "score": "Score"
+    },
+    "receipts": {
+      "title": "Receipts",
+      "viewReceipt": "View receipt",
+      "linkedTo": "Linked to",
+      "evidence": "Evidence",
+      "source": "Source",
+      "noReceipts": "No receipts available"
+    },
+    "confidence": {
+      "high": "High confidence",
+      "moderate": "Moderate confidence",
+      "low": "Low confidence",
+      "dataQuality": "Data quality"
+    },
+    "howItWorks": {
+      "title": "how it works",
+      "subtitle": "5 steps from job description to personalized outreach",
+      "steps": {
+        "pasteJd": {
+          "title": "paste job description",
+          "desc": "drop in your JD or job posting URL"
+        },
+        "skillsReview": {
+          "title": "skills review",
+          "desc": "edit & prioritize: must-have / nice-to-have / bonus"
+        },
+        "candidates": {
+          "title": "candidate list",
+          "desc": "see scored candidates from GitHub"
+        },
+        "shortlist": {
+          "title": "shortlist",
+          "desc": "select 1-10 candidates for deep analysis"
+        },
+        "outreach": {
+          "title": "outreach pack",
+          "desc": "persona + interview guide + how to reach them"
+        }
+      }
+    },
     "pricing": {
       "title": "pricing",
+      "subtitle": "pay for what you use",
+      "stageGated": {
+        "title": "stage-gated credits",
+        "description": "Buy credits once, use during hiring sprints. No monthly subscription.",
+        "stages": {
+          "search": {
+            "title": "Search",
+            "desc": "find top candidates",
+            "credits": "5 credits/candidate"
+          },
+          "deepDive": {
+            "title": "Deep Dive",
+            "desc": "AI analysis on selected",
+            "credits": "25 credits/candidate"
+          },
+          "outreach": {
+            "title": "Outreach Pack",
+            "desc": "persona + guide + reach",
+            "credits": "50 credits/candidate"
+          }
+        }
+      },
       "candidateOnDemand": "CANDIDATE ON DEMAND",
       "perSearch": "per search",
       "includesDeepSearch": "includes deep search and full profile analysis",
@@ -85,6 +168,22 @@
       },
       "startFree": "Start with 1 free search — no card required",
       "tryFreeSearch": "Find your first hire free"
+    },
+    "dataTransparency": {
+      "title": "data sources & limitations",
+      "description": "We analyze public GitHub activity to find candidates.",
+      "sources": {
+        "title": "what we analyze",
+        "items": [
+          "Open source contributions",
+          "Repository activity patterns",
+          "Code quality signals"
+        ]
+      },
+      "limitations": {
+        "title": "important limitations",
+        "note": "Private repos and enterprise work aren't visible. '0 commits' doesn't mean bad developer — they may work on private/enterprise projects."
+      }
     }
   },
   "search": {
@@ -255,24 +354,24 @@
     "skipTour": "Skip intro",
     "welcome": {
       "title": "Welcome to RecruitOS",
-      "subtitle": "Find elite engineers by what they've actually built"
+      "subtitle": "See what candidates have done — not what they claim"
     },
     "quickSteps": {
       "job": "Paste job URL or description",
-      "pipeline": "AI finds matching candidates",
-      "profile": "Deep analysis & scoring",
+      "pipeline": "AI finds candidates from GitHub + LinkedIn",
+      "profile": "Buildprint & receipts",
       "outreach": "Personalized messages"
     },
     "steps": {
       "welcome": {
         "title": "Welcome to RecruitOS",
-        "subtitle": "AI-Powered Recruiting",
-        "description": "Find elite engineers by analyzing their actual work on GitHub. No more resume screening - see what developers really build.",
+        "subtitle": "Multi-Signal Intelligence",
+        "description": "Combine data from GitHub, LinkedIn and portfolio. See real work, behavioral patterns and domain expertise — with links to the evidence.",
         "features": [
           "Search by capabilities, not keywords",
-          "AI-powered candidate scoring",
-          "Deep psychometric analysis",
-          "Personalized outreach generation"
+          "Buildprint: 5 behavioral metrics",
+          "Receipts linked to sources",
+          "Multi-source candidate scoring"
         ]
       },
       "jobIntake": {
@@ -288,23 +387,23 @@
       },
       "talentPipeline": {
         "title": "Step 2: Talent Pipeline",
-        "subtitle": "Source & Score Candidates",
-        "description": "Search GitHub to find developers matching your requirements. Each candidate is scored based on their repositories and contributions.",
+        "subtitle": "Multi-Source Sourcing",
+        "description": "Search GitHub, LinkedIn and portfolios simultaneously. Each candidate is scored across all available sources.",
         "features": [
           "Natural language search",
-          "Real-time GitHub analysis",
+          "GitHub + LinkedIn + portfolio",
           "Alignment score (0-100)",
           "Filter and compare candidates"
         ]
       },
       "deepProfile": {
         "title": "Step 3: Deep Profile",
-        "subtitle": "Evidence-Based Analysis",
-        "description": "Dive deep into a candidate's work history, coding patterns, and psychometric profile based on their GitHub activity.",
+        "subtitle": "Receipts & Buildprint",
+        "description": "See the candidate's Buildprint (5 behavioral metrics) and receipts — links to repos, PRs, articles and endorsements that prove their skills.",
         "features": [
-          "Psychometric profiling",
-          "Work style indicators",
-          "Green & red flags",
+          "Buildprint fingerprint",
+          "Receipts with source links",
+          "Multi-source evidence",
           "Interview question suggestions"
         ]
       },

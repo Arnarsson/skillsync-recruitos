@@ -71,19 +71,36 @@ services/                   # Business logic
 ├── candidateService.ts    # Data persistence (localStorage + Supabase)
 ├── enrichmentServiceV2.ts # Profile enrichment pipeline
 ├── networkAnalysisService.ts # Relationship mapping
+├── behavioralSignalsService.ts # "Open to work" detection, activity signals
+├── teamService.ts         # Team collaboration & shared pipelines
 └── logger.ts              # Centralized logging
 
 lib/                       # Utilities
 ├── services/gemini/       # Gemini client
 ├── supabase/              # Supabase clients (client/server)
+├── search/                # Search intelligence (multi-language support)
+│   ├── locationNormalizer.ts  # København → copenhagen, city aliases
+│   ├── constants.ts       # Stop words (DA, SV, DE, NO, EN)
+│   ├── experienceParser.ts # "5 års erfaring", "3-5 years" parsing
+│   ├── skillNormalizer.ts # c++ → cpp, react → javascript
+│   └── combinedSearch.ts  # Multi-source search orchestration
 ├── auth.ts                # NextAuth config (GitHub OAuth)
-├── github.ts              # Octokit wrapper
+├── github.ts              # Octokit wrapper + search intelligence integration
+├── pricing.ts             # Pricing tiers and credit calculations
 ├── stripe.ts              # Stripe integration
 └── utils.ts               # Helper functions
 
 components/                # React components
-├── ui/                    # shadcn/ui + Radix primitives
-└── [feature components]   # Header, Footer, SearchBar, etc.
+├── ui/                    # shadcn/ui + Radix primitives + Cult UI
+│   ├── dock.tsx           # Mac-style dock navigation (Cult UI, modified)
+│   └── expandable.tsx     # Expandable cards with animations (Cult UI)
+├── search/                # Search-related components
+│   └── SearchFilters.tsx  # Faceted filtering panel (location, language, experience)
+├── pipeline/              # Pipeline-specific components
+│   └── CandidatePipelineItem.tsx  # Expandable candidate cards with inline insights
+├── AdminDock.tsx          # Mac-style bottom dock navigation (uses ui/dock.tsx)
+├── BehavioralBadges.tsx   # OpenToWorkBadge, engagement indicators
+└── [feature components]   # Header, Footer, SearchBar, ScoreBadge, etc.
 ```
 
 ### State Management
@@ -93,8 +110,30 @@ components/                # React components
 - `apex_logs`: Audit event history
 - `apex_job_context`: Job description text
 - `recruitos_search_count`: Free search tracking
+- `recruitos_admin_mode`: Admin mode toggle state
 
 **API Keys**: Retrieved from `localStorage` first, then `process.env`
+
+### Admin Mode
+
+**Context-based admin mode** (`lib/adminContext.tsx`):
+- Toggle via `Ctrl+Shift+A` keyboard shortcut (works on Linux/Windows/Mac)
+- State persisted in localStorage (`recruitos_admin_mode`)
+- Access via `useAdmin()` hook: `{ isAdmin, toggleAdmin }`
+
+**AdminDock** (`components/AdminDock.tsx`):
+- Mac-style dock at bottom center when admin mode enabled
+- Navigation: Home, Intake, Search, Pipeline + Power toggle
+- Uses Cult UI Dock component with custom icon support
+- Responsive: scales to 90% on mobile, hidden keyboard hint
+
+```typescript
+// Usage in components
+const { isAdmin } = useAdmin();
+if (isAdmin) {
+  // Show admin-only features
+}
+```
 
 ### Core Services
 
@@ -114,6 +153,71 @@ components/                # React components
 **scrapingService.ts** - External data:
 - Firecrawl for job descriptions
 - BrightData for LinkedIn profiles
+
+### Search Intelligence (`lib/search/`)
+
+Multi-language search parsing for natural queries like "c++ 5 års erfaring i københavn":
+
+**locationNormalizer.ts** - Location alias resolution:
+- City name normalization (København → copenhagen, München → munich)
+- Country/region detection
+- Returns `{ location, remainingQuery }`
+
+**constants.ts** - Multi-language stop words:
+- Danish: "i", "og", "med", "for", "til", etc.
+- Swedish, German, Norwegian, English variants
+- `filterStopWords(words)` removes noise from queries
+
+**experienceParser.ts** - Experience extraction:
+- Patterns: "5 years", "5 års erfaring", "3-5 years", "senior"
+- Returns `ExperienceInfo { minYears, maxYears, level }`
+- `removeExperienceTerms(query)` cleans query after extraction
+
+**skillNormalizer.ts** - Programming language/framework mapping:
+- `c++` → `cpp`, `c#` → `csharp` for GitHub API
+- Framework → Language: `react` → `javascript`
+- Returns `{ skill, githubLanguage, keyword, remainingQuery }`
+
+**Integration in `lib/github.ts`**:
+```typescript
+function parseSearchQuery(query: string): ParsedSearchQuery {
+  const experience = parseExperience(remaining);
+  remaining = removeExperienceTerms(remaining);
+  const { location, remainingQuery } = extractLocation(remaining);
+  const { skill, githubLanguage, keyword } = extractSkill(remaining);
+  const keywords = filterStopWords(words);
+  return { keywords, language: githubLanguage, location, experience, frameworkKeyword };
+}
+```
+
+### Behavioral Insights
+
+**behavioralSignalsService.ts** - Detects job-seeking signals:
+- Bio keywords: "open to work", "looking for opportunities", "available"
+- Activity patterns: Recent commits, profile updates
+- Returns engagement scores and activity trends
+
+**BehavioralBadges.tsx** - UI components:
+- `OpenToWorkBadge` - Green indicator for candidates showing job-seeking signals
+- Displayed on search results and profile pages
+- Async fetch from `/api/github/signals` endpoint
+
+### Team Collaboration
+
+**teamService.ts** - Multi-user workspace:
+- Team creation and management
+- Shared candidate pipelines
+- Role-based permissions
+
+**Database schema** (`supabase/migrations/001_team_collaboration.sql`):
+- `teams`, `team_members`, `team_pipelines` tables
+- Row-level security policies
+
+**API routes** (`app/api/team/`):
+- `POST /api/team` - Create team
+- `GET/PUT/DELETE /api/team/[teamId]` - Team CRUD
+- `POST/DELETE /api/team/[teamId]/members` - Member management
+- `GET/POST /api/team/[teamId]/pipelines` - Shared pipelines
 
 ### Credit System
 
@@ -179,3 +283,49 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - Lint & Type Check
 - Build verification
 - Security scan (npm audit, TruffleHog)
+
+## UI Patterns
+
+### Cult UI Components
+
+Components from [cult-ui.com](https://cult-ui.com) installed via shadcn CLI:
+
+**Dock** (`components/ui/dock.tsx`):
+- Mac-style dock with spring animations
+- Modified to support custom icon content (not just images)
+- Props: `onClick`, `className` added to `DockCardInner`
+- Install: `npx shadcn@latest add https://cult-ui.com/r/dock.json`
+
+**Expandable** (`components/ui/expandable.tsx`):
+- Cards that expand in place with smooth animations
+- `onExpandStart` callback for lazy-loading content
+- Animation presets: `blur-md`, `scale-up`, `fade`, `slide-up`, `slide-down`
+- Install: `npx shadcn@latest add https://cult-ui.com/r/expandable.json`
+- Requires: `npm install react-use-measure`
+
+### Inline Insights Pattern
+
+Eliminates "pogo-sticking" (click → new page → back) for candidate analysis:
+
+```typescript
+// CandidatePipelineItem.tsx pattern
+<Expandable
+  onExpandStart={() => fetchDeepProfile(candidate.id)}
+  expandDirection="vertical"
+  animationPreset="blur-md"
+>
+  {/* Collapsed: avatar, name, score */}
+  {/* Expanded: AI analysis, psychometric profile, interview guide */}
+</Expandable>
+```
+
+### Responsive Design Patterns
+
+Standard responsive classes used throughout:
+- **Container padding**: `px-3 sm:px-4` (tighter on mobile)
+- **Top padding**: `pt-20 sm:pt-24` (account for header)
+- **Bottom padding**: `pb-24 sm:pb-16` (account for dock on mobile)
+- **Text scaling**: `text-base sm:text-lg`, `text-xl sm:text-2xl md:text-3xl`
+- **Flex direction**: `flex-col sm:flex-row` (stack on mobile)
+- **Hidden elements**: `hidden sm:inline`, `hidden sm:flex` (show on desktop only)
+- **Truncation**: `truncate max-w-[100px] sm:max-w-none`

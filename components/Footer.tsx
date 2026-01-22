@@ -26,23 +26,25 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="/about"
+                  href="/#how-it-works"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
                   {t("footer.about")}
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/contributors"
+                <a
+                  href="https://github.com/Arnarsson/skillsync-recruitos"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
                   {t("footer.contributors")}
-                </Link>
+                </a>
               </li>
               <li>
                 <Link
-                  href="#pricing"
+                  href="/#pricing"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
                   {t("footer.pricing")}
@@ -58,12 +60,12 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link
-                  href="/contact"
+                <a
+                  href="mailto:letsgo@recruitos.xyz?subject=Contact%20Request"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
                   {t("footer.contact")}
-                </Link>
+                </a>
               </li>
               <li>
                 <a
@@ -76,8 +78,30 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Empty for alignment */}
-          <div />
+          {/* Legal */}
+          <div>
+            <h3 className="text-sm text-muted-foreground mb-4 lowercase">
+              {t("footer.legal")}
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
+                >
+                  {t("footer.privacy")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
+                >
+                  {t("footer.terms")}
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="flex items-center justify-between pt-8 border-t border-border">

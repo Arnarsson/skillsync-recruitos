@@ -33,11 +33,14 @@
     "pricing": "priser",
     "company": "virksomhed",
     "contact": "kontakt",
+    "privacy": "privatlivspolitik",
+    "terms": "servicevilkår",
+    "legal": "juridisk",
     "copyright": "© {year} recruitos. alle rettigheder forbeholdes."
   },
   "home": {
-    "headline": "Ansæt efter hvad de har bygget, ikke hvad de påstår",
-    "subheadline": "AI-drevet kandidat-indsigt fra rigtige GitHub-bidrag",
+    "headline": "Se hvad kandidaten har gjort — ikke hvad de påstår",
+    "subheadline": "AI-drevet indsigt fra GitHub, LinkedIn og portfolio. Kvittér for kompetencer — før samtalen.",
     "searchPlaceholder": "Senior React udvikler, ML ingeniør, Go backend...",
     "searchHint": "{enter} for at søge, {shiftEnter} for ny linje",
     "enter": "enter",
@@ -51,29 +54,109 @@
     ],
     "features": {
       "searchByCapabilities": {
-        "title": "søg efter kompetencer",
-        "description": "recruitos analyserer ekspertise demonstreret gennem open source arbejde"
+        "title": "multi-source intelligence",
+        "description": "Kombinér GitHub-aktivitet, LinkedIn-historik og portfolio-cases i én samlet profil"
       },
       "discoverExperts": {
-        "title": "opdag skjulte eksperter",
-        "description": "find elite men oversete ingeniører fra hele verden"
+        "title": "buildprint-fingeraftryk",
+        "description": "5 adfærdsmetriker: Impact, Collaboration, Consistency, Complexity, Ownership"
       },
       "hireFaster": {
-        "title": "ansæt hurtigere",
-        "description": "se reelt arbejde, kvalificer ingeniører hurtigere"
+        "title": "kvitteringer, ikke buzzwords",
+        "description": "Hvert udsagn linkes til kilden — repo, PR, artikel eller endorsement"
       }
     },
     "buildInPublic": {
       "title": "#bygioffentlighed",
-      "description1": "open source software driver internettet. men byggerne der får det til at ske forbliver ofte usynlige. traditionelle metrikker reducerer ingeniører til tal, commits, prs, kodelinjer. men det tegner ikke det {hele} billede.",
-      "description2": "recruitos afdækker hvad der er unikt ved hver skaber: hvordan de løser problemer, og anvender domæneekspertise hvor det betyder noget. ingen formularer. ingen spørgeskemaer. kun signal fra reelt arbejde.",
+      "description1": "Traditionelle profiler reducerer ingeniører til tal — commits, PRs, kodelinjer. Det tegner ikke det {hele} billede.",
+      "description2": "recruitos samler signal fra GitHub, LinkedIn og portfolio. Vi viser hvad kandidaten har bygget, hvem de har samarbejdet med, og hvordan de arbejder — med links til beviserne.",
       "whole": "hele",
       "exploreProfiles": "udforsk individuelle udvikler profiler",
       "profilePlaceholder": "https://recruitos.dev/github_brugernavn",
       "tryNow": "prøv nu"
     },
+    "signals": {
+      "sources": "Kilder",
+      "github": "GitHub",
+      "linkedin": "LinkedIn",
+      "portfolio": "Portfolio",
+      "verified": "Verificeret",
+      "partialData": "Delvis data",
+      "noData": "Ingen data"
+    },
+    "buildprint": {
+      "title": "Buildprint",
+      "impact": "Impact",
+      "collaboration": "Collaboration",
+      "consistency": "Consistency",
+      "complexity": "Complexity",
+      "ownership": "Ownership",
+      "score": "Score"
+    },
+    "receipts": {
+      "title": "Kvitteringer",
+      "viewReceipt": "Se kvittering",
+      "linkedTo": "Linket til",
+      "evidence": "Evidens",
+      "source": "Kilde",
+      "noReceipts": "Ingen kvitteringer tilgængelige"
+    },
+    "confidence": {
+      "high": "Høj konfidens",
+      "moderate": "Moderat konfidens",
+      "low": "Lav konfidens",
+      "dataQuality": "Datakvalitet"
+    },
+    "howItWorks": {
+      "title": "sådan virker det",
+      "subtitle": "5 trin fra jobbeskrivelse til personlig outreach",
+      "steps": {
+        "pasteJd": {
+          "title": "indsæt jobbeskrivelse",
+          "desc": "indsæt din JD eller jobopslag-URL"
+        },
+        "skillsReview": {
+          "title": "skills review",
+          "desc": "rediger & prioriter: must-have / nice-to-have / bonus"
+        },
+        "candidates": {
+          "title": "kandidatliste",
+          "desc": "se scorede kandidater fra GitHub"
+        },
+        "shortlist": {
+          "title": "shortlist",
+          "desc": "vælg 1-10 kandidater til dybdeanalyse"
+        },
+        "outreach": {
+          "title": "outreach-pakke",
+          "desc": "persona + interviewguide + kontaktinfo"
+        }
+      }
+    },
     "pricing": {
       "title": "priser",
+      "subtitle": "betal for det du bruger",
+      "stageGated": {
+        "title": "trin-baserede credits",
+        "description": "Køb credits én gang, brug dem under ansættelsessprints. Ingen månedligt abonnement.",
+        "stages": {
+          "search": {
+            "title": "Søgning",
+            "desc": "find top-kandidater",
+            "credits": "5 credits/kandidat"
+          },
+          "deepDive": {
+            "title": "Dybdeanalyse",
+            "desc": "AI-analyse af udvalgte",
+            "credits": "25 credits/kandidat"
+          },
+          "outreach": {
+            "title": "Outreach-pakke",
+            "desc": "persona + guide + kontakt",
+            "credits": "50 credits/kandidat"
+          }
+        }
+      },
       "candidateOnDemand": "KANDIDAT ON DEMAND",
       "perSearch": "per søgning",
       "includesDeepSearch": "inkluderer dyb søgning og fuld profilanalyse",
@@ -85,6 +168,22 @@
       },
       "startFree": "Start med 1 gratis søgning — intet kort påkrævet",
       "tryFreeSearch": "Find din første ansættelse gratis"
+    },
+    "dataTransparency": {
+      "title": "datakilder & begrænsninger",
+      "description": "Vi analyserer offentlig GitHub-aktivitet for at finde kandidater.",
+      "sources": {
+        "title": "hvad vi analyserer",
+        "items": [
+          "Open source-bidrag",
+          "Repository-aktivitetsmønstre",
+          "Kodekvalitetssignaler"
+        ]
+      },
+      "limitations": {
+        "title": "vigtige begrænsninger",
+        "note": "Private repos og enterprise-arbejde er ikke synligt. '0 commits' betyder ikke dårlig udvikler — de arbejder muligvis på private/enterprise-projekter."
+      }
     }
   },
   "search": {
@@ -125,26 +224,28 @@
   },
   "intake": {
     "step": "Trin 1 af 4",
-    "title": "Kontekst & Jobindtag",
-    "description": "Angiv jobkonteksten. Dette etablerer grundlaget for AI alignment scoring.",
+    "title": "Jobbrief (kontekst + krav)",
+    "description": "Jo bedre kontekst, jo skarpere matchscore og outreach.",
     "loadDemo": "Indlæs Demo",
+    "insertExample": "Indsæt eksempel",
     "socialContext": {
       "title": "Social Kontekst",
-      "subtitle": "Kritisk for kulturmatch",
-      "companyLinkedIn": "Virksomhed LinkedIn URL",
-      "hiringManager": "Ansættelsesansvarlig LinkedIn",
-      "topPerformer": "Top Performer (Benchmark)",
-      "note": "Vi analyserer disse profiler for at kalibrere for teamkultur, kommunikationsstil og uddannelsesbaggrund."
+      "subtitle": "Valgfrit - forbedrer kulturmatch",
+      "companyLinkedIn": "Virksomhedens LinkedIn",
+      "hiringManager": "Ansættende leder",
+      "topPerformer": "Top performer (benchmark)",
+      "note": "Vi bruger profilerne til at kalibrere tone, samarbejdsstil og senioritet. Vi gemmer kun nødvendige signaler.",
+      "seeSignals": "Se hvilke signaler vi bruger"
     },
     "jobRequirements": {
       "title": "Jobkrav",
       "subtitle": "Indsæt eller importer fra URL",
-      "fromUrl": "Fra URL",
-      "pasteText": "Indsæt Tekst",
+      "fromUrl": "Hent fra jobopslag",
+      "pasteText": "Indsæt jobtekst",
       "jobPostingUrl": "Job Opslag URL",
-      "fetch": "Hent",
+      "fetch": "Hent jobopslag",
       "analyzing": "Analyserer...",
-      "urlHelp": "Virker med LinkedIn, Greenhouse, Lever, og de fleste jobportaler",
+      "urlHelp": "Virker med Greenhouse, Lever, Workable, LinkedIn m.fl.",
       "jobDescription": "Jobbeskrivelse",
       "pastePlaceholder": "Indsæt den fulde jobbeskrivelse her...",
       "chars": "tegn",
@@ -170,33 +271,37 @@
     "processPreview": {
       "title": "Proces Forhåndsvisning",
       "steps": {
-        "jobIntake": "Jobindtag",
+        "jobIntake": "Jobbrief",
         "jobIntakeDesc": "Kontekst & kalibrering",
-        "talentPipeline": "Talent Pipeline",
-        "talentPipelineDesc": "Kilde & scorer kandidater",
-        "deepProfile": "Dyb Profil",
-        "deepProfileDesc": "Evidensbaseret analyse",
-        "outreach": "Outreach",
-        "outreachDesc": "Personaliseret besked"
+        "talentPipeline": "Find + score",
+        "talentPipelineDesc": "GitHub + LinkedIn + portfolio",
+        "deepProfile": "Dybdeprofil (beviser)",
+        "deepProfileDesc": "Kvitteringer + buildprint",
+        "outreach": "Outreach (personligt)",
+        "outreachDesc": "AI-personaliseret besked"
       },
       "creditSystem": {
-        "title": "Kredit System",
-        "description": "1 CR = AI operation omkostning. Betal per kandidat behandlet."
+        "title": "Credits",
+        "description": "1 CR = 1 kandidat-analyse. Du betaler kun, når du kører en analyse."
       }
     }
   },
   "pipeline": {
     "step": "Trin 2 af 4",
-    "title": "Talent Pipeline",
-    "import": "Importer",
-    "editJob": "Rediger Job",
+    "title": "Kandidat-pipeline",
+    "subtitle": "Kilder: GitHub · LinkedIn · CV/portfolio",
+    "import": "Importér",
+    "editJob": "Redigér jobbrief",
     "intelligence": {
-      "title": "Pipeline Intelligence",
-      "distribution": "Score fordeling på tværs af {count} kandidater",
-      "topMatch": "Top Match"
+      "title": "Match-fordeling",
+      "distribution": "Klik et interval for at filtrere listen ({count} kandidater)",
+      "topMatch": "Stærkt match",
+      "clearFilter": "Ryd filter",
+      "showingFiltered": "Viser {count} kandidater i {range}"
     },
-    "searchPlaceholder": "Søg GitHub udviklere (f.eks. 'react copenhagen')",
-    "addCandidates": "Tilføj Kandidater",
+    "searchPlaceholder": "Søg kandidater (rolle, skill, domæne, lokation)",
+    "searchExample": "f.eks. \"React + B2B SaaS + København\"",
+    "addCandidates": "Tilføj kandidater",
     "filters": "Filtre",
     "sort": "Sorter:",
     "sortOptions": {
@@ -207,23 +312,33 @@
     },
     "scoreFilter": "Score:",
     "all": "Alle",
+    "matchBadge": {
+      "strong": "Stærkt match",
+      "ok": "Ok match",
+      "weak": "Svagt match"
+    },
+    "dataCoverage": {
+      "title": "Kilder",
+      "of": "af"
+    },
     "empty": {
       "loading": {
         "title": "Finder Kandidater...",
-        "description": "Søger efter udviklere der matcher dine jobkrav"
+        "description": "Søger GitHub + LinkedIn efter udviklere der matcher dine krav"
       },
       "noResults": {
         "title": "Ingen Kandidater Endnu",
-        "description": "Søg efter udviklere på GitHub eller importer et CV",
+        "description": "Søg efter udviklere eller importer et CV/LinkedIn",
         "importResume": "Importer CV"
       }
     },
     "candidate": {
       "at": "hos",
-      "deepProfile": "Dyb Profil",
+      "deepProfile": "Dybdeprofil",
       "deleteConfirm": "Slet denne kandidat fra pipeline?",
-      "whyScore": "Hvorfor?",
-      "scoreBreakdown": "Score Opdeling",
+      "whyScore": "Hvorfor {score}?",
+      "scoreBreakdown": "Score-fordeling",
+      "topReasons": "Top 3 grunde",
       "baseScore": "Basis",
       "skillsMatch": "Kompetencer",
       "preferred": "Foretrukne",
@@ -233,7 +348,8 @@
       "locationMatch": "Lokation",
       "exactMatch": "Præcis match",
       "remoteCompatible": "Remote kompatibel",
-      "noMatch": "Ingen match"
+      "noMatch": "Ingen match",
+      "viewReceipts": "Se kvitteringer"
     },
     "importModal": {
       "title": "Importer Kandidat",
@@ -255,24 +371,24 @@
     "skipTour": "Spring intro over",
     "welcome": {
       "title": "Velkommen til RecruitOS",
-      "subtitle": "Find elite ingeniører baseret på hvad de faktisk har bygget"
+      "subtitle": "Se hvad kandidaten har gjort — ikke hvad de påstår"
     },
     "quickSteps": {
       "job": "Indsæt job URL eller beskrivelse",
-      "pipeline": "AI finder matchende kandidater",
-      "profile": "Dyb analyse & scoring",
+      "pipeline": "AI finder kandidater fra GitHub + LinkedIn",
+      "profile": "Buildprint & kvitteringer",
       "outreach": "Personaliserede beskeder"
     },
     "steps": {
       "welcome": {
         "title": "Velkommen til RecruitOS",
-        "subtitle": "AI-Drevet Rekruttering",
-        "description": "Find elite ingeniører ved at analysere deres faktiske arbejde på GitHub. Ikke mere CV screening - se hvad udviklere virkelig bygger.",
+        "subtitle": "Multi-Signal Intelligence",
+        "description": "Kombinér data fra GitHub, LinkedIn og portfolio. Se reelt arbejde, adfærdsmønstre og domæneekspertise — med links til beviserne.",
         "features": [
           "Søg efter kompetencer, ikke nøgleord",
-          "AI-drevet kandidat scoring",
-          "Dyb psykometrisk analyse",
-          "Personaliseret outreach generering"
+          "Buildprint: 5 adfærdsmetriker",
+          "Kvitteringer linket til kilder",
+          "Multi-source kandidat scoring"
         ]
       },
       "jobIntake": {
@@ -288,23 +404,23 @@
       },
       "talentPipeline": {
         "title": "Trin 2: Talent Pipeline",
-        "subtitle": "Kilde & Score Kandidater",
-        "description": "Søg GitHub for at finde udviklere der matcher dine krav. Hver kandidat scores baseret på deres repositories og bidrag.",
+        "subtitle": "Multi-Source Sourcing",
+        "description": "Søg GitHub, LinkedIn og portfolios samtidigt. Hver kandidat scores på tværs af alle tilgængelige kilder.",
         "features": [
           "Naturligt sprog søgning",
-          "Real-time GitHub analyse",
+          "GitHub + LinkedIn + portfolio",
           "Alignment score (0-100)",
           "Filtrer og sammenlign kandidater"
         ]
       },
       "deepProfile": {
         "title": "Trin 3: Dyb Profil",
-        "subtitle": "Evidensbaseret Analyse",
-        "description": "Dyk dybt ned i en kandidats arbejdshistorik, kodemønstre og psykometriske profil baseret på deres GitHub aktivitet.",
+        "subtitle": "Kvitteringer & Buildprint",
+        "description": "Se kandidatens Buildprint (5 adfærdsmetriker) og kvitteringer — links til repos, PRs, artikler og endorsements der beviser kompetencer.",
         "features": [
-          "Psykometrisk profilering",
-          "Arbejdsstil indikatorer",
-          "Grønne & røde flag",
+          "Buildprint fingeraftryk",
+          "Kvitteringer med kildelinks",
+          "Multi-source evidens",
           "Interviewspørgsmål forslag"
         ]
       },

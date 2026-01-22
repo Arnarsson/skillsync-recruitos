@@ -243,8 +243,13 @@ export function extractLocation(query: string): {
   for (const { canonical, variant } of sortedEntries) {
     const normalizedVariant = normalizeString(variant);
 
-    // Check if the normalized query contains this variant
-    if (normalizedQuery.includes(normalizedVariant)) {
+    // ALWAYS require word boundaries to avoid matching inside words
+    // e.g., "bern" shouldn't match "kubernetes", "es" shouldn't match "typescript"
+    const wordBoundaryRegex = new RegExp(`\\b${escapeRegex(normalizedVariant)}\\b`, 'i');
+    const hasMatch = wordBoundaryRegex.test(normalizedQuery);
+
+    // Check if the normalized query contains this variant as a whole word
+    if (hasMatch) {
       // Find the original position in the query to remove it properly
       // We need to handle both normalized and original forms
       let remaining = lowerQuery;

@@ -3,11 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 // BrightData Web Scraper API - Trigger a LinkedIn profile scrape
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey, url, dataset } = await request.json();
+    const { apiKey: clientApiKey, url, dataset } = await request.json();
+
+    // Use server-side env var, fallback to client-provided key
+    const apiKey = process.env.BRIGHTDATA_API_KEY || clientApiKey;
 
     if (!apiKey) {
       return NextResponse.json(
-        { message: "BrightData API key is required" },
+        { message: "BrightData API key is required. Set BRIGHTDATA_API_KEY in environment variables." },
         { status: 400 }
       );
     }
@@ -21,6 +24,8 @@ export async function POST(request: NextRequest) {
 
     // BrightData Web Scraper API endpoint
     const brightDataUrl = `https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_l1viktl72bvl7bjuj0&include_errors=true`;
+
+    console.log("[BrightData] Triggering scrape for:", url);
 
     const response = await fetch(brightDataUrl, {
       method: "POST",
@@ -41,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
+    console.log("[BrightData] Trigger response:", JSON.stringify(data));
     return NextResponse.json(data);
   } catch (error) {
     console.error("BrightData trigger error:", error);

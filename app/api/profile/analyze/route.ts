@@ -3,12 +3,21 @@ import {
   generatePersona,
   analyzeCandidateProfile,
   generateDeepProfile,
+  generateNetworkDossier,
 } from "@/lib/services/gemini";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { candidateId, candidateName, currentRole, company, location, skills } = body;
+    const {
+      candidateId,
+      candidateName,
+      currentRole,
+      company,
+      location,
+      skills,
+      isShortlisted  // Stage 3 flag - triggers network dossier generation
+    } = body;
 
     // Build a profile text from available data
     const profileText = `
@@ -34,9 +43,23 @@ export async function POST(request: NextRequest) {
     // Generate deep profile based on candidate analysis
     const deepProfile = await generateDeepProfile(candidateAnalysis, jobContext);
 
+    // Generate network dossier ONLY for shortlisted candidates (Stage 3)
+    // This saves API costs by only generating strategic intelligence for serious candidates
+    let networkDossier = null;
+    if (isShortlisted) {
+      try {
+        networkDossier = await generateNetworkDossier(candidateAnalysis, jobContext);
+        console.log(`[API] Generated network dossier for shortlisted candidate: ${candidateName}`);
+      } catch (dossierError) {
+        console.error("Network dossier generation failed (non-critical):", dossierError);
+        // Don't fail the whole request if dossier generation fails
+      }
+    }
+
     return NextResponse.json({
       persona,
       deepProfile,
+      networkDossier, // Will be null for non-shortlisted candidates
       scoreBreakdown: candidateAnalysis.scoreBreakdown,
       keyEvidence: candidateAnalysis.keyEvidence,
       keyEvidenceWithSources: candidateAnalysis.keyEvidenceWithSources,

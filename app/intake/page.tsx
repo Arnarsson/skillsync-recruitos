@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAdmin } from "@/lib/adminContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +25,11 @@ import {
   MessageSquare,
   FlaskConical,
   Coins,
+  Check,
+  X,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
 
 const DEMO_JOB_CONTEXT = {
   title: "Senior Full-Stack Engineer",
@@ -54,8 +58,7 @@ Requirements:
 
 export default function IntakePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isAdmin = searchParams.get("admin") !== null;
+  const { isAdmin } = useAdmin();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("url");
   const [jobUrl, setJobUrl] = useState("");
@@ -76,10 +79,56 @@ export default function IntakePage() {
     }
   }, [loading]);
 
-  // Social context fields
+  // Social context fields with validation
   const [companyUrl, setCompanyUrl] = useState("");
   const [managerUrl, setManagerUrl] = useState("");
   const [benchmarkUrl, setBenchmarkUrl] = useState("");
+
+  // LinkedIn URL validation states
+  const [companyUrlValidation, setCompanyUrlValidation] = useState<LinkedInValidationResult | null>(null);
+  const [managerUrlValidation, setManagerUrlValidation] = useState<LinkedInValidationResult | null>(null);
+  const [benchmarkUrlValidation, setBenchmarkUrlValidation] = useState<LinkedInValidationResult | null>(null);
+
+  // Validate LinkedIn URLs on change
+  const handleCompanyUrlChange = (value: string) => {
+    setCompanyUrl(value);
+    if (value.trim()) {
+      const validation = validateLinkedInUrl(value, 'company');
+      setCompanyUrlValidation(validation);
+      if (validation.isValid && validation.normalizedUrl && validation.normalizedUrl !== value) {
+        // Auto-normalize after a brief delay
+        setTimeout(() => setCompanyUrl(validation.normalizedUrl!), 500);
+      }
+    } else {
+      setCompanyUrlValidation(null);
+    }
+  };
+
+  const handleManagerUrlChange = (value: string) => {
+    setManagerUrl(value);
+    if (value.trim()) {
+      const validation = validateLinkedInUrl(value, 'person');
+      setManagerUrlValidation(validation);
+      if (validation.isValid && validation.normalizedUrl && validation.normalizedUrl !== value) {
+        setTimeout(() => setManagerUrl(validation.normalizedUrl!), 500);
+      }
+    } else {
+      setManagerUrlValidation(null);
+    }
+  };
+
+  const handleBenchmarkUrlChange = (value: string) => {
+    setBenchmarkUrl(value);
+    if (value.trim()) {
+      const validation = validateLinkedInUrl(value, 'person');
+      setBenchmarkUrlValidation(validation);
+      if (validation.isValid && validation.normalizedUrl && validation.normalizedUrl !== value) {
+        setTimeout(() => setBenchmarkUrl(validation.normalizedUrl!), 500);
+      }
+    } else {
+      setBenchmarkUrlValidation(null);
+    }
+  };
 
   const [calibration, setCalibration] = useState<{
     title: string;
@@ -91,13 +140,22 @@ export default function IntakePage() {
     summary: string;
   } | null>(null);
   const [autoNavigating, setAutoNavigating] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState<string | null>(null);
 
-  // Auto-navigate to pipeline after successful analysis
+  // Check for pending search from homepage
+  useEffect(() => {
+    const pending = localStorage.getItem("recruitos_pending_search");
+    if (pending) {
+      setPendingSearch(pending);
+    }
+  }, []);
+
+  // Auto-navigate after successful analysis
   useEffect(() => {
     if (calibration && !autoNavigating) {
       setAutoNavigating(true);
 
-      // Save job context immediately
+      // Save job context immediately (capture current values)
       const enrichedContext = {
         ...calibration,
         socialContext: {
@@ -108,14 +166,31 @@ export default function IntakePage() {
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
 
+      // Clear existing candidates and hash to force auto-search in pipeline
+      localStorage.removeItem("apex_candidates");
+      localStorage.removeItem("apex_job_context_hash");
+      // Set flag to indicate fresh intake just completed
+      localStorage.setItem("apex_pending_auto_search", "true");
+      console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
+
       // Show brief success state then navigate
       const timer = setTimeout(() => {
-        router.push(`/pipeline${isAdmin ? "?admin" : ""}`);
+        // Check for pending search from homepage
+        const pending = localStorage.getItem("recruitos_pending_search");
+        if (pending) {
+          console.log("[Intake] Navigating to search with query:", pending);
+          localStorage.removeItem("recruitos_pending_search");
+          router.push(`/search?q=${encodeURIComponent(pending)}`);
+        } else {
+          console.log("[Intake] Navigating to skills review...");
+          router.push(`/skills-review`);
+        }
       }, 1500); // 1.5 second delay to show success
 
       return () => clearTimeout(timer);
     }
-  }, [calibration, autoNavigating, companyUrl, managerUrl, benchmarkUrl, router, isAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calibration]); // Only depend on calibration to avoid clearing the timeout
 
   const handleLoadDemo = () => {
     setCalibration(DEMO_JOB_CONTEXT);
@@ -198,8 +273,23 @@ export default function IntakePage() {
         },
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
+
+      // Clear existing candidates and hash to force auto-search in pipeline
+      localStorage.removeItem("apex_candidates");
+      localStorage.removeItem("apex_job_context_hash");
+      // Set flag to indicate fresh intake just completed
+      localStorage.setItem("apex_pending_auto_search", "true");
+      console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
     }
-    router.push(`/pipeline${isAdmin ? "?admin" : ""}`);
+
+    // Check for pending search from homepage
+    const pending = localStorage.getItem("recruitos_pending_search");
+    if (pending) {
+      localStorage.removeItem("recruitos_pending_search");
+      router.push(`/search?q=${encodeURIComponent(pending)}`);
+    } else {
+      router.push(`/skills-review`);
+    }
   };
 
   const loadingSteps = [
@@ -217,23 +307,32 @@ export default function IntakePage() {
   ];
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-4 sm:space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
-                <Badge className="mb-2 bg-primary/20 text-primary">{t("intake.step")}</Badge>
-                <h1 className="text-3xl font-bold mb-2">{t("intake.title")}</h1>
-                <p className="text-muted-foreground max-w-2xl">
+                <Badge className="mb-2 bg-primary/20 text-primary text-xs">{t("intake.step")}</Badge>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("intake.title")}</h1>
+                <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
                   {t("intake.description")}
                 </p>
+                {pendingSearch && (
+                  <div className="mt-3 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-sm">
+                      <span className="text-muted-foreground">{t("home.lang") === "da" ? "Søger efter:" : "Searching for:"}</span>{" "}
+                      <span className="font-medium text-primary">{pendingSearch}</span>
+                    </span>
+                  </div>
+                )}
               </div>
-              <Button variant="outline" size="sm" onClick={handleLoadDemo} className="gap-2">
+              <Button variant="outline" size="sm" onClick={handleLoadDemo} className="gap-2 self-start">
                 <FlaskConical className="w-4 h-4" />
-                {t("intake.loadDemo")}
+                <span className="sm:inline">{t("intake.loadDemo")}</span>
               </Button>
             </div>
 
@@ -260,10 +359,25 @@ export default function IntakePage() {
                     <Input
                       placeholder="https://linkedin.com/company/..."
                       value={companyUrl}
-                      onChange={(e) => setCompanyUrl(e.target.value)}
-                      className="pl-10"
+                      onChange={(e) => handleCompanyUrlChange(e.target.value)}
+                      className={`pl-10 pr-10 ${companyUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : companyUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                     />
+                    {companyUrlValidation && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {companyUrlValidation.isValid ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <X className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    )}
                   </div>
+                  {companyUrlValidation?.error && (
+                    <p className="text-xs text-red-500 mt-1">{companyUrlValidation.error}</p>
+                  )}
+                  {companyUrlValidation?.warning && (
+                    <p className="text-xs text-yellow-500 mt-1">{companyUrlValidation.warning}</p>
+                  )}
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
@@ -275,10 +389,25 @@ export default function IntakePage() {
                       <Input
                         placeholder="https://linkedin.com/in/..."
                         value={managerUrl}
-                        onChange={(e) => setManagerUrl(e.target.value)}
-                        className="pl-10"
+                        onChange={(e) => handleManagerUrlChange(e.target.value)}
+                        className={`pl-10 pr-10 ${managerUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : managerUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                       />
+                      {managerUrlValidation && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {managerUrlValidation.isValid ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <X className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      )}
                     </div>
+                    {managerUrlValidation?.error && (
+                      <p className="text-xs text-red-500 mt-1">{managerUrlValidation.error}</p>
+                    )}
+                    {managerUrlValidation?.warning && (
+                      <p className="text-xs text-yellow-500 mt-1">{managerUrlValidation.warning}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">
@@ -289,10 +418,25 @@ export default function IntakePage() {
                       <Input
                         placeholder="https://linkedin.com/in/..."
                         value={benchmarkUrl}
-                        onChange={(e) => setBenchmarkUrl(e.target.value)}
-                        className="pl-10"
+                        onChange={(e) => handleBenchmarkUrlChange(e.target.value)}
+                        className={`pl-10 pr-10 ${benchmarkUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : benchmarkUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                       />
+                      {benchmarkUrlValidation && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {benchmarkUrlValidation.isValid ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <X className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      )}
                     </div>
+                    {benchmarkUrlValidation?.error && (
+                      <p className="text-xs text-red-500 mt-1">{benchmarkUrlValidation.error}</p>
+                    )}
+                    {benchmarkUrlValidation?.warning && (
+                      <p className="text-xs text-yellow-500 mt-1">{benchmarkUrlValidation.warning}</p>
+                    )}
                   </div>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg flex items-start gap-2">

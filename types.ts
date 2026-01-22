@@ -242,6 +242,7 @@ export interface Candidate {
   connectionPath?: string;
   sharedContext?: string[];
   outreachHook?: string;
+  linkedinUrl?: string; // Direct LinkedIn profile URL
 
   // Advanced Enrichment Profile (10x better data)
   advancedProfile?: AdvancedCandidateProfile;
@@ -520,3 +521,41 @@ export interface AdvancedCandidateProfile {
   lastUpdated: string;
   nextRefreshRecommended: string;
 }
+
+// ===== CREDIT STAGE GATING =====
+
+export enum CreditStage {
+  SEARCH = 'search',      // Stage 1: Basic results
+  DEEP_PROFILE = 'deep',  // Stage 2: AI analysis
+  OUTREACH = 'outreach'   // Stage 3: Persona + guide
+}
+
+// Demo pricing (lower values for testing)
+export const STAGE_PRICING = {
+  SEARCH: { perCandidate: 5, description: 'Basic search results' },
+  DEEP_PROFILE: { perCandidate: 25, description: 'AI-powered deep analysis' },
+  OUTREACH: { perCandidate: 50, description: 'Persona + outreach generation' }
+};
+
+// Skills configuration for the skills review step
+export interface SkillTier {
+  name: string;
+  tier: 'must-have' | 'nice-to-have' | 'bonus';
+  weight: number; // 1.0 / 0.6 / 0.3
+  order: number;
+}
+
+export interface SkillsConfig {
+  skills: SkillTier[];
+  customSkills: string[];
+}
+
+// Shortlist state for candidate selection
+export interface ShortlistState {
+  candidateIds: string[];
+  stage: 'selection' | 'deep-dive' | 'outreach';
+}
+
+// ===== SOCIAL MATRIX (6 Degrees Connection Graph) =====
+// Re-export all Social Matrix types for unified access
+export * from './types/socialMatrix';
