@@ -41,6 +41,7 @@ import {
 } from "@/components/search/SearchFilters";
 import { SkillsCombobox } from "@/components/search/SkillsCombobox";
 import { OpenToWorkBadge, BehavioralBadges } from "@/components/BehavioralBadges";
+import { ConnectionBadge } from "@/components/SocialMatrix";
 
 interface Developer {
   username: string;
@@ -709,6 +710,11 @@ function SearchResults() {
                                   </Badge>
                                 );
                               })()}
+                              <ConnectionBadge
+                                recruiterId="recruiter"
+                                candidateId={dev.username}
+                                candidateGitHubUsername={dev.username}
+                              />
                               <OpenToWorkBadge username={dev.username} />
                             </div>
                             <Button

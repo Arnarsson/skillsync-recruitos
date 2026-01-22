@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import PsychometricCard from "@/components/PsychometricCard";
 import NetworkMap from "@/components/NetworkMap";
 import GitHubConnectionPath from "@/components/GitHubConnectionPath";
+import { ConnectionPathCard } from "@/components/SocialMatrix";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
 
@@ -513,7 +514,17 @@ export default function ProfilePage({
           </TabsContent>
 
           {/* Connection Path Tab */}
-          <TabsContent value="connection">
+          <TabsContent value="connection" className="space-y-6">
+            {/* Social Matrix - Unified Connection Path */}
+            <ConnectionPathCard
+              recruiterId="recruiter"
+              candidateId={user.login}
+              candidateName={user.name || user.login}
+              candidateLinkedInUrl={linkedInProfile?.profileUrl}
+              candidateGitHubUsername={user.login}
+            />
+
+            {/* GitHub Connection Details */}
             <GitHubConnectionPath
               candidateUsername={user.login}
               candidateName={user.name || undefined}
