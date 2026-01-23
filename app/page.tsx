@@ -15,16 +15,14 @@ export default function Home() {
 
   const handleSearch = () => {
     if (query.trim()) {
-      // Store the search query and go to intake first
-      localStorage.setItem("recruitos_pending_search", query.trim());
-      router.push(`/intake`);
+      // Go directly to search page with query
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
 
   const handleQuickSearch = (q: string) => {
-    // Store the search query and go to intake first
-    localStorage.setItem("recruitos_pending_search", q);
-    router.push(`/intake`);
+    // Go directly to search page with query
+    router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
   return (
@@ -213,7 +211,7 @@ export default function Home() {
                 {t("home.pricing.startFree")}
               </p>
               <Link
-                href="/intake"
+                href="/search"
                 className="inline-block w-full sm:w-auto px-8 py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm transition-colors"
               >
                 {t("home.pricing.tryFreeSearch")}
