@@ -299,7 +299,16 @@ export default function ProfilePage({
           </div>
         </div>
 
-        {/* LinkedIn Enrich Bar */}
+        {/* GitHub Connection Path - See how you're connected */}
+        <div className="mb-6">
+          <GitHubConnectionPath
+            candidateUsername={user.login}
+            candidateName={user.name || undefined}
+            candidateAvatar={user.avatar_url}
+          />
+        </div>
+
+        {/* DISABLED: LinkedIn Enrich Bar - keeping GitHub connection path only
         {!linkedInProfile && (
           <Card className={`mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 ${linkedInError ? 'border-red-500/40' : 'border-blue-500/20'}`}>
             <CardContent className="py-4">
@@ -350,6 +359,7 @@ export default function ProfilePage({
             </CardContent>
           </Card>
         )}
+        */}
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
