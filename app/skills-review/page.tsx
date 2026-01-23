@@ -149,7 +149,7 @@ function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError
   return { skills: [], hasError: false, noContext: true };
 }
 
-// Skill row component with insight
+// Skill row component with insight - mobile-friendly layout
 function SkillRow({
   skill,
   insight,
@@ -167,91 +167,109 @@ function SkillRow({
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-2 sm:gap-3 p-3 border rounded-lg bg-card hover:border-primary/30 transition-colors">
-        {/* Skill name */}
-        <span className="flex-1 font-medium text-sm sm:text-base truncate">
-          {skill.name}
-        </span>
-
-        {skill.isCustom && (
-          <Badge variant="outline" className="text-xs px-1.5 py-0 hidden sm:inline-flex">
-            Custom
-          </Badge>
-        )}
-
-        {/* Tier dropdown */}
-        <Select
-          value={skill.tier}
-          onValueChange={(value) => onTierChange(skill.id, value as SkillTier)}
-        >
-          <SelectTrigger className={cn("w-[130px] sm:w-[140px]", TIER_CONFIG[skill.tier].color)}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="must-have">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-red-400" />
-                <span>Must-have</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="nice-to-have">
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-yellow-400" />
-                <span>Nice-to-have</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="bonus">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-green-400" />
-                <span>Bonus</span>
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Candidate count badge */}
-        <div className="w-[100px] sm:w-[120px] text-right">
-          {isLoading ? (
-            <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading...
+      <div className="p-3 border rounded-lg bg-card hover:border-primary/30 transition-colors">
+        {/* Mobile: Stack layout | Desktop: Row layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          {/* Top row on mobile: skill name + remove button */}
+          <div className="flex items-center gap-2 sm:flex-1 sm:min-w-0">
+            <span className="flex-1 font-medium text-sm sm:text-base truncate">
+              {skill.name}
             </span>
-          ) : insight ? (
-            <span
-              className={cn(
-                "text-xs flex items-center justify-end gap-1",
-                isLimiting ? "text-yellow-500" : "text-muted-foreground"
-              )}
+            {skill.isCustom && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0 flex-shrink-0">
+                Custom
+              </Badge>
+            )}
+            {/* Remove button - visible on mobile in top row */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onRemove(skill.id)}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0 sm:hidden"
             >
-              {isLimiting ? (
-                <AlertTriangle className="w-3 h-3" />
-              ) : (
-                <Check className="w-3 h-3 text-green-500" />
-              )}
-              {insight.count.toLocaleString()} candidates
-            </span>
-          ) : null}
-        </div>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
 
-        {/* Remove button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onRemove(skill.id)}
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+          {/* Bottom row on mobile: tier dropdown + candidate count */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Tier dropdown */}
+            <Select
+              value={skill.tier}
+              onValueChange={(value) => onTierChange(skill.id, value as SkillTier)}
+            >
+              <SelectTrigger className={cn("w-full sm:w-[140px]", TIER_CONFIG[skill.tier].color)}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="must-have">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-red-400" />
+                    <span>Must-have</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="nice-to-have">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    <span>Nice-to-have</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="bonus">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-green-400" />
+                    <span>Bonus</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Candidate count badge */}
+            <div className="flex-shrink-0 text-right min-w-[80px] sm:min-w-[120px]">
+              {isLoading ? (
+                <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span className="hidden sm:inline">Loading...</span>
+                </span>
+              ) : insight ? (
+                <span
+                  className={cn(
+                    "text-xs flex items-center justify-end gap-1",
+                    isLimiting ? "text-yellow-500" : "text-muted-foreground"
+                  )}
+                >
+                  {isLimiting ? (
+                    <AlertTriangle className="w-3 h-3" />
+                  ) : (
+                    <Check className="w-3 h-3 text-green-500" />
+                  )}
+                  <span className="hidden sm:inline">{insight.count.toLocaleString()} candidates</span>
+                  <span className="sm:hidden">{insight.count.toLocaleString()}</span>
+                </span>
+              ) : null}
+            </div>
+
+            {/* Remove button - desktop only */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onRemove(skill.id)}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hidden sm:flex"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* AI Suggestion */}
       {isLimiting && skill.tier === "must-have" && (
         <button
-          className="flex items-center gap-1.5 text-xs text-primary ml-4 hover:underline"
+          className="flex items-center gap-1.5 text-xs text-primary ml-3 hover:underline"
           onClick={() => onTierChange(skill.id, "nice-to-have")}
         >
           <Lightbulb className="w-3 h-3" />
-          Move to nice-to-have → stops penalizing candidates without it
+          <span className="hidden sm:inline">Move to nice-to-have → stops penalizing candidates without it</span>
+          <span className="sm:hidden">Move to nice-to-have</span>
         </button>
       )}
     </div>
@@ -490,9 +508,16 @@ export default function SkillsReviewPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {skills.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No skills found.</p>
-                <p className="text-sm">Add skills below or go back to intake.</p>
+              <div className="text-center py-8">
+                <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-medium mb-2">No Skills Found</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Complete the job intake step first to extract skills from your job description.
+                </p>
+                <Button onClick={() => router.push("/intake")} variant="default">
+                  Go to Job Intake
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
               </div>
             ) : (
               skills.map((skill) => (
@@ -508,9 +533,9 @@ export default function SkillsReviewPage() {
             )}
 
             {/* Add skill input */}
-            <div className="flex gap-2 pt-3 border-t">
+            <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t">
               <Input
-                placeholder="Add a skill..."
+                placeholder="Add a skill (e.g., GraphQL, AWS)..."
                 value={newSkillInput}
                 onChange={(e) => setNewSkillInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -524,9 +549,10 @@ export default function SkillsReviewPage() {
                 variant="outline"
                 onClick={handleAddSkill}
                 disabled={!newSkillInput.trim()}
+                className="w-full sm:w-auto"
               >
-                <Plus className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Add</span>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Skill
               </Button>
             </div>
           </CardContent>
@@ -573,9 +599,14 @@ export default function SkillsReviewPage() {
           </CardContent>
         </Card>
 
-        {/* Continue button */}
-        <div className="flex justify-end">
-          <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto">
+        {/* Spacer for fixed footer on mobile */}
+        <div className="h-20 sm:hidden" />
+      </div>
+
+      {/* Continue button - Fixed on mobile, inline on desktop */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t sm:static sm:bg-transparent sm:border-0 sm:p-0 sm:mt-6 z-40">
+        <div className="max-w-3xl mx-auto flex justify-end">
+          <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto" disabled={skills.length === 0}>
             <span>Continue to Pipeline</span>
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
