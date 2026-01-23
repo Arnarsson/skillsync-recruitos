@@ -509,59 +509,92 @@ export default function DeepProfilePage() {
     : [];
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href={`/pipeline`}>
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div className="flex-1">
-            <Badge className="mb-2 bg-primary/20 text-primary">Trin 3 af 4</Badge>
-            <h1 className="text-3xl font-bold">Dybdeprofil</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link href={`/pipeline`}>
+              <Button variant="ghost" size="icon" className="shrink-0">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Badge className="mb-1 sm:mb-2 bg-primary/20 text-primary text-xs">Trin 3 af 4</Badge>
+              <h1 className="text-xl sm:text-3xl font-bold">Dybdeprofil</h1>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 pl-11 sm:pl-0">
             <Button
               onClick={runDeepAnalysis}
               disabled={analyzing}
               variant="outline"
-              className="gap-2"
+              size="sm"
+              className="gap-1.5 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
             >
               {analyzing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
-              {candidate.persona ? "Opdatér analyse" : "Kør AI-analyse"}
+              <span className="hidden xs:inline">{candidate.persona ? "Opdatér analyse" : "Kør AI-analyse"}</span>
+              <span className="xs:hidden">{candidate.persona ? "Opdatér" : "Analysér"}</span>
             </Button>
             <Button
               onClick={() => setShowOutreach(true)}
-              className="gap-2"
+              size="sm"
+              className="gap-1.5 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
             >
-              <Send className="w-4 h-4" />
-              Lav outreach
+              <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Lav outreach</span>
+              <span className="xs:hidden">Outreach</span>
             </Button>
           </div>
         </div>
 
         {/* Profile Hero */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-6">
-              <img
-                src={candidate.avatar}
-                alt={candidate.name}
-                className="w-24 h-24 rounded-full border-4 border-background"
-              />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{candidate.name}</h2>
-                    <p className="text-muted-foreground">{candidate.currentRole}</p>
+        <Card className="mb-6 sm:mb-8">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+              {/* Avatar and Score Row on Mobile */}
+              <div className="flex items-center gap-4 sm:block">
+                <img
+                  src={candidate.avatar}
+                  alt={candidate.name}
+                  className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-4 border-background shrink-0"
+                />
+                {/* Score visible on mobile next to avatar */}
+                <div className="sm:hidden text-right flex-1">
+                  <div
+                    className={`text-3xl font-bold ${getScoreColor(
+                      candidate.alignmentScore
+                    )}`}
+                  >
+                    {candidate.alignmentScore}
                   </div>
-                  <div className="text-right">
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <button className="text-xs text-primary hover:underline flex items-center gap-1 justify-end">
+                          <HelpCircle className="w-3 h-3" />
+                          Hvorfor?
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs">
+                        <p className="text-xs">Klik for at se score-fordeling og kvitteringer</p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-bold truncate">{candidate.name}</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground truncate">{candidate.currentRole}</p>
+                  </div>
+                  {/* Score hidden on mobile, shown on desktop */}
+                  <div className="hidden sm:block text-right shrink-0">
                     <div
                       className={`text-4xl font-bold ${getScoreColor(
                         candidate.alignmentScore
@@ -584,45 +617,45 @@ export default function DeepProfilePage() {
                     </TooltipProvider>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Briefcase className="w-4 h-4" />
-                    {candidate.company}
+                    <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[120px] sm:max-w-none">{candidate.company}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {candidate.location}
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[100px] sm:max-w-none">{candidate.location}</span>
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                   {candidate.skills.slice(0, 6).map((skill) => (
-                    <Badge key={skill} variant="secondary">
+                    <Badge key={skill} variant="secondary" className="text-xs">
                       {skill}
                     </Badge>
                   ))}
                 </div>
                 {/* Behavioral Insights */}
-                <BehavioralBadges username={candidate.id} className="mt-4" />
+                <BehavioralBadges username={candidate.id} className="mt-3 sm:mt-4" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Data Coverage Indicator */}
-        <Card className="mb-6 bg-muted/30">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Datadækning:</span>
-                <div className="flex items-center gap-3">
+        <Card className="mb-4 sm:mb-6 bg-muted/30">
+          <CardContent className="py-2.5 sm:py-3 px-3 sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">Data:</span>
+                <div className="flex items-center gap-2 sm:gap-3">
                   {/* GitHub */}
                   <TooltipProvider>
                     <UITooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5">
-                          <GitBranch className="w-4 h-4 text-green-500" />
-                          <span className="text-xs text-green-500">GitHub</span>
-                          <CheckCircle className="w-3 h-3 text-green-500" />
+                        <div className="flex items-center gap-1">
+                          <GitBranch className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
+                          <span className="text-xs text-green-500 hidden sm:inline">GitHub</span>
+                          <CheckCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-500" />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -635,10 +668,10 @@ export default function DeepProfilePage() {
                   <TooltipProvider>
                     <UITooltip>
                       <TooltipTrigger asChild>
-                        <button className="flex items-center gap-1.5 hover:opacity-80">
-                          <Linkedin className="w-4 h-4 text-yellow-500" />
-                          <span className="text-xs text-yellow-500">LinkedIn</span>
-                          <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                        <button className="flex items-center gap-1 hover:opacity-80">
+                          <Linkedin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
+                          <span className="text-xs text-yellow-500 hidden sm:inline">LinkedIn</span>
+                          <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-500" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -651,10 +684,10 @@ export default function DeepProfilePage() {
                   <TooltipProvider>
                     <UITooltip>
                       <TooltipTrigger asChild>
-                        <button className="flex items-center gap-1.5 hover:opacity-80">
-                          <LinkIcon className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">Portfolio</span>
-                          <Plus className="w-3 h-3 text-muted-foreground" />
+                        <button className="flex items-center gap-1 hover:opacity-80">
+                          <LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground hidden sm:inline">Portfolio</span>
+                          <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -664,7 +697,7 @@ export default function DeepProfilePage() {
                   </TooltipProvider>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7 w-full sm:w-auto">
                 <Plus className="w-3 h-3" />
                 Tilføj kilde
               </Button>
@@ -673,46 +706,54 @@ export default function DeepProfilePage() {
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
           <Button
             variant={activeTab === "overview" ? "default" : "ghost"}
             onClick={() => setActiveTab("overview")}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm shrink-0"
           >
-            <TrendingUp className="w-4 h-4" />
-            Overblik
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Overblik</span>
+            <span className="sm:hidden">Overblik</span>
           </Button>
           <Button
             variant={activeTab === "questions" ? "default" : "ghost"}
             onClick={() => setActiveTab("questions")}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm shrink-0"
           >
-            <ClipboardList className="w-4 h-4" />
-            Interviewguide
+            <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Interviewguide</span>
+            <span className="sm:hidden">Interview</span>
           </Button>
           <Button
             variant={activeTab === "persona" ? "default" : "ghost"}
             onClick={() => setActiveTab("persona")}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm shrink-0"
           >
-            <Brain className="w-4 h-4" />
+            <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Persona
           </Button>
           <Button
             variant={activeTab === "github" ? "default" : "ghost"}
             onClick={() => setActiveTab("github")}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm shrink-0"
           >
-            <GitBranch className="w-4 h-4" />
-            GitHub-aktivitet
+            <GitBranch className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            GitHub
           </Button>
           <Button
             variant={activeTab === "contact" ? "default" : "ghost"}
             onClick={() => setActiveTab("contact")}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm shrink-0"
           >
-            <Phone className="w-4 h-4" />
-            Kontaktstrategi
+            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Kontaktstrategi</span>
+            <span className="sm:hidden">Kontakt</span>
           </Button>
         </div>
 
@@ -1203,7 +1244,7 @@ export default function DeepProfilePage() {
                       </div>
 
                       {/* Metrics Grid */}
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         {/* Growth Rate */}
                         <div className="p-3 rounded-lg bg-muted/50 text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
@@ -1575,44 +1616,44 @@ export default function DeepProfilePage() {
                 </div>
 
                 {/* Activity Metrics */}
-                <div className="grid md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                   <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-primary">
+                        <div className="text-2xl sm:text-3xl font-bold text-primary">
                           {githubAnalysis.pullRequests.totalOpened}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">PRs Opened</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground mt-1">PRs Opened</div>
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-green-500">
+                        <div className="text-2xl sm:text-3xl font-bold text-green-500">
                           {githubAnalysis.pullRequests.totalMerged}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">PRs Merged</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground mt-1">PRs Merged</div>
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-purple-500">
+                        <div className="text-2xl sm:text-3xl font-bold text-purple-500">
                           {githubAnalysis.codeReview.reviewsGiven}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">Reviews Given</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground mt-1">Reviews</div>
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-500">
+                        <div className="text-2xl sm:text-3xl font-bold text-blue-500">
                           {githubAnalysis.codeReview.commentsGiven}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">Comments</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground mt-1">Comments</div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1682,7 +1723,7 @@ export default function DeepProfilePage() {
                           {githubAnalysis.collaborationStyle.style}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div className="p-3 rounded-lg bg-muted/50 text-center">
                           <div className="text-xl font-bold">{githubAnalysis.collaborationStyle.soloProjects}</div>
                           <div className="text-xs text-muted-foreground">Solo</div>
@@ -1755,9 +1796,9 @@ export default function DeepProfilePage() {
               <>
                 {/* Best Contact Method Hero */}
                 <Card className="bg-gradient-to-br from-primary/10 to-transparent">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-4 rounded-xl ${
+                  <CardContent className="pt-4 sm:pt-6">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className={`p-3 sm:p-4 rounded-xl shrink-0 ${
                         candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin'
                           ? 'bg-blue-500/20'
                           : candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email'
@@ -1766,20 +1807,20 @@ export default function DeepProfilePage() {
                           ? 'bg-purple-500/20'
                           : 'bg-orange-500/20'
                       }`}>
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && <Linkedin className="w-8 h-8 text-blue-500" />}
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && <Mail className="w-8 h-8 text-green-500" />}
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && <GitBranch className="w-8 h-8 text-purple-500" />}
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && <Users className="w-8 h-8 text-orange-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && <Linkedin className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && <GitBranch className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500" />}
+                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && <Users className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />}
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Anbefalet kontaktmetode</p>
-                        <p className="text-2xl font-bold capitalize">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Anbefalet kontaktmetode</p>
+                        <p className="text-lg sm:text-2xl font-bold capitalize">
                           {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && 'LinkedIn'}
                           {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && 'E-mail'}
                           {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && 'GitHub'}
                           {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && 'Warm Intro'}
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
                           {candidate.networkDossier.engagementPlaybook.primaryApproach}
                         </p>
                       </div>
