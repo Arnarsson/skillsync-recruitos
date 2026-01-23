@@ -483,39 +483,46 @@ export async function analyzeJobDescription(jobText: string): Promise<{
   location: string;
   summary: string;
 }> {
-  const systemPrompt = `You are a job description analyst that understands both Danish and English.
-You extract structured information and ALWAYS return skills in ENGLISH for GitHub search compatibility.
-When the job description is in Danish, translate skill names to their standard English equivalents.
-For example: "frontend udvikling" → "Frontend development", "databaser" → "Databases", "brugeroplevelse" → "UX".
-Always respond with valid JSON only.`;
+  const systemPrompt = `You are a job description analyst that extracts skills optimized for GitHub developer search.
+You understand both Danish and English. Always respond with valid JSON only.
+
+CRITICAL RULES FOR SKILLS:
+1. Use ONLY standard, common technology names that developers put in their GitHub profiles
+2. Prefer simple, single-word skills: "React" not "React.js development"
+3. Use the most common name: "JavaScript" not "JS", "TypeScript" not "TS"
+4. For frameworks, use the framework name: "Next.js", "Django", "Spring Boot"
+5. For languages, use proper names: "Python", "Go", "Rust", "Java"
+6. Keep skills concise - max 2 words typically
+7. Avoid vague terms like "problem solving", "agile", "teamwork" - focus on tech skills`;
 
   const prompt = `
 Extract structured information from this job description. The text may be in Danish or English.
-IMPORTANT: Always return skill names in ENGLISH (translate from Danish if needed) for GitHub search compatibility.
-Use standard technology names (e.g., "React", "Python", "TypeScript") not verbose descriptions.
+
+SKILL EXTRACTION RULES:
+- Return 4-8 requiredSkills (the MOST important technical skills)
+- Return 3-6 preferredSkills (nice-to-have technical skills)
+- Use EXACT technology names developers use on GitHub: "React", "Node.js", "PostgreSQL", "Docker"
+- DO NOT use verbose descriptions like "React.js frontend development" → just "React"
+- DO NOT use version numbers unless critical: "Python" not "Python 3.10"
+- DO NOT include soft skills or methodologies - only technical skills
 
 Job description:
 "${jobText.substring(0, 10000)}"
 
 Return JSON:
 {
-  "title": "string (in original language)",
-  "company": "string",
-  "requiredSkills": ["string - MUST be in English, use standard tech names like 'React', 'Python', 'AWS'"],
-  "preferredSkills": ["string - MUST be in English"],
-  "experienceLevel": "string",
+  "title": "string (job title)",
+  "company": "string (company name if found, empty string if not)",
+  "requiredSkills": ["React", "TypeScript", "Node.js", "PostgreSQL"],
+  "preferredSkills": ["Docker", "AWS", "GraphQL"],
+  "experienceLevel": "string (e.g., '3-5 years', 'Senior', 'Junior')",
   "location": "string",
-  "summary": "string (2-3 sentences in English)"
+  "summary": "string (2-3 sentences describing the role)"
 }
 
-Example skill translations:
-- "Frontend udvikling" → "Frontend"
-- "Backend udvikling" → "Backend"
-- "Databaser" → "SQL" or "Databases"
-- "Webudvikling" → "Web development"
-- "Brugeroplevelse/UX" → "UX"
-- "Systemudvikling" → "Software development"
-- "API principper" → "REST API" or "API design"`;
+GOOD skill examples: "React", "TypeScript", "Python", "AWS", "Docker", "Kubernetes", "PostgreSQL", "MongoDB", "GraphQL", "Node.js", "Go", "Rust", "Java", "Spring Boot", "Django", "FastAPI", "Next.js", "Vue.js", "Angular", "Redis", "Elasticsearch"
+
+BAD skill examples (DO NOT USE): "Frontend development", "Backend systems", "Cloud computing", "API design principles", "Database management", "Modern JavaScript frameworks"`;
 
   const text = await callOpenRouter(prompt, systemPrompt);
   return parseJsonSafe(text) as {
