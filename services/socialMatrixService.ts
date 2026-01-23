@@ -10,12 +10,13 @@
  * - networkAnalysisService.ts
  */
 
-import {
-  getLinkedInConnectionPath,
-  getCachedRecruiterProfile,
-  getRecruiterLinkedInUrl,
-  type LinkedInConnectionPath,
-} from './linkedInConnectionService';
+// DISABLED: LinkedIn connection path (keeping GitHub connection path only)
+// import {
+//   getLinkedInConnectionPath,
+//   getCachedRecruiterProfile,
+//   getRecruiterLinkedInUrl,
+//   type LinkedInConnectionPath,
+// } from './linkedInConnectionService';
 
 import {
   analyzeConnectionPath as analyzeGitHubConnectionPath,
@@ -85,99 +86,100 @@ function saveCachedMatrix(matrix: SocialMatrix): void {
   }
 }
 
-/**
- * Convert LinkedIn connection data to MatrixNodes and MatrixEdges
- */
-function linkedInToMatrix(
-  linkedInPath: LinkedInConnectionPath,
-  recruiterId: string,
-  candidateId: string
-): { nodes: MatrixNode[]; edges: MatrixEdge[] } {
-  const nodes: MatrixNode[] = [];
-  const edges: MatrixEdge[] = [];
-
-  // Add recruiter node
-  nodes.push({
-    id: recruiterId,
-    type: 'person',
-    name: linkedInPath.recruiterProfile.name,
-    source: 'linkedin',
-    profileUrl: linkedInPath.recruiterProfile.profileUrl,
-    imageUrl: linkedInPath.recruiterProfile.profileImage,
-    metadata: {
-      headline: linkedInPath.recruiterProfile.headline,
-      connections: linkedInPath.recruiterProfile.connections,
-    },
-  });
-
-  // Add candidate node
-  nodes.push({
-    id: candidateId,
-    type: 'person',
-    name: linkedInPath.candidateProfile.name,
-    source: 'linkedin',
-    profileUrl: linkedInPath.candidateProfile.profileUrl,
-    imageUrl: linkedInPath.candidateProfile.profileImage,
-    metadata: {
-      headline: linkedInPath.candidateProfile.headline,
-      connections: linkedInPath.candidateProfile.connections,
-    },
-  });
-
-  // Add mutual connections as nodes and edges
-  linkedInPath.mutualConnections.forEach((mutual, index) => {
-    const mutualId = `mutual-linkedin-${index}`;
-
-    nodes.push({
-      id: mutualId,
-      type: 'person',
-      name: mutual.name,
-      source: 'linkedin',
-      profileUrl: mutual.profileUrl,
-      imageUrl: mutual.profileImage,
-      metadata: {
-        headline: mutual.headline,
-      },
-    });
-
-    // Edge from recruiter to mutual
-    edges.push({
-      source: recruiterId,
-      target: mutualId,
-      type: 'mutual_connection',
-      weight: 0.8,
-      confidence: 0.9,
-      status: 'verified',
-      sources: [mutual.profileUrl],
-    });
-
-    // Edge from mutual to candidate
-    edges.push({
-      source: mutualId,
-      target: candidateId,
-      type: 'mutual_connection',
-      weight: 0.8,
-      confidence: 0.9,
-      status: 'verified',
-      sources: [mutual.profileUrl],
-    });
-  });
-
-  // Direct connection edge if 1st degree
-  if (linkedInPath.connectionDegree === 1) {
-    edges.push({
-      source: recruiterId,
-      target: candidateId,
-      type: 'follows',
-      weight: 1.0,
-      confidence: 1.0,
-      status: 'verified',
-      sources: [linkedInPath.recruiterProfile.profileUrl],
-    });
-  }
-
-  return { nodes, edges };
-}
+// DISABLED: LinkedIn connection path (keeping GitHub connection path only)
+// /**
+//  * Convert LinkedIn connection data to MatrixNodes and MatrixEdges
+//  */
+// function linkedInToMatrix(
+//   linkedInPath: LinkedInConnectionPath,
+//   recruiterId: string,
+//   candidateId: string
+// ): { nodes: MatrixNode[]; edges: MatrixEdge[] } {
+//   const nodes: MatrixNode[] = [];
+//   const edges: MatrixEdge[] = [];
+//
+//   // Add recruiter node
+//   nodes.push({
+//     id: recruiterId,
+//     type: 'person',
+//     name: linkedInPath.recruiterProfile.name,
+//     source: 'linkedin',
+//     profileUrl: linkedInPath.recruiterProfile.profileUrl,
+//     imageUrl: linkedInPath.recruiterProfile.profileImage,
+//     metadata: {
+//       headline: linkedInPath.recruiterProfile.headline,
+//       connections: linkedInPath.recruiterProfile.connections,
+//     },
+//   });
+//
+//   // Add candidate node
+//   nodes.push({
+//     id: candidateId,
+//     type: 'person',
+//     name: linkedInPath.candidateProfile.name,
+//     source: 'linkedin',
+//     profileUrl: linkedInPath.candidateProfile.profileUrl,
+//     imageUrl: linkedInPath.candidateProfile.profileImage,
+//     metadata: {
+//       headline: linkedInPath.candidateProfile.headline,
+//       connections: linkedInPath.candidateProfile.connections,
+//     },
+//   });
+//
+//   // Add mutual connections as nodes and edges
+//   linkedInPath.mutualConnections.forEach((mutual, index) => {
+//     const mutualId = `mutual-linkedin-${index}`;
+//
+//     nodes.push({
+//       id: mutualId,
+//       type: 'person',
+//       name: mutual.name,
+//       source: 'linkedin',
+//       profileUrl: mutual.profileUrl,
+//       imageUrl: mutual.profileImage,
+//       metadata: {
+//         headline: mutual.headline,
+//       },
+//     });
+//
+//     // Edge from recruiter to mutual
+//     edges.push({
+//       source: recruiterId,
+//       target: mutualId,
+//       type: 'mutual_connection',
+//       weight: 0.8,
+//       confidence: 0.9,
+//       status: 'verified',
+//       sources: [mutual.profileUrl],
+//     });
+//
+//     // Edge from mutual to candidate
+//     edges.push({
+//       source: mutualId,
+//       target: candidateId,
+//       type: 'mutual_connection',
+//       weight: 0.8,
+//       confidence: 0.9,
+//       status: 'verified',
+//       sources: [mutual.profileUrl],
+//     });
+//   });
+//
+//   // Direct connection edge if 1st degree
+//   if (linkedInPath.connectionDegree === 1) {
+//     edges.push({
+//       source: recruiterId,
+//       target: candidateId,
+//       type: 'follows',
+//       weight: 1.0,
+//       confidence: 1.0,
+//       status: 'verified',
+//       sources: [linkedInPath.recruiterProfile.profileUrl],
+//     });
+//   }
+//
+//   return { nodes, edges };
+// }
 
 /**
  * Convert GitHub connection data to MatrixNodes and MatrixEdges
@@ -546,18 +548,18 @@ export async function getConnectionDegree(
     }
   }
 
-  // Check LinkedIn cache
-  const recruiterCache = getCachedRecruiterProfile();
-  if (recruiterCache) {
-    // We have recruiter data, can provide quick estimate
-    return {
-      degree: 2, // Assume 2nd degree if we have some data
-      source: 'linkedin',
-      path: 'Potential connection via LinkedIn network',
-      lastChecked: recruiterCache.lastSynced,
-      isStale: true, // Mark as stale to trigger full analysis
-    };
-  }
+  // DISABLED: LinkedIn connection path (keeping GitHub connection path only)
+  // const recruiterCache = getCachedRecruiterProfile();
+  // if (recruiterCache) {
+  //   // We have recruiter data, can provide quick estimate
+  //   return {
+  //     degree: 2, // Assume 2nd degree if we have some data
+  //     source: 'linkedin',
+  //     path: 'Potential connection via LinkedIn network',
+  //     lastChecked: recruiterCache.lastSynced,
+  //     isStale: true, // Mark as stale to trigger full analysis
+  //   };
+  // }
 
   return {
     degree: null,
@@ -593,19 +595,19 @@ export async function buildUnifiedGraph(
 
   const graphSources: Array<{ nodes: MatrixNode[]; edges: MatrixEdge[] }> = [];
 
-  // Fetch LinkedIn data
-  if (options.recruiterLinkedInUrl && options.candidateLinkedInUrl) {
-    try {
-      console.log('[SocialMatrix] Fetching LinkedIn connection path...');
-      const linkedInPath = await getLinkedInConnectionPath(
-        options.recruiterLinkedInUrl,
-        options.candidateLinkedInUrl
-      );
-      graphSources.push(linkedInToMatrix(linkedInPath, recruiterId, candidateId));
-    } catch (error) {
-      console.warn('[SocialMatrix] LinkedIn fetch failed:', error);
-    }
-  }
+  // DISABLED: LinkedIn connection path (keeping GitHub connection path only)
+  // if (options.recruiterLinkedInUrl && options.candidateLinkedInUrl) {
+  //   try {
+  //     console.log('[SocialMatrix] Fetching LinkedIn connection path...');
+  //     const linkedInPath = await getLinkedInConnectionPath(
+  //       options.recruiterLinkedInUrl,
+  //       options.candidateLinkedInUrl
+  //     );
+  //     graphSources.push(linkedInToMatrix(linkedInPath, recruiterId, candidateId));
+  //   } catch (error) {
+  //     console.warn('[SocialMatrix] LinkedIn fetch failed:', error);
+  //   }
+  // }
 
   // Fetch GitHub data
   if (options.recruiterGitHubUsername && options.candidateGitHubUsername) {

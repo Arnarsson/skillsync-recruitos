@@ -55,7 +55,8 @@ import {
 } from "@/components/ui/tooltip";
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
-import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
+// DISABLED: LinkedIn connection path (keeping GitHub connection path only)
+// import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -1884,13 +1885,14 @@ export default function DeepProfilePage() {
                   </Card>
                 </div>
 
-                {/* LinkedIn Connection Path - Real network intelligence */}
+                {/* DISABLED: LinkedIn Connection Path - keeping GitHub connection path only
                 {candidate.linkedinUrl && (
                   <LinkedInConnectionPath
                     candidateLinkedInUrl={candidate.linkedinUrl}
                     candidateName={candidate.name}
                   />
                 )}
+                */}
 
                 {/* Objection Handling */}
                 <Card>
@@ -2007,13 +2009,14 @@ export default function DeepProfilePage() {
               </>
             ) : (
               <div className="space-y-6">
-                {/* LinkedIn Connection Path - Available even without full dossier */}
+                {/* DISABLED: LinkedIn Connection Path - keeping GitHub connection path only
                 {candidate.linkedinUrl && (
                   <LinkedInConnectionPath
                     candidateLinkedInUrl={candidate.linkedinUrl}
                     candidateName={candidate.name}
                   />
                 )}
+                */}
 
                 <Card>
                   <CardContent className="py-12 text-center">
