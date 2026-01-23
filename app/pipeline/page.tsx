@@ -117,7 +117,6 @@ export default function PipelinePage() {
     requiredSkills?: string[];
     location?: string;
   } | null>(null);
-  const autoSearchedRef = useRef(false);
   const urlStateInitialized = useRef(false);
 
   // Import modal state
@@ -183,96 +182,94 @@ export default function PipelinePage() {
 
   // Load job context and candidates on mount
   useEffect(() => {
-    // Prevent double execution in React strict mode
-    if (autoSearchedRef.current) {
-      console.log("[Pipeline] Already initialized, skipping...");
-      return;
-    }
+    // Use a local flag to handle React Strict Mode properly
+    // This ensures state updates only happen if the component is still mounted
+    let isActive = true;
 
-    const stored = localStorage.getItem("apex_job_context");
-    let parsedJobContext = null;
-    if (stored) {
-      try {
-        parsedJobContext = JSON.parse(stored);
-        setJobContext(parsedJobContext);
-      } catch {
-        // Ignore
-      }
-    }
-
-    // Check if we just came from intake (fresh job context)
-    const pendingAutoSearch = localStorage.getItem("apex_pending_auto_search");
-    const freshFromIntake = pendingAutoSearch === "true";
-    console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
-
-    // Create a hash of job context to detect changes
-    const jobContextHash = parsedJobContext
-      ? JSON.stringify({
-          title: parsedJobContext.title,
-          skills: parsedJobContext.requiredSkills?.slice(0, 5),
-          location: parsedJobContext.location,
-        })
-      : null;
-    const storedJobHash = localStorage.getItem("apex_job_context_hash");
-
-    // Check if job context changed - if so, clear old candidates
-    const jobContextChanged = !!(jobContextHash && storedJobHash !== jobContextHash);
-
-    const storedCandidates = localStorage.getItem("apex_candidates");
-    let existingCandidates: Candidate[] = [];
-
-    // Load existing candidates ONLY if not fresh from intake and job hasn't changed
-    if (storedCandidates && !jobContextChanged && !freshFromIntake) {
-      try {
-        existingCandidates = JSON.parse(storedCandidates);
-        setCandidates(existingCandidates);
-        console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates");
-      } catch {
-        // Ignore
-      }
-    } else if (jobContextChanged || freshFromIntake) {
-      // Clear old candidates when job context changes or fresh from intake
-      localStorage.removeItem("apex_candidates");
-      setCandidates([]);
-      console.log("[Pipeline] Cleared old candidates - jobContextChanged:", jobContextChanged, "freshFromIntake:", freshFromIntake);
-    }
-
-    // Determine if we should auto-search
-    const hasRequiredSkills = parsedJobContext?.requiredSkills?.length > 0;
-    const needsCandidates = existingCandidates.length === 0 || jobContextChanged || freshFromIntake;
-    const shouldAutoSearch = hasRequiredSkills && needsCandidates;
-
-    console.log("[Pipeline] shouldAutoSearch:", shouldAutoSearch, "| hasSkills:", hasRequiredSkills, "| needsCandidates:", needsCandidates);
-
-    if (shouldAutoSearch && parsedJobContext?.requiredSkills) {
-      // Mark as searched to prevent re-runs
-      autoSearchedRef.current = true;
-
-      // Clear the pending flag
-      localStorage.removeItem("apex_pending_auto_search");
-
-      // Store the new job context hash
-      if (jobContextHash) {
-        localStorage.setItem("apex_job_context_hash", jobContextHash);
+    const initializePipeline = async () => {
+      const stored = localStorage.getItem("apex_job_context");
+      let parsedJobContext = null;
+      if (stored) {
+        try {
+          parsedJobContext = JSON.parse(stored);
+          if (isActive) setJobContext(parsedJobContext);
+        } catch {
+          // Ignore
+        }
       }
 
-      // Use only top 2 skills for search - more specific queries return 0 results from GitHub
-      const skills = parsedJobContext.requiredSkills.slice(0, 2);
-      const query = skills.join(" ");
-      console.log("[Pipeline] Auto-searching with query:", query);
+      // Check if we just came from intake (fresh job context)
+      const pendingAutoSearch = localStorage.getItem("apex_pending_auto_search");
+      const freshFromIntake = pendingAutoSearch === "true";
+      console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
 
-      if (query) {
-        setSearchQuery(query);
-        setLoading(true);
+      // Create a hash of job context to detect changes
+      const jobContextHash = parsedJobContext
+        ? JSON.stringify({
+            title: parsedJobContext.title,
+            skills: parsedJobContext.requiredSkills?.slice(0, 5),
+            location: parsedJobContext.location,
+          })
+        : null;
+      const storedJobHash = localStorage.getItem("apex_job_context_hash");
 
-        // Call auto-search function
-        (async () => {
+      // Check if job context changed - if so, clear old candidates
+      const jobContextChanged = !!(jobContextHash && storedJobHash !== jobContextHash);
+
+      const storedCandidates = localStorage.getItem("apex_candidates");
+      let existingCandidates: Candidate[] = [];
+
+      // Load existing candidates ONLY if not fresh from intake and job hasn't changed
+      if (storedCandidates && !jobContextChanged && !freshFromIntake) {
+        try {
+          existingCandidates = JSON.parse(storedCandidates);
+          if (isActive) setCandidates(existingCandidates);
+          console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates");
+        } catch {
+          // Ignore
+        }
+      } else if (jobContextChanged || freshFromIntake) {
+        // Clear old candidates when job context changes or fresh from intake
+        localStorage.removeItem("apex_candidates");
+        if (isActive) setCandidates([]);
+        console.log("[Pipeline] Cleared old candidates - jobContextChanged:", jobContextChanged, "freshFromIntake:", freshFromIntake);
+      }
+
+      // Determine if we should auto-search
+      const hasRequiredSkills = parsedJobContext?.requiredSkills?.length > 0;
+      const needsCandidates = existingCandidates.length === 0 || jobContextChanged || freshFromIntake;
+      const shouldAutoSearch = hasRequiredSkills && needsCandidates;
+
+      console.log("[Pipeline] shouldAutoSearch:", shouldAutoSearch, "| hasSkills:", hasRequiredSkills, "| needsCandidates:", needsCandidates);
+
+      if (shouldAutoSearch && parsedJobContext?.requiredSkills) {
+        // Clear the pending flag
+        localStorage.removeItem("apex_pending_auto_search");
+
+        // Store the new job context hash
+        if (jobContextHash) {
+          localStorage.setItem("apex_job_context_hash", jobContextHash);
+        }
+
+        // Use only top 2 skills for search - more specific queries return 0 results from GitHub
+        const skills = parsedJobContext.requiredSkills.slice(0, 2);
+        const query = skills.join(" ");
+        console.log("[Pipeline] Auto-searching with query:", query);
+
+        if (query) {
+          if (isActive) {
+            setSearchQuery(query);
+            setLoading(true);
+          }
+
           try {
             const response = await fetch(
               `/api/search?q=${encodeURIComponent(query)}&perPage=15`
             );
             const data = await response.json();
             console.log("[Pipeline] Search returned", data.users?.length || 0, "users");
+
+            if (!isActive) return; // Component unmounted, don't update state
 
             if (data.users && data.users.length > 0) {
               // Get job context for scoring
@@ -347,19 +344,23 @@ export default function PipelinePage() {
           } catch (error) {
             console.error("[Pipeline] Auto-search error:", error);
           } finally {
-            setLoading(false);
+            if (isActive) setLoading(false);
           }
-        })();
+        }
+      } else {
+        // Clear flag even if no auto-search needed
+        if (freshFromIntake) {
+          localStorage.removeItem("apex_pending_auto_search");
+        }
       }
-    } else {
-      // Clear flag even if no auto-search needed
-      if (freshFromIntake) {
-        localStorage.removeItem("apex_pending_auto_search");
-      }
-      // Still mark as initialized to prevent re-runs
-      autoSearchedRef.current = true;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    };
+
+    initializePipeline();
+
+    // Cleanup function - set isActive to false when component unmounts
+    return () => {
+      isActive = false;
+    };
   }, []); // Empty dependency array - run only on mount
 
   // Calculate alignment score based on job requirements and skills config
