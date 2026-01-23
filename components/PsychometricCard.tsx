@@ -294,15 +294,15 @@ export default function PsychometricCard({ profile }: PsychometricCardProps) {
           <div className="w-full md:w-1/2 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
-                <PolarGrid stroke="hsl(var(--muted-foreground))" strokeOpacity={0.3} />
+                <PolarGrid stroke="rgba(255,255,255,0.2)" />
                 <PolarAngleAxis
                   dataKey="trait"
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
                 />
                 <PolarRadiusAxis
                   angle={30}
                   domain={[0, 100]}
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                  tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }}
                   tickCount={5}
                 />
                 <Radar
@@ -310,7 +310,7 @@ export default function PsychometricCard({ profile }: PsychometricCardProps) {
                   dataKey="value"
                   stroke={colorConfig.primary}
                   fill={colorConfig.primary}
-                  fillOpacity={0.3}
+                  fillOpacity={0.4}
                   strokeWidth={2}
                 />
               </RadarChart>
@@ -443,7 +443,7 @@ export default function PsychometricCard({ profile }: PsychometricCardProps) {
                   className="flex items-center gap-2"
                 >
                   <div className="flex-1 text-right">
-                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20">
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30">
                       {m}
                     </Badge>
                   </div>
@@ -467,7 +467,7 @@ export default function PsychometricCard({ profile }: PsychometricCardProps) {
                 >
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <div className="flex-1">
-                    <Badge variant="outline" className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10">
+                    <Badge variant="outline" className="border-blue-500/40 text-blue-400 hover:bg-blue-500/20">
                       {s}
                     </Badge>
                   </div>
