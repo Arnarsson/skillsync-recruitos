@@ -104,8 +104,9 @@ export function ConnectionBadge({
     );
   }
 
-  if (!result || result.degree === null) {
-    return null; // Don't show badge if no connection data
+  // Show badge even if no connection data - indicates we tried but couldn't find connection
+  if (!result) {
+    return null;
   }
 
   const badge = (
