@@ -5,11 +5,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Expandable,
-  ExpandableCard,
   ExpandableTrigger,
-  ExpandableCardContent,
   ExpandableContent,
-  ExpandableCardHeader,
 } from "@/components/ui/expandable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

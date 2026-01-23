@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, ReactNode } from "react";
+import { useState, useCallback, useEffect, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CandidateDetailPanel } from "./CandidateDetailPanel";
 import { Button } from "@/components/ui/button";
@@ -151,25 +151,26 @@ export function PipelineSplitView({
 export function useSplitView() {
   const [viewMode, setViewMode] = useState<"list" | "split">("list");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-
-  // Disable split view on mobile
   const [isMobile, setIsMobile] = useState(false);
 
-  if (typeof window !== "undefined") {
-    // This will only run on client
+  // Disable split view on mobile - must be in useEffect for SSR safety
+  useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth < 1024) {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile) {
         setViewMode("list");
         setSelectedCandidateId(null);
       }
     };
 
-    // Check on mount and resize
-    if (!isMobile && window.innerWidth < 1024) {
-      checkMobile();
-    }
-  }
+    // Check on mount
+    checkMobile();
+
+    // Check on resize
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   return {
     viewMode: isMobile ? "list" : viewMode,
