@@ -19,6 +19,7 @@ import {
   Brain,
   Network,
   Linkedin,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,6 +86,7 @@ export default function ProfilePage({
   // Psychometric state
   const [psychProfile, setPsychProfile] = useState<PsychometricProfile | null>(null);
   const [psychLoading, setPsychLoading] = useState(false);
+  const [isAIPsychProfile, setIsAIPsychProfile] = useState(false);
 
   // LinkedIn state
   const [linkedInUrl, setLinkedInUrl] = useState("");
@@ -117,14 +119,15 @@ export default function ProfilePage({
     fetchProfile();
   }, [username]);
 
-  // Generate psychometric profile when profile loads
+  // Generate psychometric profile when profile loads (rule-based first, fast)
   useEffect(() => {
-    if (profile && !psychProfile) {
+    if (profile && !psychProfile && !psychLoading) {
       const githubSignals = analyzeGitHubSignals(profile.repos, profile.user);
       const psych = generatePsychometricProfile(githubSignals, linkedInProfile);
       setPsychProfile(psych);
+      setIsAIPsychProfile(false);
     }
-  }, [profile, linkedInProfile, psychProfile]);
+  }, [profile, linkedInProfile, psychProfile, psychLoading]);
 
   // Re-generate psychometric when LinkedIn data is added
   useEffect(() => {
@@ -132,12 +135,42 @@ export default function ProfilePage({
       const githubSignals = analyzeGitHubSignals(profile.repos, profile.user);
       const psych = generatePsychometricProfile(githubSignals, linkedInProfile);
       setPsychProfile(psych);
+      setIsAIPsychProfile(false);
 
       // Build network graph
       const graph = brightDataService.buildNetworkGraph(linkedInProfile);
       setNetworkGraph(graph);
     }
   }, [linkedInProfile, profile]);
+
+  // Function to upgrade to AI-powered psychometric profile
+  const handleUpgradeToAIPsychometric = async () => {
+    if (!profile || psychLoading) return;
+
+    setPsychLoading(true);
+    try {
+      const response = await fetch('/api/profile/psychometric', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: profile.user.login }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI profile');
+      }
+
+      const data = await response.json();
+      if (data.success && data.profile) {
+        setPsychProfile(data.profile);
+        setIsAIPsychProfile(true);
+      }
+    } catch (error) {
+      console.error('AI psychometric generation failed:', error);
+      // Keep the existing rule-based profile
+    } finally {
+      setPsychLoading(false);
+    }
+  };
 
   const handleUnlockDeepProfile = () => {
     // Navigate to the deep profile page which has full AI analysis
@@ -512,7 +545,53 @@ export default function ProfilePage({
           {/* Psychometric Tab */}
           <TabsContent value="psychometric">
             {psychProfile ? (
-              <PsychometricCard profile={psychProfile} />
+              <div className="space-y-4">
+                {/* AI Upgrade Banner */}
+                {!isAIPsychProfile && (
+                  <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-purple-500/5">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <Sparkles className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Enhance with AI</p>
+                            <p className="text-xs text-muted-foreground">
+                              Get personalized motivators, interview questions & outreach tips based on their actual profile
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleUpgradeToAIPsychometric}
+                          disabled={psychLoading}
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          {psychLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Upgrade
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {isAIPsychProfile && (
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <Sparkles className="w-4 h-4" />
+                    <span>AI-powered personalized insights</span>
+                  </div>
+                )}
+                <PsychometricCard profile={psychProfile} />
+              </div>
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
