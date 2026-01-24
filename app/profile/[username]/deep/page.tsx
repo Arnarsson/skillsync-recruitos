@@ -546,24 +546,24 @@ export default function DeepProfilePage() {
           </div>
         </div>
 
-        {/* Profile Hero */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-6">
+        {/* Profile Hero - Compact on mobile */}
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="pt-4 sm:pt-6 pb-4 px-3 sm:px-6">
+            <div className="flex items-start gap-3 sm:gap-6">
               <img
                 src={candidate.avatar}
                 alt={candidate.name}
-                className="w-24 h-24 rounded-full border-4 border-background"
+                className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-background flex-shrink-0"
               />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{candidate.name}</h2>
-                    <p className="text-muted-foreground">{candidate.currentRole}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-bold truncate">{candidate.name}</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground line-clamp-2">{candidate.currentRole}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <div
-                      className={`text-4xl font-bold ${getScoreColor(
+                      className={`text-3xl sm:text-4xl font-bold ${getScoreColor(
                         candidate.alignmentScore
                       )}`}
                     >
@@ -584,34 +584,34 @@ export default function DeepProfilePage() {
                     </TooltipProvider>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Briefcase className="w-4 h-4" />
-                    {candidate.company}
+                    <Briefcase className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[100px] sm:max-w-none">{candidate.company}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {candidate.location}
+                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[80px] sm:max-w-none">{candidate.location}</span>
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                   {candidate.skills.slice(0, 6).map((skill) => (
-                    <Badge key={skill} variant="secondary">
+                    <Badge key={skill} variant="secondary" className="text-xs px-2 py-0.5">
                       {skill}
                     </Badge>
                   ))}
                 </div>
                 {/* Behavioral Insights */}
-                <BehavioralBadges username={candidate.id} className="mt-4" />
+                <BehavioralBadges username={candidate.id} className="mt-3 sm:mt-4" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Data Coverage Indicator */}
-        <Card className="mb-6 bg-muted/30">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        <Card className="mb-4 sm:mb-6 bg-muted/30">
+          <CardContent className="py-2 sm:py-3 px-3 sm:px-6">
+            <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-muted-foreground">Datadækning:</span>
                 <div className="flex items-center gap-3">
@@ -718,16 +718,16 @@ export default function DeepProfilePage() {
 
         {/* Content */}
         {activeTab === "overview" && (
-          <BentoGrid className="auto-rows-[minmax(140px,_1fr)]">
+          <BentoGrid compact>
             {/* Key Evidence */}
-            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-green-500/5 to-transparent">
+            <BentoCard colSpan={2} rowSpan={1} compact className="bg-gradient-to-br from-green-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
+                <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Stærkeste beviser</h3>
-                  <p className="text-xs text-muted-foreground">Baseret på GitHub + LinkedIn + øvrige kilder</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Stærkeste beviser</h3>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Baseret på GitHub + LinkedIn + øvrige kilder</p>
                 </div>
               </div>
               <TooltipProvider>
@@ -774,28 +774,28 @@ export default function DeepProfilePage() {
               </TooltipProvider>
             </BentoCard>
 
-            {/* Alignment Score */}
-            <BentoCard colSpan={1} rowSpan={2} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent">
-              <div className={`text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
+            {/* Alignment Score - Compact on mobile */}
+            <BentoCard colSpan={1} rowSpan={2} compact className="flex flex-col items-center justify-center py-4 sm:py-6 bg-gradient-to-br from-primary/10 to-transparent">
+              <div className={`text-4xl sm:text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
                 {candidate.alignmentScore}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">Alignment Score</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">Alignment Score</p>
               {candidate.persona?.archetype && (
-                <Badge className="mt-2" variant="outline">
+                <Badge className="mt-2 text-xs" variant="outline">
                   {candidate.persona.archetype.split(" ").slice(0, 2).join(" ")}
                 </Badge>
               )}
             </BentoCard>
 
             {/* Potential Gaps */}
-            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
+            <BentoCard colSpan={2} rowSpan={1} compact className="bg-gradient-to-br from-yellow-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 rounded-lg bg-yellow-500/10">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                <div className="p-1.5 sm:p-2 rounded-lg bg-yellow-500/10">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Uklarheder at afklare</h3>
-                  <p className="text-xs text-muted-foreground">Ting vi mangler bevis for</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Uklarheder at afklare</h3>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Ting vi mangler bevis for</p>
                 </div>
               </div>
               <TooltipProvider>
@@ -841,19 +841,19 @@ export default function DeepProfilePage() {
             </BentoCard>
 
             {/* Score Breakdown / Radar - Wide Card (3x1) */}
-            <BentoCard colSpan={3} rowSpan={1}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+            <BentoCard colSpan={3} rowSpan={1} compact>
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Score-fordeling</h3>
-                  <p className="text-xs text-neutral-400">Klik for at se vægtning + kilder pr. kategori</p>
+                  <h3 className="font-semibold text-sm sm:text-base text-white">Score-fordeling</h3>
+                  <p className="text-[10px] sm:text-xs text-neutral-400">Klik for at se vægtning + kilder pr. kategori</p>
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 gap-6 items-start">
-                {/* Radar Chart */}
-                <div className="h-56">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-start">
+                {/* Radar Chart - Hidden on very small screens */}
+                <div className="h-40 sm:h-48 md:h-56 hidden sm:block">
                   {radarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
@@ -885,9 +885,9 @@ export default function DeepProfilePage() {
                   )}
                 </div>
 
-                {/* Progress Bars */}
+                {/* Progress Bars - Always visible, primary on mobile */}
                 {normalizedScoreBreakdown ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {[
                       { key: "skills", labelDa: "Kompetencer" },
                       { key: "experience", labelDa: "Erfaring" },

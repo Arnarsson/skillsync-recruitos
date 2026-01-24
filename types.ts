@@ -197,6 +197,91 @@ export interface CompanyMatch {
   potentialFriction: string[];
 }
 
+// ===== EVIDENCE-LINKED PSYCHOMETRIC TRAITS (EU AI Act Compliance) =====
+
+export interface PsychometricTraitEvidence {
+  value: string; // e.g., "Moderate", "High", "Structured"
+  confidence: number; // 0-1 confidence score
+  evidence: CitedClaim[]; // Supporting evidence with sources
+  reasoning: string; // AI explanation of derivation
+}
+
+export interface PersonaV2 extends Omit<Persona, 'psychometric'> {
+  // Evidence-linked psychometric traits
+  psychometricEvidence: {
+    communicationStyle: PsychometricTraitEvidence;
+    primaryMotivator: PsychometricTraitEvidence;
+    riskTolerance: PsychometricTraitEvidence;
+    leadershipPotential: PsychometricTraitEvidence;
+  };
+  // Evidence for archetype classification
+  archetypeEvidence: CitedClaim[];
+  // Evidence-linked flags
+  greenFlagsEvidence: Array<{
+    flag: string;
+    evidence: CitedClaim;
+  }>;
+  redFlagsEvidence: Array<{
+    flag: string;
+    evidence: CitedClaim;
+  }>;
+  // Overall confidence in persona
+  overallConfidence: number;
+  // Data sources used
+  dataSources: Array<{
+    type: 'github' | 'linkedin' | 'resume' | 'manual';
+    url?: string;
+    dataQuality: number; // 0-100
+  }>;
+}
+
+// ===== DATA SOURCE CONFIDENCE TRACKING =====
+
+export interface DataSourceConfidence {
+  github: {
+    available: boolean;
+    confidence: number; // 0-1
+    lastFetched?: string;
+    dataPoints: {
+      repos: number;
+      commits: number;
+      contributions: number;
+      hasActivity: boolean;
+    };
+  };
+  linkedin: {
+    available: boolean;
+    confidence: number;
+    lastFetched?: string;
+    dataPoints: {
+      hasProfile: boolean;
+      hasExperience: boolean;
+      hasSkills: boolean;
+    };
+  };
+  manual: {
+    available: boolean;
+    source?: string; // 'resume', 'notes', etc.
+  };
+  primarySource: 'github' | 'linkedin' | 'manual' | 'mixed';
+  overallQuality: number; // 0-100
+}
+
+// ===== CALIBRATION FACTORS (Social Context Impact) =====
+
+export interface CalibrationFactor {
+  source: 'hiring_manager' | 'company' | 'benchmark';
+  factor: string; // e.g., "Industry background", "Technical depth"
+  impact: number; // Score delta (-10 to +10)
+  reasoning: string;
+}
+
+export interface CalibrationResult {
+  factors: CalibrationFactor[];
+  totalImpact: number;
+  appliedToScore: boolean;
+}
+
 export interface Candidate {
   id: string;
   name: string;
@@ -232,6 +317,15 @@ export interface Candidate {
   deepAnalysis?: string;
   cultureFit?: string; // Kept for backward compatibility or simple view
   companyMatch?: CompanyMatch; // Detailed analysis
+
+  // Data Source Tracking (for transparency)
+  dataSourceConfidence?: DataSourceConfidence;
+
+  // Calibration Impact (how social context affected scoring)
+  calibrationResult?: CalibrationResult;
+
+  // Evidence-linked persona (EU AI Act compliant)
+  personaV2?: PersonaV2;
 
   trajectoryEvidence?: string;
   indicators?: WorkstyleIndicator[];
