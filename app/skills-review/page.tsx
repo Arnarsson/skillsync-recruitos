@@ -34,6 +34,8 @@ interface Skill {
   name: string;
   tier: SkillTier;
   isCustom?: boolean;
+  confidence?: 'high' | 'medium' | 'low'; // AI extraction confidence
+  source?: string; // Where the skill was extracted from
 }
 
 interface SkillsConfig {
@@ -86,6 +88,25 @@ const TIER_CONFIG: Record<SkillTier, { weight: number; label: string; icon: Reac
 
 const TIER_ORDER: SkillTier[] = ["must-have", "nice-to-have", "bonus"];
 
+// Helper function to determine confidence based on skill context
+function inferConfidence(name: string, index: number, isRequired: boolean): 'high' | 'medium' | 'low' {
+  // Common skill keywords that are usually high confidence
+  const highConfidencePatterns = [
+    /^(react|vue|angular|node|python|java|typescript|javascript|go|rust|c\+\+|c#|ruby|php|swift|kotlin)$/i,
+    /^(aws|gcp|azure|docker|kubernetes|terraform)$/i,
+    /^(postgresql|mysql|mongodb|redis|elasticsearch)$/i,
+    /^(graphql|rest|api)$/i,
+  ];
+
+  // Check if skill matches high confidence patterns
+  const isHighConfidence = highConfidencePatterns.some(pattern => pattern.test(name));
+
+  if (isHighConfidence) return 'high';
+  if (isRequired && index < 3) return 'high'; // First 3 required skills are usually explicit
+  if (isRequired) return 'medium'; // Other required skills
+  return 'low'; // Preferred skills are often inferred
+}
+
 // Helper function to load skills from localStorage
 function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError: boolean; noContext: boolean } {
   if (typeof window === "undefined") {
@@ -108,6 +129,8 @@ function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError
           name,
           tier: "must-have",
           isCustom: false,
+          confidence: inferConfidence(name, i, true),
+          source: "Job description",
         });
       });
 
@@ -118,6 +141,8 @@ function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError
           name,
           tier: "nice-to-have",
           isCustom: false,
+          confidence: inferConfidence(name, i + 4, true),
+          source: "Job description",
         });
       });
 
@@ -128,6 +153,8 @@ function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError
           name,
           tier: "nice-to-have",
           isCustom: false,
+          confidence: inferConfidence(name, i, false),
+          source: "Inferred from context",
         });
       });
 
@@ -138,6 +165,31 @@ function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError
     }
   }
   return { skills: [], hasError: false, noContext: true };
+}
+
+// Confidence indicator component
+function ConfidenceDot({ confidence, source }: { confidence?: 'high' | 'medium' | 'low'; source?: string }) {
+  if (!confidence) return null;
+
+  const config = {
+    high: { color: 'bg-green-500', label: 'High confidence' },
+    medium: { color: 'bg-yellow-500', label: 'Medium confidence' },
+    low: { color: 'bg-orange-500', label: 'Low confidence (may be inferred)' },
+  };
+
+  const { color, label } = config[confidence];
+
+  return (
+    <div className="relative group/conf">
+      <div className={cn("w-1.5 h-1.5 rounded-full", color)} />
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/conf:block z-20">
+        <div className="bg-popover text-popover-foreground text-[10px] px-2 py-1 rounded shadow-lg border whitespace-nowrap">
+          <div className="font-medium">{label}</div>
+          {source && <div className="text-muted-foreground">{source}</div>}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Skill chip component
@@ -181,6 +233,7 @@ function SkillChip({
       {/* Skill content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
+          <ConfidenceDot confidence={skill.confidence} source={skill.source} />
           <span className="font-medium text-sm truncate">{skill.name}</span>
           {skill.isCustom && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">

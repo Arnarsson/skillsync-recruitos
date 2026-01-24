@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CREDITS_TO_EUR, PRICING } from "@/types";
 import { Coins, AlertTriangle, X, ArrowRight, Zap } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 interface CreditGateProps {
   isOpen: boolean;
@@ -15,23 +16,6 @@ interface CreditGateProps {
   currentBalance: number;
 }
 
-const STAGE_CONFIG = {
-  "deep-dive": {
-    title: "Deep Profile Analysis",
-    description:
-      "Unlock comprehensive AI-powered profiles including workstyle indicators, interview guides, and company fit analysis.",
-    creditsPerCandidate: PRICING.DEEP_PROFILE,
-    icon: Zap,
-  },
-  outreach: {
-    title: "Personalized Outreach",
-    description:
-      "Generate tailored outreach messages with connection paths and engagement strategies for each candidate.",
-    creditsPerCandidate: PRICING.OUTREACH,
-    icon: ArrowRight,
-  },
-};
-
 export default function CreditGate({
   isOpen,
   onClose,
@@ -40,6 +24,23 @@ export default function CreditGate({
   candidateCount,
   currentBalance,
 }: CreditGateProps) {
+  const { t } = useLanguage();
+
+  const STAGE_CONFIG = {
+    "deep-dive": {
+      title: t("credits.deepProfileAnalysis"),
+      description: t("credits.deepProfileDesc"),
+      creditsPerCandidate: PRICING.DEEP_PROFILE,
+      icon: Zap,
+    },
+    outreach: {
+      title: t("credits.personalizedOutreach"),
+      description: t("credits.outreachDesc"),
+      creditsPerCandidate: PRICING.OUTREACH,
+      icon: ArrowRight,
+    },
+  };
+
   const config = STAGE_CONFIG[stage];
   const totalCost = candidateCount * config.creditsPerCandidate;
   const eurCost = (totalCost * CREDITS_TO_EUR).toFixed(2);
@@ -85,16 +86,16 @@ export default function CreditGate({
             {/* Cost Breakdown */}
             <div className="bg-muted/50 rounded-lg p-4 mb-4 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Candidates</span>
+                <span className="text-muted-foreground">{t("credits.candidates")}</span>
                 <span className="font-medium">{candidateCount}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Credits per candidate</span>
+                <span className="text-muted-foreground">{t("credits.creditsPerCandidate")}</span>
                 <span className="font-medium">{config.creditsPerCandidate}</span>
               </div>
               <div className="border-t border-border pt-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Total Cost</span>
+                  <span className="font-medium">{t("credits.totalCost")}</span>
                   <div className="text-right">
                     <div className="flex items-center gap-1.5 font-bold text-lg">
                       <Coins className="w-4 h-4 text-amber-500" />
@@ -110,7 +111,7 @@ export default function CreditGate({
 
             {/* Balance Display */}
             <div className="flex items-center justify-between p-3 border rounded-lg mb-4">
-              <span className="text-sm text-muted-foreground">Your Balance</span>
+              <span className="text-sm text-muted-foreground">{t("credits.yourBalance")}</span>
               <Badge
                 variant={hasInsufficientBalance ? "destructive" : "secondary"}
                 className="font-mono"
@@ -130,11 +131,10 @@ export default function CreditGate({
                 <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-destructive">
-                    Insufficient Credits
+                    {t("credits.insufficientCredits")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    You need {(totalCost - currentBalance).toLocaleString()} more
-                    credits to proceed. Please purchase additional credits.
+                    {t("credits.needMoreCredits").replace('{amount}', (totalCost - currentBalance).toLocaleString())}
                   </p>
                 </div>
               </motion.div>
@@ -143,7 +143,7 @@ export default function CreditGate({
             {/* Remaining Balance Preview */}
             {!hasInsufficientBalance && (
               <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                <span>Balance after transaction</span>
+                <span>{t("credits.balanceAfter")}</span>
                 <span className="font-medium text-foreground">
                   {remainingBalance.toLocaleString()} credits
                 </span>
@@ -153,7 +153,7 @@ export default function CreditGate({
             {/* Actions */}
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={onClose}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 className="flex-1"
@@ -161,7 +161,7 @@ export default function CreditGate({
                 disabled={hasInsufficientBalance}
               >
                 <Coins className="w-4 h-4 mr-2" />
-                Confirm
+                {t("credits.confirm")} ({totalCost} CR)
               </Button>
             </div>
           </motion.div>

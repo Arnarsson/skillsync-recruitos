@@ -34,6 +34,10 @@ import {
   Briefcase,
   Github,
   Linkedin,
+  ExternalLink,
+  Info,
+  Lock,
+  Eye,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
@@ -48,14 +52,23 @@ interface ScoreBreakdown {
   locationScore: number;
 }
 
+interface EvidenceItem {
+  text: string;
+  source?: string;
+  sourceUrl?: string;
+  confidence?: 'high' | 'moderate' | 'low';
+}
+
 interface DeepAnalysis {
   psychometricText?: string;
   archetype?: string;
   interviewTips?: string[];
-  strengths?: string[];
-  concerns?: string[];
+  strengths?: Array<string | EvidenceItem>;
+  concerns?: Array<string | EvidenceItem>;
   cultureFit?: string;
   managementStyle?: string;
+  hasPublicActivity?: boolean;
+  totalCommits?: number;
 }
 
 interface Candidate {
@@ -97,12 +110,13 @@ export function CandidatePipelineItem({
   onOutreach,
   compact = false,
 }: CandidatePipelineItemProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
   const [showScoreExplainer, setShowScoreExplainer] = useState(false);
   const [githubAnalysis, setGithubAnalysis] = useState<any>(null);
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
 
   // Fetch deep analysis when card expands
   const handleExpandStart = useCallback(async () => {
@@ -126,6 +140,8 @@ export function CandidatePipelineItem({
           concerns: data.risks || candidate.risks || [],
           cultureFit: data.persona?.cultureFit,
           managementStyle: data.persona?.managementStyle,
+          hasPublicActivity: data.hasPublicActivity ?? true,
+          totalCommits: data.totalCommits,
         });
       }
 
@@ -343,32 +359,48 @@ export function CandidatePipelineItem({
                   <div className="mb-6">
                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                       <Target className="w-4 h-4 text-primary" />
-                      Score Breakdown
+                      {t("candidate.scoreBreakdown")}
                     </h4>
                     <div className="grid grid-cols-4 gap-2">
                       <div className="p-2 rounded-lg bg-muted/50 text-center">
                         <div className="text-lg font-bold text-muted-foreground">
                           {candidate.scoreBreakdown.baseScore}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">Base</div>
+                        <div className="text-[10px] text-muted-foreground">{t("candidate.base")}</div>
                       </div>
                       <div className="p-2 rounded-lg bg-green-500/10 text-center">
                         <div className="text-lg font-bold text-green-500">
                           +{candidate.scoreBreakdown.skillsScore}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">Skills</div>
+                        <div className="text-[10px] text-muted-foreground">{t("score.skills")}</div>
                       </div>
                       <div className="p-2 rounded-lg bg-blue-500/10 text-center">
                         <div className="text-lg font-bold text-blue-500">
                           +{candidate.scoreBreakdown.preferredScore}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">Preferred</div>
+                        <div className="text-[10px] text-muted-foreground">{t("candidate.preferred")}</div>
                       </div>
-                      <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
+                      <div className="p-2 rounded-lg bg-yellow-500/10 text-center relative group">
                         <div className="text-lg font-bold text-yellow-500">
                           +{candidate.scoreBreakdown.locationScore}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">Location</div>
+                        <div className="text-[10px] text-muted-foreground">{t("score.location")}</div>
+                        {/* Location score tooltip for 0% */}
+                        {candidate.scoreBreakdown.locationScore === 0 && (
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                            <div className="bg-popover text-popover-foreground text-xs p-2 rounded-lg shadow-lg border max-w-[200px] whitespace-normal">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Info className="w-3 h-3" />
+                                {t("score.remoteEligible")}
+                              </div>
+                              <p className="text-muted-foreground">
+                                {lang === "da"
+                                  ? "Kandidatens lokation matcher ikke direkte, men kan være remote-kompatibel."
+                                  : "Location doesn't match directly, but may be remote-compatible."}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -377,7 +409,7 @@ export function CandidatePipelineItem({
                       (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
                       <div className="mt-3">
                         <div className="text-xs font-medium text-muted-foreground mb-2">
-                          Required Skills ({candidate.scoreBreakdown.requiredMatched?.length || 0}/
+                          {t("candidate.requiredSkills")} ({candidate.scoreBreakdown.requiredMatched?.length || 0}/
                           {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
                             (candidate.scoreBreakdown.requiredMissing?.length || 0)})
                         </div>
@@ -407,13 +439,30 @@ export function CandidatePipelineItem({
                   </div>
                 )}
 
+                {/* No Public Activity Warning */}
+                {deepAnalysis && deepAnalysis.hasPublicActivity === false && (
+                  <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <Lock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-600">
+                          {t("candidate.noVisibleActivity")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t("candidate.privateActivityNote")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Deep Analysis Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   {/* Psychometric Profile */}
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <h4 className="text-xs uppercase text-muted-foreground mb-2 flex items-center gap-2">
                       <Brain className="w-4 h-4" />
-                      Psychometric Profile
+                      {t("candidate.psychometricProfile")}
                     </h4>
                     {isLoadingAnalysis ? (
                       <div className="py-2">
@@ -425,7 +474,7 @@ export function CandidatePipelineItem({
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
-                        Click &quot;Deep Profile&quot; for full AI analysis
+                        {t("candidate.clickDeepProfile")}
                       </p>
                     )}
                     {deepAnalysis?.archetype && (
@@ -440,7 +489,7 @@ export function CandidatePipelineItem({
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <h4 className="text-xs uppercase text-muted-foreground mb-2 flex items-center gap-2">
                       <Lightbulb className="w-4 h-4" />
-                      Interview Guide
+                      {t("candidate.interviewGuide")}
                     </h4>
                     {isLoadingAnalysis ? (
                       <div className="py-2">
@@ -457,52 +506,121 @@ export function CandidatePipelineItem({
                       </ul>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
-                        View deep profile for tailored questions
+                        {t("candidate.viewDeepProfileQuestions")}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* Strengths & Concerns */}
+                {/* Strengths & Concerns - Clickable with Evidence */}
                 {(deepAnalysis?.strengths?.length || deepAnalysis?.concerns?.length) && (
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     {deepAnalysis.strengths && deepAnalysis.strengths.length > 0 && (
                       <div>
                         <h4 className="text-xs uppercase text-muted-foreground mb-2">
-                          Key Strengths
+                          {t("candidate.keyStrengths")}
                         </h4>
                         <div className="flex flex-wrap gap-1">
-                          {deepAnalysis.strengths.slice(0, 3).map((strength, i) => (
-                            <Badge
-                              key={i}
-                              variant="outline"
-                              className="text-xs text-green-600 border-green-500/30"
-                            >
-                              {strength}
-                            </Badge>
-                          ))}
+                          {deepAnalysis.strengths.slice(0, 3).map((strength, i) => {
+                            const isEvidenceItem = typeof strength === 'object' && strength !== null;
+                            const text = isEvidenceItem ? (strength as EvidenceItem).text : String(strength);
+                            const hasEvidence = isEvidenceItem && (strength as EvidenceItem).sourceUrl;
+
+                            return (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className={`text-xs text-green-600 border-green-500/30 ${
+                                  hasEvidence ? 'cursor-pointer hover:bg-green-500/10' : ''
+                                }`}
+                                onClick={hasEvidence ? () => setSelectedEvidence(strength as EvidenceItem) : undefined}
+                              >
+                                {text}
+                                {hasEvidence && <Eye className="w-2.5 h-2.5 ml-1" />}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
                     {deepAnalysis.concerns && deepAnalysis.concerns.length > 0 && (
                       <div>
                         <h4 className="text-xs uppercase text-muted-foreground mb-2">
-                          Areas to Explore
+                          {t("candidate.areasToExplore")}
                         </h4>
                         <div className="flex flex-wrap gap-1">
-                          {deepAnalysis.concerns.slice(0, 3).map((concern, i) => (
-                            <Badge
-                              key={i}
-                              variant="outline"
-                              className="text-xs text-yellow-600 border-yellow-500/30"
-                            >
-                              {concern}
-                            </Badge>
-                          ))}
+                          {deepAnalysis.concerns.slice(0, 3).map((concern, i) => {
+                            const isEvidenceItem = typeof concern === 'object' && concern !== null;
+                            const text = isEvidenceItem ? (concern as EvidenceItem).text : String(concern);
+                            const hasEvidence = isEvidenceItem && (concern as EvidenceItem).sourceUrl;
+
+                            return (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className={`text-xs text-yellow-600 border-yellow-500/30 ${
+                                  hasEvidence ? 'cursor-pointer hover:bg-yellow-500/10' : ''
+                                }`}
+                                onClick={hasEvidence ? () => setSelectedEvidence(concern as EvidenceItem) : undefined}
+                              >
+                                {text}
+                                {hasEvidence && <Eye className="w-2.5 h-2.5 ml-1" />}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Evidence Modal */}
+                {selectedEvidence && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Info className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-medium">{t("candidate.flagEvidence")}</span>
+                          {selectedEvidence.confidence && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {selectedEvidence.confidence === 'high' ? t("candidate.confidenceHigh") :
+                               selectedEvidence.confidence === 'moderate' ? t("candidate.confidenceModerate") :
+                               t("candidate.confidenceLow")}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {selectedEvidence.source && (
+                            <span className="text-xs text-muted-foreground">
+                              {t("candidate.inferredFrom")}: {selectedEvidence.source}
+                            </span>
+                          )}
+                        </p>
+                        {selectedEvidence.sourceUrl && (
+                          <a
+                            href={selectedEvidence.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            {t("candidate.viewEvidence")}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setSelectedEvidence(null)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
 
                 {/* Action Buttons */}
@@ -510,7 +628,7 @@ export function CandidatePipelineItem({
                   <Link href={`/profile/${candidate.id}/deep`} className="flex-1">
                     <Button className="w-full gap-2">
                       <Brain className="w-4 h-4" />
-                      Full Deep Profile
+                      {t("candidate.fullDeepProfile")}
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
