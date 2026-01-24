@@ -59,8 +59,8 @@ export class PipelinePage {
   constructor(page: Page) {
     this.page = page;
 
-    // Main elements
-    this.candidateCards = page.locator('[id^="candidate-"]');
+    // Main elements - candidate cards don't have IDs, use class-based selector
+    this.candidateCards = page.locator('.bg-card.border.rounded-xl').filter({ has: page.locator('img[alt]') });
     this.scoreDistributionChart = page.locator('.recharts-wrapper');
     this.searchInput = page.getByPlaceholder(/search|add/i);
     this.addCandidatesButton = page.getByRole('button', { name: /add candidates/i });
@@ -83,7 +83,7 @@ export class PipelinePage {
     this.selectedCount = page.locator('[class*="Badge"]').filter({ hasText: /selected/i });
     this.compareButton = page.getByRole('button', { name: /compare/i });
     this.clearSelectionButton = page.getByRole('button', { name: /clear/i });
-    this.shortlistPanel = page.locator('.fixed.bottom-0');
+    this.shortlistPanel = page.locator('.fixed.bottom-20, .fixed.sm\\:bottom-24').filter({ has: page.locator('.backdrop-blur-md') });
 
     // Modals
     this.importModal = page.locator('.fixed.inset-0').filter({ hasText: /import|paste/i });
@@ -241,15 +241,24 @@ export class PipelinePage {
   }
 
   /**
-   * Get all candidate IDs.
+   * Get all candidate names (as IDs might not exist).
+   */
+  async getCandidateNames() {
+    const names = await this.candidateCards.locator('h3').allTextContents();
+    return names;
+  }
+
+  /**
+   * Get all candidate IDs from profile links.
    */
   async getCandidateIds() {
-    const cards = await this.candidateCards.all();
+    const links = await this.candidateCards.locator('a[href*="/profile/"]').all();
     const ids: string[] = [];
-    for (const card of cards) {
-      const id = await card.getAttribute('id');
-      if (id) {
-        ids.push(id.replace('candidate-', ''));
+    for (const link of links) {
+      const href = await link.getAttribute('href');
+      if (href) {
+        const match = href.match(/\/profile\/([^/]+)/);
+        if (match) ids.push(match[1]);
       }
     }
     return ids;

@@ -119,6 +119,17 @@ export async function mockGitHubAPI(page: Page) {
         recentActivity: [
           { type: 'commit', date: new Date().toISOString(), repo: 'example-repo' },
         ],
+        activitySignals: {
+          lastCommitDate: new Date().toISOString(),
+          commitsLast90Days: 45,
+          activityTrend: 'stable',
+          isActiveContributor: true,
+          confidence: 'high',
+        },
+        engagementScore: {
+          score: 75,
+          factors: ['Regular commits', 'Active in issues'],
+        },
       }),
     });
   });
