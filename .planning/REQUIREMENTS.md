@@ -9,13 +9,13 @@ Requirements for pilot demo in 2-3 weeks.
 
 ### E2E Testing
 
-- [ ] **TEST-01**: Playwright E2E test for Intake flow (job context collection)
-- [ ] **TEST-02**: Playwright E2E test for Search → Results flow
-- [ ] **TEST-03**: Playwright E2E test for Pipeline management flow
-- [ ] **TEST-04**: Playwright E2E test for Profile Analysis flow
-- [ ] **TEST-05**: Playwright E2E test for Outreach Generation flow
-- [ ] **TEST-06**: Playwright E2E test for Social Matrix flow
-- [ ] **TEST-07**: All critical paths pass without flakiness
+- [x] **TEST-01**: Playwright E2E test for Intake flow (job context collection)
+- [x] **TEST-02**: Playwright E2E test for Search → Results flow
+- [x] **TEST-03**: Playwright E2E test for Pipeline management flow
+- [x] **TEST-04**: Playwright E2E test for Profile Analysis flow
+- [x] **TEST-05**: Playwright E2E test for Outreach Generation flow
+- [x] **TEST-06**: Playwright E2E test for Social Matrix flow
+- [x] **TEST-07**: All critical paths pass without flakiness
 
 ### Bug Fixes
 
@@ -80,13 +80,13 @@ Deferred to post-pilot.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Phase 1 | Pending |
-| TEST-02 | Phase 1 | Pending |
-| TEST-03 | Phase 1 | Pending |
-| TEST-04 | Phase 1 | Pending |
-| TEST-05 | Phase 1 | Pending |
-| TEST-06 | Phase 1 | Pending |
-| TEST-07 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
+| TEST-02 | Phase 1 | Complete |
+| TEST-03 | Phase 1 | Complete |
+| TEST-04 | Phase 1 | Complete |
+| TEST-05 | Phase 1 | Complete |
+| TEST-06 | Phase 1 | Complete |
+| TEST-07 | Phase 1 | Complete |
 | BUGS-01 | Phase 2 | Pending |
 | BUGS-02 | Phase 2 | Pending |
 | HARD-01 | Phase 3 | Pending |
