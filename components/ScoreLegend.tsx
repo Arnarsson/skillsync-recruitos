@@ -14,80 +14,82 @@ import {
   MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface ScoreLegendProps {
   className?: string;
   defaultExpanded?: boolean;
 }
 
-const SCORE_WEIGHTS = [
-  {
-    key: "skills",
-    label: "Skills",
-    weight: 35,
-    icon: Code,
-    description: "Technical skills match with job requirements",
-  },
-  {
-    key: "experience",
-    label: "Experience",
-    weight: 20,
-    icon: TrendingUp,
-    description: "Years and depth of relevant experience",
-  },
-  {
-    key: "industry",
-    label: "Industry",
-    weight: 15,
-    icon: Briefcase,
-    description: "Domain expertise and industry background",
-  },
-  {
-    key: "seniority",
-    label: "Seniority",
-    weight: 15,
-    icon: Target,
-    description: "Career level alignment with role",
-  },
-  {
-    key: "location",
-    label: "Location",
-    weight: 15,
-    icon: MapPin,
-    description: "Geographic proximity and timezone fit",
-  },
-];
-
-const COLOR_SCALE = [
-  {
-    range: "80-100",
-    label: "Excellent Match",
-    color: "bg-green-500",
-    textColor: "text-green-500",
-    description: "Strong alignment across all criteria",
-  },
-  {
-    range: "60-79",
-    label: "Good Match",
-    color: "bg-yellow-500",
-    textColor: "text-yellow-500",
-    description: "Solid fit with minor gaps",
-  },
-  {
-    range: "0-59",
-    label: "Limited Match",
-    color: "bg-red-500",
-    textColor: "text-red-500",
-    description: "Significant gaps in key areas",
-  },
-];
-
 export default function ScoreLegend({
   className,
   defaultExpanded = false,
 }: ScoreLegendProps) {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showExplanation, setShowExplanation] = useState(false);
+
+  const SCORE_WEIGHTS = [
+    {
+      key: "skills",
+      label: t("score.skills"),
+      weight: 35,
+      icon: Code,
+      description: t("score.skillsDesc"),
+    },
+    {
+      key: "experience",
+      label: t("score.experience"),
+      weight: 20,
+      icon: TrendingUp,
+      description: t("score.experienceDesc"),
+    },
+    {
+      key: "industry",
+      label: t("score.industry"),
+      weight: 15,
+      icon: Briefcase,
+      description: t("score.industryDesc"),
+    },
+    {
+      key: "seniority",
+      label: t("score.seniority"),
+      weight: 15,
+      icon: Target,
+      description: t("score.seniorityDesc"),
+    },
+    {
+      key: "location",
+      label: t("score.location"),
+      weight: 15,
+      icon: MapPin,
+      description: t("score.locationDesc"),
+    },
+  ];
+
+  const COLOR_SCALE = [
+    {
+      range: "80-100",
+      label: t("score.excellent"),
+      color: "bg-green-500",
+      textColor: "text-green-500",
+      description: t("score.excellentDesc"),
+    },
+    {
+      range: "60-79",
+      label: t("score.good"),
+      color: "bg-yellow-500",
+      textColor: "text-yellow-500",
+      description: t("score.goodDesc"),
+    },
+    {
+      range: "0-59",
+      label: t("score.limited"),
+      color: "bg-red-500",
+      textColor: "text-red-500",
+      description: t("score.limitedDesc"),
+    },
+  ];
 
   return (
     <Card className={cn("border-border/50", className)}>
@@ -97,7 +99,7 @@ export default function ScoreLegend({
       >
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium">How Alignment Scores Work</span>
+          <span className="text-sm font-medium">{t("score.title")}</span>
         </div>
         {isExpanded ? (
           <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -111,7 +113,7 @@ export default function ScoreLegend({
           {/* Color Scale */}
           <div className="space-y-3">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Score Ranges
+              {t("score.ranges")}
             </h4>
             <div className="grid grid-cols-3 gap-2">
               {COLOR_SCALE.map((item) => (
@@ -143,7 +145,7 @@ export default function ScoreLegend({
           {/* Weight Breakdown */}
           <div className="space-y-3">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Weight Distribution
+              {t("score.weights")}
             </h4>
             <div className="space-y-2">
               {SCORE_WEIGHTS.map((item) => {
@@ -166,18 +168,18 @@ export default function ScoreLegend({
             </div>
             {/* Visual weight bar */}
             <div className="flex h-2 rounded-full overflow-hidden">
-              <div className="bg-blue-500 w-[35%]" title="Skills 35%" />
-              <div className="bg-purple-500 w-[20%]" title="Experience 20%" />
-              <div className="bg-orange-500 w-[15%]" title="Industry 15%" />
-              <div className="bg-green-500 w-[15%]" title="Seniority 15%" />
-              <div className="bg-pink-500 w-[15%]" title="Location 15%" />
+              <div className="bg-blue-500 w-[35%]" title={`${t("score.skills")} 35%`} />
+              <div className="bg-purple-500 w-[20%]" title={`${t("score.experience")} 20%`} />
+              <div className="bg-orange-500 w-[15%]" title={`${t("score.industry")} 15%`} />
+              <div className="bg-green-500 w-[15%]" title={`${t("score.seniority")} 15%`} />
+              <div className="bg-pink-500 w-[15%]" title={`${t("score.location")} 15%`} />
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>Skills</span>
-              <span>Experience</span>
-              <span>Industry</span>
-              <span>Seniority</span>
-              <span>Location</span>
+              <span>{t("score.skills")}</span>
+              <span>{t("score.experience")}</span>
+              <span>{t("score.industry")}</span>
+              <span>{t("score.seniority")}</span>
+              <span>{t("score.location")}</span>
             </div>
           </div>
 
@@ -192,45 +194,34 @@ export default function ScoreLegend({
               ) : (
                 <ChevronDown className="w-4 h-4" />
               )}
-              What does this mean?
+              {t("score.explanation")}
             </button>
 
             {showExplanation && (
               <div className="mt-4 p-4 rounded-lg bg-muted/30 space-y-3 text-sm text-muted-foreground">
+                <p>{t("score.explanationIntro")}</p>
                 <p>
-                  The alignment score (0-100) measures how well a candidate
-                  matches your job requirements across five key dimensions.
+                  <strong className="text-foreground">{t("score.skills")} (35%)</strong> -{" "}
+                  {t("score.skillsExplanation")}
                 </p>
                 <p>
-                  <strong className="text-foreground">Skills (35%)</strong> -
-                  The most heavily weighted factor. Evaluates technical
-                  competencies, programming languages, frameworks, and tools
-                  against your requirements.
+                  <strong className="text-foreground">{t("score.experience")} (20%)</strong> -{" "}
+                  {t("score.experienceExplanation")}
                 </p>
                 <p>
-                  <strong className="text-foreground">Experience (20%)</strong>{" "}
-                  - Assesses years of relevant experience and depth of
-                  expertise in similar roles or projects.
+                  <strong className="text-foreground">{t("score.industry")} (15%)</strong> -{" "}
+                  {t("score.industryExplanation")}
                 </p>
                 <p>
-                  <strong className="text-foreground">Industry (15%)</strong> -
-                  Considers domain knowledge and experience in your specific
-                  industry or sector.
+                  <strong className="text-foreground">{t("score.seniority")} (15%)</strong> -{" "}
+                  {t("score.seniorityExplanation")}
                 </p>
                 <p>
-                  <strong className="text-foreground">Seniority (15%)</strong> -
-                  Matches the candidate&apos;s career level with your role
-                  requirements (junior, mid, senior, lead).
-                </p>
-                <p>
-                  <strong className="text-foreground">Location (15%)</strong> -
-                  Evaluates geographic fit, timezone compatibility, and
-                  willingness to relocate if applicable.
+                  <strong className="text-foreground">{t("score.location")} (15%)</strong> -{" "}
+                  {t("score.locationExplanation")}
                 </p>
                 <p className="text-xs pt-2 border-t border-border/30">
-                  Scores are generated by AI analysis of public profile data and
-                  compared against your job context. Higher scores indicate
-                  stronger overall alignment.
+                  {t("score.footer")}
                 </p>
               </div>
             )}
