@@ -29,10 +29,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Social Matrix connection path visualization loads and displays 6-degrees paths
   3. All 6 Playwright test suites (Intake, Search, Pipeline, Profile, Outreach, Social Matrix) pass on every run
   4. Test suite runs in under 5 minutes with zero flaky tests
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD
+- [ ] 01-01-PLAN.md — E2E Testing Infrastructure and Critical Flow Tests (7 tasks)
 
 ### Phase 2: Bug Fixes
 **Goal**: Demo flows work without crashes or blocking errors
@@ -97,7 +97,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. E2E Testing | 0/TBD | Not started | - |
+| 1. E2E Testing | 0/1 | Planned | - |
 | 2. Bug Fixes | 0/TBD | Not started | - |
 | 3. Error Hardening | 0/TBD | Not started | - |
 | 4. Security | 0/TBD | Not started | - |
@@ -105,3 +105,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 ---
 *Roadmap created: 2026-01-24*
+*Phase 1 planned: 2026-01-24*
