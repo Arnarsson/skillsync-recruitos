@@ -28,6 +28,12 @@ setup('authenticate', async ({ page }) => {
     // Initialize empty audit logs
     localStorage.setItem('apex_logs', JSON.stringify([]));
 
+    // Set language to English for consistent selectors
+    localStorage.setItem('recruitos_lang', 'en');
+
+    // Skip onboarding modal
+    localStorage.setItem('skillsync_onboarding_completed', 'true');
+
     // Mock a basic job context for tests that need it
     localStorage.setItem(
       'apex_job_context',
