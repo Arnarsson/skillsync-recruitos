@@ -26,6 +26,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -111,6 +112,31 @@ function inferConfidence(name: string, index: number, isRequired: boolean): 'hig
 function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError: boolean; noContext: boolean } {
   if (typeof window === "undefined") {
     return { skills: [], hasError: false, noContext: false };
+  }
+
+  // Check for saved draft first (for back button support)
+  const storedDraft = localStorage.getItem("apex_skills_draft");
+  if (storedDraft) {
+    try {
+      const draft = JSON.parse(storedDraft);
+      if (draft.skills && draft.skills.length > 0) {
+        const skills: Skill[] = draft.skills.map((s: { name: string; tier: SkillTier }, i: number) => ({
+          id: `draft-${i}-${s.name}`,
+          name: s.name,
+          tier: s.tier,
+          isCustom: draft.customSkills?.includes(s.name) || false,
+        }));
+        // Get location from job context
+        const storedJobContext = localStorage.getItem("apex_job_context");
+        let location;
+        if (storedJobContext) {
+          try {
+            location = JSON.parse(storedJobContext).location;
+          } catch {}
+        }
+        return { skills, location, hasError: false, noContext: false };
+      }
+    } catch {}
   }
 
   const storedJobContext = localStorage.getItem("apex_job_context");
@@ -438,6 +464,22 @@ export default function SkillsReviewPage() {
     }
   }, [skills.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-save skills to localStorage when they change (for back button support)
+  useEffect(() => {
+    if (skills.length > 0) {
+      const draft = {
+        skills: skills.map((s, i) => ({
+          name: s.name,
+          tier: s.tier,
+          weight: TIER_CONFIG[s.tier].weight,
+          order: i,
+        })),
+        customSkills,
+      };
+      localStorage.setItem("apex_skills_draft", JSON.stringify(draft));
+    }
+  }, [skills, customSkills]);
+
   // Skills by tier
   const skillsByTier = useMemo(() => ({
     "must-have": skills.filter((s) => s.tier === "must-have"),
@@ -495,6 +537,8 @@ export default function SkillsReviewPage() {
     setSkills(originalSkills);
     setCustomSkills([]);
     setPreview(null);
+    // Clear draft so reset persists on back navigation
+    localStorage.removeItem("apex_skills_draft");
     toast.success("Reset to AI suggestions");
   }, [originalSkills]);
 
@@ -510,6 +554,8 @@ export default function SkillsReviewPage() {
     };
 
     localStorage.setItem("apex_skills_config", JSON.stringify(skillsConfig));
+    // Clear draft as we've officially saved
+    localStorage.removeItem("apex_skills_draft");
     toast.success("Skills saved");
     router.push("/pipeline");
   }, [skills, customSkills, router]);
@@ -541,10 +587,14 @@ export default function SkillsReviewPage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-32 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
+        {/* Workflow Stepper */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={2} />
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary text-xs">Step 2 of 4</Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">Skills Review</h1>
             <p className="text-muted-foreground mt-1 text-sm">
               Drag skills between columns to adjust priorities

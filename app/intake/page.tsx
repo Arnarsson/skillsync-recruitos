@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 
 const DEMO_JOB_CONTEXT = {
   title: "Senior Full-Stack Engineer",
@@ -169,6 +170,9 @@ export default function IntakePage() {
       // Clear existing candidates and hash to force auto-search in pipeline
       localStorage.removeItem("apex_candidates");
       localStorage.removeItem("apex_job_context_hash");
+      // Clear skills config and draft for fresh start
+      localStorage.removeItem("apex_skills_config");
+      localStorage.removeItem("apex_skills_draft");
       // Set flag to indicate fresh intake just completed
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
@@ -182,8 +186,9 @@ export default function IntakePage() {
           localStorage.removeItem("recruitos_pending_search");
           router.push(`/search?q=${encodeURIComponent(pending)}`);
         } else {
-          console.log("[Intake] Navigating to pipeline...");
-          router.push(`/pipeline`);
+          // Navigate to skills review first, not directly to pipeline
+          console.log("[Intake] Navigating to skills-review...");
+          router.push(`/skills-review`);
         }
       }, 1500); // 1.5 second delay to show success
 
@@ -277,6 +282,9 @@ export default function IntakePage() {
       // Clear existing candidates and hash to force auto-search in pipeline
       localStorage.removeItem("apex_candidates");
       localStorage.removeItem("apex_job_context_hash");
+      // Clear skills config and draft for fresh start
+      localStorage.removeItem("apex_skills_config");
+      localStorage.removeItem("apex_skills_draft");
       // Set flag to indicate fresh intake just completed
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
@@ -288,7 +296,8 @@ export default function IntakePage() {
       localStorage.removeItem("recruitos_pending_search");
       router.push(`/search?q=${encodeURIComponent(pending)}`);
     } else {
-      router.push(`/pipeline`);
+      // Navigate to skills review first, not directly to pipeline
+      router.push(`/skills-review`);
     }
   };
 
@@ -308,6 +317,11 @@ export default function IntakePage() {
 
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
+      {/* Workflow Progress */}
+      <div className="max-w-4xl mx-auto mb-6">
+        <WorkflowStepper currentStep={1} />
+      </div>
+
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Main Content */}
@@ -315,7 +329,6 @@ export default function IntakePage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
-                <Badge className="mb-2 bg-primary/20 text-primary text-xs">{t("intake.step")}</Badge>
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("intake.title")}</h1>
                 <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
                   {t("intake.description")}

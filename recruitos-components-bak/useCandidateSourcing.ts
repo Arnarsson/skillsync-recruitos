@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import { useState, useCallback } from 'react';
 import { Candidate, PRICING } from '../types';
 import { analyzeCandidateProfile, generatePersona } from '../services/geminiService';

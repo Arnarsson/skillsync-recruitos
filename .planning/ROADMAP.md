@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Error Hardening** - Loading states, fallbacks, and edge case handling
 - [ ] **Phase 4: Security** - Move API keys server-side, validate inputs, rate limiting
 - [ ] **Phase 5: Persona Enhancement** - Rich data collection for evidence-backed personas
+- [ ] **Phase 6: LinkedIn Auto-Discovery** - AI-powered LinkedIn finder with parallel multi-source enrichment
 
 ## Phase Details
 
@@ -93,10 +94,25 @@ Plans:
 Plans:
 - [ ] TBD
 
+### Phase 6: LinkedIn Auto-Discovery & Deep Enrichment
+**Goal**: Automatically find candidate's LinkedIn from GitHub data, enrich profiles with multiple sources in parallel
+**Depends on**: Phase 5
+**Requirements**: AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Deep Profile" auto-discovers LinkedIn via hybrid Google/BrightData search with AI ranking
+  2. Matches ≥90% confidence auto-accepted, 70-89% shown for confirmation, <70% shows top 3 options
+  3. Parallel enrichment fetches: GitHub README, PRs to other repos, contribution patterns, personal website, conference talks
+  4. Deep Profile page shows progressive loading with source status indicators
+  5. Total enrichment time <30 seconds, LinkedIn found for >70% of named profiles
+**Plans**: 1 plan
+
+Plans:
+- [ ] 06-01-PLAN.md — LinkedIn Auto-Discovery and Deep Enrichment Pipeline
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -105,6 +121,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Error Hardening | 0/TBD | Not started | - |
 | 4. Security | 0/TBD | Not started | - |
 | 5. Persona Enhancement | 0/TBD | Not started | - |
+| 6. LinkedIn Auto-Discovery | 0/1 | In Progress | - |
 
 ---
 *Roadmap created: 2026-01-24*

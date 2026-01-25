@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import React, { useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Candidate } from '../../types';

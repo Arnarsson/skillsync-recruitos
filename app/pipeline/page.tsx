@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Users,
   Plus,
@@ -133,6 +135,24 @@ export default function PipelinePage() {
   const [sortBy, setSortBy] = useState<"score-desc" | "score-asc" | "name-asc" | "name-desc">(initialUrlState.sort);
   const [filterScore, setFilterScore] = useState<"high" | "medium" | "low" | null>(initialUrlState.filter);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Hard requirements filter - exclude candidates missing must-have skills
+  const [enforceHardRequirements, setEnforceHardRequirements] = useState(false);
+  const [mustHaveSkills, setMustHaveSkills] = useState<string[]>([]);
+
+  // Load must-have skills from skills config
+  useEffect(() => {
+    const skillsConfigStr = localStorage.getItem("apex_skills_config");
+    if (skillsConfigStr) {
+      try {
+        const config: SkillsConfig = JSON.parse(skillsConfigStr);
+        const mustHaves = config.skills
+          .filter(s => s.tier === "must-have")
+          .map(s => s.name.toLowerCase());
+        setMustHaveSkills(mustHaves);
+      } catch {}
+    }
+  }, []);
 
   // Histogram filter state
   const [filterRange, setFilterRange] = useState<string | null>(initialUrlState.filterRange);
@@ -717,6 +737,22 @@ export default function PipelinePage() {
   const filteredCandidates = useMemo(() => {
     let filtered = sortedCandidates;
 
+    // Apply hard requirements filter - exclude candidates missing must-have skills
+    if (enforceHardRequirements && mustHaveSkills.length > 0) {
+      filtered = filtered.filter((c) => {
+        // Check if candidate has all must-have skills
+        const candidateSkillsLower = c.skills?.map(s => s.toLowerCase()) || [];
+        const candidateBioLower = (c.currentRole || "").toLowerCase();
+
+        return mustHaveSkills.every(mustHave => {
+          // Check if skill is in candidate's skills or bio
+          return candidateSkillsLower.some(skill =>
+            skill.includes(mustHave) || mustHave.includes(skill)
+          ) || candidateBioLower.includes(mustHave);
+        });
+      });
+    }
+
     // Apply histogram range filter
     if (filterRange) {
       filtered = filtered.filter((c) => {
@@ -755,7 +791,7 @@ export default function PipelinePage() {
     }
 
     return filtered;
-  }, [sortedCandidates, filterScore, filterRange]);
+  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills]);
 
   // Score distribution for chart
   const scoreDistribution = useMemo(() => {
@@ -803,6 +839,11 @@ export default function PipelinePage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Workflow Stepper */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={3} />
+        </div>
+
         {/* Compact Header with Job Context */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
@@ -1161,6 +1202,27 @@ export default function PipelinePage() {
                         ))}
                       </div>
                     </div>
+                    {/* Hard Requirements Filter */}
+                    {mustHaveSkills.length > 0 && (
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <Switch
+                          id="hard-requirements"
+                          checked={enforceHardRequirements}
+                          onCheckedChange={setEnforceHardRequirements}
+                        />
+                        <Label htmlFor="hard-requirements" className="text-sm font-medium cursor-pointer">
+                          <span className="text-red-400">Hard filter:</span>{" "}
+                          <span className="text-muted-foreground">
+                            Require all {mustHaveSkills.length} must-have skills
+                          </span>
+                        </Label>
+                        {enforceHardRequirements && (
+                          <Badge variant="destructive" className="text-xs">
+                            {candidates.length - filteredCandidates.length} excluded
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
                         <Badge>{selectedIds.length} {t("common.selected")}</Badge>

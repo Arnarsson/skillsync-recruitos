@@ -56,6 +56,7 @@ import {
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -288,6 +289,19 @@ export default function DeepProfilePage() {
 
   const [hasAutoRun, setHasAutoRun] = useState(false);
 
+  // Deep enrichment state
+  const [enrichmentData, setEnrichmentData] = useState<{
+    github: { readme: string | null; prsToOthers: any[]; contributionPattern: any; topics: string[] } | null;
+    linkedin: { matches: any[]; bestMatch: any; autoAccepted: boolean } | null;
+    website: { url: string; title: string; topics: string[]; hasProjects: boolean; hasBlog: boolean } | null;
+    talks: { talks: any[]; hasTalks: boolean; platforms: string[] } | null;
+  } | null>(null);
+  const [enrichmentStatus, setEnrichmentStatus] = useState<{
+    loading: boolean;
+    sources: { github: boolean | null; linkedin: boolean | null; website: boolean | null; talks: boolean | null };
+    duration: number | null;
+  }>({ loading: false, sources: { github: null, linkedin: null, website: null, talks: null }, duration: null });
+
   useEffect(() => {
     // Load candidate from localStorage
     const stored = localStorage.getItem("apex_candidates");
@@ -324,6 +338,23 @@ export default function DeepProfilePage() {
       // Check if candidate is shortlisted (Stage 3) to determine if we should generate network dossier
       const isShortlisted = candidate.isShortlisted || false;
 
+      // Format enrichment data for enhanced psychometric analysis
+      const enrichmentPayload = enrichmentData ? {
+        github: enrichmentData.github ? {
+          readme: enrichmentData.github.readme,
+          prsToOthers: enrichmentData.github.prsToOthers,
+          contributionPattern: enrichmentData.github.contributionPattern,
+          topics: enrichmentData.github.topics,
+        } : null,
+        linkedin: enrichmentData.linkedin?.bestMatch ? {
+          headline: enrichmentData.linkedin.bestMatch.headline,
+          location: enrichmentData.linkedin.bestMatch.location,
+          company: enrichmentData.linkedin.bestMatch.company,
+        } : null,
+        website: enrichmentData.website,
+        talks: enrichmentData.talks,
+      } : null;
+
       const response = await fetch("/api/profile/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -335,6 +366,7 @@ export default function DeepProfilePage() {
           location: candidate.location,
           skills: candidate.skills,
           isShortlisted, // Pass flag to trigger network dossier generation for Stage 3
+          enrichmentData: enrichmentPayload, // Pass enrichment for enhanced psychometric
         }),
       });
 
@@ -369,7 +401,7 @@ export default function DeepProfilePage() {
     } finally {
       setAnalyzing(false);
     }
-  }, [candidate, username]);
+  }, [candidate, username, enrichmentData]);
 
   // Auto-run AI analysis when page loads if not already analyzed
   useEffect(() => {
@@ -394,6 +426,56 @@ export default function DeepProfilePage() {
         .finally(() => setLoadingGithub(false));
     }
   }, [activeTab, githubAnalysis, loadingGithub, candidate]);
+
+  // Fetch deep enrichment data on page load
+  useEffect(() => {
+    if (!candidate || enrichmentData || enrichmentStatus.loading) return;
+
+    const fetchEnrichment = async () => {
+      setEnrichmentStatus((prev) => ({ ...prev, loading: true }));
+
+      try {
+        const response = await fetch("/api/deep-enrichment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: candidate.id,
+            githubProfile: {
+              login: candidate.id,
+              name: candidate.name,
+              bio: null, // Will be fetched by enrichment
+              location: candidate.location,
+              company: candidate.company,
+              blog: candidate.sourceUrl?.includes("github") ? undefined : candidate.sourceUrl,
+            },
+            linkedInUrl: candidate.linkedinUrl,
+          }),
+        });
+
+        const data = await response.json();
+
+        setEnrichmentData({
+          github: data.github,
+          linkedin: data.linkedin,
+          website: data.website,
+          talks: data.talks,
+        });
+
+        setEnrichmentStatus({
+          loading: false,
+          sources: data.meta?.sources || { github: true, linkedin: true, website: true, talks: true },
+          duration: data.meta?.duration || null,
+        });
+
+        console.log("[Deep Enrichment] Complete:", data.meta);
+      } catch (error) {
+        console.error("[Deep Enrichment] Error:", error);
+        setEnrichmentStatus((prev) => ({ ...prev, loading: false }));
+      }
+    };
+
+    fetchEnrichment();
+  }, [candidate, enrichmentData, enrichmentStatus.loading]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-500";
@@ -511,6 +593,11 @@ export default function DeepProfilePage() {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
+        {/* Workflow Stepper */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={4} />
+        </div>
+
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href={`/pipeline`}>
@@ -519,7 +606,6 @@ export default function DeepProfilePage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <Badge className="mb-2 bg-primary/20 text-primary">Trin 3 af 4</Badge>
             <h1 className="text-3xl font-bold">Dybdeprofil</h1>
           </div>
           <div className="flex gap-2">
@@ -545,6 +631,87 @@ export default function DeepProfilePage() {
             </Button>
           </div>
         </div>
+
+        {/* Enrichment Status Bar */}
+        {(enrichmentStatus.loading || enrichmentData) && (
+          <Card className="mb-4 bg-gradient-to-r from-purple-500/5 to-blue-500/5 border-purple-500/20">
+            <CardContent className="py-3">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-medium">Data Sources</span>
+                </div>
+                <div className="flex items-center gap-4 flex-1">
+                  {/* GitHub */}
+                  <div className="flex items-center gap-1.5">
+                    {enrichmentStatus.sources.github === null && enrichmentStatus.loading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                    ) : enrichmentStatus.sources.github ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
+                    )}
+                    <span className="text-xs text-muted-foreground">GitHub</span>
+                    {enrichmentData?.github?.readme && (
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1">README</Badge>
+                    )}
+                    {enrichmentData?.github?.prsToOthers?.length ? (
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1">{enrichmentData.github.prsToOthers.length} PRs</Badge>
+                    ) : null}
+                  </div>
+                  {/* LinkedIn */}
+                  <div className="flex items-center gap-1.5">
+                    {enrichmentStatus.sources.linkedin === null && enrichmentStatus.loading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                    ) : enrichmentStatus.sources.linkedin && enrichmentData?.linkedin?.bestMatch ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
+                    )}
+                    <span className="text-xs text-muted-foreground">LinkedIn</span>
+                    {enrichmentData?.linkedin?.bestMatch && (
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                        {enrichmentData.linkedin.bestMatch.confidence}%
+                      </Badge>
+                    )}
+                  </div>
+                  {/* Website */}
+                  <div className="flex items-center gap-1.5">
+                    {enrichmentStatus.sources.website === null && enrichmentStatus.loading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                    ) : enrichmentData?.website ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    ) : (
+                      <span className="w-3.5 h-3.5 text-muted-foreground/50">—</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">Website</span>
+                  </div>
+                  {/* Talks */}
+                  <div className="flex items-center gap-1.5">
+                    {enrichmentStatus.sources.talks === null && enrichmentStatus.loading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                    ) : enrichmentData?.talks?.hasTalks ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    ) : (
+                      <span className="w-3.5 h-3.5 text-muted-foreground/50">—</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">Talks</span>
+                    {enrichmentData?.talks?.hasTalks && (
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                        {enrichmentData.talks.talks.length}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {enrichmentStatus.duration && (
+                  <span className="text-xs text-muted-foreground">
+                    {(enrichmentStatus.duration / 1000).toFixed(1)}s
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile Hero */}
         <Card className="mb-8">
