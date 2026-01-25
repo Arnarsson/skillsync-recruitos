@@ -885,7 +885,7 @@ export default function DeepProfilePage() {
 
         {/* Content */}
         {activeTab === "overview" && (
-          <BentoGrid className="auto-rows-[minmax(140px,_1fr)]">
+          <BentoGrid>
             {/* Key Evidence */}
             <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-green-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
@@ -933,10 +933,18 @@ export default function DeepProfilePage() {
                       </li>
                     ))}
                   </ul>
+                ) : analyzing ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Analyserer...</span>
+                  </div>
                 ) : (
-                  <p className="text-muted-foreground">
-                    Run AI Analysis to see evidence
-                  </p>
+                  <button
+                    onClick={runDeepAnalysis}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Klik for at køre AI-analyse
+                  </button>
                 )}
               </TooltipProvider>
             </BentoCard>
@@ -999,9 +1007,14 @@ export default function DeepProfilePage() {
                       </li>
                     ))}
                   </ul>
+                ) : analyzing ? (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Analyserer...</span>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">
-                    No gaps identified
+                    Ingen uklarheder fundet
                   </p>
                 )}
               </TooltipProvider>
@@ -1091,6 +1104,29 @@ export default function DeepProfilePage() {
                   </div>
                 )}
               </div>
+            </BentoCard>
+
+            {/* Network Mapping */}
+            <BentoCard colSpan={3} rowSpan={1} className="bg-gradient-to-br from-blue-500/5 to-transparent">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Route className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Netværkskortlægning</h3>
+                  <p className="text-xs text-neutral-400">Find din vej til kandidaten via fælles forbindelser</p>
+                </div>
+              </div>
+              {candidate.linkedinUrl ? (
+                <LinkedInConnectionPath
+                  candidateLinkedInUrl={candidate.linkedinUrl}
+                  candidateName={candidate.name}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Tilføj LinkedIn URL for at se netværksforbindelser
+                </p>
+              )}
             </BentoCard>
           </BentoGrid>
         )}
