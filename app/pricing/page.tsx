@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import {
 import { PRICING_PLANS, HIRE_GUARANTEE, formatPrice, type PricingPlan } from "@/lib/pricing";
 
 export default function PricingPage() {
+  const router = useRouter();
   const [showAnnual, setShowAnnual] = useState(false);
   const [showHireGuarantee, setShowHireGuarantee] = useState(false);
 
@@ -33,14 +35,14 @@ export default function PricingPage() {
 
   const handleSelectPlan = async (planId: string) => {
     if (planId === 'enterprise') {
-      // Redirect to contact form or open modal
-      window.location.href = 'mailto:sales@recruitos.ai?subject=Enterprise%20Pricing%20Inquiry';
+      // Open mailto link for enterprise inquiries
+      window.open('mailto:sales@recruitos.ai?subject=Enterprise%20Pricing%20Inquiry', '_self');
       return;
     }
 
     // For starter, redirect directly to search
     if (planId === 'starter') {
-      window.location.href = '/search';
+      router.push('/search');
       return;
     }
 
@@ -60,7 +62,8 @@ export default function PricingPage() {
       if (response.ok) {
         const { url } = await response.json();
         if (url) {
-          window.location.href = url;
+          // External redirect to Stripe checkout
+          window.location.assign(url);
         }
       }
     } catch (error) {
