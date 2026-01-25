@@ -66,6 +66,7 @@ export function TextScramble({
   useEffect(() => {
     if (prevTextRef.current !== text) {
       prevTextRef.current = text;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Animation sequence triggered by text prop change
       scramble(text);
     }
   }, [text, scramble]);
