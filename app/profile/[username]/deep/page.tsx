@@ -56,6 +56,7 @@ import {
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -592,6 +593,11 @@ export default function DeepProfilePage() {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
+        {/* Workflow Stepper */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={4} />
+        </div>
+
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href={`/pipeline`}>
@@ -600,7 +606,6 @@ export default function DeepProfilePage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <Badge className="mb-2 bg-primary/20 text-primary">Trin 3 af 4</Badge>
             <h1 className="text-3xl font-bold">Dybdeprofil</h1>
           </div>
           <div className="flex gap-2">
