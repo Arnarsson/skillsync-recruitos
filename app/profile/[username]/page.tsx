@@ -95,6 +95,17 @@ export default function ProfilePage({
   const [linkedInProgress, setLinkedInProgress] = useState<string | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
 
+  // Recruiter's LinkedIn URL (for connection path)
+  const [recruiterLinkedInUrl, setRecruiterLinkedInUrl] = useState<string | null>(null);
+
+  // Load recruiter's LinkedIn URL on mount
+  useEffect(() => {
+    const storedUrl = localStorage.getItem("recruitos_recruiter_linkedin");
+    if (storedUrl) {
+      setRecruiterLinkedInUrl(storedUrl);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
@@ -401,15 +412,38 @@ export default function ProfilePage({
                       {linkedInProfile.connectionCount?.toLocaleString() || 0} connections
                     </span>
                   </div>
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="gap-1.5"
+                      onClick={() => {
+                        // Switch to connection tab
+                        const tab = document.querySelector('[value="connection"]') as HTMLButtonElement;
+                        tab?.click();
+                      }}
+                    >
+                      <Network className="w-3.5 h-3.5" />
+                      Find Connection Path
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      asChild
+                    >
+                      <a
+                        href={linkedInProfile.profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        View LinkedIn
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-                <a
-                  href={linkedInProfile.profileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:text-blue-400 transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
               </div>
             </CardContent>
           </Card>
@@ -580,10 +614,31 @@ export default function ProfilePage({
           {/* Connection Path Tab */}
           <TabsContent value="connection" className="space-y-6">
             {/* Social Matrix - Unified Connection Path */}
+            {!recruiterLinkedInUrl && (
+              <Card className="border-yellow-500/30 bg-yellow-500/5">
+                <CardContent className="py-4">
+                  <div className="flex items-start gap-3">
+                    <Network className="w-5 h-5 text-yellow-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Set up your LinkedIn to find connection paths</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add your LinkedIn URL in Settings to discover how you&apos;re connected to candidates
+                      </p>
+                      <Link href="/settings">
+                        <Button size="sm" variant="outline" className="mt-2">
+                          Go to Settings
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <ConnectionPathCard
               recruiterId="recruiter"
               candidateId={user.login}
               candidateName={user.name || user.login}
+              recruiterLinkedInUrl={recruiterLinkedInUrl || undefined}
               candidateLinkedInUrl={linkedInProfile?.profileUrl}
               candidateGitHubUsername={user.login}
             />
