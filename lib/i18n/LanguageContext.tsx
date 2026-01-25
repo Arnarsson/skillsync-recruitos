@@ -48,15 +48,17 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>(DEFAULT_LANG);
+  // Lazy initialization: read language from localStorage (SSR-safe)
+  const [lang, setLangState] = useState<Language>(() => {
+    if (typeof window === "undefined") return DEFAULT_LANG;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === "en" || stored === "da" ? stored : DEFAULT_LANG;
+  });
   const [mounted, setMounted] = useState(false);
 
-  // Load language from localStorage on mount
+  // Hydration gate: mark as mounted after first client render
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "en" || stored === "da") {
-      setLangState(stored);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional hydration gate pattern
     setMounted(true);
   }, []);
 
