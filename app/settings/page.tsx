@@ -56,6 +56,7 @@ export default function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [linkedInSaveSuccess, setLinkedInSaveSuccess] = useState(false);
 
   // Load saved settings on mount
   useEffect(() => {
@@ -125,8 +126,8 @@ export default function SettingsPage() {
       localStorage.removeItem(CACHE_KEY_RECRUITER_URL);
     }
 
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    setLinkedInSaveSuccess(true);
+    setTimeout(() => setLinkedInSaveSuccess(false), 3000);
   };
 
   // Sync LinkedIn connections
@@ -248,7 +249,7 @@ export default function SettingsPage() {
               {/* LinkedIn URL Input */}
               <div className="space-y-2">
                 <Label htmlFor="linkedin-url">Your LinkedIn Profile URL</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Input
                     id="linkedin-url"
                     type="url"
@@ -262,8 +263,17 @@ export default function SettingsPage() {
                     onClick={handleSaveLinkedInUrl}
                     disabled={!recruiterLinkedInUrl}
                   >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save
+                    {linkedInSaveSuccess ? (
+                      <>
+                        <Check className="w-4 h-4 mr-2 text-green-500" />
+                        Gemt!
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Gem
+                      </>
+                    )}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
