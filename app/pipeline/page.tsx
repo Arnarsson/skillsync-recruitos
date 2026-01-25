@@ -294,7 +294,7 @@ export default function PipelinePage() {
                 const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
                 const userBioLower = userBio.toLowerCase();
 
-                let matchedRequired: string[] = [];
+                const matchedRequired: string[] = [];
                 requiredSkills.forEach((skill: string) => {
                   const skillLower = skill.toLowerCase();
                   if (

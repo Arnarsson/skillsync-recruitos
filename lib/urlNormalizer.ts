@@ -148,7 +148,7 @@ export function normalizeLinkedInUrl(url: string): LinkedInUrlResult {
     }
 
     // Get the path for analysis
-    let path = parsed.pathname;
+    const path = parsed.pathname;
 
     // Handle Sales Navigator URLs
     // /sales/lead/{id} or /sales/people/{id}

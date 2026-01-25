@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 
 import { GoogleGenAI } from "@google/genai";
 import { Candidate, InterviewQuestion, WorkstyleIndicator, FunnelStage, Persona, CompanyMatch, NetworkDossier } from '../types';

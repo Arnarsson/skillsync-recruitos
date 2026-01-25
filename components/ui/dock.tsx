@@ -315,8 +315,8 @@ function DockCard({ children, id }: DockCardProps) {
   })
 
   // Transform the calculated distance into a responsive width for the card
-  let widthSync = useTransform(distance, [-150, 0, 150], [40, 80, 40])
-  let width = useSpring(widthSync, { mass: 0.1, stiffness: 150, damping: 12 })
+  const widthSync = useTransform(distance, [-150, 0, 150], [40, 80, 40])
+  const width = useSpring(widthSync, { mass: 0.1, stiffness: 150, damping: 12 })
 
   return (
     <div className="flex flex-col items-center gap-1" key={id}>
