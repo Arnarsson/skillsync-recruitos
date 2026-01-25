@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /**
  * Network Analysis Service - GraphRAG-style Connection Mapping
  *

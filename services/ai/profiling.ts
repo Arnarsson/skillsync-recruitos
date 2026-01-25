@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 
 import { Persona, WorkstyleIndicator, InterviewQuestion, CompanyMatch, Candidate, NetworkDossier } from '../../types';
 import { AI_MODELS } from '../../constants';

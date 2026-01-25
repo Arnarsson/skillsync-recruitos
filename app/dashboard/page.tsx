@@ -51,32 +51,33 @@ interface HireTracking {
   totalSpent: number;
 }
 
-export default function DashboardPage() {
-  const [plan, setPlan] = useState<ReturnType<typeof getPricingPlan>>();
-  const [usage, setUsage] = useState<ReturnType<typeof getUsageRecord>>();
-  const [hireTracking, setHireTracking] = useState<HireTracking>({
-    searches: 0,
-    contacted: 0,
-    interviews: 0,
-    hires: 0,
-    totalSpent: 0,
-  });
-
-  useEffect(() => {
-    const currentPlanId = getCurrentPlan();
-    setPlan(getPricingPlan(currentPlanId));
-    setUsage(getUsageRecord());
-
-    // Load hire tracking from localStorage
-    const stored = localStorage.getItem('recruitos_hire_tracking');
-    if (stored) {
-      try {
-        setHireTracking(JSON.parse(stored));
-      } catch {
-        // Ignore
-      }
+// Helper to get hire tracking from localStorage
+function getHireTrackingFromStorage(): HireTracking {
+  if (typeof window === 'undefined') {
+    return { searches: 0, contacted: 0, interviews: 0, hires: 0, totalSpent: 0 };
+  }
+  const stored = localStorage.getItem('recruitos_hire_tracking');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      // Ignore parse errors
     }
-  }, []);
+  }
+  return { searches: 0, contacted: 0, interviews: 0, hires: 0, totalSpent: 0 };
+}
+
+export default function DashboardPage() {
+  // Use lazy initializers to read from localStorage synchronously
+  const [plan, setPlan] = useState<ReturnType<typeof getPricingPlan>>(() => {
+    if (typeof window === 'undefined') return undefined;
+    const currentPlanId = getCurrentPlan();
+    return getPricingPlan(currentPlanId);
+  });
+  const [usage, setUsage] = useState<ReturnType<typeof getUsageRecord>>(getUsageRecord);
+  const [hireTracking, setHireTracking] = useState<HireTracking>(() =>
+    getHireTrackingFromStorage()
+  );
 
   const remaining = useMemo(() => {
     if (!plan || !usage) return null;

@@ -43,23 +43,28 @@ interface NetworkGraphViewProps {
 
 // ===== NODE ICONS =====
 
-function getNodeIcon(type: string) {
+interface NodeIconProps {
+  type: string;
+  className?: string;
+}
+
+function NodeIcon({ type, className }: NodeIconProps) {
   switch (type) {
     case "person":
-      return User;
+      return <User className={className} />;
     case "company":
-      return Building2;
+      return <Building2 className={className} />;
     case "school":
-      return GraduationCap;
+      return <GraduationCap className={className} />;
     case "repo":
     case "org":
-      return GitBranch;
+      return <GitBranch className={className} />;
     case "event":
-      return Calendar;
+      return <Calendar className={className} />;
     case "content":
-      return FileText;
+      return <FileText className={className} />;
     default:
-      return Users;
+      return <Users className={className} />;
   }
 }
 
@@ -131,7 +136,6 @@ interface MatrixNodeData extends Record<string, unknown> {
 
 function MatrixNodeComponent({ data }: NodeProps) {
   const nodeData = data as MatrixNodeData;
-  const Icon = getNodeIcon(nodeData.type);
   const colors = getNodeColor(nodeData.type, nodeData.isHighlighted, nodeData.isEndpoint);
 
   return (
@@ -159,7 +163,7 @@ function MatrixNodeComponent({ data }: NodeProps) {
                 nodeData.isEndpoint ? "w-10 h-10" : "w-8 h-8"
               }`}
             >
-              <Icon className={nodeData.isEndpoint ? "w-5 h-5" : "w-4 h-4"} />
+              <NodeIcon type={nodeData.type} className={nodeData.isEndpoint ? "w-5 h-5" : "w-4 h-4"} />
             </div>
           )}
           <div className="flex-1 min-w-0">

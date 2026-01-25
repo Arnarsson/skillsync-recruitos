@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 
 import { Candidate, Persona, FunnelStage } from '../../types';
 import { AI_MODELS } from '../../constants';

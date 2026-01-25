@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /**
  * Cited Evidence Service - AI Extraction with Source Citations
  *

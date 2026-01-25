@@ -1,4 +1,4 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { type EnrichedProfile } from './enrichmentServiceLegacy';
 import { enrichCandidatePersona } from './enrichmentServiceV2';

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -86,8 +87,12 @@ const FREE_SEARCHES = 1;
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const { t, lang } = useLanguage();
   const { isAdmin } = useAdmin();
+
+  // Get recruiter's GitHub username from OAuth session
+  const recruiterGitHubUsername = (session?.user as { login?: string })?.login;
   const query = searchParams.get("q") || "";
   const [searchQuery, setSearchQuery] = useState(query);
   const [developers, setDevelopers] = useState<Developer[]>([]);
@@ -711,8 +716,9 @@ function SearchResults() {
                                 );
                               })()}
                               <ConnectionBadge
-                                recruiterId="recruiter"
+                                recruiterId={recruiterGitHubUsername || "recruiter"}
                                 candidateId={dev.username}
+                                recruiterGitHubUsername={recruiterGitHubUsername}
                                 candidateGitHubUsername={dev.username}
                               />
                               <OpenToWorkBadge username={dev.username} />

@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /**
  * ⚠️ LEGACY SERVICE - Use enrichmentServiceV2.ts for new code
  * 

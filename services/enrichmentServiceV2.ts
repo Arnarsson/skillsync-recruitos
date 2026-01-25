@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /**
  * Profile Enrichment Pipeline V2
  *

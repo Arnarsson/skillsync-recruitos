@@ -13,16 +13,17 @@ const AdminContext = createContext<AdminContextType>({
 });
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Lazy initialization: read from localStorage during initial render (SSR-safe)
+  const [isAdmin, setIsAdmin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("recruitos_admin_mode") === "true";
+  });
   const [mounted, setMounted] = useState(false);
 
-  // Load from localStorage on mount
+  // Hydration gate: mark as mounted after first client render
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional hydration gate pattern
     setMounted(true);
-    const stored = localStorage.getItem("recruitos_admin_mode");
-    if (stored === "true") {
-      setIsAdmin(true);
-    }
   }, []);
 
   // Keyboard shortcut: Ctrl + Shift + A (works on all platforms)

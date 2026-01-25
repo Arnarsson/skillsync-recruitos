@@ -309,30 +309,41 @@ export default function ProfilePage({
                   <p className="text-sm font-medium">Enrich with LinkedIn</p>
                   <p className="text-xs text-muted-foreground">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
                 </div>
-                <div className="flex gap-2 items-center flex-wrap">
-                  <Input
-                    placeholder="linkedin.com/in/username"
-                    value={linkedInUrl}
-                    onChange={(e) => {
-                      setLinkedInUrl(e.target.value);
-                      setLinkedInError(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && linkedInUrl.trim()) {
-                        handleLinkedInEnrich();
-                      }
-                    }}
-                    className={`w-64 ${linkedInError ? 'border-red-500' : ''}`}
-                  />
-                  <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                    {linkedInLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Fetching...
-                      </>
-                    ) : "Enrich"}
-                  </Button>
-                </div>
+                {brightDataService.isConfigured() ? (
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <Input
+                      placeholder="linkedin.com/in/username"
+                      value={linkedInUrl}
+                      onChange={(e) => {
+                        setLinkedInUrl(e.target.value);
+                        setLinkedInError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && linkedInUrl.trim()) {
+                          handleLinkedInEnrich();
+                        }
+                      }}
+                      className={`w-64 ${linkedInError ? 'border-red-500' : ''}`}
+                    />
+                    <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
+                      {linkedInLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Fetching...
+                        </>
+                      ) : "Enrich"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs text-blue-500 border-blue-500/30">
+                      Premium Feature
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      Requires BrightData API key
+                    </span>
+                  </div>
+                )}
               </div>
               {linkedInError && (
                 <div className="mt-3 p-2 rounded bg-red-500/10 border border-red-500/20">

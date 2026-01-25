@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /**
  * Centralized logging service with environment-aware output
  * Prevents console statements in production builds

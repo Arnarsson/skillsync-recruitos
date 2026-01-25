@@ -294,7 +294,7 @@ export default function PipelinePage() {
                 const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
                 const userBioLower = userBio.toLowerCase();
 
-                let matchedRequired: string[] = [];
+                const matchedRequired: string[] = [];
                 requiredSkills.forEach((skill: string) => {
                   const skillLower = skill.toLowerCase();
                   if (
@@ -790,151 +790,311 @@ export default function PipelinePage() {
 
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.id));
 
+  // Top matches - first 5 candidates by score
+  const topMatches = useMemo(() => {
+    return [...candidates]
+      .sort((a, b) => b.alignmentScore - a.alignmentScore)
+      .slice(0, 5);
+  }, [candidates]);
+
+  // Collapsible chart state
+  const [showChart, setShowChart] = useState(false);
+
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Workflow Stepper */}
-        <div className="mb-6">
-          <WorkflowStepper currentStep={3} />
-        </div>
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <Badge className="mb-2 bg-primary/20 text-primary text-xs">{t("pipeline.step")}</Badge>
-            <h1 className="text-2xl sm:text-3xl font-bold">{t("pipeline.title")}</h1>
-            {jobContext && (
-              <>
-                <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-                  {jobContext.title} {t("pipeline.candidate.at")} {jobContext.company}
-                </p>
-                {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground mr-1">{t("common.skills")}:</span>
-                    {jobContext.requiredSkills.slice(0, 4).map((skill) => (
-                      <Badge key={skill} variant="outline" className="text-xs">
-                        {skill}
-                      </Badge>
-                    ))}
-                    {jobContext.requiredSkills.length > 4 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{jobContext.requiredSkills.length - 4}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+        {/* Compact Header with Job Context */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">
+                {jobContext?.title || t("pipeline.title")}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {jobContext?.company || "Your Pipeline"} • {candidates.length} candidates found
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-              <FileText className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t("pipeline.import")}</span>
-            </Button>
             <Link href={`/intake${adminSuffix}`}>
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t("pipeline.editJob")}</span>
+                <span className="hidden sm:inline">Edit Job</span>
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Score Distribution Chart - Interactive Histogram */}
-        {candidates.length > 0 && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-medium flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                    {t("pipeline.intelligence.title")}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {filterRange
-                      ? `Showing ${filteredCandidates.length} candidates in ${filterRange} range`
-                      : t("pipeline.intelligence.distribution").replace("{count}", candidates.length.toString())
-                    }
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {filterRange && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setFilterRange(null)}
-                      className="text-xs h-7 gap-1"
-                    >
-                      <X className="w-3 h-3" />
-                      Clear filter
-                    </Button>
-                  )}
-                  <Badge variant="outline" className="gap-1">
-                    <span className="w-2 h-2 rounded-full bg-green-500" />
-                    {t("pipeline.intelligence.topMatch")}: {candidates.filter((c) => c.alignmentScore >= 80).length}
-                  </Badge>
-                </div>
+        {/* TOP MATCHES - Hero Section (Above the Fold) */}
+        {!loading && topMatches.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                <h2 className="text-lg font-semibold">Top Matches</h2>
+                <Badge variant="secondary" className="text-xs">
+                  Based on {jobContext?.requiredSkills?.length || 0} requirements
+                </Badge>
               </div>
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={scoreDistribution}>
-                    <XAxis dataKey="range" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="bg-popover border rounded-md shadow-md px-3 py-2 text-sm">
-                              <p className="font-medium">{data.range}</p>
-                              <p className="text-muted-foreground">{data.count} candidates</p>
-                              <p className="text-xs text-primary mt-1">Click to filter</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar
-                      dataKey="count"
-                      radius={[4, 4, 0, 0]}
-                      className="cursor-pointer"
-                      onClick={(data) => {
-                        if (data && data.range) {
-                          setFilterRange(filterRange === data.range ? null : data.range);
-                        }
-                      }}
-                    >
-                      {scoreDistribution.map((entry, index) => (
-                        <Cell
-                          key={index}
-                          fill={filterRange === entry.range
-                            ? entry.color
-                            : (filterRange ? `${entry.color}40` : entry.color)
-                          }
-                          className="cursor-pointer transition-all duration-200 hover:opacity-80"
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {filterRange && (
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                  Click the same bar again or use &quot;Clear filter&quot; to show all candidates
-                </p>
+              {/* Compare selected from top matches */}
+              {selectedIds.filter(id => topMatches.some(c => c.id === id)).length >= 2 && (
+                <Button
+                  size="sm"
+                  onClick={() => setShowComparison(true)}
+                  className="gap-1"
+                >
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  Compare {selectedIds.filter(id => topMatches.some(c => c.id === id)).length} Selected
+                </Button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Top 5 Candidates - Card Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+              {topMatches.map((candidate, index) => {
+                const isSelected = selectedIds.includes(candidate.id);
+                return (
+                <Card
+                  key={candidate.id}
+                  className={`relative overflow-hidden transition-all hover:shadow-lg cursor-pointer ${
+                    index === 0 ? "ring-2 ring-yellow-500/50 bg-yellow-500/5" : ""
+                  } ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`}
+                  onClick={() => toggleSelect(candidate.id)}
+                >
+                  {index === 0 && !isSelected && (
+                    <div className="absolute top-0 right-0 bg-yellow-500 text-yellow-950 text-[10px] font-bold px-2 py-0.5 rounded-bl">
+                      BEST MATCH
+                    </div>
+                  )}
+                  {/* Selection indicator */}
+                  <div className="absolute top-2 left-2">
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Square className="w-4 h-4 text-muted-foreground/40 hover:text-muted-foreground" />
+                    )}
+                  </div>
+                  <CardContent className="p-4 pt-6">
+                    {/* Avatar + Score */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <img
+                            src={candidate.avatar}
+                            alt={candidate.name}
+                            className="w-10 h-10 rounded-full"
+                          />
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background flex items-center justify-center text-[10px] font-bold border-2 border-background">
+                            #{index + 1}
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{candidate.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            @{candidate.id}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-lg font-bold ${getScoreColor(candidate.alignmentScore)}`}>
+                        {candidate.alignmentScore}%
+                      </div>
+                    </div>
+
+                    {/* Role & Company */}
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                      {candidate.currentRole} {candidate.company !== "Independent" && `@ ${candidate.company}`}
+                    </p>
+
+                    {/* Key Skills - Why This Match */}
+                    {candidate.scoreBreakdown?.requiredMatched && candidate.scoreBreakdown.requiredMatched.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {candidate.scoreBreakdown.requiredMatched.slice(0, 3).map((skill) => (
+                          <Badge key={skill} variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-500/10 text-green-600 border-green-500/20">
+                            <Check className="w-2.5 h-2.5 mr-0.5" />
+                            {skill}
+                          </Badge>
+                        ))}
+                        {candidate.scoreBreakdown.requiredMatched.length > 3 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            +{candidate.scoreBreakdown.requiredMatched.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* One-Click Actions */}
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Link href={`/profile/${candidate.id}`} className="flex-1">
+                        <Button size="sm" variant="outline" className="w-full text-xs h-8">
+                          View Profile
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs h-8"
+                        onClick={() => {
+                          setOutreachCandidate(candidate);
+                          setShowOutreach(true);
+                        }}
+                      >
+                        <MessageSquare className="w-3 h-3 mr-1" />
+                        Outreach
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )})}
+            </div>
+
+            {/* Inline hint for comparison */}
+            {selectedIds.filter(id => topMatches.some(c => c.id === id)).length === 1 && (
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Click another candidate to compare
+              </p>
+            )}
+          </div>
         )}
 
-        {/* Score Legend - How alignment scores work */}
-        {candidates.length > 0 && (
-          <ScoreLegend className="mb-6" />
+        {/* Quick Stats Bar - Always visible when candidates exist */}
+        {!loading && candidates.length > 0 && (
+          <div className="flex items-center gap-4 mb-6 p-3 rounded-lg bg-muted/30 border">
+            <div className="flex items-center gap-6 flex-1">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <span className="text-sm font-medium">{scoreDistribution[0].count + scoreDistribution[1].count}</span>
+                <span className="text-xs text-muted-foreground">Strong (80+)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                <span className="text-sm font-medium">{scoreDistribution[2].count + scoreDistribution[3].count}</span>
+                <span className="text-xs text-muted-foreground">Moderate (60-79)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="text-sm font-medium">{scoreDistribution[4].count}</span>
+                <span className="text-xs text-muted-foreground">Weak (&lt;60)</span>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowChart(!showChart)}
+              className="text-xs gap-1.5"
+            >
+              <BarChart3 className="w-4 h-4" />
+              {showChart ? "Hide Chart" : "View Chart"}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showChart ? "rotate-180" : ""}`} />
+            </Button>
+          </div>
+        )}
+
+        {/* Collapsible Chart Section */}
+        <AnimatePresence>
+          {showChart && candidates.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-6"
+            >
+              <Card className="border-dashed">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-muted-foreground">
+                      {filterRange
+                        ? `Filtering: ${filterRange} range (${filteredCandidates.length} candidates)`
+                        : "Click a bar to filter candidates by score range"
+                      }
+                    </p>
+                    {filterRange && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFilterRange(null)}
+                        className="text-xs h-6 gap-1 px-2"
+                      >
+                        <X className="w-3 h-3" />
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  <div className="h-28">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={scoreDistribution}>
+                        <XAxis dataKey="range" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-popover border rounded-md shadow-md px-3 py-2 text-sm">
+                                  <p className="font-medium">{data.range}</p>
+                                  <p className="text-muted-foreground">{data.count} candidates</p>
+                                  <p className="text-xs text-primary mt-1">Click to filter</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar
+                          dataKey="count"
+                          radius={[4, 4, 0, 0]}
+                          className="cursor-pointer"
+                          onClick={(data) => {
+                            if (data && data.range) {
+                              setFilterRange(filterRange === data.range ? null : data.range);
+                            }
+                          }}
+                        >
+                          {scoreDistribution.map((entry, index) => (
+                            <Cell
+                              key={index}
+                              fill={filterRange === entry.range
+                                ? entry.color
+                                : (filterRange ? `${entry.color}40` : entry.color)
+                              }
+                              className="cursor-pointer transition-all duration-200 hover:opacity-80"
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {filterRange && (
+                    <p className="text-xs text-center text-muted-foreground mt-2">
+                      Click the same bar again or use &quot;Clear filter&quot; to show all candidates
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* All Candidates Section Header */}
+        {!loading && candidates.length > 0 && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">All Candidates</h2>
+              <Badge variant="outline" className="text-xs">
+                {filteredCandidates.length} of {candidates.length}
+              </Badge>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add More
+            </Button>
+          </div>
         )}
 
         {/* Search & Filters */}
-        <Card className="mb-6">
+        <Card className="mb-4">
           <CardContent className="pt-6">
             <div className="flex flex-wrap gap-4">
               <div className="relative flex-1 min-w-[200px]">
@@ -1169,7 +1329,7 @@ export default function PipelinePage() {
           )}
         </AnimatePresence>
 
-        {/* Comparison Modal */}
+        {/* Comparison Modal - Enhanced */}
         <AnimatePresence>
           {showComparison && selectedCandidates.length > 0 && (
             <motion.div
@@ -1183,61 +1343,211 @@ export default function PipelinePage() {
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-background rounded-lg p-6 max-w-5xl w-full max-h-[90vh] overflow-auto"
+                className="bg-background rounded-lg max-w-6xl w-full max-h-[90vh] overflow-auto"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">{t("pipeline.compareModal.title")}</h2>
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
+                  <div>
+                    <h2 className="text-xl font-bold">Compare Candidates</h2>
+                    <p className="text-sm text-muted-foreground">Side-by-side comparison of {selectedCandidates.length} candidates</p>
+                  </div>
                   <Button variant="ghost" size="sm" onClick={() => setShowComparison(false)}>
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </Button>
                 </div>
-                <div className={`grid gap-4 ${selectedCandidates.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
-                  {selectedCandidates.map((c) => (
-                    <Card key={c.id}>
-                      <CardContent className="pt-6">
-                        <div className="text-center mb-4">
-                          <img
-                            src={c.avatar}
-                            alt={c.name}
-                            className="w-16 h-16 rounded-full mx-auto mb-2"
-                          />
-                          <h3 className="font-medium">{c.name}</h3>
-                          <p className="text-sm text-muted-foreground">{c.currentRole}</p>
-                        </div>
-                        <div className={`text-center p-4 rounded-lg ${getScoreBg(c.alignmentScore)} mb-4`}>
-                          <div className={`text-3xl font-bold ${getScoreColor(c.alignmentScore)}`}>
-                            {c.alignmentScore}
+
+                {/* Comparison Table */}
+                <div className="p-4">
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground w-32">Criteria</th>
+                        {selectedCandidates.map((c) => (
+                          <th key={c.id} className="text-center py-3 px-2">
+                            <div className="flex flex-col items-center gap-2">
+                              <img src={c.avatar} alt={c.name} className="w-12 h-12 rounded-full" />
+                              <div>
+                                <p className="font-medium text-sm">{c.name}</p>
+                                <p className="text-xs text-muted-foreground">@{c.id}</p>
+                              </div>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {/* Overall Score */}
+                      <tr className="bg-muted/30">
+                        <td className="py-3 px-2 text-sm font-medium">Match Score</td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center">
+                            <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl ${getScoreBg(c.alignmentScore)}`}>
+                              <span className={`text-2xl font-bold ${getScoreColor(c.alignmentScore)}`}>
+                                {c.alignmentScore}
+                              </span>
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+
+                      {/* Role */}
+                      <tr>
+                        <td className="py-3 px-2 text-sm text-muted-foreground">Current Role</td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center text-sm">{c.currentRole}</td>
+                        ))}
+                      </tr>
+
+                      {/* Company */}
+                      <tr>
+                        <td className="py-3 px-2 text-sm text-muted-foreground">Company</td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center text-sm">{c.company}</td>
+                        ))}
+                      </tr>
+
+                      {/* Location */}
+                      <tr>
+                        <td className="py-3 px-2 text-sm text-muted-foreground">Location</td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center text-sm">
+                            <div className="flex items-center justify-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {c.location}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+
+                      {/* Matched Skills */}
+                      <tr className="bg-green-500/5">
+                        <td className="py-3 px-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Check className="w-4 h-4 text-green-500" />
+                            Matched Skills
                           </div>
-                          <div className="text-xs text-muted-foreground">{t("pipeline.compareModal.alignmentScore")}</div>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t("common.location")}</span>
-                            <span>{c.location}</span>
+                        </td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center">
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {c.scoreBreakdown?.requiredMatched?.length ? (
+                                c.scoreBreakdown.requiredMatched.map((skill) => (
+                                  <Badge key={skill} className="text-[10px] bg-green-500/20 text-green-600 border-green-500/30">
+                                    {skill}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+
+                      {/* Missing Skills */}
+                      <tr className="bg-red-500/5">
+                        <td className="py-3 px-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <AlertTriangle className="w-4 h-4 text-red-500" />
+                            Missing Skills
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t("common.company")}</span>
-                            <span>{c.company}</span>
-                          </div>
-                        </div>
-                        {c.skills && c.skills.length > 0 && (
-                          <div className="mt-4 flex flex-wrap gap-1">
-                            {c.skills.slice(0, 5).map((skill) => (
-                              <Badge key={skill} variant="secondary" className="text-xs">
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        <Link href={`/profile/${c.id}/deep${adminSuffix}`} className="block mt-4">
-                          <Button className="w-full" size="sm">
-                            {t("pipeline.compareModal.viewDeepProfile")}
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center">
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {c.scoreBreakdown?.requiredMissing?.length ? (
+                                c.scoreBreakdown.requiredMissing.map((skill) => (
+                                  <Badge key={skill} variant="outline" className="text-[10px] border-red-500/30 text-red-500">
+                                    {skill}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <Badge className="text-[10px] bg-green-500/20 text-green-600">All matched!</Badge>
+                              )}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+
+                      {/* All Skills */}
+                      <tr>
+                        <td className="py-3 px-2 text-sm text-muted-foreground">Tech Stack</td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-3 px-2 text-center">
+                            <div className="flex flex-wrap gap-1 justify-center max-w-xs mx-auto">
+                              {c.skills?.slice(0, 8).map((skill) => (
+                                <Badge key={skill} variant="secondary" className="text-[10px]">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {c.skills && c.skills.length > 8 && (
+                                <Badge variant="outline" className="text-[10px]">+{c.skills.length - 8}</Badge>
+                              )}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+
+                      {/* Risks */}
+                      {selectedCandidates.some(c => c.risks?.length) && (
+                        <tr>
+                          <td className="py-3 px-2 text-sm text-muted-foreground">Potential Risks</td>
+                          {selectedCandidates.map((c) => (
+                            <td key={c.id} className="py-3 px-2 text-center">
+                              {c.risks?.length ? (
+                                <ul className="text-xs text-left list-disc list-inside text-muted-foreground">
+                                  {c.risks.slice(0, 3).map((risk, i) => (
+                                    <li key={i}>{risk}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      )}
+
+                      {/* Actions */}
+                      <tr className="bg-muted/30">
+                        <td className="py-4 px-2 text-sm font-medium">Actions</td>
+                        {selectedCandidates.map((c) => (
+                          <td key={c.id} className="py-4 px-2 text-center">
+                            <div className="flex gap-2 justify-center">
+                              <Link href={`/profile/${c.id}`}>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  View Profile
+                                </Button>
+                              </Link>
+                              <Button
+                                size="sm"
+                                className="text-xs"
+                                onClick={() => {
+                                  setShowComparison(false);
+                                  setOutreachCandidate(c);
+                                  setShowOutreach(true);
+                                }}
+                              >
+                                <MessageSquare className="w-3 h-3 mr-1" />
+                                Outreach
+                              </Button>
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t bg-muted/20 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Tip: Add more candidates to compare by clicking the checkbox on candidate cards
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>
+                    Clear Selection
+                  </Button>
                 </div>
               </motion.div>
             </motion.div>
