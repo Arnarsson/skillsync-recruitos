@@ -26,6 +26,7 @@ interface LinkedInMatch {
 }
 
 interface MatchAnalysis {
+  index: number;
   confidence: number;
   matchReasons: string[];
   isLikelyMatch: boolean;

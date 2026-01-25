@@ -130,7 +130,7 @@ export async function enrichFromWebsite(
     socialPatterns.forEach((pattern) => {
       const matches = content.match(pattern);
       if (matches) {
-        socialLinks.push(...matches.map((m) => `https://${m}`));
+        socialLinks.push(...matches.map((m: string) => `https://${m}`));
       }
     });
 
