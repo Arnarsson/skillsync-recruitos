@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useMemo } from "react";
+import { useState, useEffect, use, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -117,6 +117,48 @@ export default function ProfilePage({
     }
   }, []);
 
+  // Sync LinkedIn data back to pipeline localStorage
+  const syncLinkedInToPipeline = useCallback((linkedIn: LinkedInProfile) => {
+    try {
+      const stored = localStorage.getItem("apex_candidates");
+      if (stored) {
+        const candidates = JSON.parse(stored);
+        const idx = candidates.findIndex((c: { id: string }) => c.id === username);
+        if (idx !== -1) {
+          candidates[idx] = {
+            ...candidates[idx],
+            linkedInUrl: linkedIn.profileUrl,
+            linkedInProfile: linkedIn,
+            linkedInName: linkedIn.name,
+            linkedInHeadline: linkedIn.headline,
+          };
+          localStorage.setItem("apex_candidates", JSON.stringify(candidates));
+          console.log("[Profile] Synced LinkedIn to pipeline:", username);
+        }
+      }
+    } catch (err) {
+      console.error("[Profile] Failed to sync LinkedIn to pipeline:", err);
+    }
+  }, [username]);
+
+  // Load existing LinkedIn from pipeline localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("apex_candidates");
+      if (stored) {
+        const candidates = JSON.parse(stored);
+        const candidate = candidates.find((c: { id: string }) => c.id === username);
+        if (candidate?.linkedInProfile) {
+          console.log("[Profile] Loading LinkedIn from pipeline:", username);
+          setLinkedInProfile(candidate.linkedInProfile);
+          setLinkedInUrl(candidate.linkedInUrl || candidate.linkedInProfile.profileUrl || "");
+        }
+      }
+    } catch (err) {
+      console.error("[Profile] Failed to load LinkedIn from pipeline:", err);
+    }
+  }, [username]);
+
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
@@ -199,6 +241,8 @@ export default function ProfilePage({
         setLinkedInProfile(linkedIn);
         setLinkedInError(null);
         setLinkedInProgress(null);
+        // Sync to pipeline localStorage
+        syncLinkedInToPipeline(linkedIn);
       } else {
         console.warn('[LinkedIn] No profile data returned');
         setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
@@ -285,6 +329,8 @@ export default function ProfilePage({
         setLinkedInProfile(linkedIn);
         setLinkedInError(null);
         setLinkedInProgress(null);
+        // Sync to pipeline localStorage
+        syncLinkedInToPipeline(linkedIn);
       } else {
         setLinkedInError("Could not fetch LinkedIn profile.");
         setLinkedInProgress(null);
