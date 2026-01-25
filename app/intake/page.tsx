@@ -182,8 +182,8 @@ export default function IntakePage() {
           localStorage.removeItem("recruitos_pending_search");
           router.push(`/search?q=${encodeURIComponent(pending)}`);
         } else {
-          console.log("[Intake] Navigating to skills review...");
-          router.push(`/skills-review`);
+          console.log("[Intake] Navigating to pipeline...");
+          router.push(`/pipeline`);
         }
       }, 1500); // 1.5 second delay to show success
 
@@ -288,7 +288,7 @@ export default function IntakePage() {
       localStorage.removeItem("recruitos_pending_search");
       router.push(`/search?q=${encodeURIComponent(pending)}`);
     } else {
-      router.push(`/skills-review`);
+      router.push(`/pipeline`);
     }
   };
 
