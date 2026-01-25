@@ -42,10 +42,13 @@ Plans:
   1. All bugs identified by E2E tests are fixed and verified
   2. User can complete any critical flow without encountering crashes or unhandled exceptions
   3. E2E test suite passes with 100% success rate after bug fixes
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD
+- [ ] 02-01-PLAN.md — Fix component creation during render and window.location mutation bugs
+- [ ] 02-02-PLAN.md — Fix state initialization patterns in context providers and hooks
+- [ ] 02-03-PLAN.md — Fix remaining setState-in-useEffect anti-patterns in UI components
+- [ ] 02-04-PLAN.md — Final verification and cleanup of bug fixes
 
 ### Phase 3: Error Hardening
 **Goal**: Application degrades gracefully when external services fail or edge cases occur
@@ -98,7 +101,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. E2E Testing | 1/1 | ✓ Complete | 2026-01-24 |
-| 2. Bug Fixes | 0/TBD | Not started | - |
+| 2. Bug Fixes | 0/4 | Planned | - |
 | 3. Error Hardening | 0/TBD | Not started | - |
 | 4. Security | 0/TBD | Not started | - |
 | 5. Persona Enhancement | 0/TBD | Not started | - |
@@ -107,3 +110,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 *Roadmap created: 2026-01-24*
 *Phase 1 planned: 2026-01-24*
 *Phase 1 complete: 2026-01-24*
+*Phase 2 planned: 2026-01-25*
