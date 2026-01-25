@@ -19,6 +19,7 @@ import {
   Brain,
   Network,
   Linkedin,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,11 +171,14 @@ export default function ProfilePage({
           setLinkedInProgress(`Fetching profile... (${attempt}/${maxAttempts})`);
         }
       );
+      console.log('[LinkedIn] Scrape result:', linkedIn);
       if (linkedIn) {
+        console.log('[LinkedIn] Setting profile state with:', linkedIn.name, linkedIn.headline);
         setLinkedInProfile(linkedIn);
         setLinkedInError(null);
         setLinkedInProgress(null);
       } else {
+        console.warn('[LinkedIn] No profile data returned');
         setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
         setLinkedInProgress(null);
       }
@@ -358,6 +362,55 @@ export default function ProfilePage({
                   <p className="text-xs text-blue-500/70 mt-1">This may take up to 3 minutes for some profiles.</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* LinkedIn Profile Card - Shows when enriched */}
+        {linkedInProfile && (
+          <Card className="mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-4">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/20">
+                  <Linkedin className="w-6 h-6 text-blue-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold">{linkedInProfile.name}</h3>
+                    <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-500">
+                      <Check className="w-3 h-3 mr-1" />
+                      Enriched
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{linkedInProfile.headline}</p>
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    {linkedInProfile.currentCompany && (
+                      <span className="flex items-center gap-1">
+                        <Building className="w-3 h-3" />
+                        {linkedInProfile.currentRole} at {linkedInProfile.currentCompany}
+                      </span>
+                    )}
+                    {linkedInProfile.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {linkedInProfile.location}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {linkedInProfile.connectionCount?.toLocaleString() || 0} connections
+                    </span>
+                  </div>
+                </div>
+                <a
+                  href={linkedInProfile.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-400 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
             </CardContent>
           </Card>
         )}
