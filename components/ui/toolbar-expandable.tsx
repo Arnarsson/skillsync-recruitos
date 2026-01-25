@@ -101,6 +101,7 @@ const DynamicToolbarExpandable = React.memo<DynamicToolbarExpandableProps>(
 
     useEffect(() => {
       if (!widthContainer || maxWidth > 0) return
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial width measurement on first render
       setMaxWidth(widthContainer)
     }, [widthContainer, maxWidth])
 

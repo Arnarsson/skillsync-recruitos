@@ -115,6 +115,7 @@ export function ScoreExplainer({ candidate, isOpen, onClose }: ScoreExplainerPro
 
   // Reset expanded section when candidate changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset state on prop change is intentional
     setExpandedSection(null);
   }, [candidate.id]);
 

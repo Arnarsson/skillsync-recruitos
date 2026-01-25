@@ -15,12 +15,14 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration gate pattern
     setMounted(true);
 
     // Check if user has completed onboarding - show immediately if not
     const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
 
     if (!hasCompletedOnboarding) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration gate pattern
       setShowOnboarding(true);
     }
   }, []);
