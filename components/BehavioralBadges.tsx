@@ -56,39 +56,64 @@ interface BehavioralBadgesProps {
  * - Engagement score
  * - Activity trend indicator
  */
-export function BehavioralBadges({ username, compact = false, className = "" }: BehavioralBadgesProps) {
-  const [insights, setInsights] = useState<BehavioralInsights | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    // Check cache first
-    const cacheKey = `behavioral_${username}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
+// Helper to check cache synchronously
+function getCachedBehavioralInsights(username: string): BehavioralInsights | null {
+  if (typeof window === 'undefined') return null;
+  const cacheKey = `behavioral_${username}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    try {
       const { data, timestamp } = JSON.parse(cached);
       // Cache valid for 5 minutes
       if (Date.now() - timestamp < 5 * 60 * 1000) {
-        setInsights(data);
-        setLoading(false);
-        return;
+        return data;
       }
+    } catch {
+      // Ignore parse errors
     }
+  }
+  return null;
+}
+
+export function BehavioralBadges({ username, compact = false, className = "" }: BehavioralBadgesProps) {
+  // Use lazy initializer to check cache synchronously on first render
+  const [insights, setInsights] = useState<BehavioralInsights | null>(() =>
+    getCachedBehavioralInsights(username)
+  );
+  const [loading, setLoading] = useState(() => {
+    // If we have cached insights, don't show loading
+    return getCachedBehavioralInsights(username) === null;
+  });
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // If we already have cached data, skip fetch
+    if (insights) return;
 
     // Fetch fresh data
-    fetch(`/api/github/signals?username=${encodeURIComponent(username)}`)
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/github/signals?username=${encodeURIComponent(username)}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async data fetch requires setState
         setInsights(data);
         // Cache the result
+        const cacheKey = `behavioral_${username}`;
         sessionStorage.setItem(cacheKey, JSON.stringify({
           data,
           timestamp: Date.now(),
         }));
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [username]);
+      } catch {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async error handling requires setState
+        setError(true);
+      } finally {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async completion requires setState
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [username, insights]);
 
   if (loading || error || !insights) {
     return null;
@@ -263,38 +288,60 @@ export function BehavioralBadges({ username, compact = false, className = "" }: 
   );
 }
 
+// Helper to check OTW cache synchronously
+function getCachedOpenToWork(username: string): { show: boolean; confidence: 'high' | 'medium' | 'low' } | null {
+  if (typeof window === 'undefined') return null;
+  const cacheKey = `otw_${username}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        return data;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  return null;
+}
+
 /**
  * Simple inline badge showing just the "Open to Work" status
  */
 export function OpenToWorkBadge({ username, className = "" }: { username: string; className?: string }) {
-  const [openToWork, setOpenToWork] = useState<{ show: boolean; confidence: 'high' | 'medium' | 'low' } | null>(null);
+  // Use lazy initializer to check cache synchronously on first render
+  const [openToWork, setOpenToWork] = useState<{ show: boolean; confidence: 'high' | 'medium' | 'low' } | null>(() =>
+    getCachedOpenToWork(username)
+  );
 
   useEffect(() => {
-    const cacheKey = `otw_${username}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < 5 * 60 * 1000) {
-        setOpenToWork(data);
-        return;
-      }
-    }
+    // If we already have cached data, skip fetch
+    if (openToWork !== null) return;
 
-    fetch(`/api/github/signals?username=${encodeURIComponent(username)}`)
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: BehavioralInsights) => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/github/signals?username=${encodeURIComponent(username)}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data: BehavioralInsights = await res.json();
         const result = {
           show: data.activitySignals.openToWork,
           confidence: data.activitySignals.confidence,
         };
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async data fetch requires setState
         setOpenToWork(result);
+        const cacheKey = `otw_${username}`;
         sessionStorage.setItem(cacheKey, JSON.stringify({
           data: result,
           timestamp: Date.now(),
         }));
-      })
-      .catch(() => setOpenToWork(null));
-  }, [username]);
+      } catch {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async error handling requires setState
+        setOpenToWork(null);
+      }
+    };
+    fetchData();
+  }, [username, openToWork]);
 
   if (!openToWork?.show) return null;
 
