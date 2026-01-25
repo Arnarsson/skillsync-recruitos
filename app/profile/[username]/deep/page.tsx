@@ -337,6 +337,23 @@ export default function DeepProfilePage() {
       // Check if candidate is shortlisted (Stage 3) to determine if we should generate network dossier
       const isShortlisted = candidate.isShortlisted || false;
 
+      // Format enrichment data for enhanced psychometric analysis
+      const enrichmentPayload = enrichmentData ? {
+        github: enrichmentData.github ? {
+          readme: enrichmentData.github.readme,
+          prsToOthers: enrichmentData.github.prsToOthers,
+          contributionPattern: enrichmentData.github.contributionPattern,
+          topics: enrichmentData.github.topics,
+        } : null,
+        linkedin: enrichmentData.linkedin?.bestMatch ? {
+          headline: enrichmentData.linkedin.bestMatch.headline,
+          location: enrichmentData.linkedin.bestMatch.location,
+          company: enrichmentData.linkedin.bestMatch.company,
+        } : null,
+        website: enrichmentData.website,
+        talks: enrichmentData.talks,
+      } : null;
+
       const response = await fetch("/api/profile/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -348,6 +365,7 @@ export default function DeepProfilePage() {
           location: candidate.location,
           skills: candidate.skills,
           isShortlisted, // Pass flag to trigger network dossier generation for Stage 3
+          enrichmentData: enrichmentPayload, // Pass enrichment for enhanced psychometric
         }),
       });
 
@@ -382,7 +400,7 @@ export default function DeepProfilePage() {
     } finally {
       setAnalyzing(false);
     }
-  }, [candidate, username]);
+  }, [candidate, username, enrichmentData]);
 
   // Auto-run AI analysis when page loads if not already analyzed
   useEffect(() => {

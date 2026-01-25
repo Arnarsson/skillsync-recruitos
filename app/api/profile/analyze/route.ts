@@ -4,6 +4,7 @@ import {
   analyzeCandidateProfile,
   generateDeepProfile,
   generateNetworkDossier,
+  EnrichmentData,
 } from "@/lib/services/gemini";
 
 export async function POST(request: NextRequest) {
@@ -16,7 +17,8 @@ export async function POST(request: NextRequest) {
       company,
       location,
       skills,
-      isShortlisted  // Stage 3 flag - triggers network dossier generation
+      isShortlisted,  // Stage 3 flag - triggers network dossier generation
+      enrichmentData, // Optional enrichment data from deep-enrichment API
     } = body;
 
     // Build a profile text from available data
@@ -34,9 +36,47 @@ export async function POST(request: NextRequest) {
       body.jobContext ||
       "Looking for a senior software engineer with strong technical skills and collaborative mindset.";
 
-    // Run analysis in parallel
+    // Transform enrichment data to match EnrichmentData interface if provided
+    let formattedEnrichment: EnrichmentData | undefined;
+    if (enrichmentData) {
+      formattedEnrichment = {
+        github: enrichmentData.github ? {
+          readme: enrichmentData.github.readme,
+          prsToOthers: enrichmentData.github.prsToOthers || [],
+          contributionPattern: enrichmentData.github.contributionPattern || {
+            totalContributions: 0,
+            averagePerWeek: 0,
+            longestStreak: 0,
+            mostActiveDay: 'Unknown',
+            activityLevel: 'low' as const,
+          },
+          topics: enrichmentData.github.topics || [],
+        } : undefined,
+        linkedin: enrichmentData.linkedin ? {
+          headline: enrichmentData.linkedin.headline,
+          location: enrichmentData.linkedin.location,
+          company: enrichmentData.linkedin.company,
+        } : undefined,
+        website: enrichmentData.website ? {
+          url: enrichmentData.website.url,
+          title: enrichmentData.website.title,
+          topics: enrichmentData.website.topics || [],
+          hasProjects: enrichmentData.website.hasProjects || false,
+          hasBlog: enrichmentData.website.hasBlog || false,
+          socialLinks: enrichmentData.website.socialLinks || [],
+        } : undefined,
+        talks: enrichmentData.talks ? {
+          talks: enrichmentData.talks.talks || [],
+          hasTalks: enrichmentData.talks.hasTalks || false,
+          platforms: enrichmentData.talks.platforms || [],
+        } : undefined,
+      };
+      console.log("[API] Using enrichment data for enhanced persona generation");
+    }
+
+    // Run analysis in parallel - pass enrichment data if available
     const [persona, candidateAnalysis] = await Promise.all([
-      generatePersona(profileText),
+      generatePersona(profileText, formattedEnrichment),
       analyzeCandidateProfile(profileText, jobContext),
     ]);
 

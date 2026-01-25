@@ -12,6 +12,9 @@ export interface Persona {
     primaryMotivator: string;
     riskTolerance: string;
     leadershipPotential: string;
+    collaborationStyle?: string;
+    learningOrientation?: string;
+    workEthicIndicators?: string;
   };
   softSkills: string[];
   redFlags: string[];
@@ -41,6 +44,13 @@ export interface Persona {
     geographicBarriers: string[];
     unexplainedGaps: boolean;
     compensationRiskLevel: 'low' | 'moderate' | 'high';
+  };
+  behavioralInsights?: {
+    publicSpeakingConfidence: string;
+    thoughtLeadershipLevel: 'none' | 'emerging' | 'established' | 'influential' | 'unknown';
+    communityInvolvement: string;
+    personalBrandStrength: 'weak' | 'developing' | 'strong' | 'exceptional' | 'unknown';
+    consistencyScore: string;
   };
 }
 
@@ -198,24 +208,135 @@ function calculateScore(breakdown: CandidateAnalysis['scoreBreakdown']): number 
   return Math.round((totalValue / totalMax) * 100);
 }
 
-// Generate Persona from raw profile text
-export async function generatePersona(rawProfileText: string): Promise<Persona> {
-  const systemPrompt = `You are an expert Executive Recruiter preparing a candidate briefing. Always respond with valid JSON only, no markdown or explanations.`;
+// Enrichment data types for enhanced analysis
+export interface EnrichmentData {
+  github?: {
+    readme: string | null;
+    prsToOthers: Array<{
+      repo: string;
+      repoOwner: string;
+      title: string;
+      state: 'open' | 'closed' | 'merged';
+      url: string;
+    }>;
+    contributionPattern: {
+      totalContributions: number;
+      averagePerWeek: number;
+      longestStreak: number;
+      mostActiveDay: string;
+      activityLevel: 'very-active' | 'active' | 'moderate' | 'low';
+    };
+    topics: string[];
+  };
+  linkedin?: {
+    headline?: string;
+    location?: string;
+    company?: string;
+  };
+  website?: {
+    url: string;
+    title: string;
+    topics: string[];
+    hasProjects: boolean;
+    hasBlog: boolean;
+    socialLinks: string[];
+  };
+  talks?: {
+    talks: Array<{
+      title: string;
+      event: string;
+      url: string;
+      platform: string;
+    }>;
+    hasTalks: boolean;
+    platforms: string[];
+  };
+}
+
+// Generate Persona from raw profile text with optional enrichment data
+export async function generatePersona(rawProfileText: string, enrichmentData?: EnrichmentData): Promise<Persona> {
+  const systemPrompt = `You are an expert Executive Recruiter and Industrial-Organizational Psychologist preparing a comprehensive candidate briefing. You excel at inferring personality traits, work styles, and behavioral patterns from multiple data sources. Always respond with valid JSON only, no markdown or explanations.`;
+
+  // Build enrichment context if available
+  let enrichmentContext = '';
+
+  if (enrichmentData?.github) {
+    const gh = enrichmentData.github;
+    enrichmentContext += `
+=== GITHUB ENRICHMENT DATA ===
+Profile README (self-description):
+${gh.readme ? gh.readme.substring(0, 3000) : 'No README found'}
+
+Contribution Patterns:
+- Activity Level: ${gh.contributionPattern.activityLevel}
+- Average commits per week: ${gh.contributionPattern.averagePerWeek}
+- Longest contribution streak: ${gh.contributionPattern.longestStreak} days
+- Most active day: ${gh.contributionPattern.mostActiveDay}
+- Total recent contributions: ${gh.contributionPattern.totalContributions}
+
+Open Source Contributions (PRs to other repos):
+${gh.prsToOthers.length > 0
+  ? gh.prsToOthers.slice(0, 10).map(pr => `- ${pr.title} (${pr.repo}) - ${pr.state}`).join('\n')
+  : 'No PRs to external repos found'}
+
+Technical Interests (repo topics): ${gh.topics.join(', ') || 'None tagged'}
+`;
+  }
+
+  if (enrichmentData?.website) {
+    const web = enrichmentData.website;
+    enrichmentContext += `
+=== PERSONAL WEBSITE DATA ===
+Website: ${web.url}
+Title: ${web.title}
+Has Blog: ${web.hasBlog ? 'Yes (indicates thought leadership)' : 'No'}
+Has Projects Showcase: ${web.hasProjects ? 'Yes (shows initiative)' : 'No'}
+Topics/Interests: ${web.topics.join(', ') || 'None detected'}
+Social Presence: ${web.socialLinks.join(', ') || 'None linked'}
+`;
+  }
+
+  if (enrichmentData?.talks) {
+    const talks = enrichmentData.talks;
+    enrichmentContext += `
+=== CONFERENCE TALKS & PRESENTATIONS ===
+Public Speaking: ${talks.hasTalks ? 'Yes - Active speaker' : 'No public talks found'}
+Platforms: ${talks.platforms.join(', ') || 'None'}
+${talks.talks.length > 0
+  ? `Recent Talks:\n${talks.talks.slice(0, 5).map(t => `- "${t.title}" at ${t.event}`).join('\n')}`
+  : ''}
+`;
+  }
+
+  if (enrichmentData?.linkedin) {
+    const li = enrichmentData.linkedin;
+    enrichmentContext += `
+=== LINKEDIN DATA ===
+Headline: ${li.headline || 'Not available'}
+Current Company: ${li.company || 'Not available'}
+Location: ${li.location || 'Not available'}
+`;
+  }
+
+  const hasEnrichment = !!enrichmentContext;
 
   const prompt = `
-Analyze this candidate and return JSON with:
+Analyze this candidate using ALL available data sources and return JSON with:
 {
-  "persona_archetype": "string (2-sentence elevator pitch)",
+  "persona_archetype": "string (2-sentence elevator pitch that captures their unique value proposition)",
   "psychometric_profile": {
-    "communication_style": "string",
-    "primary_motivator": "string",
-    "risk_tolerance": "string",
-    "leadership_potential": "string"
+    "communication_style": "string (infer from README writing, PR titles, blog posts if available)",
+    "primary_motivator": "string (infer from projects, topics, conference talks, open source work)",
+    "risk_tolerance": "string (infer from career moves, startup involvement, tech choices)",
+    "leadership_potential": "string (infer from talks, mentoring signals, team contributions)",
+    "collaboration_style": "string (infer from PR patterns, open source contributions)",
+    "learning_orientation": "string (infer from skill diversity, emerging tech adoption, blog topics)",
+    "work_ethic_indicators": "string (infer from contribution patterns, streak length, consistency)"
   },
-  "soft_skills_analysis": ["string"],
-  "red_flags": ["string"],
-  "green_flags": ["string"],
-  "reasoning_evidence": "string",
+  "soft_skills_analysis": ["string (be specific, cite evidence source)"],
+  "red_flags": ["string (only include if evidence-based)"],
+  "green_flags": ["string (cite specific evidence from data)"],
+  "reasoning_evidence": "string (comprehensive analysis citing specific data points)",
   "career_trajectory": {
     "growth_velocity": "rapid|steady|slow",
     "promotion_frequency": "high|moderate|low",
@@ -240,24 +361,53 @@ Analyze this candidate and return JSON with:
     "geographic_barriers": ["string"],
     "unexplained_gaps": boolean,
     "compensation_risk_level": "low|moderate|high"
+  },
+  "behavioral_insights": {
+    "public_speaking_confidence": "${hasEnrichment ? 'string (based on talks data)' : 'unknown'}",
+    "thought_leadership_level": "${hasEnrichment ? 'none|emerging|established|influential' : 'unknown'}",
+    "community_involvement": "${hasEnrichment ? 'string (based on PRs, talks, blog)' : 'unknown'}",
+    "personal_brand_strength": "${hasEnrichment ? 'weak|developing|strong|exceptional' : 'unknown'}",
+    "consistency_score": "${hasEnrichment ? 'string (based on contribution patterns)' : 'unknown'}"
   }
 }
 
-Raw Candidate Data:
-"${rawProfileText.substring(0, 30000)}"
+${hasEnrichment ? `
+=== ENRICHMENT ANALYSIS GUIDELINES ===
+You have rich multi-source data. Use it to make SPECIFIC inferences:
+
+1. FROM GITHUB README: Infer communication style, values, what they're proud of, how they present themselves
+2. FROM CONTRIBUTION PATTERNS: Infer work consistency, dedication, whether they code on weekends (passion vs work-life balance)
+3. FROM PRs TO OTHER REPOS: Infer collaboration willingness, community involvement, helpfulness, code review quality
+4. FROM WEBSITE/BLOG: Infer thought leadership, writing ability, depth of expertise, self-marketing skills
+5. FROM CONFERENCE TALKS: Infer public speaking ability, industry recognition, expertise areas, confidence level
+6. FROM LINKEDIN: Cross-reference career claims, verify current role
+
+BE SPECIFIC. Don't just say "good communicator" - say "clear technical writer based on detailed README with structured sections and helpful examples"
+` : ''}
+
+=== BASE CANDIDATE DATA ===
+"${rawProfileText.substring(0, 20000)}"
+
+${enrichmentContext}
 
 Return ONLY valid JSON.`;
 
   const text = await callOpenRouter(prompt, systemPrompt);
   const data = parseJsonSafe(text) as Record<string, unknown>;
 
+  const psychometricData = data.psychometric_profile as Record<string, string> || {};
+  const behavioralData = data.behavioral_insights as Record<string, string> || {};
+
   return {
     archetype: data.persona_archetype as string || '',
     psychometric: {
-      communicationStyle: (data.psychometric_profile as Record<string, string>)?.communication_style || "Unknown",
-      primaryMotivator: (data.psychometric_profile as Record<string, string>)?.primary_motivator || "Unknown",
-      riskTolerance: (data.psychometric_profile as Record<string, string>)?.risk_tolerance || "Unknown",
-      leadershipPotential: (data.psychometric_profile as Record<string, string>)?.leadership_potential || "Unknown"
+      communicationStyle: psychometricData.communication_style || "Unknown",
+      primaryMotivator: psychometricData.primary_motivator || "Unknown",
+      riskTolerance: psychometricData.risk_tolerance || "Unknown",
+      leadershipPotential: psychometricData.leadership_potential || "Unknown",
+      collaborationStyle: psychometricData.collaboration_style,
+      learningOrientation: psychometricData.learning_orientation,
+      workEthicIndicators: psychometricData.work_ethic_indicators,
     },
     softSkills: data.soft_skills_analysis as string[] || [],
     redFlags: data.red_flags as string[] || [],
@@ -265,7 +415,14 @@ Return ONLY valid JSON.`;
     reasoning: data.reasoning_evidence as string || "",
     careerTrajectory: data.career_trajectory as Persona['careerTrajectory'],
     skillProfile: data.skill_profile as Persona['skillProfile'],
-    riskAssessment: data.risk_assessment as Persona['riskAssessment']
+    riskAssessment: data.risk_assessment as Persona['riskAssessment'],
+    behavioralInsights: behavioralData ? {
+      publicSpeakingConfidence: behavioralData.public_speaking_confidence || 'unknown',
+      thoughtLeadershipLevel: (behavioralData.thought_leadership_level || 'unknown') as 'none' | 'emerging' | 'established' | 'influential' | 'unknown',
+      communityInvolvement: behavioralData.community_involvement || 'unknown',
+      personalBrandStrength: (behavioralData.personal_brand_strength || 'unknown') as 'weak' | 'developing' | 'strong' | 'exceptional' | 'unknown',
+      consistencyScore: behavioralData.consistency_score || 'unknown',
+    } : undefined,
   };
 }
 

@@ -82,9 +82,15 @@ Return JSON only:
   const content = data.choices[0].message.content;
 
   try {
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    // Validate the response has keywords
+    if (!parsed.keywords || parsed.keywords === "null" || parsed.keywords === "undefined") {
+      throw new Error("Invalid keywords in AI response");
+    }
+    return parsed;
   } catch {
     // Fallback: use name or username
+    console.log("[LinkedIn Finder] AI parsing failed, using fallback query");
     return {
       keywords: profile.name || profile.login,
       location: profile.location || undefined,
