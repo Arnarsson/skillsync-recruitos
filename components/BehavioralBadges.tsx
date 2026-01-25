@@ -96,7 +96,6 @@ export function BehavioralBadges({ username, compact = false, className = "" }: 
         const res = await fetch(`/api/github/signals?username=${encodeURIComponent(username)}`);
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async data fetch requires setState
         setInsights(data);
         // Cache the result
         const cacheKey = `behavioral_${username}`;
@@ -105,10 +104,8 @@ export function BehavioralBadges({ username, compact = false, className = "" }: 
           timestamp: Date.now(),
         }));
       } catch {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async error handling requires setState
         setError(true);
       } finally {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async completion requires setState
         setLoading(false);
       }
     };
@@ -328,7 +325,6 @@ export function OpenToWorkBadge({ username, className = "" }: { username: string
           show: data.activitySignals.openToWork,
           confidence: data.activitySignals.confidence,
         };
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async data fetch requires setState
         setOpenToWork(result);
         const cacheKey = `otw_${username}`;
         sessionStorage.setItem(cacheKey, JSON.stringify({
@@ -336,7 +332,6 @@ export function OpenToWorkBadge({ username, className = "" }: { username: string
           timestamp: Date.now(),
         }));
       } catch {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Async error handling requires setState
         setOpenToWork(null);
       }
     };

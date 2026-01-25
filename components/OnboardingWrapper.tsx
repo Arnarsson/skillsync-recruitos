@@ -22,7 +22,6 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
     const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
 
     if (!hasCompletedOnboarding) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration gate pattern
       setShowOnboarding(true);
     }
   }, []);
