@@ -95,6 +95,17 @@ export default function ProfilePage({
   const [linkedInProgress, setLinkedInProgress] = useState<string | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
 
+  // LinkedIn auto-discovery state
+  const [linkedInFinding, setLinkedInFinding] = useState(false);
+  const [linkedInSuggestions, setLinkedInSuggestions] = useState<Array<{
+    profileUrl: string;
+    name: string;
+    headline: string;
+    confidence: number;
+    reasons: string[];
+    autoAccepted: boolean;
+  }> | null>(null);
+
   // Recruiter's LinkedIn URL (for connection path)
   const [recruiterLinkedInUrl, setRecruiterLinkedInUrl] = useState<string | null>(null);
 
