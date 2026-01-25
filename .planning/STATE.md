@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 2 of 5 (Bug Fixes)
-Plan: 2 of 4 in phase
+Plan: 2 of 4 in phase (02-01 and 02-02 complete)
 Status: In progress
-Last activity: 2026-01-25 - Completed 02-02-PLAN.md
+Last activity: 2026-01-25 - Completed 02-01-PLAN.md (Component creation and navigation bugs)
 
-Progress: [###░░░░░░░] 30%
+Progress: [######░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 25 minutes
-- Total execution time: 0.82 hours
+- Total plans completed: 3
+- Average duration: 20 minutes
+- Total execution time: 1.02 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 1 | 45min | 45min |
-| 2 | 1 | 4min | 4min |
+| 2 | 2 | 16min | 8min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (45min), 02-02 (4min)
-- Trend: Improving (faster bug fixes)
+- Last 5 plans: 01-01 (45min), 02-02 (4min), 02-01 (12min)
+- Trend: Bug fixes significantly faster than initial E2E setup
 
 *Updated after each plan completion*
 
@@ -52,6 +52,8 @@ Recent decisions affecting current work:
 - Auth mocking: Use localStorage with mocked admin mode and credits
 - Hydration gate pattern: setMounted(true) in useEffect is legitimate, document with eslint-disable
 - Animation setState: setState in useEffect for animations is legitimate, document with eslint-disable
+- NodeIcon pattern: Component with type prop instead of function returning component types
+- Navigation pattern: router.push for internal, window.location.assign for external redirects
 
 ### Pending Todos
 
@@ -64,6 +66,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 02-02-PLAN.md (State initialization patterns)
+Stopped at: Completed 02-01-PLAN.md (Component creation and navigation bug fixes)
 Resume file: None
-Next action: Continue with 02-03-PLAN.md or next bug fix plan
+Next action: Continue with 02-03-PLAN.md (remaining bug fixes)
