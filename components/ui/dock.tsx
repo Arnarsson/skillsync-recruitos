@@ -134,11 +134,12 @@ interface DockCardInnerProps {
   id?: string // Optional unique identifier for the card
   children?: ReactNode // Optional children for the card
   onClick?: () => void // Optional click handler
+  onPointerDown?: (e: React.PointerEvent) => void // Optional pointer down handler
   className?: string // Optional custom className
 }
 
 // DockCardInner component to display images and handle animation states
-function DockCardInner({ src, id, children, onClick, className }: DockCardInnerProps) {
+function DockCardInner({ src, id, children, onClick, onPointerDown, className }: DockCardInnerProps) {
   const { animatingIndexes } = useDock() // Access the Dock context to get the animating indexes. This determines which cards are currently animating.
 
   // If no src, render simple icon-based content
@@ -150,6 +151,7 @@ function DockCardInner({ src, id, children, onClick, className }: DockCardInnerP
           className
         )}
         onClick={onClick}
+        onPointerDown={onPointerDown}
       >
         {children}
       </span>
