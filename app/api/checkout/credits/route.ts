@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         data: {
           email: session.user.email,
           name: session.user.name || session.user.email,
-          githubId: session.user.id || session.user.email, // Fallback
+          githubId: (session.user as any).id || session.user.email, // Fallback
         },
       });
     }

@@ -15,6 +15,13 @@ export interface Persona {
     collaborationStyle?: string;
     learningOrientation?: string;
     workEthicIndicators?: string;
+    bigFive?: {
+      openness: number;        // 1-10 scale
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
   };
   softSkills: string[];
   redFlags: string[];
@@ -331,7 +338,14 @@ Analyze this candidate using ALL available data sources and return JSON with:
     "leadership_potential": "string (infer from talks, mentoring signals, team contributions)",
     "collaboration_style": "string (infer from PR patterns, open source contributions)",
     "learning_orientation": "string (infer from skill diversity, emerging tech adoption, blog topics)",
-    "work_ethic_indicators": "string (infer from contribution patterns, streak length, consistency)"
+    "work_ethic_indicators": "string (infer from contribution patterns, streak length, consistency)",
+    "big_five": {
+      "openness": number (1-10 scale: willingness to try new tech, diversity of projects, innovation signals),
+      "conscientiousness": number (1-10: code quality, documentation, consistency, follow-through),
+      "extraversion": number (1-10: conference talks, community involvement, collaboration patterns),
+      "agreeableness": number (1-10: PR tone, helping others, code review style, team player signals),
+      "neuroticism": number (1-10: stress indicators from career changes, job hopping, gap patterns)
+    }
   },
   "soft_skills_analysis": ["string (be specific, cite evidence source)"],
   "red_flags": ["string (only include if evidence-based)"],
@@ -395,8 +409,9 @@ Return ONLY valid JSON.`;
   const text = await callOpenRouter(prompt, systemPrompt);
   const data = parseJsonSafe(text) as Record<string, unknown>;
 
-  const psychometricData = data.psychometric_profile as Record<string, string> || {};
+  const psychometricData = data.psychometric_profile as Record<string, any> || {};
   const behavioralData = data.behavioral_insights as Record<string, string> || {};
+  const bigFiveData = psychometricData.big_five as Record<string, number> || {};
 
   return {
     archetype: data.persona_archetype as string || '',
@@ -408,6 +423,13 @@ Return ONLY valid JSON.`;
       collaborationStyle: psychometricData.collaboration_style,
       learningOrientation: psychometricData.learning_orientation,
       workEthicIndicators: psychometricData.work_ethic_indicators,
+      bigFive: bigFiveData.openness ? {
+        openness: bigFiveData.openness,
+        conscientiousness: bigFiveData.conscientiousness,
+        extraversion: bigFiveData.extraversion,
+        agreeableness: bigFiveData.agreeableness,
+        neuroticism: bigFiveData.neuroticism,
+      } : undefined,
     },
     softSkills: data.soft_skills_analysis as string[] || [],
     redFlags: data.red_flags as string[] || [],

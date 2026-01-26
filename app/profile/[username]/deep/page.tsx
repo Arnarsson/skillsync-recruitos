@@ -161,6 +161,13 @@ interface Persona {
     primaryMotivator: string;
     riskTolerance: string;
     leadershipPotential: string;
+    bigFive?: {
+      openness: number;
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
   };
   softSkills: string[];
   redFlags: string[];
@@ -1148,6 +1155,94 @@ export default function DeepProfilePage() {
                     <p className="text-lg">{candidate.persona.archetype}</p>
                   </CardContent>
                 </Card>
+
+                {/* Big Five Personality Radar - Prominent Feature */}
+                {candidate.persona.psychometric.bigFive && (
+                  <Card className="border-primary/30">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Brain className="w-5 h-5 text-primary" />
+                        Personality Profile (Big Five)
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Inferred from work patterns, code style, and professional behavior
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Radar Chart */}
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart
+                              data={[
+                                { trait: 'Openness', value: candidate.persona.psychometric.bigFive.openness },
+                                { trait: 'Conscientious', value: candidate.persona.psychometric.bigFive.conscientiousness },
+                                { trait: 'Extraversion', value: candidate.persona.psychometric.bigFive.extraversion },
+                                { trait: 'Agreeableness', value: candidate.persona.psychometric.bigFive.agreeableness },
+                                { trait: 'Stability', value: 10 - candidate.persona.psychometric.bigFive.neuroticism },
+                              ]}
+                            >
+                              <PolarGrid stroke="#333" />
+                              <PolarAngleAxis dataKey="trait" tick={{ fill: '#999', fontSize: 12 }} />
+                              <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: '#666' }} />
+                              <Radar
+                                name="Personality"
+                                dataKey="value"
+                                stroke="hsl(var(--primary))"
+                                fill="hsl(var(--primary))"
+                                fillOpacity={0.3}
+                              />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        {/* Trait Descriptions */}
+                        <div className="space-y-3 text-sm">
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="font-medium">Openness</span>
+                              <span className="text-muted-foreground">{candidate.persona.psychometric.bigFive.openness}/10</span>
+                            </div>
+                            <Progress value={candidate.persona.psychometric.bigFive.openness * 10} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1">Innovation, curiosity, new tech adoption</p>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="font-medium">Conscientiousness</span>
+                              <span className="text-muted-foreground">{candidate.persona.psychometric.bigFive.conscientiousness}/10</span>
+                            </div>
+                            <Progress value={candidate.persona.psychometric.bigFive.conscientiousness * 10} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1">Code quality, reliability, discipline</p>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="font-medium">Extraversion</span>
+                              <span className="text-muted-foreground">{candidate.persona.psychometric.bigFive.extraversion}/10</span>
+                            </div>
+                            <Progress value={candidate.persona.psychometric.bigFive.extraversion * 10} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1">Public speaking, community involvement</p>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="font-medium">Agreeableness</span>
+                              <span className="text-muted-foreground">{candidate.persona.psychometric.bigFive.agreeableness}/10</span>
+                            </div>
+                            <Progress value={candidate.persona.psychometric.bigFive.agreeableness * 10} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1">Collaboration, helpfulness, team fit</p>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="font-medium">Emotional Stability</span>
+                              <span className="text-muted-foreground">{10 - candidate.persona.psychometric.bigFive.neuroticism}/10</span>
+                            </div>
+                            <Progress value={(10 - candidate.persona.psychometric.bigFive.neuroticism) * 10} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1">Stress management, career stability</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Psychometric */}
                 <div className="grid md:grid-cols-2 gap-4">

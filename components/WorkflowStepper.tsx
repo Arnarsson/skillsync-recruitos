@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle, FileText, ListChecks, Users, Microscope, Mail } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface WorkflowStepperProps {
@@ -9,11 +10,11 @@ interface WorkflowStepperProps {
 }
 
 const STEPS = [
-  { id: 1, label: "Job Intake", icon: FileText },
-  { id: 2, label: "Skills Review", icon: ListChecks },
-  { id: 3, label: "Candidates", icon: Users },
-  { id: 4, label: "Deep Dive", icon: Microscope },
-  { id: 5, label: "Outreach", icon: Mail },
+  { id: 1, label: "Job Intake", icon: FileText, path: "/intake" },
+  { id: 2, label: "Skills Review", icon: ListChecks, path: "/skills-review" },
+  { id: 3, label: "Candidates", icon: Users, path: "/pipeline" },
+  { id: 4, label: "Deep Dive", icon: Microscope, path: "/profile" },
+  { id: 5, label: "Outreach", icon: Mail, path: "/outreach" },
 ] as const;
 
 export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepperProps) {
@@ -25,37 +26,49 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
           const isCompleted = step.id < currentStep;
           const isCurrent = step.id === currentStep;
           const isFuture = step.id > currentStep;
+          const isClickable = isCompleted || isCurrent;
           const StepIcon = step.icon;
+
+          const stepContent = (
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                  isCompleted && "bg-green-500 text-white",
+                  isCurrent && "bg-primary text-primary-foreground ring-4 ring-primary/20",
+                  isFuture && "bg-muted text-muted-foreground",
+                  isClickable && "cursor-pointer hover:scale-110 hover:shadow-lg"
+                )}
+              >
+                {isCompleted ? (
+                  <CheckCircle className="w-5 h-5" />
+                ) : (
+                  <StepIcon className="w-5 h-5" />
+                )}
+              </div>
+              <span
+                className={cn(
+                  "text-xs font-medium whitespace-nowrap",
+                  isCompleted && "text-green-600",
+                  isCurrent && "text-primary",
+                  isFuture && "text-muted-foreground"
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+          );
 
           return (
             <div key={step.id} className="flex items-center flex-1 last:flex-none">
               {/* Step circle and label */}
-              <div className="flex flex-col items-center gap-2">
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                    isCompleted && "bg-green-500 text-white",
-                    isCurrent && "bg-primary text-primary-foreground ring-4 ring-primary/20",
-                    isFuture && "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {isCompleted ? (
-                    <CheckCircle className="w-5 h-5" />
-                  ) : (
-                    <StepIcon className="w-5 h-5" />
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium whitespace-nowrap",
-                    isCompleted && "text-green-600",
-                    isCurrent && "text-primary",
-                    isFuture && "text-muted-foreground"
-                  )}
-                >
-                  {step.label}
-                </span>
-              </div>
+              {isClickable ? (
+                <Link href={step.path} className="transition-transform">
+                  {stepContent}
+                </Link>
+              ) : (
+                stepContent
+              )}
 
               {/* Connector line (not after last step) */}
               {index < STEPS.length - 1 && (
@@ -77,18 +90,20 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
           const isCompleted = step.id < currentStep;
           const isCurrent = step.id === currentStep;
           const isFuture = step.id > currentStep;
+          const isClickable = isCompleted || isCurrent;
           const StepIcon = step.icon;
 
-          return (
-            <div key={step.id} className="flex items-start gap-3">
+          const stepContent = (
+            <div className="flex items-start gap-3 w-full">
               {/* Step indicator column */}
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0",
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0",
                     isCompleted && "bg-green-500 text-white",
                     isCurrent && "bg-primary text-primary-foreground ring-2 ring-primary/20",
-                    isFuture && "bg-muted text-muted-foreground"
+                    isFuture && "bg-muted text-muted-foreground",
+                    isClickable && "cursor-pointer hover:scale-110"
                   )}
                 >
                   {isCompleted ? (
@@ -124,6 +139,18 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
                   <p className="text-xs text-muted-foreground mt-0.5">Current step</p>
                 )}
               </div>
+            </div>
+          );
+
+          return (
+            <div key={step.id}>
+              {isClickable ? (
+                <Link href={step.path}>
+                  {stepContent}
+                </Link>
+              ) : (
+                stepContent
+              )}
             </div>
           );
         })}
