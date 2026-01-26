@@ -1,18 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useAdmin } from "@/lib/adminContext";
-import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Users,
   Plus,
@@ -33,21 +28,9 @@ import {
   Link as LinkIcon,
   Sparkles,
   ChevronDown,
-  ChevronUp,
   MessageSquare,
-  HelpCircle,
-  Check,
-  AlertTriangle,
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
-import ScoreBadge from "@/components/ScoreBadge";
-import { BehavioralBadges } from "@/components/BehavioralBadges";
-import { CandidatePipelineItem } from "@/components/pipeline/CandidatePipelineItem";
-import { PipelineSplitView } from "@/components/pipeline/PipelineSplitView";
-import { PipelineLoadingScramble } from "@/components/ui/loading-scramble";
-import { ShortlistPanel } from "@/components/pipeline/ShortlistPanel";
-import ScoreLegend from "@/components/ScoreLegend";
-import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   BarChart,
@@ -57,31 +40,6 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
-import { useLanguage } from "@/lib/i18n";
-
-interface ScoreBreakdown {
-  requiredMatched: string[];
-  requiredMissing: string[];
-  preferredMatched: string[];
-  locationMatch: "exact" | "remote" | "none";
-  baseScore: number;
-  skillsScore: number;
-  preferredScore: number;
-  locationScore: number;
-}
-
-// Skills config from skills-review page
-interface SkillsConfigItem {
-  name: string;
-  tier: "must-have" | "nice-to-have" | "bonus";
-  weight: number;
-  order: number;
-}
-
-interface SkillsConfig {
-  skills: SkillsConfigItem[];
-  customSkills: string[];
-}
 
 interface Candidate {
   id: string;
@@ -95,7 +53,6 @@ interface Candidate {
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
-  scoreBreakdown?: ScoreBreakdown;
   persona?: {
     archetype?: string;
     riskAssessment?: {
@@ -105,11 +62,6 @@ interface Candidate {
 }
 
 export default function PipelinePage() {
-  const { t } = useLanguage();
-  const { isAdmin } = useAdmin();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const adminSuffix = ""; // No longer needed with context-based admin
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,399 +71,65 @@ export default function PipelinePage() {
     requiredSkills?: string[];
     location?: string;
   } | null>(null);
-  const urlStateInitialized = useRef(false);
+  const [autoSearched, setAutoSearched] = useState(false);
 
   // Import modal state
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  // Initialize state from URL params
-  const initialUrlState = useMemo(() => {
-    return deserializePipelineState(searchParams);
-  }, [searchParams]);
-
-  // Sorting & Filtering - initialized from URL state
-  const [sortBy, setSortBy] = useState<"score-desc" | "score-asc" | "name-asc" | "name-desc">(initialUrlState.sort);
-  const [filterScore, setFilterScore] = useState<"high" | "medium" | "low" | null>(initialUrlState.filter);
+  // Sorting & Filtering
+  const [sortBy, setSortBy] = useState<"score-desc" | "score-asc" | "name-asc" | "name-desc">("score-desc");
+  const [filterScore, setFilterScore] = useState<"high" | "medium" | "low" | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Hard requirements filter - exclude candidates missing must-have skills
-  const [enforceHardRequirements, setEnforceHardRequirements] = useState(false);
-  const [mustHaveSkills, setMustHaveSkills] = useState<string[]>([]);
-
-  // Load must-have skills from skills config
-  useEffect(() => {
-    const skillsConfigStr = localStorage.getItem("apex_skills_config");
-    if (skillsConfigStr) {
-      try {
-        const config: SkillsConfig = JSON.parse(skillsConfigStr);
-        const mustHaves = config.skills
-          .filter(s => s.tier === "must-have")
-          .map(s => s.name.toLowerCase());
-        setMustHaveSkills(mustHaves);
-      } catch {}
-    }
-  }, []);
-
-  // Histogram filter state
-  const [filterRange, setFilterRange] = useState<string | null>(initialUrlState.filterRange);
-
-  // Split view state
-  const [viewMode, setViewMode] = useState<"list" | "split">(initialUrlState.viewMode);
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-
-  // Multi-select for comparison - initialized from URL state
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialUrlState.selected);
+  // Multi-select for comparison
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
-
-  // Scroll to candidate from URL state
-  useEffect(() => {
-    if (initialUrlState.scrollTo && candidates.length > 0 && !urlStateInitialized.current) {
-      urlStateInitialized.current = true;
-      const element = document.getElementById(`candidate-${initialUrlState.scrollTo}`);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-      }
-    }
-  }, [initialUrlState.scrollTo, candidates]);
-
-  // Update URL when filter/sort state changes (shallow routing)
-  useEffect(() => {
-    if (!urlStateInitialized.current && candidates.length === 0) return;
-
-    const params = serializePipelineState({
-      sort: sortBy,
-      filter: filterScore,
-      filterRange,
-      selected: selectedIds,
-      viewMode,
-    });
-
-    const newUrl = params.toString() ? `/pipeline?${params.toString()}` : '/pipeline';
-    router.replace(newUrl, { scroll: false });
-  }, [sortBy, filterScore, filterRange, selectedIds, viewMode, router, candidates.length]);
 
   // Outreach modal state
   const [showOutreach, setShowOutreach] = useState(false);
   const [outreachCandidate, setOutreachCandidate] = useState<Candidate | null>(null);
 
-  // Note: expandedExplanation state moved to CandidatePipelineItem component
-
-  // Load job context and candidates on mount
   useEffect(() => {
-    // Use a local flag to handle React Strict Mode properly
-    // This ensures state updates only happen if the component is still mounted
-    let isActive = true;
-
-    const initializePipeline = async () => {
-      const stored = localStorage.getItem("apex_job_context");
-      let parsedJobContext = null;
-      if (stored) {
-        try {
-          parsedJobContext = JSON.parse(stored);
-          if (isActive) setJobContext(parsedJobContext);
-        } catch {
-          // Ignore
-        }
-      }
-
-      // Check if we just came from intake (fresh job context)
-      const pendingAutoSearch = localStorage.getItem("apex_pending_auto_search");
-      const freshFromIntake = pendingAutoSearch === "true";
-      console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
-
-      // Create a hash of job context to detect changes
-      const jobContextHash = parsedJobContext
-        ? JSON.stringify({
-            title: parsedJobContext.title,
-            skills: parsedJobContext.requiredSkills?.slice(0, 5),
-            location: parsedJobContext.location,
-          })
-        : null;
-      const storedJobHash = localStorage.getItem("apex_job_context_hash");
-
-      // Check if job context changed - if so, clear old candidates
-      const jobContextChanged = !!(jobContextHash && storedJobHash !== jobContextHash);
-
-      const storedCandidates = localStorage.getItem("apex_candidates");
-      let existingCandidates: Candidate[] = [];
-
-      // Load existing candidates ONLY if not fresh from intake and job hasn't changed
-      if (storedCandidates && !jobContextChanged && !freshFromIntake) {
-        try {
-          existingCandidates = JSON.parse(storedCandidates);
-          if (isActive) setCandidates(existingCandidates);
-          console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates");
-        } catch {
-          // Ignore
-        }
-      } else if (jobContextChanged || freshFromIntake) {
-        // Clear old candidates when job context changes or fresh from intake
-        localStorage.removeItem("apex_candidates");
-        if (isActive) setCandidates([]);
-        console.log("[Pipeline] Cleared old candidates - jobContextChanged:", jobContextChanged, "freshFromIntake:", freshFromIntake);
-      }
-
-      // Determine if we should auto-search
-      const hasRequiredSkills = parsedJobContext?.requiredSkills?.length > 0;
-      const needsCandidates = existingCandidates.length === 0 || jobContextChanged || freshFromIntake;
-      const shouldAutoSearch = hasRequiredSkills && needsCandidates;
-
-      console.log("[Pipeline] shouldAutoSearch:", shouldAutoSearch, "| hasSkills:", hasRequiredSkills, "| needsCandidates:", needsCandidates);
-
-      if (shouldAutoSearch && parsedJobContext?.requiredSkills) {
-        // Clear the pending flag
-        localStorage.removeItem("apex_pending_auto_search");
-
-        // Store the new job context hash
-        if (jobContextHash) {
-          localStorage.setItem("apex_job_context_hash", jobContextHash);
-        }
-
-        // Use only top 2 skills for search - more specific queries return 0 results from GitHub
-        const skills = parsedJobContext.requiredSkills.slice(0, 2);
-        const query = skills.join(" ");
-        console.log("[Pipeline] Auto-searching with query:", query);
-
-        if (query) {
-          if (isActive) {
-            setSearchQuery(query);
-            setLoading(true);
-          }
-
-          try {
-            const response = await fetch(
-              `/api/search?q=${encodeURIComponent(query)}&perPage=15`
-            );
-            const data = await response.json();
-            console.log("[Pipeline] Search returned", data.users?.length || 0, "users");
-
-            if (!isActive) return; // Component unmounted, don't update state
-
-            if (data.users && data.users.length > 0) {
-              // Get job context for scoring
-              const jobReqs = parsedJobContext || {};
-
-              const newCandidates = data.users.map((user: {
-                username: string;
-                name: string;
-                avatar: string;
-                bio: string;
-                location: string;
-                company: string;
-                skills: string[];
-                score: number;
-              }) => {
-                // Calculate alignment score based on job requirements
-                const userSkills = user.skills || [];
-                const userBio = user.bio || "";
-
-                // Simple inline scoring
-                const requiredSkills = jobReqs.requiredSkills || [];
-                const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
-                const userBioLower = userBio.toLowerCase();
-
-                const matchedRequired: string[] = [];
-                requiredSkills.forEach((skill: string) => {
-                  const skillLower = skill.toLowerCase();
-                  if (
-                    userSkillsLower.some((s: string) => s.includes(skillLower) || skillLower.includes(s)) ||
-                    userBioLower.includes(skillLower)
-                  ) {
-                    matchedRequired.push(skill);
-                  }
-                });
-
-                const baseScore = 50;
-                const skillsScore = requiredSkills.length > 0
-                  ? Math.round((matchedRequired.length / requiredSkills.length) * 35)
-                  : 0;
-                const score = Math.min(99, Math.max(30, baseScore + skillsScore));
-
-                return {
-                  id: user.username,
-                  name: user.name || user.username,
-                  currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
-                  company: user.company || "Independent",
-                  location: user.location || "Remote",
-                  alignmentScore: score,
-                  scoreBreakdown: {
-                    requiredMatched: matchedRequired,
-                    requiredMissing: requiredSkills.filter((s: string) => !matchedRequired.includes(s)),
-                    preferredMatched: [],
-                    locationMatch: "none" as const,
-                    baseScore,
-                    skillsScore,
-                    preferredScore: 0,
-                    locationScore: 0,
-                  },
-                  avatar: user.avatar,
-                  skills: user.skills || [],
-                  createdAt: new Date().toISOString(),
-                };
-              });
-
-              // Sort by alignment score
-              newCandidates.sort((a: Candidate, b: Candidate) => b.alignmentScore - a.alignmentScore);
-
-              setCandidates(newCandidates);
-              localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
-              console.log("[Pipeline] Saved", newCandidates.length, "candidates");
-            }
-          } catch (error) {
-            console.error("[Pipeline] Auto-search error:", error);
-          } finally {
-            if (isActive) setLoading(false);
-          }
-        }
-      } else {
-        // Clear flag even if no auto-search needed
-        if (freshFromIntake) {
-          localStorage.removeItem("apex_pending_auto_search");
-        }
-      }
-    };
-
-    initializePipeline();
-
-    // Cleanup function - set isActive to false when component unmounts
-    return () => {
-      isActive = false;
-    };
-  }, []); // Empty dependency array - run only on mount
-
-  // Calculate alignment score based on job requirements and skills config
-  const calculateAlignmentScore = (
-    user: { skills: string[]; bio: string; location: string },
-    jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
-  ): { score: number; breakdown: ScoreBreakdown } => {
-    const baseScore = 40;
-    let skillsScore = 0;
-    let preferredScore = 0;
-    let locationScore = 0;
-
-    const userSkillsLower = user.skills.map((s) => s.toLowerCase());
-    const userBioLower = (user.bio || "").toLowerCase();
-
-    // Helper to check if user has a skill
-    const userHasSkill = (skillName: string): boolean => {
-      const skillLower = skillName.toLowerCase();
-      return (
-        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
-        userBioLower.includes(skillLower)
-      );
-    };
-
-    // Try to use skills config from skills-review page (has tier weights)
-    const skillsConfigStr = typeof window !== "undefined"
-      ? localStorage.getItem("apex_skills_config")
-      : null;
-
-    const requiredMatched: string[] = [];
-    const requiredMissing: string[] = [];
-    const preferredMatched: string[] = [];
-
-    if (skillsConfigStr) {
-      // Use tiered scoring from skills config
+    const stored = localStorage.getItem("apex_job_context");
+    let parsedJobContext = null;
+    if (stored) {
       try {
-        const skillsConfig: SkillsConfig = JSON.parse(skillsConfigStr);
-        const mustHaves = skillsConfig.skills.filter(s => s.tier === "must-have");
-        const niceToHaves = skillsConfig.skills.filter(s => s.tier === "nice-to-have");
-        const bonuses = skillsConfig.skills.filter(s => s.tier === "bonus");
-
-        // Weighted scoring:
-        // must-have match: +8 points each (max ~32 for 4 skills)
-        // must-have MISS: -5 points each (penalty)
-        // nice-to-have match: +4 points each (max ~16 for 4 skills)
-        // bonus match: +2 points each (max ~6 for 3 skills)
-
-        mustHaves.forEach(skill => {
-          if (userHasSkill(skill.name)) {
-            skillsScore += 8;
-            requiredMatched.push(skill.name);
-          } else {
-            skillsScore -= 5; // Penalty for missing must-have
-            requiredMissing.push(skill.name);
-          }
-        });
-
-        niceToHaves.forEach(skill => {
-          if (userHasSkill(skill.name)) {
-            preferredScore += 4;
-            preferredMatched.push(skill.name);
-          }
-        });
-
-        bonuses.forEach(skill => {
-          if (userHasSkill(skill.name)) {
-            preferredScore += 2;
-            preferredMatched.push(skill.name);
-          }
-        });
-
-      } catch (e) {
-        console.error("Failed to parse skills config:", e);
-        // Fall through to legacy scoring
-      }
-    } else {
-      // Legacy scoring: use job requirements directly
-      const requiredSkills = jobRequirements.requiredSkills || [];
-      const preferredSkills = jobRequirements.preferredSkills || [];
-
-      requiredSkills.forEach((skill) => {
-        if (userHasSkill(skill)) {
-          requiredMatched.push(skill);
-        } else {
-          requiredMissing.push(skill);
-        }
-      });
-      if (requiredSkills.length > 0) {
-        skillsScore = Math.round((requiredMatched.length / requiredSkills.length) * 35);
-      }
-
-      preferredSkills.forEach((skill) => {
-        if (userHasSkill(skill)) {
-          preferredMatched.push(skill);
-        }
-      });
-      if (preferredSkills.length > 0) {
-        preferredScore = Math.round((preferredMatched.length / preferredSkills.length) * 15);
+        parsedJobContext = JSON.parse(stored);
+        setJobContext(parsedJobContext);
+      } catch {
+        // Ignore
       }
     }
 
-    // Location match
-    let locationMatch: "exact" | "remote" | "none" = "none";
-    if (jobRequirements.location && user.location) {
-      const jobLocLower = jobRequirements.location.toLowerCase();
-      const userLocLower = user.location.toLowerCase();
-      if (userLocLower.includes(jobLocLower) || jobLocLower.includes(userLocLower)) {
-        locationScore = 10;
-        locationMatch = "exact";
-      } else if (userLocLower.includes("remote") || jobLocLower.includes("remote")) {
-        locationScore = 5;
-        locationMatch = "remote";
+    const storedCandidates = localStorage.getItem("apex_candidates");
+    let existingCandidates: Candidate[] = [];
+    if (storedCandidates) {
+      try {
+        existingCandidates = JSON.parse(storedCandidates);
+        setCandidates(existingCandidates);
+      } catch {
+        // Ignore
       }
     }
 
-    const totalScore = Math.min(99, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
+    // Auto-search for candidates based on job requirements
+    if (parsedJobContext?.requiredSkills?.length > 0 && existingCandidates.length === 0 && !autoSearched) {
+      setAutoSearched(true);
+      const skills = parsedJobContext.requiredSkills.slice(0, 3);
+      const location = parsedJobContext.location || "";
+      const query = [...skills, location].filter(Boolean).join(" ");
 
-    return {
-      score: totalScore,
-      breakdown: {
-        requiredMatched,
-        requiredMissing,
-        preferredMatched,
-        locationMatch,
-        baseScore,
-        skillsScore,
-        preferredScore,
-        locationScore,
-      },
-    };
-  };
+      if (query) {
+        setSearchQuery(query);
+        // Auto-trigger search after a short delay
+        setTimeout(() => {
+          autoSearchCandidates(query);
+        }, 500);
+      }
+    }
+  }, [autoSearched]);
 
   // Auto-search function (separate from manual search to handle initial load)
   const autoSearchCandidates = async (query: string) => {
@@ -519,17 +137,12 @@ export default function PipelinePage() {
     setLoading(true);
 
     try {
-      // Fetch more candidates to have better selection
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&perPage=15`
+        `/api/search?q=${encodeURIComponent(query)}`
       );
       const data = await response.json();
 
       if (data.users && data.users.length > 0) {
-        // Get job context for scoring
-        const storedContext = localStorage.getItem("apex_job_context");
-        const jobReqs = storedContext ? JSON.parse(storedContext) : {};
-
         const newCandidates = data.users.map((user: {
           username: string;
           name: string;
@@ -539,33 +152,17 @@ export default function PipelinePage() {
           company: string;
           skills: string[];
           score: number;
-        }) => {
-          // Calculate alignment score based on job requirements
-          const { score, breakdown } = calculateAlignmentScore(
-            { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
-            {
-              requiredSkills: jobReqs.requiredSkills,
-              preferredSkills: jobReqs.preferredSkills,
-              location: jobReqs.location,
-            }
-          );
-
-          return {
-            id: user.username,
-            name: user.name || user.username,
-            currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
-            company: user.company || "Independent",
-            location: user.location || "Remote",
-            alignmentScore: score,
-            scoreBreakdown: breakdown,
-            avatar: user.avatar,
-            skills: user.skills || [],
-            createdAt: new Date().toISOString(),
-          };
-        });
-
-        // Sort by alignment score
-        newCandidates.sort((a: Candidate, b: Candidate) => b.alignmentScore - a.alignmentScore);
+        }) => ({
+          id: user.username,
+          name: user.name || user.username,
+          currentRole: user.bio || "Developer",
+          company: user.company || "Independent",
+          location: user.location || "Remote",
+          alignmentScore: user.score || Math.floor(Math.random() * 30) + 60,
+          avatar: user.avatar,
+          skills: user.skills || [],
+          createdAt: new Date().toISOString(),
+        }));
 
         setCandidates(newCandidates);
         localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
@@ -583,15 +180,11 @@ export default function PipelinePage() {
 
     try {
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(searchQuery)}&perPage=15`
+        `/api/search?q=${encodeURIComponent(searchQuery)}`
       );
       const data = await response.json();
 
       if (data.users && data.users.length > 0) {
-        // Get job context for scoring
-        const storedContext = localStorage.getItem("apex_job_context");
-        const jobReqs = storedContext ? JSON.parse(storedContext) : {};
-
         const newCandidates = data.users.map((user: {
           username: string;
           name: string;
@@ -601,38 +194,23 @@ export default function PipelinePage() {
           company: string;
           skills: string[];
           score: number;
-        }) => {
-          // Calculate alignment score based on job requirements
-          const { score, breakdown } = calculateAlignmentScore(
-            { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
-            {
-              requiredSkills: jobReqs.requiredSkills,
-              preferredSkills: jobReqs.preferredSkills,
-              location: jobReqs.location,
-            }
-          );
-
-          return {
-            id: user.username,
-            name: user.name || user.username,
-            currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
-            company: user.company || "Independent",
-            location: user.location || "Remote",
-            alignmentScore: score,
-            scoreBreakdown: breakdown,
-            avatar: user.avatar,
-            skills: user.skills || [],
-            createdAt: new Date().toISOString(),
-          };
-        });
+        }) => ({
+          id: user.username,
+          name: user.name || user.username,
+          currentRole: user.bio || "Developer",
+          company: user.company || "Independent",
+          location: user.location || "Remote",
+          alignmentScore: user.score || Math.floor(Math.random() * 30) + 60,
+          avatar: user.avatar,
+          skills: user.skills || [],
+          createdAt: new Date().toISOString(),
+        }));
 
         setCandidates((prev) => {
           const merged = [...newCandidates, ...prev];
           const unique = merged.filter(
             (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
           );
-          // Sort by alignment score
-          unique.sort((a, b) => b.alignmentScore - a.alignmentScore);
           localStorage.setItem("apex_candidates", JSON.stringify(unique));
           return unique;
         });
@@ -696,7 +274,7 @@ export default function PipelinePage() {
   };
 
   const handleDelete = useCallback((id: string) => {
-    if (confirm(t("pipeline.candidate.deleteConfirm"))) {
+    if (confirm("Delete this candidate from the pipeline?")) {
       setCandidates((prev) => {
         const updated = prev.filter((c) => c.id !== id);
         localStorage.setItem("apex_candidates", JSON.stringify(updated));
@@ -704,14 +282,16 @@ export default function PipelinePage() {
       });
       setSelectedIds((prev) => prev.filter((i) => i !== id));
     }
-  }, [t]);
+  }, []);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       if (prev.includes(id)) {
         return prev.filter((i) => i !== id);
       }
-      // No limit on selection - users can select as many candidates as needed
+      if (prev.length >= 3) {
+        return prev;
+      }
       return [...prev, id];
     });
   }, []);
@@ -735,63 +315,20 @@ export default function PipelinePage() {
 
   // Filtering
   const filteredCandidates = useMemo(() => {
-    let filtered = sortedCandidates;
-
-    // Apply hard requirements filter - exclude candidates missing must-have skills
-    if (enforceHardRequirements && mustHaveSkills.length > 0) {
-      filtered = filtered.filter((c) => {
-        // Check if candidate has all must-have skills
-        const candidateSkillsLower = c.skills?.map(s => s.toLowerCase()) || [];
-        const candidateBioLower = (c.currentRole || "").toLowerCase();
-
-        return mustHaveSkills.every(mustHave => {
-          // Check if skill is in candidate's skills or bio
-          return candidateSkillsLower.some(skill =>
-            skill.includes(mustHave) || mustHave.includes(skill)
-          ) || candidateBioLower.includes(mustHave);
-        });
-      });
+    if (!filterScore) return sortedCandidates;
+    switch (filterScore) {
+      case "high":
+        return sortedCandidates.filter((c) => c.alignmentScore >= 80);
+      case "medium":
+        return sortedCandidates.filter(
+          (c) => c.alignmentScore >= 50 && c.alignmentScore < 80
+        );
+      case "low":
+        return sortedCandidates.filter((c) => c.alignmentScore < 50);
+      default:
+        return sortedCandidates;
     }
-
-    // Apply histogram range filter
-    if (filterRange) {
-      filtered = filtered.filter((c) => {
-        switch (filterRange) {
-          case "90-100":
-            return c.alignmentScore >= 90;
-          case "80-89":
-            return c.alignmentScore >= 80 && c.alignmentScore < 90;
-          case "70-79":
-            return c.alignmentScore >= 70 && c.alignmentScore < 80;
-          case "60-69":
-            return c.alignmentScore >= 60 && c.alignmentScore < 70;
-          case "0-59":
-            return c.alignmentScore < 60;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply preset score filter
-    if (filterScore) {
-      switch (filterScore) {
-        case "high":
-          filtered = filtered.filter((c) => c.alignmentScore >= 80);
-          break;
-        case "medium":
-          filtered = filtered.filter(
-            (c) => c.alignmentScore >= 50 && c.alignmentScore < 80
-          );
-          break;
-        case "low":
-          filtered = filtered.filter((c) => c.alignmentScore < 50);
-          break;
-      }
-    }
-
-    return filtered;
-  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills]);
+  }, [sortedCandidates, filterScore]);
 
   // Score distribution for chart
   const scoreDistribution = useMemo(() => {
@@ -826,322 +363,89 @@ export default function PipelinePage() {
 
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.id));
 
-  // Top matches - first 5 candidates by score
-  const topMatches = useMemo(() => {
-    return [...candidates]
-      .sort((a, b) => b.alignmentScore - a.alignmentScore)
-      .slice(0, 5);
-  }, [candidates]);
-
-  // Collapsible chart state
-  const [showChart, setShowChart] = useState(false);
-
   return (
-    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
+    <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Workflow Stepper */}
-        <div className="mb-6">
-          <WorkflowStepper currentStep={3} />
-        </div>
-
-        {/* Compact Header with Job Context */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold">
-                {jobContext?.title || t("pipeline.title")}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {jobContext?.company || "Your Pipeline"} • {candidates.length} candidates found
-              </p>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <Badge className="mb-2 bg-primary/20 text-primary">Trin 2 af 4</Badge>
+            <h1 className="text-3xl font-bold">Talent Pipeline</h1>
+            {jobContext && (
+              <>
+                <p className="text-muted-foreground mt-1">
+                  {jobContext.title} at {jobContext.company}
+                </p>
+                {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-xs text-muted-foreground mr-1">Færdigheder:</span>
+                    {jobContext.requiredSkills.slice(0, 5).map((skill) => (
+                      <Badge key={skill} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <div className="flex gap-2">
-            <Link href={`/intake${adminSuffix}`}>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+              <FileText className="w-4 h-4 mr-2" />
+              Importer
+            </Button>
+            <Link href="/intake">
               <Button variant="outline" size="sm">
-                <Briefcase className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Edit Job</span>
+                <Briefcase className="w-4 h-4 mr-2" />
+                Rediger Job
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* TOP MATCHES - Hero Section (Above the Fold) */}
-        {!loading && topMatches.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                <h2 className="text-lg font-semibold">Top Matches</h2>
-                <Badge variant="secondary" className="text-xs">
-                  Based on {jobContext?.requiredSkills?.length || 0} requirements
+        {/* Score Distribution Chart */}
+        {candidates.length > 0 && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-medium flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                    Pipeline Intelligens
+                  </h3>
+                  <p className="text-xs text-muted-foreground">Score fordeling på tværs af {candidates.length} kandidater</p>
+                </div>
+                <Badge variant="outline" className="gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  Top Match: {candidates.filter((c) => c.alignmentScore >= 80).length}
                 </Badge>
               </div>
-              {/* Compare selected from top matches */}
-              {selectedIds.filter(id => topMatches.some(c => c.id === id)).length >= 2 && (
-                <Button
-                  size="sm"
-                  onClick={() => setShowComparison(true)}
-                  className="gap-1"
-                >
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                  Compare {selectedIds.filter(id => topMatches.some(c => c.id === id)).length} Selected
-                </Button>
-              )}
-            </div>
-
-            {/* Top 5 Candidates - Card Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-              {topMatches.map((candidate, index) => {
-                const isSelected = selectedIds.includes(candidate.id);
-                return (
-                <Card
-                  key={candidate.id}
-                  className={`relative overflow-hidden transition-all hover:shadow-lg cursor-pointer ${
-                    index === 0 ? "ring-2 ring-yellow-500/50 bg-yellow-500/5" : ""
-                  } ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`}
-                  onClick={() => toggleSelect(candidate.id)}
-                >
-                  {index === 0 && !isSelected && (
-                    <div className="absolute top-0 right-0 bg-yellow-500 text-yellow-950 text-[10px] font-bold px-2 py-0.5 rounded-bl">
-                      BEST MATCH
-                    </div>
-                  )}
-                  {/* Selection indicator */}
-                  <div className="absolute top-2 left-2">
-                    {isSelected ? (
-                      <CheckSquare className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Square className="w-4 h-4 text-muted-foreground/40 hover:text-muted-foreground" />
-                    )}
-                  </div>
-                  <CardContent className="p-4 pt-6">
-                    {/* Avatar + Score */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <img
-                            src={candidate.avatar}
-                            alt={candidate.name}
-                            className="w-10 h-10 rounded-full"
-                          />
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background flex items-center justify-center text-[10px] font-bold border-2 border-background">
-                            #{index + 1}
-                          </div>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{candidate.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            @{candidate.id}
-                          </p>
-                        </div>
-                      </div>
-                      <div className={`text-lg font-bold ${getScoreColor(candidate.alignmentScore)}`}>
-                        {candidate.alignmentScore}%
-                      </div>
-                    </div>
-
-                    {/* Role & Company */}
-                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                      {candidate.currentRole} {candidate.company !== "Independent" && `@ ${candidate.company}`}
-                    </p>
-
-                    {/* Key Skills - Why This Match */}
-                    {candidate.scoreBreakdown?.requiredMatched && candidate.scoreBreakdown.requiredMatched.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {candidate.scoreBreakdown.requiredMatched.slice(0, 3).map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-500/10 text-green-600 border-green-500/20">
-                            <Check className="w-2.5 h-2.5 mr-0.5" />
-                            {skill}
-                          </Badge>
-                        ))}
-                        {candidate.scoreBreakdown.requiredMatched.length > 3 && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            +{candidate.scoreBreakdown.requiredMatched.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    {/* One-Click Actions */}
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Link href={`/profile/${candidate.id}`} className="flex-1">
-                        <Button size="sm" variant="outline" className="w-full text-xs h-8">
-                          View Profile
-                        </Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        className="flex-1 text-xs h-8"
-                        onClick={() => {
-                          setOutreachCandidate(candidate);
-                          setShowOutreach(true);
-                        }}
-                      >
-                        <MessageSquare className="w-3 h-3 mr-1" />
-                        Outreach
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )})}
-            </div>
-
-            {/* Inline hint for comparison */}
-            {selectedIds.filter(id => topMatches.some(c => c.id === id)).length === 1 && (
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Click another candidate to compare
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Quick Stats Bar - Always visible when candidates exist */}
-        {!loading && candidates.length > 0 && (
-          <div className="flex items-center gap-4 mb-6 p-3 rounded-lg bg-muted/30 border">
-            <div className="flex items-center gap-6 flex-1">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-sm font-medium">{scoreDistribution[0].count + scoreDistribution[1].count}</span>
-                <span className="text-xs text-muted-foreground">Strong (80+)</span>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={scoreDistribution}>
+                    <XAxis dataKey="range" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      {scoreDistribution.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                <span className="text-sm font-medium">{scoreDistribution[2].count + scoreDistribution[3].count}</span>
-                <span className="text-xs text-muted-foreground">Moderate (60-79)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <span className="text-sm font-medium">{scoreDistribution[4].count}</span>
-                <span className="text-xs text-muted-foreground">Weak (&lt;60)</span>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowChart(!showChart)}
-              className="text-xs gap-1.5"
-            >
-              <BarChart3 className="w-4 h-4" />
-              {showChart ? "Hide Chart" : "View Chart"}
-              <ChevronDown className={`w-3 h-3 transition-transform ${showChart ? "rotate-180" : ""}`} />
-            </Button>
-          </div>
-        )}
-
-        {/* Collapsible Chart Section */}
-        <AnimatePresence>
-          {showChart && candidates.length > 0 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mb-6"
-            >
-              <Card className="border-dashed">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs text-muted-foreground">
-                      {filterRange
-                        ? `Filtering: ${filterRange} range (${filteredCandidates.length} candidates)`
-                        : "Click a bar to filter candidates by score range"
-                      }
-                    </p>
-                    {filterRange && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setFilterRange(null)}
-                        className="text-xs h-6 gap-1 px-2"
-                      >
-                        <X className="w-3 h-3" />
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                  <div className="h-28">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={scoreDistribution}>
-                        <XAxis dataKey="range" tick={{ fontSize: 11 }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-popover border rounded-md shadow-md px-3 py-2 text-sm">
-                                  <p className="font-medium">{data.range}</p>
-                                  <p className="text-muted-foreground">{data.count} candidates</p>
-                                  <p className="text-xs text-primary mt-1">Click to filter</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar
-                          dataKey="count"
-                          radius={[4, 4, 0, 0]}
-                          className="cursor-pointer"
-                          onClick={(data) => {
-                            if (data && data.range) {
-                              setFilterRange(filterRange === data.range ? null : data.range);
-                            }
-                          }}
-                        >
-                          {scoreDistribution.map((entry, index) => (
-                            <Cell
-                              key={index}
-                              fill={filterRange === entry.range
-                                ? entry.color
-                                : (filterRange ? `${entry.color}40` : entry.color)
-                              }
-                              className="cursor-pointer transition-all duration-200 hover:opacity-80"
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {filterRange && (
-                    <p className="text-xs text-center text-muted-foreground mt-2">
-                      Click the same bar again or use &quot;Clear filter&quot; to show all candidates
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* All Candidates Section Header */}
-        {!loading && candidates.length > 0 && (
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">All Candidates</h2>
-              <Badge variant="outline" className="text-xs">
-                {filteredCandidates.length} of {candidates.length}
-              </Badge>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add More
-            </Button>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Search & Filters */}
-        <Card className="mb-4">
+        <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-wrap gap-4">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder={t("pipeline.searchPlaceholder")}
+                  placeholder="Søg GitHub udviklere (f.eks. 'react københavn')"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -1150,11 +454,11 @@ export default function PipelinePage() {
               </div>
               <Button onClick={handleSearch} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                <span className="ml-2">{t("pipeline.addCandidates")}</span>
+                <span className="ml-2">Tilføj Kandidater</span>
               </Button>
               <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
                 <Filter className="w-4 h-4 mr-2" />
-                {t("pipeline.filters")}
+                Filtre
                 <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showFilters ? "rotate-180" : ""}`} />
               </Button>
             </div>
@@ -1170,23 +474,23 @@ export default function PipelinePage() {
                 >
                   <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">{t("pipeline.sort")}</span>
+                      <span className="text-sm text-muted-foreground">Sorter:</span>
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                         className="text-sm bg-background border rounded px-2 py-1"
                       >
-                        <option value="score-desc">{t("pipeline.sortOptions.scoreDesc")}</option>
-                        <option value="score-asc">{t("pipeline.sortOptions.scoreAsc")}</option>
-                        <option value="name-asc">{t("pipeline.sortOptions.nameAsc")}</option>
-                        <option value="name-desc">{t("pipeline.sortOptions.nameDesc")}</option>
+                        <option value="score-desc">Score (Høj til Lav)</option>
+                        <option value="score-asc">Score (Lav til Høj)</option>
+                        <option value="name-asc">Navn (A-Z)</option>
+                        <option value="name-desc">Navn (Z-A)</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">{t("pipeline.scoreFilter")}</span>
+                      <span className="text-sm text-muted-foreground">Score:</span>
                       <div className="flex gap-1">
                         {[
-                          { value: null, label: t("pipeline.all") },
+                          { value: null, label: "All" },
                           { value: "high", label: "80+" },
                           { value: "medium", label: "50-79" },
                           { value: "low", label: "<50" },
@@ -1202,35 +506,14 @@ export default function PipelinePage() {
                         ))}
                       </div>
                     </div>
-                    {/* Hard Requirements Filter */}
-                    {mustHaveSkills.length > 0 && (
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <Switch
-                          id="hard-requirements"
-                          checked={enforceHardRequirements}
-                          onCheckedChange={setEnforceHardRequirements}
-                        />
-                        <Label htmlFor="hard-requirements" className="text-sm font-medium cursor-pointer">
-                          <span className="text-red-400">Hard filter:</span>{" "}
-                          <span className="text-muted-foreground">
-                            Require all {mustHaveSkills.length} must-have skills
-                          </span>
-                        </Label>
-                        {enforceHardRequirements && (
-                          <Badge variant="destructive" className="text-xs">
-                            {candidates.length - filteredCandidates.length} excluded
-                          </Badge>
-                        )}
-                      </div>
-                    )}
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
-                        <Badge>{selectedIds.length} {t("common.selected")}</Badge>
+                        <Badge>{selectedIds.length} valgt</Badge>
                         <Button size="sm" onClick={() => setShowComparison(true)}>
-                          {t("common.compare")}
+                          Sammenlign
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-                          {t("common.clear")}
+                          Ryd
                         </Button>
                       </div>
                     )}
@@ -1241,105 +524,138 @@ export default function PipelinePage() {
           </CardContent>
         </Card>
 
-        {/* Loading State with Text Scramble */}
-        {loading && candidates.length === 0 && (
-          <div className="space-y-3 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <PipelineLoadingScramble />
-              {jobContext?.requiredSkills && (
-                <div className="flex gap-1 ml-2">
-                  {jobContext.requiredSkills.slice(0, 3).map((skill) => (
-                    <Badge key={skill} variant="secondary" className="text-xs">{skill}</Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="py-4">
-                  <div className="flex items-center gap-4">
-                    {/* Checkbox skeleton */}
-                    <div className="w-5 h-5 rounded bg-muted" />
-                    {/* Avatar skeleton */}
-                    <div className="w-12 h-12 rounded-full bg-muted" />
-                    {/* Info skeleton */}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-5 w-32 bg-muted rounded" />
-                        <div className="h-4 w-20 bg-muted rounded" />
-                      </div>
-                      <div className="h-4 w-48 bg-muted rounded" />
-                      <div className="flex gap-2">
-                        <div className="h-3 w-24 bg-muted rounded" />
-                        <div className="h-3 w-32 bg-muted rounded" />
-                      </div>
-                    </div>
-                    {/* Score skeleton */}
-                    <div className="w-14 h-14 rounded-xl bg-muted" />
-                    {/* Actions skeleton */}
-                    <div className="flex gap-2">
-                      <div className="h-8 w-24 bg-muted rounded" />
-                      <div className="h-8 w-8 bg-muted rounded" />
-                      <div className="h-8 w-8 bg-muted rounded" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Candidates List with Split View */}
-        {!loading && filteredCandidates.length === 0 ? (
+        {/* Candidates List */}
+        {filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
-              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.noResults.title")}</h3>
-              <p className="text-muted-foreground mb-4">
-                {t("pipeline.empty.noResults.description")}
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => setShowImport(true)}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  {t("pipeline.empty.noResults.importResume")}
-                </Button>
-              </div>
+              {loading ? (
+                <>
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
+                  <h3 className="text-lg font-medium mb-2">Finder Kandidater...</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Søger efter udviklere der matcher dine jobkrav
+                  </p>
+                  {jobContext?.requiredSkills && (
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {jobContext.requiredSkills.slice(0, 3).map((skill) => (
+                        <Badge key={skill} variant="secondary">{skill}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">Ingen Kandidater Endnu</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Søg efter udviklere på GitHub eller importer et CV
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button onClick={() => setShowImport(true)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Importer CV
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
-        ) : filteredCandidates.length > 0 ? (
-          <PipelineSplitView
-            candidates={filteredCandidates}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            selectedCandidateId={selectedCandidateId}
-            onSelectCandidate={setSelectedCandidateId}
-            onOutreach={(c) => {
-              setOutreachCandidate(c);
-              setShowOutreach(true);
-            }}
-            renderListItem={(candidate, isCompact) => (
-              <motion.div
-                key={candidate.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                layout
-              >
-                <CandidatePipelineItem
-                  candidate={candidate}
-                  isSelected={selectedIds.includes(candidate.id)}
-                  onToggleSelect={toggleSelect}
-                  onDelete={handleDelete}
-                  onOutreach={(c) => {
-                    setOutreachCandidate(c);
-                    setShowOutreach(true);
-                  }}
-                  compact={isCompact}
-                />
-              </motion.div>
-            )}
-          />
-        ) : null}
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence>
+              {filteredCandidates.map((candidate) => (
+                <motion.div
+                  key={candidate.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  layout
+                >
+                  <Card className="hover:border-primary/50 transition-colors">
+                    <CardContent className="py-4">
+                      <div className="flex items-center gap-4">
+                        {/* Checkbox */}
+                        <button onClick={() => toggleSelect(candidate.id)} className="text-muted-foreground hover:text-foreground">
+                          {selectedIds.includes(candidate.id) ? (
+                            <CheckSquare className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+
+                        {/* Avatar */}
+                        <img
+                          src={candidate.avatar}
+                          alt={candidate.name}
+                          className="w-12 h-12 rounded-full"
+                        />
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium truncate">{candidate.name}</h3>
+                            {candidate.persona?.archetype && (
+                              <Badge variant="outline" className="text-xs">
+                                {candidate.persona.archetype.split(" ").slice(0, 2).join(" ")}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {candidate.currentRole} at {candidate.company}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {candidate.location}
+                            </span>
+                            {candidate.skills.length > 0 && (
+                              <span>{candidate.skills.slice(0, 3).join(", ")}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Score */}
+                        <div className={`text-center px-4 py-2 rounded-lg ${getScoreBg(candidate.alignmentScore)}`}>
+                          <div className={`text-2xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
+                            {candidate.alignmentScore}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Score</div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          <Link href={`/profile/${candidate.id}/deep`}>
+                            <Button size="sm">
+                              Dybdeprofil
+                              <ArrowRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setOutreachCandidate(candidate);
+                              setShowOutreach(true);
+                            }}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(candidate.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* Import Modal */}
         <AnimatePresence>
@@ -1359,23 +675,23 @@ export default function PipelinePage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">{t("pipeline.importModal.title")}</h2>
+                  <h2 className="text-xl font-bold">Importer Kandidat</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowImport(false)}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {t("pipeline.importModal.description")}
+                  Indsæt et CV, LinkedIn profiltekst eller anden kandidatinformation. Vores AI vil analysere og udtrække de relevante detaljer.
                 </p>
                 <textarea
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
-                  placeholder={t("pipeline.importModal.placeholder")}
+                  placeholder="Indsæt kandidatinformation her..."
                   className="w-full h-64 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="outline" onClick={() => setShowImport(false)}>
-                    {t("common.cancel")}
+                    Annuller
                   </Button>
                   <Button onClick={handleImport} disabled={isImporting || !importText.trim()}>
                     {isImporting ? (
@@ -1383,7 +699,7 @@ export default function PipelinePage() {
                     ) : (
                       <Sparkles className="w-4 h-4 mr-2" />
                     )}
-                    {t("pipeline.importModal.analyzeImport")}
+                    Analyser & Importer
                   </Button>
                 </div>
               </motion.div>
@@ -1391,7 +707,7 @@ export default function PipelinePage() {
           )}
         </AnimatePresence>
 
-        {/* Comparison Modal - Enhanced */}
+        {/* Comparison Modal */}
         <AnimatePresence>
           {showComparison && selectedCandidates.length > 0 && (
             <motion.div
@@ -1405,211 +721,61 @@ export default function PipelinePage() {
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-background rounded-lg max-w-6xl w-full max-h-[90vh] overflow-auto"
+                className="bg-background rounded-lg p-6 max-w-5xl w-full max-h-[90vh] overflow-auto"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-10">
-                  <div>
-                    <h2 className="text-xl font-bold">Compare Candidates</h2>
-                    <p className="text-sm text-muted-foreground">Side-by-side comparison of {selectedCandidates.length} candidates</p>
-                  </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold">Sammenlign Kandidater</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowComparison(false)}>
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
-
-                {/* Comparison Table */}
-                <div className="p-4">
-                  <table className="w-full">
-                    <thead>
-                      <tr>
-                        <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground w-32">Criteria</th>
-                        {selectedCandidates.map((c) => (
-                          <th key={c.id} className="text-center py-3 px-2">
-                            <div className="flex flex-col items-center gap-2">
-                              <img src={c.avatar} alt={c.name} className="w-12 h-12 rounded-full" />
-                              <div>
-                                <p className="font-medium text-sm">{c.name}</p>
-                                <p className="text-xs text-muted-foreground">@{c.id}</p>
-                              </div>
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {/* Overall Score */}
-                      <tr className="bg-muted/30">
-                        <td className="py-3 px-2 text-sm font-medium">Match Score</td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center">
-                            <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl ${getScoreBg(c.alignmentScore)}`}>
-                              <span className={`text-2xl font-bold ${getScoreColor(c.alignmentScore)}`}>
-                                {c.alignmentScore}
-                              </span>
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-
-                      {/* Role */}
-                      <tr>
-                        <td className="py-3 px-2 text-sm text-muted-foreground">Current Role</td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center text-sm">{c.currentRole}</td>
-                        ))}
-                      </tr>
-
-                      {/* Company */}
-                      <tr>
-                        <td className="py-3 px-2 text-sm text-muted-foreground">Company</td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center text-sm">{c.company}</td>
-                        ))}
-                      </tr>
-
-                      {/* Location */}
-                      <tr>
-                        <td className="py-3 px-2 text-sm text-muted-foreground">Location</td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center text-sm">
-                            <div className="flex items-center justify-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {c.location}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-
-                      {/* Matched Skills */}
-                      <tr className="bg-green-500/5">
-                        <td className="py-3 px-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Check className="w-4 h-4 text-green-500" />
-                            Matched Skills
+                <div className={`grid gap-4 ${selectedCandidates.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                  {selectedCandidates.map((c) => (
+                    <Card key={c.id}>
+                      <CardContent className="pt-6">
+                        <div className="text-center mb-4">
+                          <img
+                            src={c.avatar}
+                            alt={c.name}
+                            className="w-16 h-16 rounded-full mx-auto mb-2"
+                          />
+                          <h3 className="font-medium">{c.name}</h3>
+                          <p className="text-sm text-muted-foreground">{c.currentRole}</p>
+                        </div>
+                        <div className={`text-center p-4 rounded-lg ${getScoreBg(c.alignmentScore)} mb-4`}>
+                          <div className={`text-3xl font-bold ${getScoreColor(c.alignmentScore)}`}>
+                            {c.alignmentScore}
                           </div>
-                        </td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center">
-                            <div className="flex flex-wrap gap-1 justify-center">
-                              {c.scoreBreakdown?.requiredMatched?.length ? (
-                                c.scoreBreakdown.requiredMatched.map((skill) => (
-                                  <Badge key={skill} className="text-[10px] bg-green-500/20 text-green-600 border-green-500/30">
-                                    {skill}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-
-                      {/* Missing Skills */}
-                      <tr className="bg-red-500/5">
-                        <td className="py-3 px-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <AlertTriangle className="w-4 h-4 text-red-500" />
-                            Missing Skills
+                          <div className="text-xs text-muted-foreground">Match Score</div>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Lokation</span>
+                            <span>{c.location}</span>
                           </div>
-                        </td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center">
-                            <div className="flex flex-wrap gap-1 justify-center">
-                              {c.scoreBreakdown?.requiredMissing?.length ? (
-                                c.scoreBreakdown.requiredMissing.map((skill) => (
-                                  <Badge key={skill} variant="outline" className="text-[10px] border-red-500/30 text-red-500">
-                                    {skill}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <Badge className="text-[10px] bg-green-500/20 text-green-600">All matched!</Badge>
-                              )}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-
-                      {/* All Skills */}
-                      <tr>
-                        <td className="py-3 px-2 text-sm text-muted-foreground">Tech Stack</td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-3 px-2 text-center">
-                            <div className="flex flex-wrap gap-1 justify-center max-w-xs mx-auto">
-                              {c.skills?.slice(0, 8).map((skill) => (
-                                <Badge key={skill} variant="secondary" className="text-[10px]">
-                                  {skill}
-                                </Badge>
-                              ))}
-                              {c.skills && c.skills.length > 8 && (
-                                <Badge variant="outline" className="text-[10px]">+{c.skills.length - 8}</Badge>
-                              )}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-
-                      {/* Risks */}
-                      {selectedCandidates.some(c => c.risks?.length) && (
-                        <tr>
-                          <td className="py-3 px-2 text-sm text-muted-foreground">Potential Risks</td>
-                          {selectedCandidates.map((c) => (
-                            <td key={c.id} className="py-3 px-2 text-center">
-                              {c.risks?.length ? (
-                                <ul className="text-xs text-left list-disc list-inside text-muted-foreground">
-                                  {c.risks.slice(0, 3).map((risk, i) => (
-                                    <li key={i}>{risk}</li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      )}
-
-                      {/* Actions */}
-                      <tr className="bg-muted/30">
-                        <td className="py-4 px-2 text-sm font-medium">Actions</td>
-                        {selectedCandidates.map((c) => (
-                          <td key={c.id} className="py-4 px-2 text-center">
-                            <div className="flex gap-2 justify-center">
-                              <Link href={`/profile/${c.id}`}>
-                                <Button size="sm" variant="outline" className="text-xs">
-                                  View Profile
-                                </Button>
-                              </Link>
-                              <Button
-                                size="sm"
-                                className="text-xs"
-                                onClick={() => {
-                                  setShowComparison(false);
-                                  setOutreachCandidate(c);
-                                  setShowOutreach(true);
-                                }}
-                              >
-                                <MessageSquare className="w-3 h-3 mr-1" />
-                                Outreach
-                              </Button>
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t bg-muted/20 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Tip: Add more candidates to compare by clicking the checkbox on candidate cards
-                  </p>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>
-                    Clear Selection
-                  </Button>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Virksomhed</span>
+                            <span>{c.company}</span>
+                          </div>
+                        </div>
+                        {c.skills.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-1">
+                            {c.skills.slice(0, 5).map((skill) => (
+                              <Badge key={skill} variant="secondary" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <Link href={`/profile/${c.id}/deep`} className="block mt-4">
+                          <Button className="w-full" size="sm">
+                            Se Dybdeprofil
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </motion.div>
             </motion.div>
@@ -1634,22 +800,6 @@ export default function PipelinePage() {
           />
         )}
       </div>
-
-      {/* Shortlist Panel - Fixed bottom selection bar */}
-      <ShortlistPanel
-        selectedCandidates={selectedCandidates}
-        totalCandidates={candidates.length}
-        onCompare={() => setShowComparison(true)}
-        onClearSelection={() => setSelectedIds([])}
-        onMoveToDeepDive={() => {
-          // Save selected IDs to localStorage and navigate to shortlist page
-          if (selectedCandidates.length > 0) {
-            localStorage.setItem("apex_shortlist", JSON.stringify(selectedIds));
-            router.push("/shortlist");
-          }
-        }}
-        onRemoveCandidate={(id) => setSelectedIds((prev) => prev.filter((i) => i !== id))}
-      />
     </div>
   );
 }

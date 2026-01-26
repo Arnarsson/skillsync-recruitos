@@ -1,15 +1,106 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
-import { FileText, Search, Users, Power, Home, Settings } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { FileText, Search, Users, Power, Home, Settings, GripVertical } from "lucide-react";
 import { Dock, DockCard, DockCardInner, DockDivider } from "@/components/ui/dock";
 import { useAdmin } from "@/lib/adminContext";
 import { cn } from "@/lib/utils";
 
+const DOCK_POSITION_KEY = "recruitos_dock_position";
+
+function useDraggable(initialPosition?: { x: number; y: number }) {
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const didDragRef = useRef(false);
+
+  // Load saved position on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DOCK_POSITION_KEY);
+      if (saved) {
+        setPosition(JSON.parse(saved));
+      } else if (initialPosition) {
+        setPosition(initialPosition);
+      }
+    } catch {
+      // ignore
+    }
+  }, [initialPosition]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = dragRef.current.getBoundingClientRect();
+    offsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    didDragRef.current = false;
+    setIsDragging(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging || !dragRef.current) return;
+
+      const x = e.clientX - offsetRef.current.x;
+      const y = e.clientY - offsetRef.current.y;
+
+      // Clamp to viewport
+      const rect = dragRef.current.getBoundingClientRect();
+      const clampedX = Math.max(0, Math.min(window.innerWidth - rect.width, x));
+      const clampedY = Math.max(0, Math.min(window.innerHeight - rect.height, y));
+
+      didDragRef.current = true;
+      setPosition({ x: clampedX, y: clampedY });
+    },
+    [isDragging]
+  );
+
+  const onPointerUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    // Persist position
+    if (position) {
+      try {
+        localStorage.setItem(DOCK_POSITION_KEY, JSON.stringify(position));
+      } catch {
+        // ignore
+      }
+    }
+    // Suppress clicks that fire right after drag ends
+    if (didDragRef.current) {
+      requestAnimationFrame(() => {
+        didDragRef.current = false;
+      });
+    }
+  }, [isDragging, position]);
+
+  // Capture clicks on the container and suppress them if a drag just ended
+  const onClickCapture = useCallback((e: React.MouseEvent) => {
+    if (didDragRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, []);
+
+  return { position, isDragging, dragRef, onPointerDown, onPointerMove, onPointerUp, onClickCapture };
+}
+
 export default function AdminDock() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isAdmin, toggleAdmin } = useAdmin();
+  const { position, isDragging, dragRef, onPointerDown, onPointerMove, onPointerUp, onClickCapture } =
+    useDraggable();
+
+  // Only show in development or when ?admin query param is present
+  const isDev = process.env.NODE_ENV === "development";
+  const hasAdminParam = searchParams.has("admin");
+  const showAdminUI = isDev || hasAdminParam;
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, href: "/" },
@@ -25,7 +116,10 @@ export default function AdminDock() {
   };
 
   // Floating power button when admin mode is off
+  // Hidden in production unless ?admin query param is present
   if (!isAdmin) {
+    if (!showAdminUI) return null;
+
     return (
       <button
         onClick={toggleAdmin}
@@ -40,10 +134,37 @@ export default function AdminDock() {
     );
   }
 
-  // Mac-style dock when admin mode is on
+  // Positioning: use saved/dragged position or default to bottom-center
+  const style: React.CSSProperties = position
+    ? { left: position.x, top: position.y, transform: "none" }
+    : { left: "50%", bottom: "12px", transform: "translateX(-50%)" };
+
+  // Mac-style draggable dock when admin mode is on
   return (
-    <div className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50">
+    <div
+      ref={dragRef}
+      className={cn("fixed z-50", isDragging && "select-none")}
+      style={style}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onClickCapture={onClickCapture}
+    >
       <Dock className="bg-card/95 backdrop-blur-md border border-border shadow-2xl scale-90 sm:scale-100 origin-bottom">
+        {/* Drag handle */}
+        <DockCard id="drag-handle">
+          <DockCardInner
+            onPointerDown={onPointerDown}
+            className={cn(
+              "cursor-grab active:cursor-grabbing bg-muted/50 hover:bg-muted text-muted-foreground transition-colors",
+              isDragging && "cursor-grabbing"
+            )}
+          >
+            <GripVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+          </DockCardInner>
+        </DockCard>
+
+        <DockDivider />
+
         {navItems.map((item) => (
           <DockCard key={item.id} id={item.id}>
             <DockCardInner

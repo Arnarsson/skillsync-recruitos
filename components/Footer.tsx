@@ -1,12 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useLanguage } from "@/lib/i18n";
 
 export default function Footer() {
-  const { t } = useLanguage();
-  const year = new Date().getFullYear();
-
   return (
     <footer className="border-t border-border bg-background">
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -14,40 +8,38 @@ export default function Footer() {
           {/* Logo */}
           <div>
             <Link href="/" className="font-medium tracking-tight lowercase">
-              {t("header.logo")}
+              recruitos
             </Link>
           </div>
 
           {/* Resources */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              {t("footer.resources")}
+              ressourcer
             </h3>
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="/#how-it-works"
+                  href="/about"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  {t("footer.about")}
+                  om os
                 </Link>
               </li>
               <li>
-                <a
-                  href="https://github.com/Arnarsson/skillsync-recruitos"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/contributors"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  {t("footer.contributors")}
-                </a>
+                  bidragydere
+                </Link>
               </li>
               <li>
                 <Link
-                  href="/#pricing"
+                  href="#pricing"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  {t("footer.pricing")}
+                  priser
                 </Link>
               </li>
             </ul>
@@ -56,62 +48,37 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              {t("footer.company")}
+              virksomhed
             </h3>
             <ul className="space-y-3">
               <li>
-                <a
-                  href="mailto:letsgo@recruitos.xyz?subject=Contact%20Request"
+                <Link
+                  href="/contact"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  {t("footer.contact")}
-                </a>
+                  kontakt
+                </Link>
               </li>
               <li>
                 <a
-                  href="mailto:letsgo@recruitos.xyz?subject=Contact%20Request"
+                  href="mailto:nars@recruitos.dev"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  letsgo@recruitos.xyz
+                  nars@recruitos.dev
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Legal */}
-          <div>
-            <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              {t("footer.legal")}
-            </h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/privacy"
-                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
-                >
-                  {t("footer.privacy")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
-                >
-                  {t("footer.terms")}
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {/* Empty for alignment */}
+          <div />
         </div>
 
         <div className="flex items-center justify-between pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground lowercase">
-            {t("footer.copyright").replace("{year}", year.toString())}
+            © {new Date().getFullYear()} recruitos. alle rettigheder forbeholdes.
           </p>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             $
           </Link>
         </div>

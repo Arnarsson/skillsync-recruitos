@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import Onboarding from "./Onboarding";
 
-const ONBOARDING_KEY = "skillsync_onboarding_completed";
+const ONBOARDING_KEY = "recruitos_intro_dismissed";
 
 interface OnboardingWrapperProps {
   children: ReactNode;
@@ -18,23 +18,32 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration gate pattern
     setMounted(true);
 
-    // Check if user has completed onboarding - show immediately if not
-    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
+    // Check if user has dismissed onboarding - show if not dismissed
+    const hasDismissed = localStorage.getItem(ONBOARDING_KEY);
 
-    if (!hasCompletedOnboarding) {
+    if (!hasDismissed) {
       setShowOnboarding(true);
     }
   }, []);
 
-  const handleComplete = useCallback(() => {
+  const handleDismiss = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setShowOnboarding(false);
   }, []);
 
-  const handleSkip = useCallback(() => {
-    localStorage.setItem(ONBOARDING_KEY, "true");
-    setShowOnboarding(false);
-  }, []);
+  // Escape key dismisses onboarding
+  useEffect(() => {
+    if (!showOnboarding) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleDismiss();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showOnboarding, handleDismiss]);
 
   // Ctrl/Cmd + Shift + O to reset onboarding (for testing)
   useEffect(() => {
@@ -59,7 +68,7 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
       {children}
       <AnimatePresence>
         {showOnboarding && (
-          <Onboarding onComplete={handleComplete} onSkip={handleSkip} />
+          <Onboarding onComplete={handleDismiss} onSkip={handleDismiss} />
         )}
       </AnimatePresence>
     </>
