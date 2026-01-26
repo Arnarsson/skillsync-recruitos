@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { FileText, Search, Users, Power, Home, Settings } from "lucide-react";
 import { Dock, DockCard, DockCardInner, DockDivider } from "@/components/ui/dock";
 import { useAdmin } from "@/lib/adminContext";
@@ -9,7 +9,13 @@ import { cn } from "@/lib/utils";
 export default function AdminDock() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isAdmin, toggleAdmin } = useAdmin();
+
+  // Only show in development or when ?admin query param is present
+  const isDev = process.env.NODE_ENV === "development";
+  const hasAdminParam = searchParams.has("admin");
+  const showAdminUI = isDev || hasAdminParam;
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, href: "/" },
@@ -25,7 +31,10 @@ export default function AdminDock() {
   };
 
   // Floating power button when admin mode is off
+  // Hidden in production unless ?admin query param is present
   if (!isAdmin) {
+    if (!showAdminUI) return null;
+
     return (
       <button
         onClick={toggleAdmin}

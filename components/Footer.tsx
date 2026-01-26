@@ -108,12 +108,6 @@ export default function Footer() {
           <p className="text-sm text-muted-foreground lowercase">
             {t("footer.copyright").replace("{year}", year.toString())}
           </p>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            $
-          </Link>
         </div>
       </div>
     </footer>

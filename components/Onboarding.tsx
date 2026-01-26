@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,17 @@ interface OnboardingProps {
 
 export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
   const { t } = useLanguage();
+
+  // Dismiss modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onSkip();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onSkip]);
 
   const steps = [
     {
