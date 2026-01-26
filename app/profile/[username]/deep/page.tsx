@@ -55,7 +55,8 @@ import {
 } from "@/components/ui/tooltip";
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
-import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
+// DISABLED: LinkedIn connection path (keeping GitHub connection path only)
+// import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -289,31 +290,62 @@ export default function DeepProfilePage() {
   const [hasAutoRun, setHasAutoRun] = useState(false);
 
   useEffect(() => {
-    // Load candidate from localStorage
-    const stored = localStorage.getItem("apex_candidates");
-    if (stored) {
-      try {
-        const candidates = JSON.parse(stored) as Candidate[];
-        const found = candidates.find((c) => c.id === username);
-        if (found) {
-          setCandidate(found);
+    async function loadCandidate() {
+      // First try to load candidate from localStorage (pipeline)
+      const stored = localStorage.getItem("apex_candidates");
+      if (stored) {
+        try {
+          const candidates = JSON.parse(stored) as Candidate[];
+          const found = candidates.find((c) => c.id === username);
+          if (found) {
+            setCandidate(found);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Ignore parse errors
         }
-      } catch {
-        // Ignore parse errors
       }
-    }
 
-    // Load job context
-    const storedJob = localStorage.getItem("apex_job_context");
-    if (storedJob) {
+      // If not in pipeline, fetch from GitHub API
       try {
-        setJobContext(JSON.parse(storedJob));
-      } catch {
-        // Ignore parse errors
+        const response = await fetch(`https://api.github.com/users/${username}`);
+        if (response.ok) {
+          const user = await response.json();
+
+          // Create a basic candidate object from GitHub data
+          const githubCandidate: Candidate = {
+            id: user.login,
+            name: user.name || user.login,
+            currentRole: user.bio ? user.bio.split('.')[0] : 'Software Developer',
+            company: user.company?.replace(/^@/, '') || '',
+            location: user.location || '',
+            skills: [], // Will be populated by analysis
+            alignmentScore: 0,
+            avatar: user.avatar_url,
+            sourceUrl: `https://github.com/${user.login}`,
+          };
+
+          setCandidate(githubCandidate);
+        }
+      } catch (error) {
+        console.error("Failed to fetch GitHub profile:", error);
       }
+
+      // Load job context
+      const storedJob = localStorage.getItem("apex_job_context");
+      if (storedJob) {
+        try {
+          setJobContext(JSON.parse(storedJob));
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      setLoading(false);
     }
 
-    setLoading(false);
+    loadCandidate();
   }, [username]);
 
   const runDeepAnalysis = useCallback(async () => {
@@ -1925,13 +1957,14 @@ export default function DeepProfilePage() {
                   </Card>
                 </div>
 
-                {/* LinkedIn Connection Path - Real network intelligence */}
+                {/* DISABLED: LinkedIn Connection Path - keeping GitHub connection path only
                 {candidate.linkedinUrl && (
                   <LinkedInConnectionPath
                     candidateLinkedInUrl={candidate.linkedinUrl}
                     candidateName={candidate.name}
                   />
                 )}
+                */}
 
                 {/* Objection Handling */}
                 <Card>
@@ -2048,13 +2081,14 @@ export default function DeepProfilePage() {
               </>
             ) : (
               <div className="space-y-6">
-                {/* LinkedIn Connection Path - Available even without full dossier */}
+                {/* DISABLED: LinkedIn Connection Path - keeping GitHub connection path only
                 {candidate.linkedinUrl && (
                   <LinkedInConnectionPath
                     candidateLinkedInUrl={candidate.linkedinUrl}
                     candidateName={candidate.name}
                   />
                 )}
+                */}
 
                 <Card>
                   <CardContent className="py-12 text-center">

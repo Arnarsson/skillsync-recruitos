@@ -640,39 +640,46 @@ export async function analyzeJobDescription(jobText: string): Promise<{
   location: string;
   summary: string;
 }> {
-  const systemPrompt = `You are a job description analyst that understands both Danish and English.
-You extract structured information and ALWAYS return skills in ENGLISH for GitHub search compatibility.
-When the job description is in Danish, translate skill names to their standard English equivalents.
-For example: "frontend udvikling" → "Frontend development", "databaser" → "Databases", "brugeroplevelse" → "UX".
-Always respond with valid JSON only.`;
+  const systemPrompt = `You are a job description analyst that extracts skills optimized for GitHub developer search.
+You understand both Danish and English. Always respond with valid JSON only.
+
+CRITICAL RULES FOR SKILLS:
+1. Use ONLY standard, common technology names that developers put in their GitHub profiles
+2. Prefer simple, single-word skills: "React" not "React.js development"
+3. Use the most common name: "JavaScript" not "JS", "TypeScript" not "TS"
+4. For frameworks, use the framework name: "Next.js", "Django", "Spring Boot"
+5. For languages, use proper names: "Python", "Go", "Rust", "Java"
+6. Keep skills concise - max 2 words typically
+7. Avoid vague terms like "problem solving", "agile", "teamwork" - focus on tech skills`;
 
   const prompt = `
 Extract structured information from this job description. The text may be in Danish or English.
-IMPORTANT: Always return skill names in ENGLISH (translate from Danish if needed) for GitHub search compatibility.
-Use standard technology names (e.g., "React", "Python", "TypeScript") not verbose descriptions.
+
+SKILL EXTRACTION RULES:
+- Return 4-8 requiredSkills (the MOST important technical skills)
+- Return 3-6 preferredSkills (nice-to-have technical skills)
+- Use EXACT technology names developers use on GitHub: "React", "Node.js", "PostgreSQL", "Docker"
+- DO NOT use verbose descriptions like "React.js frontend development" → just "React"
+- DO NOT use version numbers unless critical: "Python" not "Python 3.10"
+- DO NOT include soft skills or methodologies - only technical skills
 
 Job description:
 "${jobText.substring(0, 10000)}"
 
 Return JSON:
 {
-  "title": "string (in original language)",
-  "company": "string",
-  "requiredSkills": ["string - MUST be in English, use standard tech names like 'React', 'Python', 'AWS'"],
-  "preferredSkills": ["string - MUST be in English"],
-  "experienceLevel": "string",
+  "title": "string (job title)",
+  "company": "string (company name if found, empty string if not)",
+  "requiredSkills": ["React", "TypeScript", "Node.js", "PostgreSQL"],
+  "preferredSkills": ["Docker", "AWS", "GraphQL"],
+  "experienceLevel": "string (e.g., '3-5 years', 'Senior', 'Junior')",
   "location": "string",
-  "summary": "string (2-3 sentences in English)"
+  "summary": "string (2-3 sentences describing the role)"
 }
 
-Example skill translations:
-- "Frontend udvikling" → "Frontend"
-- "Backend udvikling" → "Backend"
-- "Databaser" → "SQL" or "Databases"
-- "Webudvikling" → "Web development"
-- "Brugeroplevelse/UX" → "UX"
-- "Systemudvikling" → "Software development"
-- "API principper" → "REST API" or "API design"`;
+GOOD skill examples: "React", "TypeScript", "Python", "AWS", "Docker", "Kubernetes", "PostgreSQL", "MongoDB", "GraphQL", "Node.js", "Go", "Rust", "Java", "Spring Boot", "Django", "FastAPI", "Next.js", "Vue.js", "Angular", "Redis", "Elasticsearch"
+
+BAD skill examples (DO NOT USE): "Frontend development", "Backend systems", "Cloud computing", "API design principles", "Database management", "Modern JavaScript frameworks"`;
 
   const text = await callOpenRouter(prompt, systemPrompt);
   return parseJsonSafe(text) as {
@@ -683,5 +690,161 @@ Example skill translations:
     experienceLevel: string;
     location: string;
     summary: string;
+  };
+}
+
+/**
+ * Generate personalized psychometric profile from GitHub data
+ * Returns AI-analyzed motivators, stressors, work style, and interview questions
+ */
+export interface PsychometricInsights {
+  archetype: {
+    primary: string;
+    secondary: string | null;
+    description: string;
+    strengths: string[];
+    blindSpots: string[];
+  };
+  workStyle: {
+    autonomy: number;
+    collaboration: number;
+    structure: number;
+    pacePreference: "fast" | "steady" | "methodical";
+    feedbackStyle: "direct" | "diplomatic" | "data-driven";
+    decisionMaking: "intuitive" | "analytical" | "consensus";
+  };
+  motivators: string[];
+  stressors: string[];
+  greenFlags: string[];
+  redFlags: string[];
+  interviewQuestions: string[];
+  outreachTips: string[];
+  confidence: number;
+}
+
+export async function generatePsychometricInsights(
+  githubData: {
+    username: string;
+    name: string;
+    bio: string;
+    company: string;
+    location: string;
+    followers: number;
+    publicRepos: number;
+    topLanguages: string[];
+    repoTopics: string[];
+    hasTests: boolean;
+    hasDocs: boolean;
+    contributionCount: number;
+  }
+): Promise<PsychometricInsights> {
+  const systemPrompt = `You are a psychometric analyst specializing in developer profiles.
+Analyze GitHub signals to build accurate personality and work style profiles.
+Return ONLY valid JSON, no markdown or explanations.
+
+ARCHETYPE OPTIONS (pick the BEST match):
+- "The Architect" - Systems thinker, designs elegant solutions
+- "The Optimizer" - Performance focused, loves efficiency
+- "The Collaborator" - Team player, strong communicator
+- "The Pioneer" - Early adopter, builds new things
+- "The Craftsman" - Quality focused, attention to detail
+- "The Mentor" - Knowledge sharer, grows others
+- "The Strategist" - Big picture thinker, business minded
+- "The Specialist" - Deep expertise in narrow domain`;
+
+  const prompt = `
+Analyze this developer's GitHub profile and generate a personalized psychometric profile.
+
+DEVELOPER DATA:
+- Username: ${githubData.username}
+- Name: ${githubData.name || "Unknown"}
+- Bio: "${githubData.bio || "No bio"}"
+- Company: ${githubData.company || "Not specified"}
+- Location: ${githubData.location || "Unknown"}
+- Followers: ${githubData.followers}
+- Public Repos: ${githubData.publicRepos}
+- Top Languages: ${githubData.topLanguages.join(", ") || "None"}
+- Repo Topics/Interests: ${githubData.repoTopics.join(", ") || "None"}
+- Has Test Repos: ${githubData.hasTests}
+- Has Documentation: ${githubData.hasDocs}
+- Open Source Contributions: ${githubData.contributionCount}
+
+IMPORTANT:
+- Generate PERSONALIZED motivators and stressors based on their actual profile
+- Look at their bio, languages, topics for clues about what they care about
+- Consider their contribution patterns and collaboration signals
+- Be specific! "Building high-traffic systems" is better than "Complex problems"
+
+Return this JSON structure:
+{
+  "archetype": {
+    "primary": "The Architect",
+    "secondary": null,
+    "description": "2-sentence description based on their actual profile",
+    "strengths": ["specific strength 1", "specific strength 2", "specific strength 3", "specific strength 4"],
+    "blindSpots": ["blind spot 1", "blind spot 2", "blind spot 3"]
+  },
+  "workStyle": {
+    "autonomy": 75,
+    "collaboration": 60,
+    "structure": 50,
+    "pacePreference": "steady",
+    "feedbackStyle": "data-driven",
+    "decisionMaking": "analytical"
+  },
+  "motivators": ["specific thing 1 that energizes them", "thing 2", "thing 3", "thing 4"],
+  "stressors": ["specific thing 1 that drains them", "thing 2", "thing 3", "thing 4"],
+  "greenFlags": ["positive signal from their profile", "another positive"],
+  "redFlags": ["concern or area to explore", "if any - can be empty"],
+  "interviewQuestions": [
+    "Question 1 based on their specific background",
+    "Question 2 probing their tech choices",
+    "Question 3 about work style",
+    "Question 4 about growth areas",
+    "Question 5 situational"
+  ],
+  "outreachTips": [
+    "Tip 1 for reaching out to THIS specific person",
+    "Tip 2 based on their interests",
+    "Tip 3 based on communication style"
+  ],
+  "confidence": 70
+}`;
+
+  const text = await callOpenRouter(prompt, systemPrompt);
+  const result = parseJsonSafe(text) as PsychometricInsights;
+
+  // Ensure all required fields exist with defaults
+  return {
+    archetype: result.archetype || {
+      primary: "The Craftsman",
+      secondary: null,
+      description: "A developer focused on quality and best practices.",
+      strengths: ["Code quality", "Attention to detail", "Best practices", "Technical debt management"],
+      blindSpots: ["May be slow to deliver", "Can be rigid about standards"]
+    },
+    workStyle: result.workStyle || {
+      autonomy: 60,
+      collaboration: 50,
+      structure: 50,
+      pacePreference: "steady",
+      feedbackStyle: "direct",
+      decisionMaking: "analytical"
+    },
+    motivators: result.motivators || ["Interesting problems", "Learning opportunities", "Quality work", "Technical excellence"],
+    stressors: result.stressors || ["Rushed deadlines", "Technical debt", "Lack of autonomy", "Poor code quality"],
+    greenFlags: result.greenFlags || [],
+    redFlags: result.redFlags || [],
+    interviewQuestions: result.interviewQuestions || [
+      "Tell me about a project you're most proud of.",
+      "How do you approach learning new technologies?",
+      "Describe your ideal work environment."
+    ],
+    outreachTips: result.outreachTips || [
+      "Lead with technical challenges",
+      "Be specific about the role",
+      "Mention technologies they use"
+    ],
+    confidence: result.confidence || 50
   };
 }

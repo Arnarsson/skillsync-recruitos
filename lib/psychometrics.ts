@@ -551,7 +551,84 @@ function calculateConfidence(
   return Math.min(confidence, 95);
 }
 
+/**
+ * Generate AI-powered psychometric profile with personalized insights
+ * Falls back to rule-based generation if AI fails
+ */
+export async function generateAIPsychometricProfile(
+  github: GitHubSignals,
+  githubUser: {
+    name?: string;
+    bio?: string;
+    company?: string;
+    location?: string;
+    followers?: number;
+    public_repos?: number;
+  },
+  linkedin?: LinkedInProfile | null
+): Promise<PsychometricProfile> {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { generatePsychometricInsights } = await import('@/lib/services/gemini');
+
+    // Call AI for personalized insights
+    const aiInsights = await generatePsychometricInsights({
+      username: github.username,
+      name: githubUser.name || github.username,
+      bio: githubUser.bio || '',
+      company: githubUser.company || '',
+      location: githubUser.location || '',
+      followers: githubUser.followers || 0,
+      publicRepos: githubUser.public_repos || github.collaboration.openSourceContributions,
+      topLanguages: github.techStack,
+      repoTopics: github.interests,
+      hasTests: github.codeStyle.testCoverage !== 'none',
+      hasDocs: github.codeStyle.documentationLevel === 'extensive',
+      contributionCount: github.collaboration.openSourceContributions,
+    });
+
+    // Map AI archetype to our type system
+    const archetypeType = aiInsights.archetype.primary as ArchetypeType;
+
+    // Build profile from AI insights
+    const archetype: CandidateArchetype = {
+      primary: archetypeType,
+      secondary: aiInsights.archetype.secondary as ArchetypeType | null,
+      description: aiInsights.archetype.description,
+      strengths: aiInsights.archetype.strengths,
+      blindSpots: aiInsights.archetype.blindSpots,
+    };
+
+    const workStyle: WorkStyleIndicators = aiInsights.workStyle;
+
+    // Use AI-generated communicationStyle or fall back to rule-based
+    const communicationStyle = analyzeCommunicationStyle(github, linkedin);
+
+    // Use AI-generated team dynamics or fall back to rule-based
+    const teamDynamics = analyzeTeamDynamics(github, linkedin);
+
+    return {
+      archetype,
+      workStyle,
+      communicationStyle,
+      motivators: aiInsights.motivators,
+      stressors: aiInsights.stressors,
+      teamDynamics,
+      greenFlags: aiInsights.greenFlags,
+      redFlags: aiInsights.redFlags,
+      interviewQuestions: aiInsights.interviewQuestions,
+      outreachTips: aiInsights.outreachTips,
+      confidence: aiInsights.confidence,
+    };
+  } catch (error) {
+    console.error('[Psychometrics] AI generation failed, falling back to rules:', error);
+    // Fall back to rule-based generation
+    return generatePsychometricProfile(github, linkedin);
+  }
+}
+
 export default {
   analyzeGitHubSignals,
   generatePsychometricProfile,
+  generateAIPsychometricProfile,
 };

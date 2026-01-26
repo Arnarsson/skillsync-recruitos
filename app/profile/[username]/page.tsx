@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useMemo, useCallback } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -19,7 +19,7 @@ import {
   Brain,
   Network,
   Linkedin,
-  Check,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +86,7 @@ export default function ProfilePage({
   // Psychometric state
   const [psychProfile, setPsychProfile] = useState<PsychometricProfile | null>(null);
   const [psychLoading, setPsychLoading] = useState(false);
+  const [isAIPsychProfile, setIsAIPsychProfile] = useState(false);
 
   // LinkedIn state
   const [linkedInUrl, setLinkedInUrl] = useState("");
@@ -94,70 +95,6 @@ export default function ProfilePage({
   const [linkedInError, setLinkedInError] = useState<string | null>(null);
   const [linkedInProgress, setLinkedInProgress] = useState<string | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
-
-  // LinkedIn auto-discovery state
-  const [linkedInFinding, setLinkedInFinding] = useState(false);
-  const [linkedInSuggestions, setLinkedInSuggestions] = useState<Array<{
-    profileUrl: string;
-    name: string;
-    headline: string;
-    confidence: number;
-    reasons: string[];
-    autoAccepted: boolean;
-  }> | null>(null);
-
-  // Recruiter's LinkedIn URL (for connection path)
-  const [recruiterLinkedInUrl, setRecruiterLinkedInUrl] = useState<string | null>(null);
-
-  // Load recruiter's LinkedIn URL on mount
-  useEffect(() => {
-    const storedUrl = localStorage.getItem("recruitos_recruiter_linkedin");
-    if (storedUrl) {
-      setRecruiterLinkedInUrl(storedUrl);
-    }
-  }, []);
-
-  // Sync LinkedIn data back to pipeline localStorage
-  const syncLinkedInToPipeline = useCallback((linkedIn: LinkedInProfile) => {
-    try {
-      const stored = localStorage.getItem("apex_candidates");
-      if (stored) {
-        const candidates = JSON.parse(stored);
-        const idx = candidates.findIndex((c: { id: string }) => c.id === username);
-        if (idx !== -1) {
-          candidates[idx] = {
-            ...candidates[idx],
-            linkedInUrl: linkedIn.profileUrl,
-            linkedInProfile: linkedIn,
-            linkedInName: linkedIn.name,
-            linkedInHeadline: linkedIn.headline,
-          };
-          localStorage.setItem("apex_candidates", JSON.stringify(candidates));
-          console.log("[Profile] Synced LinkedIn to pipeline:", username);
-        }
-      }
-    } catch (err) {
-      console.error("[Profile] Failed to sync LinkedIn to pipeline:", err);
-    }
-  }, [username]);
-
-  // Load existing LinkedIn from pipeline localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("apex_candidates");
-      if (stored) {
-        const candidates = JSON.parse(stored);
-        const candidate = candidates.find((c: { id: string }) => c.id === username);
-        if (candidate?.linkedInProfile) {
-          console.log("[Profile] Loading LinkedIn from pipeline:", username);
-          setLinkedInProfile(candidate.linkedInProfile);
-          setLinkedInUrl(candidate.linkedInUrl || candidate.linkedInProfile.profileUrl || "");
-        }
-      }
-    } catch (err) {
-      console.error("[Profile] Failed to load LinkedIn from pipeline:", err);
-    }
-  }, [username]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -182,14 +119,15 @@ export default function ProfilePage({
     fetchProfile();
   }, [username]);
 
-  // Generate psychometric profile when profile loads
+  // Generate psychometric profile when profile loads (rule-based first, fast)
   useEffect(() => {
-    if (profile && !psychProfile) {
+    if (profile && !psychProfile && !psychLoading) {
       const githubSignals = analyzeGitHubSignals(profile.repos, profile.user);
       const psych = generatePsychometricProfile(githubSignals, linkedInProfile);
       setPsychProfile(psych);
+      setIsAIPsychProfile(false);
     }
-  }, [profile, linkedInProfile, psychProfile]);
+  }, [profile, linkedInProfile, psychProfile, psychLoading]);
 
   // Re-generate psychometric when LinkedIn data is added
   useEffect(() => {
@@ -197,12 +135,42 @@ export default function ProfilePage({
       const githubSignals = analyzeGitHubSignals(profile.repos, profile.user);
       const psych = generatePsychometricProfile(githubSignals, linkedInProfile);
       setPsychProfile(psych);
+      setIsAIPsychProfile(false);
 
       // Build network graph
       const graph = brightDataService.buildNetworkGraph(linkedInProfile);
       setNetworkGraph(graph);
     }
   }, [linkedInProfile, profile]);
+
+  // Function to upgrade to AI-powered psychometric profile
+  const handleUpgradeToAIPsychometric = async () => {
+    if (!profile || psychLoading) return;
+
+    setPsychLoading(true);
+    try {
+      const response = await fetch('/api/profile/psychometric', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: profile.user.login }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI profile');
+      }
+
+      const data = await response.json();
+      if (data.success && data.profile) {
+        setPsychProfile(data.profile);
+        setIsAIPsychProfile(true);
+      }
+    } catch (error) {
+      console.error('AI psychometric generation failed:', error);
+      // Keep the existing rule-based profile
+    } finally {
+      setPsychLoading(false);
+    }
+  };
 
   const handleUnlockDeepProfile = () => {
     // Navigate to the deep profile page which has full AI analysis
@@ -235,16 +203,11 @@ export default function ProfilePage({
           setLinkedInProgress(`Fetching profile... (${attempt}/${maxAttempts})`);
         }
       );
-      console.log('[LinkedIn] Scrape result:', linkedIn);
       if (linkedIn) {
-        console.log('[LinkedIn] Setting profile state with:', linkedIn.name, linkedIn.headline);
         setLinkedInProfile(linkedIn);
         setLinkedInError(null);
         setLinkedInProgress(null);
-        // Sync to pipeline localStorage
-        syncLinkedInToPipeline(linkedIn);
       } else {
-        console.warn('[LinkedIn] No profile data returned');
         setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
         setLinkedInProgress(null);
       }
@@ -255,99 +218,6 @@ export default function ProfilePage({
     } finally {
       setLinkedInLoading(false);
     }
-  };
-
-  // Auto-discover LinkedIn profile using AI
-  const handleFindLinkedIn = async () => {
-    if (!profile) return;
-
-    setLinkedInFinding(true);
-    setLinkedInError(null);
-    setLinkedInSuggestions(null);
-
-    try {
-      const response = await fetch("/api/linkedin-finder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          githubProfile: {
-            login: profile.user.login,
-            name: profile.user.name,
-            bio: profile.user.bio,
-            location: profile.user.location,
-            company: profile.user.company,
-            blog: profile.user.blog,
-            twitter_username: profile.user.twitter_username,
-          },
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to find LinkedIn profile");
-      }
-
-      if (data.matches && data.matches.length > 0) {
-        const topMatch = data.matches[0];
-
-        // Auto-accept if ≥90% confidence
-        if (topMatch.autoAccepted || topMatch.confidence >= 90) {
-          console.log("[LinkedIn Finder] Auto-accepting:", topMatch.name, topMatch.confidence + "%");
-          setLinkedInUrl(topMatch.profileUrl);
-          handleLinkedInEnrichWithUrl(topMatch.profileUrl);
-        } else {
-          // Show suggestions for user to pick
-          setLinkedInSuggestions(data.matches);
-        }
-      } else {
-        setLinkedInError("No LinkedIn profiles found matching this GitHub user.");
-      }
-    } catch (err) {
-      console.error("[LinkedIn Finder] Error:", err);
-      setLinkedInError(err instanceof Error ? err.message : "Failed to find LinkedIn profile");
-    } finally {
-      setLinkedInFinding(false);
-    }
-  };
-
-  // Enrich with a specific LinkedIn URL
-  const handleLinkedInEnrichWithUrl = async (url: string) => {
-    setLinkedInLoading(true);
-    setLinkedInProgress("Fetching LinkedIn profile...");
-    setLinkedInSuggestions(null);
-
-    try {
-      const linkedIn = await brightDataService.scrapeLinkedInProfile(
-        url,
-        (status, attempt, maxAttempts) => {
-          setLinkedInProgress(`Fetching profile... (${attempt}/${maxAttempts})`);
-        }
-      );
-
-      if (linkedIn) {
-        setLinkedInProfile(linkedIn);
-        setLinkedInError(null);
-        setLinkedInProgress(null);
-        // Sync to pipeline localStorage
-        syncLinkedInToPipeline(linkedIn);
-      } else {
-        setLinkedInError("Could not fetch LinkedIn profile.");
-        setLinkedInProgress(null);
-      }
-    } catch (err) {
-      console.error("LinkedIn scrape error:", err);
-      setLinkedInError(err instanceof Error ? err.message : "Failed to fetch LinkedIn profile.");
-      setLinkedInProgress(null);
-    } finally {
-      setLinkedInLoading(false);
-    }
-  };
-
-  // Select a LinkedIn suggestion
-  const handleSelectSuggestion = (suggestion: NonNullable<typeof linkedInSuggestions>[0]) => {
-    setLinkedInUrl(suggestion.profileUrl);
-    handleLinkedInEnrichWithUrl(suggestion.profileUrl);
   };
 
   const formatNumber = (num: number) => {
@@ -462,220 +332,67 @@ export default function ProfilePage({
           </div>
         </div>
 
-        {/* LinkedIn Enrich Bar */}
+        {/* GitHub Connection Path - See how you're connected */}
+        <div className="mb-6">
+          <GitHubConnectionPath
+            candidateUsername={user.login}
+            candidateName={user.name || undefined}
+            candidateAvatar={user.avatar_url}
+          />
+        </div>
+
+        {/* DISABLED: LinkedIn Enrich Bar - keeping GitHub connection path only
         {!linkedInProfile && (
-          <Card className={`mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 ${linkedInError ? 'border-red-500/40' : linkedInSuggestions ? 'border-green-500/40' : 'border-blue-500/20'}`}>
+          <Card className={`mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 ${linkedInError ? 'border-red-500/40' : 'border-blue-500/20'}`}>
             <CardContent className="py-4">
-              {/* Finding LinkedIn - AI Search in Progress */}
-              {linkedInFinding && (
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20 animate-pulse">
-                    <Brain className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-500">Finding LinkedIn...</p>
-                    <p className="text-xs text-muted-foreground">AI is searching for {profile?.user.name || username}&apos;s LinkedIn profile</p>
-                  </div>
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+              <div className="flex items-center gap-4 flex-wrap">
+                <Linkedin className="w-6 h-6 text-blue-500" />
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-medium">Enrich with LinkedIn</p>
+                  <p className="text-xs text-muted-foreground">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
                 </div>
-              )}
-
-              {/* LinkedIn Suggestions - AI Found Matches */}
-              {!linkedInFinding && linkedInSuggestions && linkedInSuggestions.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-green-500" />
-                    <p className="text-sm font-medium text-green-500">LinkedIn profiles found</p>
-                  </div>
-                  <div className="space-y-2">
-                    {linkedInSuggestions.slice(0, 3).map((suggestion, idx) => (
-                      <div
-                        key={suggestion.profileUrl}
-                        className={`p-3 rounded-lg border ${idx === 0 ? 'border-green-500/40 bg-green-500/5' : 'border-border bg-card/50'} hover:border-primary/50 transition-colors cursor-pointer`}
-                        onClick={() => handleSelectSuggestion(suggestion)}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{suggestion.name}</p>
-                              <Badge variant={idx === 0 ? "default" : "secondary"} className="text-xs">
-                                {suggestion.confidence}% match
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate">{suggestion.headline}</p>
-                            {suggestion.reasons.length > 0 && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {suggestion.reasons.slice(0, 2).join(" • ")}
-                              </p>
-                            )}
-                          </div>
-                          <Button size="sm" variant={idx === 0 ? "default" : "outline"}>
-                            Use This
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-border">
-                    <span className="text-xs text-muted-foreground">Not the right person?</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setLinkedInSuggestions(null)}
-                    >
-                      Enter URL manually
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Default State - Find or Manual Input */}
-              {!linkedInFinding && !linkedInSuggestions && (
-                <>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <Linkedin className="w-6 h-6 text-blue-500" />
-                    <div className="flex-1 min-w-[200px]">
-                      <p className="text-sm font-medium">Enrich with LinkedIn</p>
-                      <p className="text-xs text-muted-foreground">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
-                    </div>
-                    {brightDataService.isConfigured() ? (
-                      <div className="flex gap-2 items-center flex-wrap">
-                        {/* AI Find Button */}
-                        <Button
-                          variant="outline"
-                          onClick={handleFindLinkedIn}
-                          disabled={linkedInFinding || linkedInLoading}
-                          className="gap-2"
-                        >
-                          <Brain className="w-4 h-4" />
-                          Find LinkedIn
-                        </Button>
-                        <span className="text-xs text-muted-foreground">or</span>
-                        <Input
-                          placeholder="linkedin.com/in/username"
-                          value={linkedInUrl}
-                          onChange={(e) => {
-                            setLinkedInUrl(e.target.value);
-                            setLinkedInError(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && linkedInUrl.trim()) {
-                              handleLinkedInEnrich();
-                            }
-                          }}
-                          className={`w-48 ${linkedInError ? 'border-red-500' : ''}`}
-                        />
-                        <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
-                          {linkedInLoading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              Fetching...
-                            </>
-                          ) : "Enrich"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs text-blue-500 border-blue-500/30">
-                          Premium Feature
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Requires BrightData API key
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {linkedInError && (
-                    <div className="mt-3 p-2 rounded bg-red-500/10 border border-red-500/20">
-                      <p className="text-xs text-red-500">{linkedInError}</p>
-                    </div>
-                  )}
-                  {linkedInLoading && (
-                    <div className="mt-3 p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                      <p className="text-xs text-blue-500">
-                        {linkedInProgress || "Initializing LinkedIn scrape..."}
-                      </p>
-                      <p className="text-xs text-blue-500/70 mt-1">This may take up to 3 minutes for some profiles.</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* LinkedIn Profile Card - Shows when enriched */}
-        {linkedInProfile && (
-          <Card className="mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/20">
-                  <Linkedin className="w-6 h-6 text-blue-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold">{linkedInProfile.name}</h3>
-                    <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-500">
-                      <Check className="w-3 h-3 mr-1" />
-                      Enriched
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{linkedInProfile.headline}</p>
-                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    {linkedInProfile.currentCompany && (
-                      <span className="flex items-center gap-1">
-                        <Building className="w-3 h-3" />
-                        {linkedInProfile.currentRole} at {linkedInProfile.currentCompany}
-                      </span>
-                    )}
-                    {linkedInProfile.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {linkedInProfile.location}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {linkedInProfile.connectionCount?.toLocaleString() || 0} connections
-                    </span>
-                  </div>
-                  {/* Action buttons */}
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="gap-1.5"
-                      onClick={() => {
-                        // Switch to connection tab
-                        const tab = document.querySelector('[value="connection"]') as HTMLButtonElement;
-                        tab?.click();
-                      }}
-                    >
-                      <Network className="w-3.5 h-3.5" />
-                      Find Connection Path
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      asChild
-                    >
-                      <a
-                        href={linkedInProfile.profileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        View LinkedIn
-                      </a>
-                    </Button>
-                  </div>
+                <div className="flex gap-2 items-center flex-wrap">
+                  <Input
+                    placeholder="linkedin.com/in/username"
+                    value={linkedInUrl}
+                    onChange={(e) => {
+                      setLinkedInUrl(e.target.value);
+                      setLinkedInError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && linkedInUrl.trim()) {
+                        handleLinkedInEnrich();
+                      }
+                    }}
+                    className={`w-64 ${linkedInError ? 'border-red-500' : ''}`}
+                  />
+                  <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
+                    {linkedInLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Fetching...
+                      </>
+                    ) : "Enrich"}
+                  </Button>
                 </div>
               </div>
+              {linkedInError && (
+                <div className="mt-3 p-2 rounded bg-red-500/10 border border-red-500/20">
+                  <p className="text-xs text-red-500">{linkedInError}</p>
+                </div>
+              )}
+              {linkedInLoading && (
+                <div className="mt-3 p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                  <p className="text-xs text-blue-500">
+                    {linkedInProgress || "Initializing LinkedIn scrape..."}
+                  </p>
+                  <p className="text-xs text-blue-500/70 mt-1">This may take up to 3 minutes for some profiles.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
+        */}
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -828,7 +545,53 @@ export default function ProfilePage({
           {/* Psychometric Tab */}
           <TabsContent value="psychometric">
             {psychProfile ? (
-              <PsychometricCard profile={psychProfile} />
+              <div className="space-y-4">
+                {/* AI Upgrade Banner */}
+                {!isAIPsychProfile && (
+                  <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-purple-500/5">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <Sparkles className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Enhance with AI</p>
+                            <p className="text-xs text-muted-foreground">
+                              Get personalized motivators, interview questions & outreach tips based on their actual profile
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleUpgradeToAIPsychometric}
+                          disabled={psychLoading}
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          {psychLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Upgrade
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {isAIPsychProfile && (
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <Sparkles className="w-4 h-4" />
+                    <span>AI-powered personalized insights</span>
+                  </div>
+                )}
+                <PsychometricCard profile={psychProfile} />
+              </div>
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
@@ -842,31 +605,10 @@ export default function ProfilePage({
           {/* Connection Path Tab */}
           <TabsContent value="connection" className="space-y-6">
             {/* Social Matrix - Unified Connection Path */}
-            {!recruiterLinkedInUrl && (
-              <Card className="border-yellow-500/30 bg-yellow-500/5">
-                <CardContent className="py-4">
-                  <div className="flex items-start gap-3">
-                    <Network className="w-5 h-5 text-yellow-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Set up your LinkedIn to find connection paths</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Add your LinkedIn URL in Settings to discover how you&apos;re connected to candidates
-                      </p>
-                      <Link href="/settings">
-                        <Button size="sm" variant="outline" className="mt-2">
-                          Go to Settings
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
             <ConnectionPathCard
               recruiterId="recruiter"
               candidateId={user.login}
               candidateName={user.name || user.login}
-              recruiterLinkedInUrl={recruiterLinkedInUrl || undefined}
               candidateLinkedInUrl={linkedInProfile?.profileUrl}
               candidateGitHubUsername={user.login}
             />
