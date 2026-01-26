@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAdmin } from "@/lib/adminContext";
 import Link from "next/link";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -591,7 +592,7 @@ export default function DeepProfilePage() {
     : [];
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-5xl mx-auto">
         {/* Workflow Stepper */}
         <div className="mb-6">
