@@ -56,7 +56,6 @@ import {
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
-import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -289,19 +288,6 @@ export default function DeepProfilePage() {
 
   const [hasAutoRun, setHasAutoRun] = useState(false);
 
-  // Deep enrichment state
-  const [enrichmentData, setEnrichmentData] = useState<{
-    github: { readme: string | null; prsToOthers: any[]; contributionPattern: any; topics: string[] } | null;
-    linkedin: { matches: any[]; bestMatch: any; autoAccepted: boolean } | null;
-    website: { url: string; title: string; topics: string[]; hasProjects: boolean; hasBlog: boolean } | null;
-    talks: { talks: any[]; hasTalks: boolean; platforms: string[] } | null;
-  } | null>(null);
-  const [enrichmentStatus, setEnrichmentStatus] = useState<{
-    loading: boolean;
-    sources: { github: boolean | null; linkedin: boolean | null; website: boolean | null; talks: boolean | null };
-    duration: number | null;
-  }>({ loading: false, sources: { github: null, linkedin: null, website: null, talks: null }, duration: null });
-
   useEffect(() => {
     // Load candidate from localStorage
     const stored = localStorage.getItem("apex_candidates");
@@ -338,23 +324,6 @@ export default function DeepProfilePage() {
       // Check if candidate is shortlisted (Stage 3) to determine if we should generate network dossier
       const isShortlisted = candidate.isShortlisted || false;
 
-      // Format enrichment data for enhanced psychometric analysis
-      const enrichmentPayload = enrichmentData ? {
-        github: enrichmentData.github ? {
-          readme: enrichmentData.github.readme,
-          prsToOthers: enrichmentData.github.prsToOthers,
-          contributionPattern: enrichmentData.github.contributionPattern,
-          topics: enrichmentData.github.topics,
-        } : null,
-        linkedin: enrichmentData.linkedin?.bestMatch ? {
-          headline: enrichmentData.linkedin.bestMatch.headline,
-          location: enrichmentData.linkedin.bestMatch.location,
-          company: enrichmentData.linkedin.bestMatch.company,
-        } : null,
-        website: enrichmentData.website,
-        talks: enrichmentData.talks,
-      } : null;
-
       const response = await fetch("/api/profile/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,7 +335,6 @@ export default function DeepProfilePage() {
           location: candidate.location,
           skills: candidate.skills,
           isShortlisted, // Pass flag to trigger network dossier generation for Stage 3
-          enrichmentData: enrichmentPayload, // Pass enrichment for enhanced psychometric
         }),
       });
 
@@ -401,7 +369,7 @@ export default function DeepProfilePage() {
     } finally {
       setAnalyzing(false);
     }
-  }, [candidate, username, enrichmentData]);
+  }, [candidate, username]);
 
   // Auto-run AI analysis when page loads if not already analyzed
   useEffect(() => {
@@ -426,56 +394,6 @@ export default function DeepProfilePage() {
         .finally(() => setLoadingGithub(false));
     }
   }, [activeTab, githubAnalysis, loadingGithub, candidate]);
-
-  // Fetch deep enrichment data on page load
-  useEffect(() => {
-    if (!candidate || enrichmentData || enrichmentStatus.loading) return;
-
-    const fetchEnrichment = async () => {
-      setEnrichmentStatus((prev) => ({ ...prev, loading: true }));
-
-      try {
-        const response = await fetch("/api/deep-enrichment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: candidate.id,
-            githubProfile: {
-              login: candidate.id,
-              name: candidate.name,
-              bio: null, // Will be fetched by enrichment
-              location: candidate.location,
-              company: candidate.company,
-              blog: candidate.sourceUrl?.includes("github") ? undefined : candidate.sourceUrl,
-            },
-            linkedInUrl: candidate.linkedinUrl,
-          }),
-        });
-
-        const data = await response.json();
-
-        setEnrichmentData({
-          github: data.github,
-          linkedin: data.linkedin,
-          website: data.website,
-          talks: data.talks,
-        });
-
-        setEnrichmentStatus({
-          loading: false,
-          sources: data.meta?.sources || { github: true, linkedin: true, website: true, talks: true },
-          duration: data.meta?.duration || null,
-        });
-
-        console.log("[Deep Enrichment] Complete:", data.meta);
-      } catch (error) {
-        console.error("[Deep Enrichment] Error:", error);
-        setEnrichmentStatus((prev) => ({ ...prev, loading: false }));
-      }
-    };
-
-    fetchEnrichment();
-  }, [candidate, enrichmentData, enrichmentStatus.loading]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-500";
@@ -593,11 +511,6 @@ export default function DeepProfilePage() {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
-        {/* Workflow Stepper */}
-        <div className="mb-6">
-          <WorkflowStepper currentStep={4} />
-        </div>
-
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href={`/pipeline`}>
@@ -606,6 +519,7 @@ export default function DeepProfilePage() {
             </Button>
           </Link>
           <div className="flex-1">
+            <Badge className="mb-2 bg-primary/20 text-primary">Trin 3 af 4</Badge>
             <h1 className="text-3xl font-bold">Dybdeprofil</h1>
           </div>
           <div className="flex gap-2">
@@ -632,105 +546,24 @@ export default function DeepProfilePage() {
           </div>
         </div>
 
-        {/* Enrichment Status Bar */}
-        {(enrichmentStatus.loading || enrichmentData) && (
-          <Card className="mb-4 bg-gradient-to-r from-purple-500/5 to-blue-500/5 border-purple-500/20">
-            <CardContent className="py-3">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-purple-500" />
-                  <span className="text-sm font-medium">Data Sources</span>
-                </div>
-                <div className="flex items-center gap-4 flex-1">
-                  {/* GitHub */}
-                  <div className="flex items-center gap-1.5">
-                    {enrichmentStatus.sources.github === null && enrichmentStatus.loading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-                    ) : enrichmentStatus.sources.github ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                    ) : (
-                      <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
-                    )}
-                    <span className="text-xs text-muted-foreground">GitHub</span>
-                    {enrichmentData?.github?.readme && (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1">README</Badge>
-                    )}
-                    {enrichmentData?.github?.prsToOthers?.length ? (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1">{enrichmentData.github.prsToOthers.length} PRs</Badge>
-                    ) : null}
-                  </div>
-                  {/* LinkedIn */}
-                  <div className="flex items-center gap-1.5">
-                    {enrichmentStatus.sources.linkedin === null && enrichmentStatus.loading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-                    ) : enrichmentStatus.sources.linkedin && enrichmentData?.linkedin?.bestMatch ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                    ) : (
-                      <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
-                    )}
-                    <span className="text-xs text-muted-foreground">LinkedIn</span>
-                    {enrichmentData?.linkedin?.bestMatch && (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                        {enrichmentData.linkedin.bestMatch.confidence}%
-                      </Badge>
-                    )}
-                  </div>
-                  {/* Website */}
-                  <div className="flex items-center gap-1.5">
-                    {enrichmentStatus.sources.website === null && enrichmentStatus.loading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-                    ) : enrichmentData?.website ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                    ) : (
-                      <span className="w-3.5 h-3.5 text-muted-foreground/50">—</span>
-                    )}
-                    <span className="text-xs text-muted-foreground">Website</span>
-                  </div>
-                  {/* Talks */}
-                  <div className="flex items-center gap-1.5">
-                    {enrichmentStatus.sources.talks === null && enrichmentStatus.loading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-                    ) : enrichmentData?.talks?.hasTalks ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                    ) : (
-                      <span className="w-3.5 h-3.5 text-muted-foreground/50">—</span>
-                    )}
-                    <span className="text-xs text-muted-foreground">Talks</span>
-                    {enrichmentData?.talks?.hasTalks && (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                        {enrichmentData.talks.talks.length}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                {enrichmentStatus.duration && (
-                  <span className="text-xs text-muted-foreground">
-                    {(enrichmentStatus.duration / 1000).toFixed(1)}s
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Profile Hero */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-6">
+        {/* Profile Hero - Compact on mobile */}
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="pt-4 sm:pt-6 pb-4 px-3 sm:px-6">
+            <div className="flex items-start gap-3 sm:gap-6">
               <img
                 src={candidate.avatar}
                 alt={candidate.name}
-                className="w-24 h-24 rounded-full border-4 border-background"
+                className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-background flex-shrink-0"
               />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{candidate.name}</h2>
-                    <p className="text-muted-foreground">{candidate.currentRole}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-bold truncate">{candidate.name}</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground line-clamp-2">{candidate.currentRole}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <div
-                      className={`text-4xl font-bold ${getScoreColor(
+                      className={`text-3xl sm:text-4xl font-bold ${getScoreColor(
                         candidate.alignmentScore
                       )}`}
                     >
@@ -751,34 +584,34 @@ export default function DeepProfilePage() {
                     </TooltipProvider>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Briefcase className="w-4 h-4" />
-                    {candidate.company}
+                    <Briefcase className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[100px] sm:max-w-none">{candidate.company}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {candidate.location}
+                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[80px] sm:max-w-none">{candidate.location}</span>
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                   {candidate.skills.slice(0, 6).map((skill) => (
-                    <Badge key={skill} variant="secondary">
+                    <Badge key={skill} variant="secondary" className="text-xs px-2 py-0.5">
                       {skill}
                     </Badge>
                   ))}
                 </div>
                 {/* Behavioral Insights */}
-                <BehavioralBadges username={candidate.id} className="mt-4" />
+                <BehavioralBadges username={candidate.id} className="mt-3 sm:mt-4" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Data Coverage Indicator */}
-        <Card className="mb-6 bg-muted/30">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        <Card className="mb-4 sm:mb-6 bg-muted/30">
+          <CardContent className="py-2 sm:py-3 px-3 sm:px-6">
+            <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-muted-foreground">Datadækning:</span>
                 <div className="flex items-center gap-3">
@@ -885,16 +718,16 @@ export default function DeepProfilePage() {
 
         {/* Content */}
         {activeTab === "overview" && (
-          <BentoGrid>
+          <BentoGrid compact>
             {/* Key Evidence */}
-            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-green-500/5 to-transparent">
+            <BentoCard colSpan={2} rowSpan={1} compact className="bg-gradient-to-br from-green-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
+                <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Stærkeste beviser</h3>
-                  <p className="text-xs text-muted-foreground">Baseret på GitHub + LinkedIn + øvrige kilder</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Stærkeste beviser</h3>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Baseret på GitHub + LinkedIn + øvrige kilder</p>
                 </div>
               </div>
               <TooltipProvider>
@@ -933,44 +766,36 @@ export default function DeepProfilePage() {
                       </li>
                     ))}
                   </ul>
-                ) : analyzing ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Analyserer...</span>
-                  </div>
                 ) : (
-                  <button
-                    onClick={runDeepAnalysis}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Klik for at køre AI-analyse
-                  </button>
+                  <p className="text-muted-foreground">
+                    Run AI Analysis to see evidence
+                  </p>
                 )}
               </TooltipProvider>
             </BentoCard>
 
-            {/* Alignment Score */}
-            <BentoCard colSpan={1} rowSpan={2} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent">
-              <div className={`text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
+            {/* Alignment Score - Compact on mobile */}
+            <BentoCard colSpan={1} rowSpan={2} compact className="flex flex-col items-center justify-center py-4 sm:py-6 bg-gradient-to-br from-primary/10 to-transparent">
+              <div className={`text-4xl sm:text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
                 {candidate.alignmentScore}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">Alignment Score</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">Alignment Score</p>
               {candidate.persona?.archetype && (
-                <Badge className="mt-2" variant="outline">
+                <Badge className="mt-2 text-xs" variant="outline">
                   {candidate.persona.archetype.split(" ").slice(0, 2).join(" ")}
                 </Badge>
               )}
             </BentoCard>
 
             {/* Potential Gaps */}
-            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
+            <BentoCard colSpan={2} rowSpan={1} compact className="bg-gradient-to-br from-yellow-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 rounded-lg bg-yellow-500/10">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                <div className="p-1.5 sm:p-2 rounded-lg bg-yellow-500/10">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Uklarheder at afklare</h3>
-                  <p className="text-xs text-muted-foreground">Ting vi mangler bevis for</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Uklarheder at afklare</h3>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Ting vi mangler bevis for</p>
                 </div>
               </div>
               <TooltipProvider>
@@ -1007,33 +832,28 @@ export default function DeepProfilePage() {
                       </li>
                     ))}
                   </ul>
-                ) : analyzing ? (
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Analyserer...</span>
-                  </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">
-                    Ingen uklarheder fundet
+                    No gaps identified
                   </p>
                 )}
               </TooltipProvider>
             </BentoCard>
 
             {/* Score Breakdown / Radar - Wide Card (3x1) */}
-            <BentoCard colSpan={3} rowSpan={1}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+            <BentoCard colSpan={3} rowSpan={1} compact>
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Score-fordeling</h3>
-                  <p className="text-xs text-neutral-400">Klik for at se vægtning + kilder pr. kategori</p>
+                  <h3 className="font-semibold text-sm sm:text-base text-white">Score-fordeling</h3>
+                  <p className="text-[10px] sm:text-xs text-neutral-400">Klik for at se vægtning + kilder pr. kategori</p>
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 gap-6 items-start">
-                {/* Radar Chart */}
-                <div className="h-56">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-start">
+                {/* Radar Chart - Hidden on very small screens */}
+                <div className="h-40 sm:h-48 md:h-56 hidden sm:block">
                   {radarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
@@ -1065,9 +885,9 @@ export default function DeepProfilePage() {
                   )}
                 </div>
 
-                {/* Progress Bars */}
+                {/* Progress Bars - Always visible, primary on mobile */}
                 {normalizedScoreBreakdown ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {[
                       { key: "skills", labelDa: "Kompetencer" },
                       { key: "experience", labelDa: "Erfaring" },
@@ -1104,29 +924,6 @@ export default function DeepProfilePage() {
                   </div>
                 )}
               </div>
-            </BentoCard>
-
-            {/* Network Mapping */}
-            <BentoCard colSpan={3} rowSpan={1} className="bg-gradient-to-br from-blue-500/5 to-transparent">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Route className="w-5 h-5 text-blue-500" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">Netværkskortlægning</h3>
-                  <p className="text-xs text-neutral-400">Find din vej til kandidaten via fælles forbindelser</p>
-                </div>
-              </div>
-              {candidate.linkedinUrl ? (
-                <LinkedInConnectionPath
-                  candidateLinkedInUrl={candidate.linkedinUrl}
-                  candidateName={candidate.name}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Tilføj LinkedIn URL for at se netværksforbindelser
-                </p>
-              )}
             </BentoCard>
           </BentoGrid>
         )}
