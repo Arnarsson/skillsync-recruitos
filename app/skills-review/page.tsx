@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import {
   X,
   Plus,
   ArrowRight,
-  ArrowLeft,
   RotateCcw,
   Target,
   Star,
@@ -19,14 +18,12 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
-  Lightbulb,
   Users,
   ChevronLeft,
   ChevronRight,
-  GripVertical,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { WorkflowStepper } from "@/components/WorkflowStepper";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -35,8 +32,6 @@ interface Skill {
   name: string;
   tier: SkillTier;
   isCustom?: boolean;
-  confidence?: 'high' | 'medium' | 'low'; // AI extraction confidence
-  source?: string; // Where the skill was extracted from
 }
 
 interface SkillsConfig {
@@ -53,7 +48,6 @@ interface JobContext {
 interface SkillInsight {
   count: number;
   isLimiting: boolean;
-  potentialGain?: number;
 }
 
 interface PreviewResponse {
@@ -63,80 +57,41 @@ interface PreviewResponse {
   cached: boolean;
 }
 
-const TIER_CONFIG: Record<SkillTier, { weight: number; label: string; icon: React.ReactNode; color: string; bgColor: string }> = {
+const TIER_CONFIG: Record<SkillTier, { weight: number; label: string; shortLabel: string; icon: React.ReactNode; color: string; bgColor: string; borderColor: string }> = {
   "must-have": {
     weight: 1.0,
     label: "Must-have",
+    shortLabel: "Must",
     icon: <Target className="w-4 h-4" />,
     color: "text-red-400",
-    bgColor: "bg-red-500/10 border-red-500/30",
+    bgColor: "bg-red-500/10",
+    borderColor: "border-red-500/30",
   },
   "nice-to-have": {
     weight: 0.6,
     label: "Nice-to-have",
+    shortLabel: "Nice",
     icon: <Star className="w-4 h-4" />,
     color: "text-yellow-400",
-    bgColor: "bg-yellow-500/10 border-yellow-500/30",
+    bgColor: "bg-yellow-500/10",
+    borderColor: "border-yellow-500/30",
   },
   bonus: {
     weight: 0.3,
     label: "Bonus",
+    shortLabel: "Bonus",
     icon: <Sparkles className="w-4 h-4" />,
     color: "text-green-400",
-    bgColor: "bg-green-500/10 border-green-500/30",
+    bgColor: "bg-green-500/10",
+    borderColor: "border-green-500/30",
   },
 };
 
 const TIER_ORDER: SkillTier[] = ["must-have", "nice-to-have", "bonus"];
 
-// Helper function to determine confidence based on skill context
-function inferConfidence(name: string, index: number, isRequired: boolean): 'high' | 'medium' | 'low' {
-  // Common skill keywords that are usually high confidence
-  const highConfidencePatterns = [
-    /^(react|vue|angular|node|python|java|typescript|javascript|go|rust|c\+\+|c#|ruby|php|swift|kotlin)$/i,
-    /^(aws|gcp|azure|docker|kubernetes|terraform)$/i,
-    /^(postgresql|mysql|mongodb|redis|elasticsearch)$/i,
-    /^(graphql|rest|api)$/i,
-  ];
-
-  // Check if skill matches high confidence patterns
-  const isHighConfidence = highConfidencePatterns.some(pattern => pattern.test(name));
-
-  if (isHighConfidence) return 'high';
-  if (isRequired && index < 3) return 'high'; // First 3 required skills are usually explicit
-  if (isRequired) return 'medium'; // Other required skills
-  return 'low'; // Preferred skills are often inferred
-}
-
-// Helper function to load skills from localStorage
 function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError: boolean; noContext: boolean } {
   if (typeof window === "undefined") {
     return { skills: [], hasError: false, noContext: false };
-  }
-
-  // Check for saved draft first (for back button support)
-  const storedDraft = localStorage.getItem("apex_skills_draft");
-  if (storedDraft) {
-    try {
-      const draft = JSON.parse(storedDraft);
-      if (draft.skills && draft.skills.length > 0) {
-        const skills: Skill[] = draft.skills.map((s: { name: string; tier: SkillTier }, i: number) => ({
-          id: `draft-${i}-${s.name}`,
-          name: s.name,
-          tier: s.tier,
-          isCustom: draft.customSkills?.includes(s.name) || false,
-        }));
-        // Get location from job context
-        const storedJobContext = localStorage.getItem("apex_job_context");
-        let location;
-        if (storedJobContext) {
-          try {
-            location = JSON.parse(storedJobContext).location;
-          } catch {}
-        }
-        return { skills, location, hasError: false, noContext: false };
-      }
-    } catch {}
   }
 
   const storedJobContext = localStorage.getItem("apex_job_context");
@@ -148,78 +103,116 @@ function loadSkillsFromStorage(): { skills: Skill[]; location?: string; hasError
 
       const initialSkills: Skill[] = [];
 
-      // First 4 required → must-have
       requiredSkills.slice(0, 4).forEach((name, i) => {
-        initialSkills.push({
-          id: `skill-${i}-${name}`,
-          name,
-          tier: "must-have",
-          isCustom: false,
-          confidence: inferConfidence(name, i, true),
-          source: "Job description",
-        });
+        initialSkills.push({ id: `skill-${i}-${name}`, name, tier: "must-have", isCustom: false });
       });
 
-      // Remaining required → nice-to-have
       requiredSkills.slice(4).forEach((name, i) => {
-        initialSkills.push({
-          id: `skill-demoted-${i}-${name}`,
-          name,
-          tier: "nice-to-have",
-          isCustom: false,
-          confidence: inferConfidence(name, i + 4, true),
-          source: "Job description",
-        });
+        initialSkills.push({ id: `skill-demoted-${i}-${name}`, name, tier: "nice-to-have", isCustom: false });
       });
 
-      // Preferred → nice-to-have
       preferredSkills.forEach((name, i) => {
-        initialSkills.push({
-          id: `skill-preferred-${i}-${name}`,
-          name,
-          tier: "nice-to-have",
-          isCustom: false,
-          confidence: inferConfidence(name, i, false),
-          source: "Inferred from context",
-        });
+        initialSkills.push({ id: `skill-preferred-${i}-${name}`, name, tier: "nice-to-have", isCustom: false });
       });
 
       return { skills: initialSkills, location: jobContext.location, hasError: false, noContext: false };
-    } catch (e) {
-      console.error("Failed to parse job context:", e);
+    } catch {
       return { skills: [], hasError: true, noContext: false };
     }
   }
   return { skills: [], hasError: false, noContext: true };
 }
 
-// Confidence indicator component
-function ConfidenceDot({ confidence, source }: { confidence?: 'high' | 'medium' | 'low'; source?: string }) {
-  if (!confidence) return null;
-
-  const config = {
-    high: { color: 'bg-green-500', label: 'High confidence' },
-    medium: { color: 'bg-yellow-500', label: 'Medium confidence' },
-    low: { color: 'bg-orange-500', label: 'Low confidence (may be inferred)' },
-  };
-
-  const { color, label } = config[confidence];
+// Mobile-optimized skill card
+function MobileSkillCard({
+  skill,
+  insight,
+  isLoading,
+  onMove,
+  onRemove,
+  tierIndex,
+}: {
+  skill: Skill;
+  insight?: SkillInsight;
+  isLoading: boolean;
+  onMove: (direction: "left" | "right") => void;
+  onRemove: () => void;
+  tierIndex: number;
+}) {
+  const isLimiting = insight?.isLimiting && skill.tier === "must-have";
+  const canMoveLeft = tierIndex > 0;
+  const canMoveRight = tierIndex < TIER_ORDER.length - 1;
 
   return (
-    <div className="relative group/conf">
-      <div className={cn("w-1.5 h-1.5 rounded-full", color)} />
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/conf:block z-20">
-        <div className="bg-popover text-popover-foreground text-[10px] px-2 py-1 rounded shadow-lg border whitespace-nowrap">
-          <div className="font-medium">{label}</div>
-          {source && <div className="text-muted-foreground">{source}</div>}
+    <div className={cn(
+      "flex items-center gap-2 p-3 rounded-xl border-2 bg-card transition-all",
+      isLimiting ? "border-yellow-500/50 bg-yellow-500/5" : "border-border"
+    )}>
+      {/* Move left button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onMove("left")}
+        disabled={!canMoveLeft}
+        className={cn(
+          "h-10 w-10 rounded-full flex-shrink-0",
+          canMoveLeft ? "bg-muted hover:bg-primary/20" : "opacity-30"
+        )}
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </Button>
+
+      {/* Skill info */}
+      <div className="flex-1 min-w-0 px-1">
+        <div className="font-medium truncate">{skill.name}</div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {isLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+          ) : insight ? (
+            <>
+              {isLimiting && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
+              <span className={cn("text-xs", isLimiting ? "text-yellow-500" : "text-muted-foreground")}>
+                {insight.count.toLocaleString()} matches
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+          {skill.isCustom && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 ml-1">Custom</Badge>
+          )}
         </div>
       </div>
+
+      {/* Move right button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onMove("right")}
+        disabled={!canMoveRight}
+        className={cn(
+          "h-10 w-10 rounded-full flex-shrink-0",
+          canMoveRight ? "bg-muted hover:bg-primary/20" : "opacity-30"
+        )}
+      >
+        <ChevronRight className="w-5 h-5" />
+      </Button>
+
+      {/* Delete button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="h-10 w-10 rounded-full flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+      >
+        <Trash2 className="w-4 h-4" />
+      </Button>
     </div>
   );
 }
 
-// Skill chip component
-function SkillChip({
+// Desktop skill chip (compact)
+function DesktopSkillChip({
   skill,
   insight,
   isLoading,
@@ -240,80 +233,56 @@ function SkillChip({
 
   return (
     <div className={cn(
-      "group flex items-center gap-1 p-2 rounded-lg border bg-card transition-all",
+      "group flex items-center gap-1.5 p-2 rounded-lg border bg-card transition-all",
       isLimiting && "border-yellow-500/50 bg-yellow-500/5"
     )}>
-      {/* Move left */}
       <button
         onClick={() => onMove("left")}
         disabled={!canMoveLeft}
-        className={cn(
-          "p-1 rounded hover:bg-muted transition-colors",
-          !canMoveLeft && "opacity-30 cursor-not-allowed"
-        )}
-        title="Move to higher priority"
+        className={cn("p-1 rounded hover:bg-muted", !canMoveLeft && "opacity-30 cursor-not-allowed")}
       >
-        <ChevronLeft className="w-3 h-3" />
+        <ChevronLeft className="w-3.5 h-3.5" />
       </button>
 
-      {/* Skill content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <ConfidenceDot confidence={skill.confidence} source={skill.source} />
           <span className="font-medium text-sm truncate">{skill.name}</span>
-          {skill.isCustom && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-              Custom
-            </Badge>
-          )}
+          {skill.isCustom && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">Custom</Badge>}
         </div>
-        {/* Candidate count */}
         <div className="flex items-center gap-1 mt-0.5">
           {isLoading ? (
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
           ) : insight ? (
             <>
               {isLimiting && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
-              <span className={cn(
-                "text-xs",
-                isLimiting ? "text-yellow-500" : "text-muted-foreground"
-              )}>
-                {insight.count.toLocaleString()} candidates
+              <span className={cn("text-xs", isLimiting ? "text-yellow-500" : "text-muted-foreground")}>
+                {insight.count.toLocaleString()}
               </span>
             </>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
+          ) : <span className="text-xs text-muted-foreground">—</span>}
         </div>
       </div>
 
-      {/* Move right */}
       <button
         onClick={() => onMove("right")}
         disabled={!canMoveRight}
-        className={cn(
-          "p-1 rounded hover:bg-muted transition-colors",
-          !canMoveRight && "opacity-30 cursor-not-allowed"
-        )}
-        title="Move to lower priority"
+        className={cn("p-1 rounded hover:bg-muted", !canMoveRight && "opacity-30 cursor-not-allowed")}
       >
-        <ChevronRight className="w-3 h-3" />
+        <ChevronRight className="w-3.5 h-3.5" />
       </button>
 
-      {/* Remove */}
       <button
         onClick={onRemove}
-        className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-        title="Remove skill"
+        className="p-1 rounded hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
       >
-        <X className="w-3 h-3" />
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );
 }
 
-// Column component for each tier
-function TierColumn({
+// Desktop column
+function DesktopTierColumn({
   tier,
   skills,
   preview,
@@ -334,35 +303,20 @@ function TierColumn({
   const [newSkill, setNewSkill] = useState("");
   const tierIndex = TIER_ORDER.indexOf(tier);
 
-  const handleAdd = () => {
-    if (newSkill.trim()) {
-      onAddSkill(tier, newSkill.trim());
-      setNewSkill("");
-    }
-  };
-
   return (
-    <div className={cn("rounded-xl border p-3 sm:p-4 flex flex-col", config.bgColor)}>
-      {/* Header */}
+    <div className={cn("rounded-xl border p-4 flex flex-col", config.bgColor, config.borderColor)}>
       <div className="flex items-center gap-2 mb-3">
         <span className={config.color}>{config.icon}</span>
-        <h3 className={cn("font-semibold text-sm sm:text-base", config.color)}>
-          {config.label}
-        </h3>
-        <Badge variant="secondary" className="ml-auto text-xs">
-          {skills.length}
-        </Badge>
+        <h3 className={cn("font-semibold", config.color)}>{config.label}</h3>
+        <Badge variant="secondary" className="ml-auto text-xs">{skills.length}</Badge>
       </div>
 
-      {/* Skills list */}
-      <div className="flex-1 space-y-2 min-h-[100px]">
+      <div className="flex-1 space-y-2 min-h-[120px]">
         {skills.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground text-sm">
-            No skills
-          </div>
+          <div className="text-center py-6 text-muted-foreground text-sm">No skills</div>
         ) : (
           skills.map((skill) => (
-            <SkillChip
+            <DesktopSkillChip
               key={skill.id}
               skill={skill}
               insight={preview?.perSkill[skill.name]}
@@ -376,19 +330,28 @@ function TierColumn({
         )}
       </div>
 
-      {/* Add skill input */}
       <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
         <Input
           placeholder="Add skill..."
           value={newSkill}
           onChange={(e) => setNewSkill(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && newSkill.trim()) {
+              onAddSkill(tier, newSkill.trim());
+              setNewSkill("");
+            }
+          }}
           className="h-8 text-sm"
         />
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleAdd}
+          onClick={() => {
+            if (newSkill.trim()) {
+              onAddSkill(tier, newSkill.trim());
+              setNewSkill("");
+            }
+          }}
           disabled={!newSkill.trim()}
           className="h-8 px-2"
         >
@@ -412,25 +375,20 @@ export default function SkillsReviewPage() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  // Show toast messages after mount
+  // Mobile: active tab
+  const [activeTab, setActiveTab] = useState<SkillTier>("must-have");
+  const [newSkillInput, setNewSkillInput] = useState("");
+
   useEffect(() => {
     if (toastShownRef.current) return;
     toastShownRef.current = true;
-
     const { hasError, noContext } = loadSkillsFromStorage();
-    if (hasError) {
-      toast.error("Failed to load skills from job context");
-    } else if (noContext) {
-      toast.error("No job context found", {
-        description: "Please complete the intake step first",
-      });
-    }
+    if (hasError) toast.error("Failed to load skills");
+    else if (noContext) toast.error("No job context", { description: "Complete intake first" });
   }, []);
 
-  // Fetch preview data
   const fetchPreview = useCallback(async (force = false) => {
     if (skills.length === 0) return;
-
     const now = Date.now();
     if (!force && now - lastFetchTime < 5000) return;
 
@@ -439,48 +397,23 @@ export default function SkillsReviewPage() {
       const response = await fetch("/api/skills/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          skills: skills.map((s) => ({ name: s.name, tier: s.tier })),
-          location,
-        }),
+        body: JSON.stringify({ skills: skills.map((s) => ({ name: s.name, tier: s.tier })), location }),
       });
-
-      if (!response.ok) throw new Error("Failed to fetch preview");
-
+      if (!response.ok) throw new Error("Failed");
       const data: PreviewResponse = await response.json();
       setPreview(data);
       setLastFetchTime(now);
-    } catch (error) {
-      console.error("Preview fetch error:", error);
+    } catch {
+      // Silent fail
     } finally {
       setIsLoadingPreview(false);
     }
   }, [skills, location, lastFetchTime]);
 
-  // Initial fetch
   useEffect(() => {
-    if (skills.length > 0 && !preview) {
-      fetchPreview(true);
-    }
+    if (skills.length > 0 && !preview) fetchPreview(true);
   }, [skills.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-save skills to localStorage when they change (for back button support)
-  useEffect(() => {
-    if (skills.length > 0) {
-      const draft = {
-        skills: skills.map((s, i) => ({
-          name: s.name,
-          tier: s.tier,
-          weight: TIER_CONFIG[s.tier].weight,
-          order: i,
-        })),
-        customSkills,
-      };
-      localStorage.setItem("apex_skills_draft", JSON.stringify(draft));
-    }
-  }, [skills, customSkills]);
-
-  // Skills by tier
   const skillsByTier = useMemo(() => ({
     "must-have": skills.filter((s) => s.tier === "must-have"),
     "nice-to-have": skills.filter((s) => s.tier === "nice-to-have"),
@@ -491,14 +424,10 @@ export default function SkillsReviewPage() {
     setSkills((prev) => {
       const skill = prev.find((s) => s.id === skillId);
       if (!skill) return prev;
-
       const currentIndex = TIER_ORDER.indexOf(skill.tier);
       const newIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
-
       if (newIndex < 0 || newIndex >= TIER_ORDER.length) return prev;
-
-      const newTier = TIER_ORDER[newIndex];
-      return prev.map((s) => (s.id === skillId ? { ...s, tier: newTier } : s));
+      return prev.map((s) => (s.id === skillId ? { ...s, tier: TIER_ORDER[newIndex] } : s));
     });
     setPreview(null);
   }, []);
@@ -506,9 +435,7 @@ export default function SkillsReviewPage() {
   const handleRemoveSkill = useCallback((skillId: string) => {
     setSkills((prev) => {
       const skill = prev.find((s) => s.id === skillId);
-      if (skill?.isCustom) {
-        setCustomSkills((cs) => cs.filter((name) => name !== skill.name));
-      }
+      if (skill?.isCustom) setCustomSkills((cs) => cs.filter((name) => name !== skill.name));
       return prev.filter((s) => s.id !== skillId);
     });
     setPreview(null);
@@ -519,44 +446,24 @@ export default function SkillsReviewPage() {
       toast.error("Skill already exists");
       return;
     }
-
-    const newSkill: Skill = {
-      id: `custom-${Date.now()}-${name}`,
-      name,
-      tier,
-      isCustom: true,
-    };
-
-    setSkills((prev) => [...prev, newSkill]);
+    setSkills((prev) => [...prev, { id: `custom-${Date.now()}-${name}`, name, tier, isCustom: true }]);
     setCustomSkills((prev) => [...prev, name]);
     setPreview(null);
-    toast.success("Skill added");
+    toast.success("Added");
   }, [skills]);
 
   const handleReset = useCallback(() => {
     setSkills(originalSkills);
     setCustomSkills([]);
     setPreview(null);
-    // Clear draft so reset persists on back navigation
-    localStorage.removeItem("apex_skills_draft");
-    toast.success("Reset to AI suggestions");
+    toast.success("Reset");
   }, [originalSkills]);
 
   const handleContinue = useCallback(() => {
-    const skillsConfig: SkillsConfig = {
-      skills: skills.map((s, i) => ({
-        name: s.name,
-        tier: s.tier,
-        weight: TIER_CONFIG[s.tier].weight,
-        order: i,
-      })),
+    localStorage.setItem("apex_skills_config", JSON.stringify({
+      skills: skills.map((s, i) => ({ name: s.name, tier: s.tier, weight: TIER_CONFIG[s.tier].weight, order: i })),
       customSkills,
-    };
-
-    localStorage.setItem("apex_skills_config", JSON.stringify(skillsConfig));
-    // Clear draft as we've officially saved
-    localStorage.removeItem("apex_skills_draft");
-    toast.success("Skills saved");
+    }));
     router.push("/pipeline");
   }, [skills, customSkills, router]);
 
@@ -568,91 +475,155 @@ export default function SkillsReviewPage() {
   // Empty state
   if (skills.length === 0) {
     return (
-      <div className="min-h-screen pt-20 sm:pt-24 pb-24 px-3 sm:px-4">
-        <div className="max-w-3xl mx-auto text-center py-16">
+      <div className="min-h-screen pt-20 pb-24 px-4">
+        <div className="max-w-md mx-auto text-center py-16">
           <Target className="w-16 h-16 mx-auto mb-6 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">No Skills Found</h1>
-          <p className="text-muted-foreground mb-6">
-            Complete the job intake step first to extract skills from your job description.
-          </p>
+          <p className="text-muted-foreground mb-6">Complete intake first to extract skills.</p>
           <Button onClick={() => router.push("/intake")} size="lg">
-            Go to Job Intake
-            <ArrowRight className="w-4 h-4 ml-2" />
+            Go to Intake <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
       </div>
     );
   }
 
+  const activeTabIndex = TIER_ORDER.indexOf(activeTab);
+  const activeSkills = skillsByTier[activeTab];
+
   return (
-    <div className="min-h-screen pt-20 sm:pt-24 pb-32 px-3 sm:px-4">
+    <div className="min-h-screen pt-16 sm:pt-20 pb-40 sm:pb-32 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Workflow Stepper */}
-        <div className="mb-6">
-          <WorkflowStepper currentStep={2} />
-        </div>
-
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Skills Review</h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Drag skills between columns to adjust priorities
-            </p>
+            <Badge className="mb-1 bg-primary/20 text-primary text-xs">Step 2</Badge>
+            <h1 className="text-xl sm:text-2xl font-bold">Skills Review</h1>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset} disabled={!hasChanges} size="sm">
-              <RotateCcw className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Reset</span>
+          <div className="flex gap-1.5">
+            <Button variant="outline" onClick={handleReset} disabled={!hasChanges} size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3">
+              <RotateCcw className="w-4 h-4" />
             </Button>
-            <Button variant="outline" onClick={() => fetchPreview(true)} disabled={isLoadingPreview} size="sm">
-              <RefreshCw className={cn("w-4 h-4 sm:mr-2", isLoadingPreview && "animate-spin")} />
-              <span className="hidden sm:inline">Refresh</span>
+            <Button variant="outline" onClick={() => fetchPreview(true)} disabled={isLoadingPreview} size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3">
+              <RefreshCw className={cn("w-4 h-4", isLoadingPreview && "animate-spin")} />
             </Button>
           </div>
         </div>
 
-        {/* Candidate Pool Indicator */}
-        <Card className="mb-6">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-4">
-              <Users className="w-5 h-5 text-primary" />
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">Candidate Pool</span>
-                  <span className="text-lg font-bold">
-                    {isLoadingPreview ? (
-                      <Loader2 className="w-4 h-4 animate-spin inline" />
-                    ) : preview ? (
-                      preview.totalCandidates.toLocaleString()
-                    ) : (
-                      "—"
-                    )}
-                  </span>
-                </div>
-                {preview && (
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, (preview.totalCandidates / 5000) * 100)}%` }}
-                    />
-                  </div>
-                )}
+        {/* Pool indicator - compact */}
+        <Card className="mb-4">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Pool</span>
               </div>
+              <span className="text-lg font-bold">
+                {isLoadingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : preview?.totalCandidates.toLocaleString() ?? "—"}
+              </span>
             </div>
+            {preview && (
+              <div className="h-1.5 bg-muted rounded-full mt-2 overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, (preview.totalCandidates / 5000) * 100)}%` }} />
+              </div>
+            )}
             {limitingCount > 0 && (
-              <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-yellow-500/10 text-yellow-500 text-sm">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{limitingCount} must-have skill{limitingCount !== 1 && "s"} limiting your pool. Consider demoting.</span>
+              <div className="flex items-center gap-1.5 mt-2 text-yellow-500 text-xs">
+                <AlertTriangle className="w-3 h-3" />
+                <span>{limitingCount} skill{limitingCount !== 1 && "s"} limiting pool</span>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Three-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* MOBILE: Tabbed interface */}
+        <div className="md:hidden">
+          {/* Tab bar */}
+          <div className="flex gap-1 p-1 bg-muted rounded-xl mb-4">
+            {TIER_ORDER.map((tier) => {
+              const config = TIER_CONFIG[tier];
+              const count = skillsByTier[tier].length;
+              const isActive = activeTab === tier;
+              return (
+                <button
+                  key={tier}
+                  onClick={() => setActiveTab(tier)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-sm font-medium transition-all",
+                    isActive ? cn("bg-background shadow-sm", config.color) : "text-muted-foreground"
+                  )}
+                >
+                  {config.icon}
+                  <span>{config.shortLabel}</span>
+                  <Badge variant={isActive ? "default" : "secondary"} className="ml-1 h-5 min-w-[20px] text-xs">
+                    {count}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active tab content */}
+          <div className={cn("rounded-xl border-2 p-3 mb-4", TIER_CONFIG[activeTab].bgColor, TIER_CONFIG[activeTab].borderColor)}>
+            <div className="space-y-2 min-h-[200px]">
+              {activeSkills.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No {TIER_CONFIG[activeTab].label.toLowerCase()} skills</p>
+                </div>
+              ) : (
+                activeSkills.map((skill) => (
+                  <MobileSkillCard
+                    key={skill.id}
+                    skill={skill}
+                    insight={preview?.perSkill[skill.name]}
+                    isLoading={isLoadingPreview && !preview}
+                    onMove={(dir) => handleMoveSkill(skill.id, dir)}
+                    onRemove={() => handleRemoveSkill(skill.id)}
+                    tierIndex={activeTabIndex}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Add skill */}
+            <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
+              <Input
+                placeholder={`Add ${TIER_CONFIG[activeTab].shortLabel.toLowerCase()} skill...`}
+                value={newSkillInput}
+                onChange={(e) => setNewSkillInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newSkillInput.trim()) {
+                    handleAddSkill(activeTab, newSkillInput.trim());
+                    setNewSkillInput("");
+                  }
+                }}
+                className="h-10"
+              />
+              <Button
+                onClick={() => {
+                  if (newSkillInput.trim()) {
+                    handleAddSkill(activeTab, newSkillInput.trim());
+                    setNewSkillInput("");
+                  }
+                }}
+                disabled={!newSkillInput.trim()}
+                className="h-10 px-4"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Navigation hint */}
+          <p className="text-center text-xs text-muted-foreground">
+            ← Higher priority | Lower priority →
+          </p>
+        </div>
+
+        {/* DESKTOP: Three columns */}
+        <div className="hidden md:grid md:grid-cols-3 gap-4">
           {TIER_ORDER.map((tier) => (
-            <TierColumn
+            <DesktopTierColumn
               key={tier}
               tier={tier}
               skills={skillsByTier[tier]}
@@ -664,38 +635,33 @@ export default function SkillsReviewPage() {
             />
           ))}
         </div>
-
-        {/* Mobile hint */}
-        <p className="text-center text-xs text-muted-foreground mb-4 md:hidden">
-          Use arrows to move skills between columns
-        </p>
       </div>
 
-      {/* Fixed Continue Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-md border-t z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="hidden sm:flex items-center gap-6 text-sm">
-            <span>
-              <span className="font-semibold text-red-400">{skillsByTier["must-have"].length}</span>
-              <span className="text-muted-foreground ml-1">must-have</span>
-            </span>
-            <span>
-              <span className="font-semibold text-yellow-400">{skillsByTier["nice-to-have"].length}</span>
-              <span className="text-muted-foreground ml-1">nice-to-have</span>
-            </span>
-            <span>
-              <span className="font-semibold text-green-400">{skillsByTier["bonus"].length}</span>
-              <span className="text-muted-foreground ml-1">bonus</span>
-            </span>
-            {preview && (
-              <span className="text-muted-foreground">
-                <span className="font-semibold text-foreground">{preview.totalCandidates.toLocaleString()}</span> candidates
-              </span>
-            )}
+      {/* Fixed footer */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-background/95 backdrop-blur-md border-t z-50">
+        <div className="max-w-6xl mx-auto">
+          {/* Mobile: simple counts */}
+          <div className="flex items-center justify-between gap-2 mb-3 sm:hidden text-xs">
+            <div className="flex gap-3">
+              <span><span className="font-semibold text-red-400">{skillsByTier["must-have"].length}</span> must</span>
+              <span><span className="font-semibold text-yellow-400">{skillsByTier["nice-to-have"].length}</span> nice</span>
+              <span><span className="font-semibold text-green-400">{skillsByTier["bonus"].length}</span> bonus</span>
+            </div>
+            {preview && <span className="text-muted-foreground">{preview.totalCandidates.toLocaleString()} candidates</span>}
           </div>
-          <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto">
-            Continue to Pipeline
-            <ArrowRight className="w-4 h-4 ml-2" />
+
+          {/* Desktop: detailed stats */}
+          <div className="hidden sm:flex items-center justify-between gap-4 mb-0">
+            <div className="flex items-center gap-6 text-sm">
+              <span><span className="font-semibold text-red-400">{skillsByTier["must-have"].length}</span> must-have</span>
+              <span><span className="font-semibold text-yellow-400">{skillsByTier["nice-to-have"].length}</span> nice-to-have</span>
+              <span><span className="font-semibold text-green-400">{skillsByTier["bonus"].length}</span> bonus</span>
+              {preview && <span className="text-muted-foreground">{preview.totalCandidates.toLocaleString()} candidates</span>}
+            </div>
+          </div>
+
+          <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto sm:ml-auto sm:flex mt-2 sm:mt-0">
+            Continue to Pipeline <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
       </div>
