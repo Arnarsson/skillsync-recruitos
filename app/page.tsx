@@ -42,6 +42,12 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Free Credits Banner */}
+          <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/30">
+            <Zap className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Start gratis med 5 dybdeprofil-kreditter</span>
+          </div>
+
           {/* Headline */}
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-foreground mb-3 font-medium tracking-tight">
             {t("home.headline")}
