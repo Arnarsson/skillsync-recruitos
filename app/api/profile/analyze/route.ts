@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import {
   generatePersona,
   analyzeCandidateProfile,
@@ -9,6 +11,16 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and credits FIRST
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       candidateId,
@@ -20,6 +32,42 @@ export async function POST(request: NextRequest) {
       isShortlisted,  // Stage 3 flag - triggers network dossier generation
       enrichmentData, // Optional enrichment data from deep-enrichment API
     } = body;
+
+    // Deduct credit before generating report
+    try {
+      const creditResponse = await fetch(`${request.nextUrl.origin}/api/credits`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "deduct",
+          username: candidateId,
+        }),
+      });
+
+      if (!creditResponse.ok) {
+        const errorData = await creditResponse.json();
+        
+        if (creditResponse.status === 402) {
+          return NextResponse.json(
+            { error: "Insufficient credits. Please purchase more credits to continue." },
+            { status: 402 }
+          );
+        }
+        
+        throw new Error(errorData.error || "Failed to deduct credit");
+      }
+
+      const creditData = await creditResponse.json();
+      console.log(`Credit deducted for ${candidateName}. Remaining: ${creditData.creditsRemaining}`);
+    } catch (creditError) {
+      console.error("Credit deduction failed:", creditError);
+      return NextResponse.json(
+        { error: "Credit system error. Please try again." },
+        { status: 500 }
+      );
+    }
 
     // Build a profile text from available data
     const profileText = `
