@@ -65,10 +65,12 @@ export const DEFAULT_FILTERS: SearchFilters = {
 
 const LOCATIONS = [
   { value: "copenhagen", label: "Copenhagen" },
-  { value: "stockholm", label: "Stockholm" },
+  { value: "london", label: "London" },
   { value: "berlin", label: "Berlin" },
   { value: "amsterdam", label: "Amsterdam" },
-  { value: "london", label: "London" },
+  { value: "new york", label: "New York" },
+  { value: "san francisco", label: "San Francisco" },
+  { value: "stockholm", label: "Stockholm" },
   { value: "oslo", label: "Oslo" },
   { value: "helsinki", label: "Helsinki" },
   { value: "paris", label: "Paris" },
