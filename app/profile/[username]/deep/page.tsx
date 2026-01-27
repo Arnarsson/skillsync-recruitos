@@ -336,7 +336,7 @@ export default function DeepProfilePage() {
   }>({ loading: false, sources: { github: null, linkedin: null, website: null, talks: null }, duration: null });
 
   useEffect(() => {
-    // Load candidate from localStorage
+    // First try localStorage (existing behavior)
     const stored = localStorage.getItem("apex_candidates");
     if (stored) {
       try {
@@ -344,23 +344,61 @@ export default function DeepProfilePage() {
         const found = candidates.find((c) => c.id === username);
         if (found) {
           setCandidate(found);
+          setLoading(false);
+          
+          // Load job context
+          const storedJob = localStorage.getItem("apex_job_context");
+          if (storedJob) {
+            try {
+              setJobContext(JSON.parse(storedJob));
+            } catch {
+              // Ignore parse errors
+            }
+          }
+          return;
         }
       } catch {
         // Ignore parse errors
       }
     }
-
-    // Load job context
-    const storedJob = localStorage.getItem("apex_job_context");
-    if (storedJob) {
-      try {
-        setJobContext(JSON.parse(storedJob));
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    setLoading(false);
+    
+    // Fallback: fetch from GitHub API
+    fetch(`/api/github/user?username=${username}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          const fallbackCandidate: Candidate = {
+            id: data.login || username,
+            name: data.name || username,
+            currentRole: data.bio || '',
+            company: data.company || '',
+            location: data.location || '',
+            alignmentScore: 0, // Will be calculated by AI analysis
+            avatar: data.avatar_url || `https://github.com/${username}.png`,
+            skills: data.topLanguages || [],
+            sourceUrl: `https://github.com/${username}`,
+          };
+          setCandidate(fallbackCandidate);
+          
+          // Also store in localStorage for next time
+          const existing = localStorage.getItem("apex_candidates");
+          const candidates = existing ? JSON.parse(existing) : [];
+          candidates.push(fallbackCandidate);
+          localStorage.setItem("apex_candidates", JSON.stringify(candidates));
+          
+          // Load job context
+          const storedJob = localStorage.getItem("apex_job_context");
+          if (storedJob) {
+            try {
+              setJobContext(JSON.parse(storedJob));
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      })
+      .catch(err => console.error("GitHub fallback error:", err))
+      .finally(() => setLoading(false));
   }, [username]);
 
   const runDeepAnalysis = useCallback(async () => {

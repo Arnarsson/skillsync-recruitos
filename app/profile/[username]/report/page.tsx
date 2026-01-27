@@ -57,6 +57,7 @@ export default function ProfileReportPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // First try localStorage (existing behavior)
     const stored = localStorage.getItem("apex_candidates");
     if (stored) {
       try {
@@ -64,12 +65,40 @@ export default function ProfileReportPage() {
         const found = candidates.find((c) => c.id === username);
         if (found) {
           setCandidate(found);
+          setLoading(false);
+          return;
         }
       } catch {
         // Ignore
       }
     }
-    setLoading(false);
+    
+    // Fallback: fetch from GitHub API
+    fetch(`/api/github/user?username=${username}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          const fallbackCandidate: Candidate = {
+            id: data.login || username,
+            name: data.name || username,
+            currentRole: data.bio || '',
+            company: data.company || '',
+            location: data.location || '',
+            alignmentScore: 0, // Will be calculated by AI analysis
+            avatar: data.avatar_url || `https://github.com/${username}.png`,
+            skills: data.topLanguages || [],
+          };
+          setCandidate(fallbackCandidate);
+          
+          // Also store in localStorage for next time
+          const existing = localStorage.getItem("apex_candidates");
+          const candidates = existing ? JSON.parse(existing) : [];
+          candidates.push(fallbackCandidate);
+          localStorage.setItem("apex_candidates", JSON.stringify(candidates));
+        }
+      })
+      .catch(err => console.error("GitHub fallback error:", err))
+      .finally(() => setLoading(false));
   }, [username]);
 
   if (loading) {
