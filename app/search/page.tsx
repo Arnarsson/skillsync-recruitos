@@ -148,7 +148,7 @@ function SearchResults() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <WorkflowStepper currentStep={3} />
+          <WorkflowStepper currentStep={2} />
         </motion.div>
 
         {/* Search Header */}

@@ -11,15 +11,16 @@ interface WorkflowStepperProps {
 
 /**
  * Phase definitions for the recruiting workflow.
- * Phase 1: Search & Discovery   — Steps 1-2 (Intake, Skills Review) — Blue accent
- * Phase 2: Analysis & Intelligence — Steps 3-4 (Candidates, Deep Dive) — Purple accent
- * Phase 3: Outreach & Pipeline   — Step 5 (Outreach) — Emerald accent
+ * Phase 1: Search (Search & Filter) - Steps 1-2
+ * Phase 2: Select (Screening) - Step 3
+ * Phase 3: Analyze (Deep Dive) - Step 4
+ * Phase 4: Contact (Outreach) - Step 5
  */
 const PHASES = [
   {
     id: 1,
-    label: "Search & Discovery",
-    shortLabel: "Discovery",
+    label: "Search & Define",
+    shortLabel: "Search",
     color: "blue",
     bgClass: "bg-blue-500",
     bgLightClass: "bg-blue-500/10",
@@ -32,8 +33,8 @@ const PHASES = [
   },
   {
     id: 2,
-    label: "Analysis & Intelligence",
-    shortLabel: "Analysis",
+    label: "Select & Screen",
+    shortLabel: "Select",
     color: "purple",
     bgClass: "bg-purple-500",
     bgLightClass: "bg-purple-500/10",
@@ -42,12 +43,26 @@ const PHASES = [
     ringClass: "ring-purple-500/20",
     gradientFrom: "from-purple-500",
     gradientTo: "to-purple-400",
-    steps: [3, 4],
+    steps: [3],
   },
   {
     id: 3,
-    label: "Outreach & Pipeline",
-    shortLabel: "Outreach",
+    label: "AI Analysis",
+    shortLabel: "Analyze",
+    color: "amber",
+    bgClass: "bg-amber-500",
+    bgLightClass: "bg-amber-500/10",
+    textClass: "text-amber-400",
+    borderClass: "border-amber-500/30",
+    ringClass: "ring-amber-500/20",
+    gradientFrom: "from-amber-500",
+    gradientTo: "to-amber-400",
+    steps: [4],
+  },
+  {
+    id: 4,
+    label: "Contact & Hire",
+    shortLabel: "Contact",
     color: "emerald",
     bgClass: "bg-emerald-500",
     bgLightClass: "bg-emerald-500/10",
@@ -62,10 +77,10 @@ const PHASES = [
 
 const STEPS = [
   { id: 1, label: "Job Intake", icon: FileText, path: "/intake", phaseId: 1 },
-  { id: 2, label: "Skills Review", icon: ListChecks, path: "/skills-review", phaseId: 1 },
-  { id: 3, label: "Candidates", icon: Users, path: "/search", phaseId: 2 },
-  { id: 4, label: "Deep Dive", icon: Microscope, path: "/shortlist", phaseId: 2 },
-  { id: 5, label: "Outreach", icon: Mail, path: "/pipeline", phaseId: 3 },
+  { id: 2, label: "Candidates", icon: Users, path: "/search", phaseId: 1 },
+  { id: 3, label: "Skills Review", icon: ListChecks, path: "/skills-review", phaseId: 2 },
+  { id: 4, label: "Deep Dive", icon: Microscope, path: "/shortlist", phaseId: 3 },
+  { id: 5, label: "Outreach", icon: Mail, path: "/pipeline", phaseId: 4 },
 ] as const;
 
 function getPhaseForStep(stepId: number) {

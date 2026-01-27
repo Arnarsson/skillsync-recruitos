@@ -375,7 +375,7 @@ export default function PipelinePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Badge className="mb-2 bg-emerald-500/20 text-emerald-400">Phase 3 — Outreach</Badge>
+            <Badge className="mb-2 bg-emerald-500/20 text-emerald-400">Phase 4 — Outreach</Badge>
             <h1 className="text-3xl font-bold">Talent Pipeline</h1>
             {jobContext && (
               <>

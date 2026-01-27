@@ -564,14 +564,14 @@ export default function SkillsReviewPage() {
       <div className="max-w-6xl mx-auto">
         {/* Workflow Phase Indicator */}
         <div className="mb-6">
-          <WorkflowStepper currentStep={2} />
+          <WorkflowStepper currentStep={3} />
         </div>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <Badge className="mb-2 bg-blue-500/20 text-blue-400 text-xs">
-              Phase 1 — Discovery
+            <Badge className="mb-2 bg-purple-500/20 text-purple-400 text-xs">
+              Phase 2 — Selection
             </Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">
               Drag skills to prioritize
