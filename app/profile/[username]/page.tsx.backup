@@ -34,7 +34,6 @@ import GitHubConnectionPath from "@/components/GitHubConnectionPath";
 import { ConnectionPathCard } from "@/components/SocialMatrix";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
-import { PhaseIndicator } from "@/components/PhaseIndicator";
 
 interface Repo {
   name: string;
@@ -394,9 +393,6 @@ export default function ProfilePage({
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
-        {/* Phase Indicator */}
-        <PhaseIndicator currentPhase={3} />
-        
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
           <Avatar className="w-32 h-32">

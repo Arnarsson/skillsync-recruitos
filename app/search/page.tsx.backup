@@ -43,7 +43,6 @@ import {
 import { SkillsCombobox } from "@/components/search/SkillsCombobox";
 import { OpenToWorkBadge, BehavioralBadges } from "@/components/BehavioralBadges";
 import { ConnectionBadge } from "@/components/SocialMatrix";
-import { PhaseIndicator } from "@/components/PhaseIndicator";
 
 interface Developer {
   username: string;
@@ -455,9 +454,6 @@ function SearchResults() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Phase Indicator */}
-        <PhaseIndicator currentPhase={1} />
-        
         {/* Search Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

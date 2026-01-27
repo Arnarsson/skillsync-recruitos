@@ -48,7 +48,6 @@ import { PipelineLoadingScramble } from "@/components/ui/loading-scramble";
 import { ShortlistPanel } from "@/components/pipeline/ShortlistPanel";
 import ScoreLegend from "@/components/ScoreLegend";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
-import { PhaseIndicator } from "@/components/PhaseIndicator";
 import {
   ResponsiveContainer,
   BarChart,
@@ -840,13 +839,10 @@ export default function PipelinePage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Phase Indicator */}
-        <PhaseIndicator currentPhase={2} />
-        
-        {/* Workflow Stepper - Legacy, will be removed */}
-        {/* <div className="mb-6">
+        {/* Workflow Stepper */}
+        <div className="mb-6">
           <WorkflowStepper currentStep={3} />
-        </div> */}
+        </div>
 
         {/* Compact Header with Job Context */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">

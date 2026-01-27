@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import Onboarding from "./Onboarding";
 
@@ -11,12 +12,17 @@ interface OnboardingWrapperProps {
 }
 
 export default function OnboardingWrapper({ children }: OnboardingWrapperProps) {
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
   const [mounted, setMounted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration gate pattern
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHomePage) return;
 
     // Check if user has completed onboarding - show immediately if not
     const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
@@ -24,12 +30,12 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
     if (!hasCompletedOnboarding) {
       setShowOnboarding(true);
     }
-  }, []);
+  }, [isHomePage]);
 
   const handleComplete = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setShowOnboarding(false);
-  }, []);
+  }, [isHomePage]);
 
   const handleSkip = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, "true");
@@ -38,6 +44,8 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
 
   // Ctrl/Cmd + Shift + O to reset onboarding (for testing)
   useEffect(() => {
+    if (!isHomePage) return;
+
     const handleReset = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "O") {
         localStorage.removeItem(ONBOARDING_KEY);
@@ -50,7 +58,7 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
   }, []);
 
   // Don't render onboarding until mounted (SSR safety)
-  if (!mounted) {
+  if (!mounted || !isHomePage) {
     return <>{children}</>;
   }
 

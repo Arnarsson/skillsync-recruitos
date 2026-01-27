@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import ScoreBadge from "@/components/ScoreBadge";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
-import { PhaseIndicator } from "@/components/PhaseIndicator";
 import OutreachModal from "@/components/OutreachModal";
 import { PRICING, CREDITS_TO_EUR } from "@/types";
 interface Candidate {
@@ -126,7 +125,7 @@ export default function ShortlistPage() {
     return (
       <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
         <div className="max-w-4xl mx-auto">
-          <PhaseIndicator currentPhase={4} />
+          <WorkflowStepper currentStep={4} />
           <Card className="border-dashed mt-6">
             <CardContent className="py-16 text-center">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -150,8 +149,10 @@ export default function ShortlistPage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Phase Indicator */}
-        <PhaseIndicator currentPhase={4} />
+        {/* Workflow Stepper */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={4} />
+        </div>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
