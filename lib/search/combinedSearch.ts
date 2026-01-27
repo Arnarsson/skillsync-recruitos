@@ -1,7 +1,7 @@
 /**
  * Combined Search Service
  *
- * Searches multiple sources (GitHub, LinkedIn) and combines results
+ * Searches multiple sources (GitHub, LinkedIn, SERP) and combines results
  */
 
 export interface CombinedSearchResult {
@@ -22,6 +22,9 @@ export interface CombinedSearchResult {
   followers?: number;
   // LinkedIn-specific
   connectionDegree?: string;
+  // SERP-specific
+  snippet?: string;
+  sourceType?: 'linkedin' | 'github' | 'academic' | 'company' | 'blog' | 'other';
 }
 
 export interface CombinedSearchResponse {
@@ -30,6 +33,7 @@ export interface CombinedSearchResponse {
   sources: {
     github: { count: number; status: "ready" | "error" };
     linkedin: { count: number; status: "ready" | "pending" | "error"; snapshotId?: string };
+    serp: { count: number; status: "ready" | "pending" | "error" };
   };
   interpretation: {
     language: string | null;
@@ -39,21 +43,24 @@ export interface CombinedSearchResponse {
 }
 
 /**
- * Trigger a combined search across GitHub and LinkedIn
+ * Trigger a combined search across GitHub, LinkedIn, and SERP
  */
 export async function triggerCombinedSearch(
   query: string,
   options: {
     includeLinkedIn?: boolean;
     linkedInApiKey?: string;
+    includeSERP?: boolean;
   } = {}
 ): Promise<{
   githubResults: CombinedSearchResult[];
   linkedInSnapshotId?: string;
+  serpResults?: CombinedSearchResult[];
   interpretation: any;
 }> {
   const results: CombinedSearchResult[] = [];
   let linkedInSnapshotId: string | undefined;
+  let serpResults: CombinedSearchResult[] | undefined;
   let interpretation: any = null;
 
   // 1. Search GitHub (fast, synchronous)
@@ -111,9 +118,46 @@ export async function triggerCombinedSearch(
     }
   }
 
+  // 3. Trigger SERP search for niche/specialized queries (if enabled)
+  if (options.includeSERP) {
+    try {
+      // Dynamic import to avoid bundling issues
+      const { searchTalentViaSERP, shouldUseSerpSearch } = await import(
+        "@/services/serpTalentSearch"
+      );
+
+      // Only use SERP search for specialized queries
+      if (shouldUseSerpSearch(query)) {
+        const location = interpretation?.location || undefined;
+        const serpTalents = await searchTalentViaSERP(query, {
+          location,
+          maxResults: 10,
+        });
+
+        // Convert to combined format
+        serpResults = serpTalents.map((talent) => ({
+          id: talent.id,
+          source: "serp" as const,
+          name: talent.name,
+          headline: talent.headline,
+          location: talent.location,
+          profileUrl: talent.profileUrl,
+          skills: talent.skills,
+          company: talent.company,
+          score: talent.relevanceScore,
+          snippet: talent.snippet,
+          sourceType: talent.sourceType,
+        }));
+      }
+    } catch (error) {
+      console.error("[CombinedSearch] SERP search error:", error);
+    }
+  }
+
   return {
     githubResults: results,
     linkedInSnapshotId,
+    serpResults,
     interpretation,
   };
 }
