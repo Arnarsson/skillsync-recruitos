@@ -128,10 +128,10 @@ export default function DashboardPage() {
   }, [plan, usage]);
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-16 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <Badge className="mb-2 bg-primary/20 text-primary">Dashboard</Badge>
             <h1 className="text-3xl font-bold">Recruiting Analytics</h1>
@@ -139,15 +139,15 @@ export default function DashboardPage() {
               Track your hiring funnel and ROI
             </p>
           </div>
-          <div className="flex gap-2">
-            <Link href="/search">
-              <Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Link href="/search" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto">
                 <Search className="w-4 h-4 mr-2" />
                 Ny Søgning
               </Button>
             </Link>
-            <Link href="/pricing">
-              <Button variant="outline">
+            <Link href="/pricing" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <CreditCard className="w-4 h-4 mr-2" />
                 Køb Kreditter
               </Button>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
         {/* Credit Balance Card */}
         <Card className="mb-8 border-primary/20">
           <CardContent className="py-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <Coins className="w-6 h-6 text-primary" />
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 sm:justify-end">
                 {unlimited ? (
                   <div className="flex items-center gap-1 text-green-500">
                     <Crown className="w-5 h-5" />
@@ -208,7 +208,7 @@ export default function DashboardPage() {
         {/* Plan Status (legacy — hidden now in favor of Credit Balance Card above) */}
 
         {/* Quick Stats */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card>
               <CardContent className="pt-6">
@@ -275,7 +275,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
           {/* Weekly Activity */}
           <Card>
             <CardHeader>
@@ -312,7 +312,7 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={funnelData} layout="vertical">
                     <XAxis type="number" tick={{ fontSize: 12 }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={70} />
                     <Tooltip />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                       {funnelData.map((entry, index) => (
@@ -338,7 +338,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground mb-1">Cost per Search</p>
                 <p className="text-2xl font-bold">${analytics.costPerSearch.toFixed(2)}</p>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
 
             <div className="mt-6 pt-6 border-t">
               <h4 className="font-medium mb-4">Conversion Rates</h4>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Search → Contact</span>
@@ -386,7 +386,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-6 pt-6 border-t flex items-center justify-between">
+            <div className="mt-6 pt-6 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="text-sm text-muted-foreground">Total Spent</p>
                 <p className="text-3xl font-bold">${hireTracking.totalSpent.toFixed(2)}</p>
@@ -399,7 +399,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link href="/pipeline">
             <Card className="hover:border-primary/50 transition-colors cursor-pointer">
               <CardContent className="py-6 flex items-center gap-4">
