@@ -20,6 +20,7 @@ import {
   MapPin,
   Calendar,
   Building,
+  MessageSquare,
 } from "lucide-react";
 import {
   RadarChart,
