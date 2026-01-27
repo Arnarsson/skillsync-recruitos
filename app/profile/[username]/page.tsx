@@ -29,11 +29,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import PsychometricCard from "@/components/PsychometricCard";
+import PersonalityProfileCard from "@/components/PersonalityProfileCard";
 import NetworkMap from "@/components/NetworkMap";
 import GitHubConnectionPath from "@/components/GitHubConnectionPath";
 import { ConnectionPathCard } from "@/components/SocialMatrix";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
+import { computePersonalityProfile, PersonalityProfile } from "@/services/personalityService";
 
 interface Repo {
   name: string;
@@ -88,6 +90,11 @@ export default function ProfilePage({
   const [psychLoading, setPsychLoading] = useState(false);
   const [isAIPsychProfile, setIsAIPsychProfile] = useState(false);
 
+  // Personality profile state
+  const [personalityProfile, setPersonalityProfile] = useState<PersonalityProfile | null>(null);
+  const [personalityLoading, setPersonalityLoading] = useState(false);
+  const [deepAnalysis, setDeepAnalysis] = useState<any>(null);
+
   // LinkedIn state
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null);
@@ -128,6 +135,45 @@ export default function ProfilePage({
       setIsAIPsychProfile(false);
     }
   }, [profile, linkedInProfile, psychProfile, psychLoading]);
+
+  // Generate personality profile when profile loads + fetch deep analysis for richer data
+  useEffect(() => {
+    if (profile && !personalityProfile && !personalityLoading) {
+      setPersonalityLoading(true);
+
+      // First generate with basic data (instant)
+      const basicProfile = computePersonalityProfile({
+        user: profile.user,
+        repos: profile.repos,
+        deepAnalysis: null,
+      });
+      setPersonalityProfile(basicProfile);
+
+      // Then fetch deep analysis and re-compute with richer data
+      fetch(`/api/github/deep?username=${profile.user.login}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(deep => {
+          if (deep) {
+            setDeepAnalysis(deep);
+            const enrichedProfile = computePersonalityProfile({
+              user: profile.user,
+              repos: profile.repos,
+              deepAnalysis: {
+                commitActivity: deep.commitActivity,
+                pullRequests: deep.pullRequests,
+                codeReview: deep.codeReview,
+                contributionPatterns: deep.contributionPatterns,
+                collaborationStyle: deep.collaborationStyle,
+                topLanguages: deep.topLanguages,
+              },
+            });
+            setPersonalityProfile(enrichedProfile);
+          }
+        })
+        .catch(err => console.error('Deep analysis fetch failed:', err))
+        .finally(() => setPersonalityLoading(false));
+    }
+  }, [profile, personalityProfile, personalityLoading]);
 
   // Re-generate psychometric when LinkedIn data is added
   useEffect(() => {
@@ -278,6 +324,11 @@ export default function ProfilePage({
                     {psychProfile.archetype.primary}
                   </Badge>
                 )}
+                {personalityProfile && (
+                  <Badge className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white text-[10px]">
+                    {personalityProfile.personaTag}
+                  </Badge>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" asChild>
@@ -415,22 +466,26 @@ export default function ProfilePage({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="gap-2">
               <Github className="w-4 h-4" />
-              Overview
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="personality" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Personality</span>
             </TabsTrigger>
             <TabsTrigger value="psychometric" className="gap-2">
               <Brain className="w-4 h-4" />
-              Psychometric
+              <span className="hidden sm:inline">Psychometric</span>
             </TabsTrigger>
             <TabsTrigger value="connection" className="gap-2">
               <Users className="w-4 h-4" />
-              Connection
+              <span className="hidden sm:inline">Connection</span>
             </TabsTrigger>
             <TabsTrigger value="outreach" className="gap-2">
               <ExternalLink className="w-4 h-4" />
-              Outreach
+              <span className="hidden sm:inline">Outreach</span>
             </TabsTrigger>
           </TabsList>
 
@@ -537,6 +592,20 @@ export default function ProfilePage({
                       </div>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Personality Tab */}
+          <TabsContent value="personality">
+            {personalityProfile ? (
+              <PersonalityProfileCard profile={personalityProfile} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
+                  <p className="text-muted-foreground">Generating personality profile...</p>
                 </CardContent>
               </Card>
             )}
