@@ -22,6 +22,8 @@ import {
 import ScoreBadge from "@/components/ScoreBadge";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
 import OutreachModal from "@/components/OutreachModal";
+import TeamTailorExport from "@/components/TeamTailorExport";
+import { RecruitOSProfile } from "@/lib/teamtailor";
 import { PRICING, CREDITS_TO_EUR } from "@/types";
 interface Candidate {
   id: string;
@@ -113,6 +115,20 @@ export default function ShortlistPage() {
     setCompletedOutreach((prev) => new Set([...prev, candidateId]));
   };
 
+  // Map candidates to RecruitOSProfile format for Team Tailor export
+  const candidateProfiles: RecruitOSProfile[] = useMemo(() => {
+    return candidates.map((candidate) => ({
+      username: candidate.id,
+      name: candidate.name,
+      location: candidate.location,
+      company: candidate.company,
+      bio: candidate.currentRole,
+      skills: candidate.skills || [],
+      followers: 0,
+      hireable: true,
+    }));
+  }, [candidates]);
+
   if (loading) {
     return (
       <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4 flex items-center justify-center">
@@ -167,6 +183,12 @@ export default function ShortlistPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <TeamTailorExport 
+              profiles={candidateProfiles}
+              buttonLabel="Export to ATS"
+              buttonVariant="outline"
+              buttonSize="sm"
+            />
             <Link href="/pipeline">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="w-4 h-4 sm:mr-2" />
