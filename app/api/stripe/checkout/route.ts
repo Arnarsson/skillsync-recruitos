@@ -7,11 +7,6 @@ import {
 } from "@/lib/stripe";
 import { CREDIT_PACKAGES, type PricingTier } from "@/lib/pricing";
 
-/**
- * POST /api/checkout
- * Creates a Stripe Checkout session for a credit package.
- * Body: { packageId: PricingTier } or legacy { planId: PricingTier }
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -27,10 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    // Support both new and legacy field names
-    const packageId: PricingTier = body.packageId || body.planId;
+    const { packageId } = (await request.json()) as { packageId: PricingTier };
 
+    // Validate package
     const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
     if (!pkg) {
       return NextResponse.json({ error: "Invalid package" }, { status: 400 });
@@ -40,6 +34,7 @@ export async function POST(request: NextRequest) {
     const email = session.user.email;
     const name = session.user.name || "User";
 
+    // Get or create Stripe customer
     const customerId = await getOrCreateCustomer(email, name, userId);
 
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
@@ -56,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url });
   } catch (error) {
-    console.error("Checkout error:", error);
+    console.error("Stripe checkout error:", error);
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 },

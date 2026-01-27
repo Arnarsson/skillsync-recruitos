@@ -28,6 +28,7 @@ model User {
   profileViews  ProfileView[]
   searches      Search[]
   payments      Payment[]
+  creditLedger  CreditLedger[]
 }
 
 model ProfileView {
@@ -56,21 +57,52 @@ model Search {
 }
 
 model Payment {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   userId          String
-  stripePaymentId String   @unique
-  amount          Int      // in cents
-  credits         Int      // credits purchased
-  status          String
-  createdAt       DateTime @default(now())
+  stripePaymentId String        @unique
+  stripeSessionId String?       @unique
+  amount          Int           // in smallest currency unit (øre for DKK)
+  currency        String        @default("dkk")
+  credits         Int           // credits purchased (0 for unlimited/annual)
+  packageId       String?       // which credit package was purchased
+  status          String        // pending, completed, failed, refunded
+  createdAt       DateTime      @default(now())
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([stripeSessionId])
+}
+
+/// Ledger tracking every credit change (purchases, consumption, adjustments)
+model CreditLedger {
+  id          String       @id @default(cuid())
+  userId      String
+  delta       Int          // positive = credit added, negative = credit consumed
+  reason      CreditReason
+  balance     Int          // balance after this transaction
+  metadata    Json?        // { candidateUsername, paymentId, packageId, etc. }
+  createdAt   DateTime     @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 enum Plan {
   FREE
+  STARTER
   PRO
   ENTERPRISE
+  ANNUAL
+}
+
+enum CreditReason {
+  PURCHASE        // Bought a credit package
+  CONSUMPTION     // Used credit for candidate analysis
+  SIGNUP_BONUS    // Free credits on signup
+  ADMIN_ADJUST    // Manual admin adjustment
+  REFUND          // Refund from failed analysis
+  SUBSCRIPTION    // Monthly/annual subscription credit refresh
 }

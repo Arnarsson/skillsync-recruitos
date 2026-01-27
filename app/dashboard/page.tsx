@@ -20,6 +20,10 @@ import {
   ArrowRight,
   Sparkles,
   Calendar,
+  Coins,
+  CreditCard,
+  Crown,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -42,6 +46,7 @@ import {
   calculateCostAnalytics,
   type CostAnalytics,
 } from "@/lib/pricing";
+import { useCredits } from "@/lib/useCredits";
 
 interface HireTracking {
   searches: number;
@@ -68,6 +73,8 @@ function getHireTrackingFromStorage(): HireTracking {
 }
 
 export default function DashboardPage() {
+  const { credits, unlimited, plan: creditPlan, loading: creditsLoading } = useCredits();
+
   // Use lazy initializers to read from localStorage synchronously
   const [plan, setPlan] = useState<ReturnType<typeof getPricingPlan>>(() => {
     if (typeof window === 'undefined') return undefined;
@@ -114,8 +121,10 @@ export default function DashboardPage() {
 
   const usagePercent = useMemo(() => {
     if (!plan || !usage) return 0;
-    if (plan.limits.searchesPerMonth === 'unlimited') return 0;
-    return Math.round((usage.searches / plan.limits.searchesPerMonth) * 100);
+    if (plan.credits === 'unlimited') return 0;
+    const total = typeof plan.credits === 'number' ? plan.credits : 0;
+    if (total === 0) return 0;
+    return Math.round((usage.searches / total) * 100);
   }, [plan, usage]);
 
   return (
@@ -134,52 +143,69 @@ export default function DashboardPage() {
             <Link href="/search">
               <Button>
                 <Search className="w-4 h-4 mr-2" />
-                New Search
+                Ny Søgning
               </Button>
             </Link>
             <Link href="/pricing">
               <Button variant="outline">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Upgrade
+                <CreditCard className="w-4 h-4 mr-2" />
+                Køb Kreditter
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Plan Status */}
-        {plan && (
-          <Card className="mb-8">
-            <CardContent className="py-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">{plan.name} Plan</h3>
-                      <Badge variant="outline">{plan.price.period === 'once' ? 'Pay as you go' : 'Subscription'}</Badge>
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {remaining?.searches === 'unlimited'
-                        ? 'Unlimited searches'
-                        : `${remaining?.searches || 0} searches remaining this month`}
-                    </p>
-                  </div>
+        {/* Credit Balance Card */}
+        <Card className="mb-8 border-primary/20">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Coins className="w-6 h-6 text-primary" />
                 </div>
-                {plan.limits.searchesPerMonth !== 'unlimited' && (
-                  <div className="w-48">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Usage</span>
-                      <span>{usage?.searches || 0} / {plan.limits.searchesPerMonth}</span>
-                    </div>
-                    <Progress value={usagePercent} className="h-2" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-lg">
+                      {unlimited ? "Ubegrænset Adgang" : "Kredit-saldo"}
+                    </h3>
+                    <Badge variant="outline" className="text-xs">
+                      {creditPlan}
+                    </Badge>
                   </div>
+                  <p className="text-muted-foreground text-sm">
+                    {unlimited
+                      ? "Du har ubegrænset adgang til alle analyser"
+                      : `${credits} kreditter tilbage — 1 kredit per analyse`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {unlimited ? (
+                  <div className="flex items-center gap-1 text-green-500">
+                    <Crown className="w-5 h-5" />
+                    <InfinityIcon className="w-5 h-5" />
+                  </div>
+                ) : (
+                  <>
+                    <span className={`text-3xl font-bold ${credits <= 2 ? "text-red-400" : "text-primary"}`}>
+                      {credits}
+                    </span>
+                    {credits <= 5 && (
+                      <Link href="/pricing">
+                        <Button size="sm" variant="default">
+                          <CreditCard className="w-3.5 h-3.5 mr-1.5" />
+                          Køb flere
+                        </Button>
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Plan Status (legacy — hidden now in favor of Credit Balance Card above) */}
 
         {/* Quick Stats */}
         <div className="grid md:grid-cols-4 gap-4 mb-8">

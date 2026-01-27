@@ -1,9 +1,6 @@
-import { NextResponse } from "next/server";
-
-export async function POST() {
-  // Stripe webhook not configured yet
-  return NextResponse.json(
-    { error: "Stripe webhook not configured" },
-    { status: 501 }
-  );
-}
+/**
+ * Legacy webhook path — redirects to the main handler.
+ * Stripe webhook should be configured to POST to /api/stripe/webhook
+ * but this catches the old path too.
+ */
+export { POST } from "@/app/api/stripe/webhook/route";

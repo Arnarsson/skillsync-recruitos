@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X } from "lucide-react";
+import CreditBadge from "./CreditBadge";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,6 +35,16 @@ export default function Header() {
               <span className="text-muted-foreground">...</span>
             ) : session?.user ? (
               <>
+                {/* Credit balance badge */}
+                <CreditBadge />
+                <span className="text-muted-foreground">/</span>
+                <Link
+                  href="/dashboard"
+                  className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                >
+                  DASHBOARD
+                </Link>
+                <span className="text-muted-foreground">/</span>
                 <Link
                   href="/pipeline"
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
@@ -96,6 +107,18 @@ export default function Header() {
 
               {session?.user ? (
                 <>
+                  {/* Credit balance in mobile nav */}
+                  <div className="flex items-center gap-2">
+                    <CreditBadge />
+                    <span className="text-muted-foreground text-xs">kreditter</span>
+                  </div>
+                  <Link
+                    href="/dashboard"
+                    className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    DASHBOARD
+                  </Link>
                   <Link
                     href="/pipeline"
                     className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
