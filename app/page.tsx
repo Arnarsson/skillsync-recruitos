@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Brain, Globe, Sparkles, Check, AlertCircle, Search, Microscope, Mail } from "lucide-react";
+import { ArrowRight, Brain, Globe, Sparkles, Check, AlertCircle, Search, Microscope, Mail, Zap } from "lucide-react";
 import { useLanguage, useTranslatedArray } from "@/lib/i18n";
 import { HowItWorksSection } from "@/components/HowItWorksSection";
 

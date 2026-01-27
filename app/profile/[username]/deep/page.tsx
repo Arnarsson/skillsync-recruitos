@@ -57,7 +57,6 @@ import {
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
-import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   RadarChart,
