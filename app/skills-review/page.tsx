@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -561,11 +562,16 @@ export default function SkillsReviewPage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
+        {/* Workflow Phase Indicator */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={2} />
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary text-xs">
-              Step 2 of 3
+            <Badge className="mb-2 bg-blue-500/20 text-blue-400 text-xs">
+              Phase 1 — Discovery
             </Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">
               Drag skills to prioritize

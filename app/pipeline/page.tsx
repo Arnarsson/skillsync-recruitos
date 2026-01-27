@@ -31,6 +31,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 import {
   ResponsiveContainer,
   BarChart,
@@ -366,10 +367,15 @@ export default function PipelinePage() {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Workflow Phase Indicator */}
+        <div className="mb-6">
+          <WorkflowStepper currentStep={5} />
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary">Trin 2 af 4</Badge>
+            <Badge className="mb-2 bg-emerald-500/20 text-emerald-400">Phase 3 — Outreach</Badge>
             <h1 className="text-3xl font-bold">Talent Pipeline</h1>
             {jobContext && (
               <>
