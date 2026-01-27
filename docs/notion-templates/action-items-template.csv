@@ -1,0 +1,7 @@
+Task Name,Owner,Status,Priority,Due Date,Tags,Description,Related Meeting
+Set up Notion workspace,Sven,Todo,P0 Critical,2026-01-28,Operations,Create workspace and invite team members,
+Migrate HackMD notes,Christopher,Todo,P1 High,2026-01-29,Operations,Move meeting notes from HackMD to Notion,
+Create product spec structure,Hjalti,Todo,P1 High,2026-01-29,Product,Set up wiki structure for product documentation,
+Follow up with VEO recruiter,Sven,Todo,P2 Medium,2026-01-30,Sales,Check if Carl Johan showed demo to tech recruiter,
+Finalize pricing model,Team,In Progress,P0 Critical,2026-02-01,Product|Sales,Decide between credits vs subscription vs per-hire,
+Update landing page messaging,Mason,Done,P2 Medium,2026-01-27,Product,Address Hjalti feedback on burning platform,
