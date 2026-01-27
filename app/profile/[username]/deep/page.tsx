@@ -308,6 +308,8 @@ export default function DeepProfilePage() {
       }
 
       // If not in pipeline, fetch from GitHub API
+      // [DEBUG] Fallback trigger verified
+      console.log("Candidate not in pipeline, attempting GitHub fallback for:", username);
       try {
         const response = await fetch(`https://api.github.com/users/${username}`);
         if (response.ok) {
