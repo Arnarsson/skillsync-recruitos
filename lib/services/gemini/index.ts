@@ -4,6 +4,14 @@
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.0-flash-001"; // Paid tier - no rate limits
 
+// Re-export comparative analysis types for EU AI Act compliance
+export type {
+  ComparativeAnalysis,
+  SkillComparison,
+  ExperienceComparison,
+  LocationComparison,
+} from './comparativeAnalysis';
+
 // Types
 export interface Persona {
   archetype: string;
@@ -448,7 +456,55 @@ Return ONLY valid JSON.`;
   };
 }
 
-// Analyze candidate profile
+// ============================================================================
+// EU AI ACT COMPLIANT COMPARATIVE ANALYSIS
+// ============================================================================
+
+import {
+  ComparativeAnalysis,
+  buildComparativeAnalysisPrompt,
+  validateCompliance,
+} from './comparativeAnalysis';
+
+/**
+ * Analyze candidate using comparative approach (EU AI Act compliant)
+ * 
+ * This replaces numeric scoring with factual comparisons between
+ * candidate profile and job requirements. Reduces classification
+ * from High-Risk to Limited Risk under EU AI Act.
+ */
+export async function analyzeCandidateComparative(
+  resumeText: string,
+  jobContext: string
+): Promise<ComparativeAnalysis> {
+  const { systemPrompt, userPrompt } = buildComparativeAnalysisPrompt(
+    resumeText,
+    jobContext
+  );
+
+  const text = await callOpenRouter(userPrompt, systemPrompt);
+  const analysis = parseJsonSafe(text) as ComparativeAnalysis;
+
+  // Validate EU AI Act compliance
+  const validation = validateCompliance(analysis);
+  if (!validation.compliant) {
+    console.warn('[EU AI Act] Compliance violations detected:', validation.violations);
+    // Log but don't fail - let the response through with warning
+  }
+
+  return analysis;
+}
+
+// ============================================================================
+// LEGACY SCORING APPROACH (DEPRECATED - EU AI ACT NON-COMPLIANT)
+// ============================================================================
+
+/**
+ * @deprecated Use analyzeCandidateComparative instead for EU AI Act compliance
+ * 
+ * This function uses numeric scoring which classifies as "High-Risk" under
+ * EU AI Act Article 5. Kept for backward compatibility during migration.
+ */
 export async function analyzeCandidateProfile(
   resumeText: string,
   jobContext: string

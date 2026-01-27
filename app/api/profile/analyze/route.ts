@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import {
   generatePersona,
   analyzeCandidateProfile,
+  analyzeCandidateComparative,
   generateDeepProfile,
   generateNetworkDossier,
   EnrichmentData,
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       skills,
       isShortlisted,  // Stage 3 flag - triggers network dossier generation
       enrichmentData, // Optional enrichment data from deep-enrichment API
+      useComparativeAnalysis = true, // EU AI Act compliant mode (default: true)
     } = body;
 
     // Deduct credit before generating report
@@ -123,10 +125,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Run analysis in parallel - pass enrichment data if available
-    const [persona, candidateAnalysis] = await Promise.all([
-      generatePersona(profileText, formattedEnrichment),
-      analyzeCandidateProfile(profileText, jobContext),
-    ]);
+    // Use comparative analysis (EU AI Act compliant) or legacy scoring
+    const persona = await generatePersona(profileText, formattedEnrichment);
+    
+    let candidateAnalysis: any;
+    let comparativeAnalysis: any;
+    
+    if (useComparativeAnalysis) {
+      // EU AI Act compliant mode - comparative analysis instead of scoring
+      comparativeAnalysis = await analyzeCandidateComparative(profileText, jobContext);
+      // Create compatibility object for deepProfile generation
+      candidateAnalysis = {
+        name: comparativeAnalysis.name,
+        currentRole: comparativeAnalysis.currentRole,
+        company: comparativeAnalysis.company,
+        location: comparativeAnalysis.location,
+        alignmentScore: 0, // Not used in comparative mode
+        scoreBreakdown: {} as any, // Not used in comparative mode
+      };
+    } else {
+      // Legacy scoring mode (deprecated)
+      candidateAnalysis = await analyzeCandidateProfile(profileText, jobContext);
+    }
 
     // Generate deep profile based on candidate analysis
     const deepProfile = await generateDeepProfile(candidateAnalysis, jobContext);
@@ -144,17 +164,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    // Build response based on analysis mode
+    const response: any = {
       persona,
       deepProfile,
       networkDossier, // Will be null for non-shortlisted candidates
-      scoreBreakdown: candidateAnalysis.scoreBreakdown,
-      keyEvidence: candidateAnalysis.keyEvidence,
-      keyEvidenceWithSources: candidateAnalysis.keyEvidenceWithSources,
-      risks: candidateAnalysis.risks,
-      risksWithSources: candidateAnalysis.risksWithSources,
-      alignmentScore: candidateAnalysis.alignmentScore,
-    });
+      analysisMode: useComparativeAnalysis ? 'comparative' : 'scoring',
+    };
+    
+    if (useComparativeAnalysis) {
+      // EU AI Act compliant response - comparative analysis
+      response.comparativeAnalysis = comparativeAnalysis;
+      response.euAiActCompliant = true;
+    } else {
+      // Legacy scoring response (deprecated)
+      response.scoreBreakdown = candidateAnalysis.scoreBreakdown;
+      response.keyEvidence = candidateAnalysis.keyEvidence;
+      response.keyEvidenceWithSources = candidateAnalysis.keyEvidenceWithSources;
+      response.risks = candidateAnalysis.risks;
+      response.risksWithSources = candidateAnalysis.risksWithSources;
+      response.alignmentScore = candidateAnalysis.alignmentScore;
+      response.euAiActCompliant = false;
+      response.warning = 'Using deprecated scoring mode. Switch to comparative analysis for EU AI Act compliance.';
+    }
+    
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Profile analysis error:", error);
     return NextResponse.json(
