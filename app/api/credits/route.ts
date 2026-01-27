@@ -33,7 +33,7 @@ export async function GET() {
     if (!user) {
       // User not in database yet - return defaults
       return NextResponse.json({
-        credits: 5,
+        credits: 3,
         plan: "FREE",
         profilesViewed: 0,
         unlimited: false,
@@ -90,15 +90,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
 
+    // Auto-create user on first credit usage (free trial activation)
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      try {
+        user = await prisma.user.create({
+          data: {
+            email: session.user.email!,
+            name: session.user.name || session.user.email!,
+            githubId: (session.user as any).id || `github_${Date.now()}`,
+            credits: 3, // Start with 3 free trial credits
+            plan: "FREE",
+          },
+        });
+        console.log(`✅ Free trial activated for ${session.user.email} - 3 credits granted`);
+      } catch (createError: any) {
+        // Handle race condition if user was created by another request
+        if (createError.code === 'P2002') {
+          user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+          });
+          if (!user) throw createError;
+        } else {
+          throw createError;
+        }
+      }
     }
 
     // Check if user has unlimited credits (Pro/Enterprise)

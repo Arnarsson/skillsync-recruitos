@@ -16,7 +16,7 @@ model User {
   githubToken   String?
 
   // Credits & Subscription
-  credits       Int       @default(5)
+  credits       Int       @default(3)
   plan          Plan      @default(FREE)
   stripeCustomerId    String?   @unique
   stripeSubscriptionId String?

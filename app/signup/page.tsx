@@ -36,7 +36,7 @@ export default function SignupPage() {
           <div className="mt-6 space-y-3">
             <div className="flex items-start gap-3 text-sm text-gray-400">
               <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-              <span>Free trial with 5 deep profile credits</span>
+              <span>Start free - 3 AI profile analyses included</span>
             </div>
             <div className="flex items-start gap-3 text-sm text-gray-400">
               <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
