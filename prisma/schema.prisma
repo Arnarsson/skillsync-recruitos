@@ -70,6 +70,41 @@ model Payment {
   @@index([userId])
 }
 
+model SharedProfile {
+  id            String   @id @default(cuid())
+  
+  // Candidate info
+  candidateId   String   // GitHub username or internal ID
+  name          String
+  currentRole   String?
+  company       String?
+  location      String?
+  avatar        String?
+  skills        String[] // Array of skill strings
+  yearsExperience Int?
+  
+  // Personality & Analysis (stored as JSON)
+  persona       Json?    // Full persona object
+  scoreBreakdown Json?   // Score breakdown object
+  keyEvidence   Json?    // Array of evidence items
+  risks         Json?    // Array of risk items
+  alignmentScore Int     @default(0)
+  
+  // Sharing metadata
+  createdBy     String?  // User ID who created the share
+  viewCount     Int      @default(0)
+  isActive      Boolean  @default(true)
+  expiresAt     DateTime?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([candidateId])
+  @@index([createdBy])
+  @@index([isActive])
+}
+
 enum Plan {
   FREE
   PRO

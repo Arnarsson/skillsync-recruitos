@@ -694,9 +694,45 @@ export default function DeepProfilePage() {
               {candidate.persona ? "Opdatér analyse" : "Kør AI-analyse"}
             </Button>
             <Button
-              onClick={() => {
-                const reportUrl = `/profile/${username}/report`;
-                window.open(reportUrl, '_blank');
+              onClick={async () => {
+                if (!candidate) return;
+                try {
+                  const res = await fetch("/api/shared-profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      candidateId: candidate.id,
+                      name: candidate.name,
+                      currentRole: candidate.currentRole,
+                      company: candidate.company,
+                      location: candidate.location,
+                      avatar: candidate.avatar,
+                      skills: candidate.skills,
+                      yearsExperience: candidate.yearsExperience,
+                      alignmentScore: candidate.alignmentScore,
+                      persona: candidate.persona,
+                      keyEvidenceWithSources: candidate.keyEvidenceWithSources || candidate.keyEvidence?.map((e: string) => ({ claim: e })),
+                      risksWithSources: candidate.risksWithSources || candidate.risks?.map((r: string) => ({ claim: r })),
+                      scoreBreakdown: candidate.scoreBreakdown,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.url) {
+                    // Copy to clipboard and open
+                    navigator.clipboard.writeText(data.url).catch(() => {});
+                    window.open(data.url, '_blank');
+                    // Show toast
+                    const { toast } = await import("sonner");
+                    toast.success("Shareable link copied to clipboard!", {
+                      description: data.url,
+                    });
+                  } else {
+                    // Fallback to old report page
+                    window.open(`/profile/${username}/report`, '_blank');
+                  }
+                } catch {
+                  window.open(`/profile/${username}/report`, '_blank');
+                }
               }}
               variant="outline"
               className="gap-2"
@@ -705,12 +741,45 @@ export default function DeepProfilePage() {
               Del Profil
             </Button>
             <Button
-              onClick={() => {
-                const reportUrl = `/profile/${username}/report`;
-                window.open(reportUrl, '_blank');
-                setTimeout(() => {
-                  window.print();
-                }, 1000);
+              onClick={async () => {
+                if (!candidate) return;
+                try {
+                  const res = await fetch("/api/shared-profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      candidateId: candidate.id,
+                      name: candidate.name,
+                      currentRole: candidate.currentRole,
+                      company: candidate.company,
+                      location: candidate.location,
+                      avatar: candidate.avatar,
+                      skills: candidate.skills,
+                      yearsExperience: candidate.yearsExperience,
+                      alignmentScore: candidate.alignmentScore,
+                      persona: candidate.persona,
+                      keyEvidenceWithSources: candidate.keyEvidenceWithSources || candidate.keyEvidence?.map((e: string) => ({ claim: e })),
+                      risksWithSources: candidate.risksWithSources || candidate.risks?.map((r: string) => ({ claim: r })),
+                      scoreBreakdown: candidate.scoreBreakdown,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.url) {
+                    const reportUrl = data.url;
+                    const w = window.open(reportUrl, '_blank');
+                    // Trigger print after load
+                    if (w) {
+                      w.addEventListener('afterprint', () => {}, { once: true });
+                      setTimeout(() => { try { w.print(); } catch {} }, 2000);
+                    }
+                  } else {
+                    const reportUrl = `/profile/${username}/report`;
+                    window.open(reportUrl, '_blank');
+                  }
+                } catch {
+                  const reportUrl = `/profile/${username}/report`;
+                  window.open(reportUrl, '_blank');
+                }
               }}
               variant="outline"
               className="gap-2"
