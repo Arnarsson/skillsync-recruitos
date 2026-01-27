@@ -47,6 +47,11 @@ import {
   MessageCircle,
   Route,
   Zap,
+  Share2,
+  FileDown,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
 } from "lucide-react";
 import {
   Tooltip as UITooltip,
@@ -295,6 +300,27 @@ export default function DeepProfilePage() {
   } | null>(null);
 
   const [hasAutoRun, setHasAutoRun] = useState(false);
+
+  // Progressive disclosure state
+  const [expandedSections, setExpandedSections] = useState<{
+    bigFive: boolean;
+    psychometric: boolean;
+    careerTrajectory: boolean;
+    compensation: boolean;
+    riskAssessment: boolean;
+    skillProfile: boolean;
+  }>({
+    bigFive: false,
+    psychometric: false,
+    careerTrajectory: false,
+    compensation: false,
+    riskAssessment: false,
+    skillProfile: false,
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Deep enrichment state
   const [enrichmentData, setEnrichmentData] = useState<{
@@ -615,7 +641,7 @@ export default function DeepProfilePage() {
           <div className="flex-1">
             <h1 className="text-3xl font-bold">Dybdeprofil</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               onClick={runDeepAnalysis}
               disabled={analyzing}
@@ -628,6 +654,31 @@ export default function DeepProfilePage() {
                 <RefreshCw className="w-4 h-4" />
               )}
               {candidate.persona ? "Opdatér analyse" : "Kør AI-analyse"}
+            </Button>
+            <Button
+              onClick={() => {
+                const reportUrl = `/profile/${username}/report`;
+                window.open(reportUrl, '_blank');
+              }}
+              variant="outline"
+              className="gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Del Profil
+            </Button>
+            <Button
+              onClick={() => {
+                const reportUrl = `/profile/${username}/report`;
+                window.open(reportUrl, '_blank');
+                setTimeout(() => {
+                  window.print();
+                }, 1000);
+              }}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              Eksportér PDF
             </Button>
             <Button
               onClick={() => setShowOutreach(true)}
@@ -892,6 +943,53 @@ export default function DeepProfilePage() {
 
         {/* Content */}
         {activeTab === "overview" && (
+          <>
+            {/* Quick Summary Cards - Always Visible */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Archetype */}
+              <Card className="bg-gradient-to-br from-primary/10 to-transparent">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-muted-foreground font-medium">Personlighedstype</span>
+                  </div>
+                  <p className="text-lg font-semibold">
+                    {candidate.persona?.archetype || "Kør AI-analyse"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Top Skills */}
+              <Card className="bg-gradient-to-br from-green-500/10 to-transparent">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm text-muted-foreground font-medium">Top Skills</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {candidate.skills.slice(0, 3).map((skill) => (
+                      <Badge key={skill} variant="secondary" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fit Score */}
+              <Card className="bg-gradient-to-br from-blue-500/10 to-transparent">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
+                    <span className="text-sm text-muted-foreground font-medium">Match Score</span>
+                  </div>
+                  <div className={`text-3xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
+                    {candidate.alignmentScore}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
           <BentoGrid className="auto-rows-[minmax(140px,_1fr)]">
             {/* Key Evidence */}
             <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-green-500/5 to-transparent">
@@ -1100,6 +1198,7 @@ export default function DeepProfilePage() {
               </div>
             </BentoCard>
           </BentoGrid>
+          </>
         )}
 
         {activeTab === "questions" && (
@@ -1158,16 +1257,28 @@ export default function DeepProfilePage() {
                 {/* Big Five Personality Radar - Prominent Feature */}
                 {candidate.persona.psychometric.bigFive && (
                   <Card className="border-primary/30">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Brain className="w-5 h-5 text-primary" />
-                        Personality Profile (Big Five)
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Inferred from work patterns, code style, and professional behavior
-                      </p>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('bigFive')}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Brain className="w-5 h-5 text-primary" />
+                            Personality Profile (Big Five)
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {expandedSections.bigFive 
+                              ? "Inferred from work patterns, code style, and professional behavior"
+                              : `${Object.keys(candidate.persona.psychometric.bigFive).length} personality traits analyzed`
+                            }
+                          </p>
+                        </div>
+                        {expandedSections.bigFive ? (
+                          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
                     </CardHeader>
-                    <CardContent>
+                    {expandedSections.bigFive && <CardContent>
                       <div className="grid md:grid-cols-2 gap-6">
                         {/* Radar Chart */}
                         <div className="h-64">
@@ -1239,19 +1350,26 @@ export default function DeepProfilePage() {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
+                    </CardContent>}
                   </Card>
                 )}
 
                 {/* Psychometric */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Psychometric Profile
-                      </CardTitle>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('psychometric')}>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Psychometric Profile
+                        </CardTitle>
+                        {expandedSections.psychometric ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    {expandedSections.psychometric && <CardContent className="space-y-4">
                       {/* Communication Style Indicator */}
                       <div>
                         <div className="flex justify-between text-sm mb-1">
@@ -1310,17 +1428,24 @@ export default function DeepProfilePage() {
                           </Badge>
                         </div>
                       </div>
-                    </CardContent>
+                    </CardContent>}
                   </Card>
 
                   {candidate.persona.careerTrajectory && (
                     <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                          Career Trajectory
-                        </CardTitle>
+                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('careerTrajectory')}>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Career Trajectory
+                          </CardTitle>
+                          {expandedSections.careerTrajectory ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      {expandedSections.careerTrajectory && <CardContent className="space-y-4">
                         {/* Growth Velocity */}
                         <div>
                           <div className="flex justify-between text-sm mb-1">
@@ -1385,7 +1510,7 @@ export default function DeepProfilePage() {
                             </div>
                           </div>
                         )}
-                      </CardContent>
+                      </CardContent>}
                     </Card>
                   )}
                 </div>
@@ -1393,13 +1518,20 @@ export default function DeepProfilePage() {
                 {/* Compensation Intelligence */}
                 {candidate.persona.compensationIntelligence && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <DollarSign className="w-4 h-4" />
-                        Compensation Intelligence
-                      </CardTitle>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('compensation')}>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                          <DollarSign className="w-4 h-4" />
+                          Compensation Intelligence
+                        </CardTitle>
+                        {expandedSections.compensation ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    {expandedSections.compensation && <CardContent className="space-y-6">
                       {/* Salary Range Visualization */}
                       <div>
                         <div className="flex justify-between text-sm mb-2">
@@ -1527,11 +1659,11 @@ export default function DeepProfilePage() {
                           )}
                         </p>
                       </div>
-                    </CardContent>
+                    </CardContent>}
                   </Card>
                 )}
 
-                {/* Flags */}
+                {/* Flags - Always visible (summary) */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
@@ -1579,12 +1711,19 @@ export default function DeepProfilePage() {
                 {/* Risk Assessment */}
                 {candidate.persona.riskAssessment && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Risk Assessment
-                      </CardTitle>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('riskAssessment')}>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Risk Assessment
+                        </CardTitle>
+                        {expandedSections.riskAssessment ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    {expandedSections.riskAssessment && <CardContent className="space-y-6">
                       {/* Risk Gauges */}
                       <div className="grid md:grid-cols-3 gap-4">
                         {/* Attrition Risk */}
@@ -1717,7 +1856,7 @@ export default function DeepProfilePage() {
                           <span className="text-sm text-yellow-500">Unexplained career gaps detected</span>
                         </div>
                       )}
-                    </CardContent>
+                    </CardContent>}
                   </Card>
                 )}
               </>
