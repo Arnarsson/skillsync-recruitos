@@ -39,8 +39,8 @@
     "copyright": "© {year} recruitos. alle rettigheder forbeholdes."
   },
   "home": {
-    "headline": "Se hvad kandidaten har gjort — ikke hvad de påstår",
-    "subheadline": "AI-drevet indsigt fra GitHub, LinkedIn og portfolio. Kvittér for kompetencer — før samtalen.",
+    "headline": "Hver fejlansættelse koster dig 6-12 måneders tid og dit teams momentum",
+    "subheadline": "Stop med at gætte på kompetencer. Se hvad kandidaten faktisk har bygget — før du investerer i samtaler der fører ingen vegne.",
     "searchPlaceholder": "Senior React udvikler, ML ingeniør, Go backend...",
     "searchHint": "{enter} for at søge, {shiftEnter} for ny linje",
     "enter": "enter",
@@ -54,16 +54,16 @@
     ],
     "features": {
       "searchByCapabilities": {
-        "title": "multi-source intelligence",
-        "description": "Kombinér GitHub-aktivitet, LinkedIn-historik og portfolio-cases i én samlet profil"
+        "title": "Stop med at spilde tid på overfladiske CV'er",
+        "description": "Se hvad kandidaten faktisk har kodet, ikke hvad de har copy-pasted fra jobannoncer. GitHub, LinkedIn og portfolio samlet ét sted."
       },
       "discoverExperts": {
-        "title": "buildprint-fingeraftryk",
-        "description": "5 adfærdsmetriker: Impact, Collaboration, Consistency, Complexity, Ownership"
+        "title": "Forstå hvordan de arbejder — ikke kun hvad de ved",
+        "description": "5 adfærdsindikatorer afslører samarbejdsstil, ejerskab og impact. Undgå brilliant jerks og silomestre."
       },
       "hireFaster": {
-        "title": "kvitteringer, ikke buzzwords",
-        "description": "Hvert udsagn linkes til kilden — repo, PR, artikel eller endorsement"
+        "title": "Verificér kompetencer på 5 minutter, ikke 5 runder",
+        "description": "Hver påstand linker direkte til beviset. Reducer interviewrunder og lav bedre beslutninger hurtigere."
       }
     },
     "buildInPublic": {

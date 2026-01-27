@@ -39,8 +39,8 @@
     "copyright": "© {year} recruitos. all rights reserved."
   },
   "home": {
-    "headline": "See what candidates have done — not what they claim",
-    "subheadline": "AI-powered insights from GitHub, LinkedIn and portfolio. Verify skills with receipts — before the interview.",
+    "headline": "Every bad hire costs you 6-12 months and your team's momentum",
+    "subheadline": "Stop guessing on skills. See what candidates actually built — before investing in interviews that lead nowhere.",
     "searchPlaceholder": "Senior React developer, ML engineer, Go backend...",
     "searchHint": "{enter} to search, {shiftEnter} for new line",
     "enter": "enter",
@@ -54,16 +54,16 @@
     ],
     "features": {
       "searchByCapabilities": {
-        "title": "multi-source intelligence",
-        "description": "Combine GitHub activity, LinkedIn history and portfolio cases into one unified profile"
+        "title": "Stop wasting time on surface-level CVs",
+        "description": "See what candidates actually coded, not what they copy-pasted from job ads. GitHub, LinkedIn and portfolio in one place."
       },
       "discoverExperts": {
-        "title": "buildprint fingerprint",
-        "description": "5 behavioral metrics: Impact, Collaboration, Consistency, Complexity, Ownership"
+        "title": "Understand how they work — not just what they know",
+        "description": "5 behavioral indicators reveal collaboration style, ownership and impact. Avoid brilliant jerks and silo builders."
       },
       "hireFaster": {
-        "title": "receipts, not buzzwords",
-        "description": "Every claim links to its source — repo, PR, article or endorsement"
+        "title": "Verify skills in 5 minutes, not 5 rounds",
+        "description": "Every claim links directly to the evidence. Reduce interview rounds and make better decisions faster."
       }
     },
     "buildInPublic": {
