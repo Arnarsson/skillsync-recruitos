@@ -11,7 +11,8 @@ model User {
   email         String?   @unique
   name          String?
   image         String?
-  githubId      String    @unique
+  passwordHash  String?
+  githubId      String?   @unique
   githubToken   String?
 
   // Credits & Subscription
