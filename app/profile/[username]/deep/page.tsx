@@ -1028,7 +1028,7 @@ export default function DeepProfilePage() {
               </Card>
             </div>
 
-          <BentoGrid className="auto-rows-[minmax(140px,_1fr)]">
+          <BentoGrid>
             {/* Key Evidence */}
             <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-green-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
@@ -1085,7 +1085,7 @@ export default function DeepProfilePage() {
             </BentoCard>
 
             {/* Alignment Score */}
-            <BentoCard colSpan={1} rowSpan={2} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent">
+            <BentoCard colSpan={1} rowSpan={1} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent min-h-[140px]">
               <div className={`text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
                 {candidate.alignmentScore}
               </div>
@@ -1098,7 +1098,7 @@ export default function DeepProfilePage() {
             </BentoCard>
 
             {/* Potential Gaps */}
-            <BentoCard colSpan={2} rowSpan={1} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
+            <BentoCard colSpan={3} rowSpan={1} className="bg-gradient-to-br from-yellow-500/5 to-transparent">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-2 rounded-lg bg-yellow-500/10">
                   <AlertTriangle className="w-5 h-5 text-yellow-500" />
