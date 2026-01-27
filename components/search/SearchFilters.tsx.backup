@@ -37,8 +37,6 @@ import {
   SlidersHorizontal,
   X,
   RotateCcw,
-  AlertCircle,
-  Shield,
 } from "lucide-react";
 
 export interface SearchFilters {
@@ -51,8 +49,6 @@ export interface SearchFilters {
   hireable: boolean | null;
   yearsOfExperience: [number, number];
   companyType: string | null;
-  employmentType: string | null;
-  requiredSkills: string[];
 }
 
 export const DEFAULT_FILTERS: SearchFilters = {
@@ -65,8 +61,6 @@ export const DEFAULT_FILTERS: SearchFilters = {
   hireable: null,
   yearsOfExperience: [0, 20],
   companyType: null,
-  employmentType: null,
-  requiredSkills: [],
 };
 
 const LOCATIONS = [
@@ -121,13 +115,6 @@ const COMPANY_TYPES = [
   { value: "freelance", label: "Freelance" },
 ];
 
-const EMPLOYMENT_TYPES = [
-  { value: "full-time", label: "Full-time" },
-  { value: "contract", label: "Contract" },
-  { value: "freelance", label: "Freelance" },
-  { value: "part-time", label: "Part-time" },
-];
-
 export interface AvailableFilters {
   locations: string[];
   languages: string[];
@@ -172,68 +159,6 @@ const FilterContent = ({
   availableFilters,
 }: FilterContentProps) => (
   <div className="space-y-4">
-    {/* Hard Requirements Section */}
-    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-      <div className="flex items-center gap-2 mb-3">
-        <Shield className="w-4 h-4 text-red-500" />
-        <h4 className="font-semibold text-sm text-red-400">Hard Requirements</h4>
-        <AlertCircle className="w-3 h-3 text-red-400/70" />
-      </div>
-      <p className="text-xs text-muted-foreground mb-3">
-        Candidates must match ALL hard requirements to appear in results
-      </p>
-      
-      {/* Employment Type */}
-      <div className="mb-3">
-        <Label className="text-xs text-muted-foreground mb-2 block">
-          Employment Type
-        </Label>
-        <div className="flex flex-wrap gap-2">
-          {EMPLOYMENT_TYPES.map((type) => (
-            <Badge
-              key={type.value}
-              variant={filters.employmentType === type.value ? "default" : "outline"}
-              className={`cursor-pointer transition-colors ${
-                filters.employmentType === type.value
-                  ? "bg-red-500 hover:bg-red-600"
-                  : "hover:bg-red-500/10"
-              }`}
-              onClick={() =>
-                updateFilter(
-                  "employmentType",
-                  filters.employmentType === type.value ? null : type.value
-                )
-              }
-            >
-              {type.label}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      {/* Min Years Experience */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label className="text-xs text-muted-foreground">
-            Minimum Years Experience
-          </Label>
-          <span className="text-xs font-medium text-red-400">
-            {filters.yearsOfExperience[0]}+ years
-          </span>
-        </div>
-        <Slider
-          value={[filters.yearsOfExperience[0]]}
-          onValueChange={([value]) =>
-            updateFilter("yearsOfExperience", [value, filters.yearsOfExperience[1]])
-          }
-          min={0}
-          max={15}
-          step={1}
-          className="w-full"
-        />
-      </div>
-    </div>
-
     {/* Active filters summary */}
     {activeFilterCount > 0 && (
       <div className="flex items-center justify-between pb-3 border-b">

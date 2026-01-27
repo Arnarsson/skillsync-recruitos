@@ -401,6 +401,21 @@ function SearchResults() {
       }
     }
 
+    // Hard requirement: Min years of experience (estimated from GitHub account age and activity)
+    if (filters.yearsOfExperience[0] > 0) {
+      // Estimate years from repos and activity
+      const estimatedYears = Math.max(
+        (dev.repos || 0) / 10, // Rough estimate: 10 repos per year
+        1
+      );
+      if (estimatedYears < filters.yearsOfExperience[0]) {
+        return false;
+      }
+    }
+
+    // Note: Employment type filter is not applicable to GitHub data
+    // This would be filtered later in the pipeline with LinkedIn/profile data
+
     return true;
   });
 
