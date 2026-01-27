@@ -336,54 +336,60 @@ export default function DeepProfilePage() {
   }>({ loading: false, sources: { github: null, linkedin: null, website: null, talks: null }, duration: null });
 
   useEffect(() => {
-    // First try localStorage (existing behavior)
-    const stored = localStorage.getItem("apex_candidates");
-    if (stored) {
-      try {
-        const candidates = JSON.parse(stored) as Candidate[];
-        const found = candidates.find((c) => c.id === username);
-        if (found) {
-          setCandidate(found);
-          setLoading(false);
-          
-          // Load job context
-          const storedJob = localStorage.getItem("apex_job_context");
-          if (storedJob) {
-            try {
-              setJobContext(JSON.parse(storedJob));
-            } catch {
-              // Ignore parse errors
+    async function loadCandidate() {
+      // First try to load candidate from localStorage (pipeline)
+      const stored = localStorage.getItem("apex_candidates");
+      if (stored) {
+        try {
+          const candidates = JSON.parse(stored) as Candidate[];
+          const found = candidates.find((c) => c.id === username);
+          if (found) {
+            setCandidate(found);
+            setLoading(false);
+            
+            // Load job context
+            const storedJob = localStorage.getItem("apex_job_context");
+            if (storedJob) {
+              try {
+                setJobContext(JSON.parse(storedJob));
+              } catch {
+                // Ignore parse errors
+              }
             }
+            return;
           }
-          return;
+        } catch {
+          // Ignore parse errors
         }
-      } catch {
-        // Ignore parse errors
       }
-    }
-    
-    // Fallback: fetch from GitHub API
-    fetch(`/api/github/user?username=${username}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && !data.error) {
-          const fallbackCandidate: Candidate = {
-            id: data.login || username,
-            name: data.name || username,
-            currentRole: data.bio || '',
-            company: data.company || '',
-            location: data.location || '',
-            alignmentScore: 0, // Will be calculated by AI analysis
-            avatar: data.avatar_url || `https://github.com/${username}.png`,
-            skills: data.topLanguages || [],
-            sourceUrl: `https://github.com/${username}`,
+
+      // If not in pipeline, fetch from GitHub API
+      // [DEBUG] Fallback trigger verified
+      console.log("Candidate not in pipeline, attempting GitHub fallback for:", username);
+      try {
+        const response = await fetch(`https://api.github.com/users/${username}`);
+        if (response.ok) {
+          const user = await response.json();
+
+          // Create a basic candidate object from GitHub data
+          const githubCandidate: Candidate = {
+            id: user.login,
+            name: user.name || user.login,
+            currentRole: user.bio ? user.bio.split('.')[0] : 'Software Developer',
+            company: user.company?.replace(/^@/, '') || '',
+            location: user.location || '',
+            skills: [], // Will be populated by analysis
+            alignmentScore: 0,
+            avatar: user.avatar_url,
+            sourceUrl: `https://github.com/${user.login}`,
           };
-          setCandidate(fallbackCandidate);
+
+          setCandidate(githubCandidate);
           
           // Also store in localStorage for next time
           const existing = localStorage.getItem("apex_candidates");
           const candidates = existing ? JSON.parse(existing) : [];
-          candidates.push(fallbackCandidate);
+          candidates.push(githubCandidate);
           localStorage.setItem("apex_candidates", JSON.stringify(candidates));
           
           // Load job context
@@ -396,9 +402,14 @@ export default function DeepProfilePage() {
             }
           }
         }
-      })
-      .catch(err => console.error("GitHub fallback error:", err))
-      .finally(() => setLoading(false));
+      } catch (error) {
+        console.error("Failed to fetch GitHub profile:", error);
+      }
+
+      setLoading(false);
+    }
+
+    loadCandidate();
   }, [username]);
 
   const runDeepAnalysis = useCallback(async () => {
@@ -2253,304 +2264,6 @@ export default function DeepProfilePage() {
                   </p>
                 </CardContent>
               </Card>
-            )}
-          </div>
-        )}
-
-        {activeTab === "contact" && (
-          <div className="space-y-6">
-            {candidate.networkDossier ? (
-              <>
-                {/* Best Contact Method Hero */}
-                <Card className="bg-gradient-to-br from-primary/10 to-transparent">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-4 rounded-xl ${
-                        candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin'
-                          ? 'bg-blue-500/20'
-                          : candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email'
-                          ? 'bg-green-500/20'
-                          : candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github'
-                          ? 'bg-purple-500/20'
-                          : 'bg-orange-500/20'
-                      }`}>
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && <Linkedin className="w-8 h-8 text-blue-500" />}
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && <Mail className="w-8 h-8 text-green-500" />}
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && <GitBranch className="w-8 h-8 text-purple-500" />}
-                        {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && <Users className="w-8 h-8 text-orange-500" />}
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Anbefalet kontaktmetode</p>
-                        <p className="text-2xl font-bold capitalize">
-                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'linkedin' && 'LinkedIn'}
-                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'email' && 'E-mail'}
-                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'github' && 'GitHub'}
-                          {candidate.networkDossier.engagementPlaybook.bestContactMethod === 'referral' && 'Warm Intro'}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {candidate.networkDossier.engagementPlaybook.primaryApproach}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Conversation Starters */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <MessageCircle className="w-4 h-4" />
-                      Samtalestartere
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {candidate.networkDossier.engagementPlaybook.conversationStarters.map((starter, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                          <div className="p-1.5 rounded-full bg-primary/20 text-primary shrink-0">
-                            <Zap className="w-3 h-3" />
-                          </div>
-                          <p className="text-sm">{starter}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Connection Paths */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Route className="w-4 h-4" />
-                        Forbindelsesveje
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {candidate.networkDossier.networkIntelligence.introductionPaths.map((path, i) => (
-                          <div key={i} className="flex items-start gap-2 text-sm">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                              i === 0 ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {i + 1}
-                            </span>
-                            <span>{path}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {candidate.networkDossier.networkIntelligence.inferredConnections.length > 0 && (
-                        <div className="mt-4 pt-4 border-t">
-                          <p className="text-xs text-muted-foreground mb-2">Mulige fælles forbindelser</p>
-                          <div className="flex flex-wrap gap-2">
-                            {candidate.networkDossier.networkIntelligence.inferredConnections.map((conn, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
-                                <Users className="w-3 h-3 mr-1" />
-                                {conn}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Timing & Communities */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        Timing & Kanaler
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                          <p className="text-xs text-blue-500 font-medium mb-1">Optimal timing</p>
-                          <p className="text-sm">{candidate.networkDossier.engagementPlaybook.timingConsiderations}</p>
-                        </div>
-                        {candidate.networkDossier.networkIntelligence.professionalCommunities.length > 0 && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-2">Professionelle fællesskaber</p>
-                            <div className="flex flex-wrap gap-2">
-                              {candidate.networkDossier.networkIntelligence.professionalCommunities.map((community, i) => (
-                                <Badge key={i} variant="outline" className="text-xs">
-                                  {community}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {candidate.networkDossier.networkIntelligence.thoughtLeadership && (
-                          <div className="p-3 rounded-lg bg-muted/30">
-                            <p className="text-xs text-muted-foreground mb-1">Thought Leadership</p>
-                            <p className="text-sm">{candidate.networkDossier.networkIntelligence.thoughtLeadership}</p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* LinkedIn Connection Path - Real network intelligence */}
-                {candidate.linkedinUrl && (
-                  <LinkedInConnectionPath
-                    candidateLinkedInUrl={candidate.linkedinUrl}
-                    candidateName={candidate.name}
-                  />
-                )}
-
-                {/* Objection Handling */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Shield className="w-4 h-4" />
-                      Indvendingshåndtering
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {candidate.networkDossier.engagementPlaybook.objectionHandling.map((item, i) => (
-                        <div key={i} className="p-4 rounded-lg border">
-                          <div className="flex items-start gap-3">
-                            <div className="p-1.5 rounded-full bg-orange-500/20 shrink-0">
-                              <AlertTriangle className="w-3 h-3 text-orange-500" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-orange-500 mb-2">&quot;{item.objection}&quot;</p>
-                              <div className="p-3 rounded bg-green-500/10 border border-green-500/20">
-                                <p className="text-sm text-green-400">{item.response}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Red Flags to Avoid + Cultural Fit */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Red Flags to Avoid */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-red-500">
-                        <AlertTriangle className="w-4 h-4" />
-                        Emner at undgå
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {candidate.networkDossier.engagementPlaybook.redFlagsToAvoid.map((flag, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0" />
-                            {flag}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-
-                  {/* Motivational Drivers */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm font-medium text-green-500">
-                        <Target className="w-4 h-4" />
-                        Motivationsfaktorer
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {candidate.networkDossier.culturalFit.motivationalDrivers.map((driver, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0" />
-                            {driver}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Strategic Context */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Info className="w-4 h-4" />
-                      Strategisk kontekst
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="p-3 rounded-lg bg-muted/30">
-                        <p className="text-xs text-muted-foreground mb-1">Brancheposition</p>
-                        <p className="text-sm">{candidate.networkDossier.strategyContext.industryPosition}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30">
-                        <p className="text-xs text-muted-foreground mb-1">Virksomhedsdynamik</p>
-                        <p className="text-sm">{candidate.networkDossier.strategyContext.companyDynamics}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30">
-                        <p className="text-xs text-muted-foreground mb-1">Markedstiming</p>
-                        <p className="text-sm">{candidate.networkDossier.strategyContext.marketTiming}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30">
-                        <p className="text-xs text-muted-foreground mb-1">Konkurrenceanalyse</p>
-                        <p className="text-sm">{candidate.networkDossier.strategyContext.competitiveIntel}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Generation timestamp */}
-                <p className="text-xs text-muted-foreground text-center">
-                  Dossier genereret: {new Date(candidate.networkDossier.generatedAt).toLocaleDateString('da-DK', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-              </>
-            ) : (
-              <div className="space-y-6">
-                {/* LinkedIn Connection Path - Available even without full dossier */}
-                {candidate.linkedinUrl && (
-                  <LinkedInConnectionPath
-                    candidateLinkedInUrl={candidate.linkedinUrl}
-                    candidateName={candidate.name}
-                  />
-                )}
-
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Phone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-medium mb-2">Fuld kontaktstrategi ikke tilgængelig</h3>
-                    <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                      {candidate.linkedinUrl
-                        ? "Brug LinkedIn-forbindelsesstien ovenfor til at finde en vej ind. Fuld kontaktstrategi genereres kun for shortlistede kandidater."
-                        : "Kontaktstrategi genereres kun for shortlistede kandidater (Trin 3)."
-                      }
-                      {!candidate.isShortlisted && (
-                        <span className="block mt-2 text-yellow-500">
-                          Denne kandidat er ikke shortlistet endnu.
-                        </span>
-                      )}
-                    </p>
-                    {candidate.isShortlisted && (
-                      <Button onClick={runDeepAnalysis} disabled={analyzing}>
-                        {analyzing ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                        )}
-                        Generer kontaktstrategi
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
             )}
           </div>
         )}
