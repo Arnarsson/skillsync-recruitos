@@ -589,15 +589,26 @@ export default function SkillsReviewPage() {
       <div className="max-w-6xl mx-auto">
         {/* Workflow Stepper */}
         <div className="mb-6">
-          <WorkflowStepper currentStep={2} />
+          <WorkflowStepper currentStep={3} />
         </div>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
+<<<<<<< HEAD
             <h1 className="text-2xl sm:text-3xl font-bold">Skills Review</h1>
             <p className="text-muted-foreground mt-1 text-sm">
               Drag skills between columns to adjust priorities
+=======
+            <Badge className="mb-2 bg-purple-500/20 text-purple-400 text-xs">
+              Phase 2 — Selection
+            </Badge>
+            <h1 className="text-2xl sm:text-3xl font-bold">
+              Drag skills to prioritize
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+              Drag skills between columns to adjust their importance
+>>>>>>> 57816c0 (feat(7-167): implement 4-phase stepper workflow)
             </p>
           </div>
           <div className="flex gap-2">

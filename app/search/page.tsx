@@ -468,11 +468,25 @@ function SearchResults() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
         {/* Phase Indicator */}
         <PhaseIndicator currentPhase={1} />
         
+=======
+    <div className="min-h-screen pt-24 pb-16 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Workflow Stepper — Phase indicator */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <WorkflowStepper currentStep={2} />
+        </motion.div>
+
+>>>>>>> 57816c0 (feat(7-167): implement 4-phase stepper workflow)
         {/* Search Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -9,12 +9,87 @@ interface WorkflowStepperProps {
   className?: string;
 }
 
+<<<<<<< HEAD
 const STEPS = [
   { id: 1, label: "Job Intake", description: "Beskriv hvad du søger", icon: FileText, path: "/intake" },
   { id: 2, label: "Skills Review", description: "Prioritér kompetencer", icon: ListChecks, path: "/skills-review" },
   { id: 3, label: "Candidates", description: "Gennemse matches", icon: Users, path: "/pipeline" },
   { id: 4, label: "Deep Profile", description: "Personlighed + skills", icon: Microscope, path: "/profile" },
   { id: 5, label: "Outreach Pack", description: "E-mail + guide", icon: Mail, path: "/outreach" },
+=======
+/**
+ * Phase definitions for the recruiting workflow.
+ * Phase 1: Search (Search & Filter) - Steps 1-2
+ * Phase 2: Select (Screening) - Step 3
+ * Phase 3: Analyze (Deep Dive) - Step 4
+ * Phase 4: Contact (Outreach) - Step 5
+ */
+const PHASES = [
+  {
+    id: 1,
+    label: "Search & Define",
+    shortLabel: "Search",
+    color: "blue",
+    bgClass: "bg-blue-500",
+    bgLightClass: "bg-blue-500/10",
+    textClass: "text-blue-400",
+    borderClass: "border-blue-500/30",
+    ringClass: "ring-blue-500/20",
+    gradientFrom: "from-blue-500",
+    gradientTo: "to-blue-400",
+    steps: [1, 2],
+  },
+  {
+    id: 2,
+    label: "Select & Screen",
+    shortLabel: "Select",
+    color: "purple",
+    bgClass: "bg-purple-500",
+    bgLightClass: "bg-purple-500/10",
+    textClass: "text-purple-400",
+    borderClass: "border-purple-500/30",
+    ringClass: "ring-purple-500/20",
+    gradientFrom: "from-purple-500",
+    gradientTo: "to-purple-400",
+    steps: [3],
+  },
+  {
+    id: 3,
+    label: "AI Analysis",
+    shortLabel: "Analyze",
+    color: "amber",
+    bgClass: "bg-amber-500",
+    bgLightClass: "bg-amber-500/10",
+    textClass: "text-amber-400",
+    borderClass: "border-amber-500/30",
+    ringClass: "ring-amber-500/20",
+    gradientFrom: "from-amber-500",
+    gradientTo: "to-amber-400",
+    steps: [4],
+  },
+  {
+    id: 4,
+    label: "Contact & Hire",
+    shortLabel: "Contact",
+    color: "emerald",
+    bgClass: "bg-emerald-500",
+    bgLightClass: "bg-emerald-500/10",
+    textClass: "text-emerald-400",
+    borderClass: "border-emerald-500/30",
+    ringClass: "ring-emerald-500/20",
+    gradientFrom: "from-emerald-500",
+    gradientTo: "to-emerald-400",
+    steps: [5],
+  },
+] as const;
+
+const STEPS = [
+  { id: 1, label: "Job Intake", icon: FileText, path: "/intake", phaseId: 1 },
+  { id: 2, label: "Candidates", icon: Users, path: "/search", phaseId: 1 },
+  { id: 3, label: "Skills Review", icon: ListChecks, path: "/skills-review", phaseId: 2 },
+  { id: 4, label: "Deep Dive", icon: Microscope, path: "/shortlist", phaseId: 3 },
+  { id: 5, label: "Outreach", icon: Mail, path: "/pipeline", phaseId: 4 },
+>>>>>>> 57816c0 (feat(7-167): implement 4-phase stepper workflow)
 ] as const;
 
 export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepperProps) {
