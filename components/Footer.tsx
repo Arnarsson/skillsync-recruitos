@@ -20,18 +20,26 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="/about"
+                  href="/guides/technical-recruiting"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  om os
+                  guide til tech recruiting
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/contributors"
+                  href="/compare"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  bidragydere
+                  sammenlign platforme
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/faq"
+                  className="text-sm text-foreground hover:text-primary transition-colors lowercase"
+                >
+                  faq
                 </Link>
               </li>
               <li>

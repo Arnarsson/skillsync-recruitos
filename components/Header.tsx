@@ -22,6 +22,27 @@ export default function Header() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6 text-sm">
             <Link
+              href="/guides/technical-recruiting"
+              className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+            >
+              GUIDE
+            </Link>
+            <span className="text-muted-foreground">/</span>
+            <Link
+              href="/compare"
+              className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+            >
+              SAMMENLIGN
+            </Link>
+            <span className="text-muted-foreground">/</span>
+            <Link
+              href="/faq"
+              className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+            >
+              FAQ
+            </Link>
+            <span className="text-muted-foreground">/</span>
+            <Link
               href="https://cal.com"
               target="_blank"
               rel="noopener noreferrer"
@@ -95,6 +116,27 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4 text-sm">
+              <Link
+                href="/guides/technical-recruiting"
+                className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                GUIDE
+              </Link>
+              <Link
+                href="/compare"
+                className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                SAMMENLIGN
+              </Link>
+              <Link
+                href="/faq"
+                className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                FAQ
+              </Link>
               <Link
                 href="https://cal.com"
                 target="_blank"

@@ -13,6 +13,39 @@ const quickSearches = [
   "Virtuel maskine implementører",
 ];
 
+// Product and Offer schema for SEO/GEO
+const productSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "RecruitOS",
+  applicationCategory: "BusinessApplication",
+  description: "Technical recruiting platform that finds and evaluates engineering candidates based on their GitHub contributions and code quality",
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Pro Plan",
+      price: "499",
+      priceCurrency: "USD",
+      billingDuration: "P1M",
+      description: "15 searches per month, 10 deep profile credits, phone and chat support",
+    },
+    {
+      "@type": "Offer",
+      name: "Enterprise Plan",
+      priceSpecification: {
+        "@type": "PriceSpecification",
+        price: "0",
+        priceCurrency: "USD",
+        description: "Custom pricing",
+      },
+      description: "Custom pricing with unlimited searches, MCP server, dedicated account manager, and priority support",
+    },
+  ],
+  operatingSystem: "Web",
+  softwareVersion: "1.0",
+  url: "https://recruitos.dev",
+};
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const router = useRouter();
@@ -28,9 +61,16 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero */}
-      <section className="pt-32 pb-20 px-4">
+    <>
+      {/* JSON-LD Product Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      
+      <div className="min-h-screen bg-background">
+        {/* Hero */}
+        <section className="pt-32 pb-20 px-4">
         <div className="max-w-2xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm mb-8">
@@ -295,6 +335,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
