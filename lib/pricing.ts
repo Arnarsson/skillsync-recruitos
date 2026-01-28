@@ -40,7 +40,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       currency: 'DKK',
       period: 'profile',
     },
-    stripePriceId: process.env.STRIPE_PERSONALITY_PRICE_ID,
+    // stripePriceId loaded server-side from env
     features: [
       'Deep personality analysis',
       'Behavioral insights & traits',
@@ -67,7 +67,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       currency: 'DKK',
       period: 'hire',
     },
-    stripePriceId: process.env.STRIPE_RECRUITING_PRICE_ID,
+    // stripePriceId loaded server-side from env
     features: [
       'Full recruiting process management',
       'Candidate sourcing & screening',
