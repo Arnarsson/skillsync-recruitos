@@ -166,7 +166,7 @@ export default function PipelinePage() {
           .filter(s => s.tier === "must-have")
           .map(s => s.name.toLowerCase());
         setMustHaveSkills(mustHaves);
-        setHardRequirementsConfig(config.hardRequirements || null);
+        setHardRequirementsConfig(config.hardRequirements || undefined);
       } catch {}
     }
   }, []);
