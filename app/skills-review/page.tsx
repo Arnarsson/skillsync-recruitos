@@ -595,6 +595,9 @@ export default function SkillsReviewPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
+            <Badge className="mb-2 bg-purple-500/20 text-purple-400 text-xs">
+              Phase 2 — Shortlist
+            </Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">Skills Review</h1>
             <p className="text-muted-foreground mt-1 text-sm">
               Drag skills between columns to adjust priorities

@@ -156,8 +156,8 @@ export default function ShortlistPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary text-xs">
-              Step 4 of 5
+            <Badge className="mb-2 bg-green-500/20 text-green-400 text-xs">
+              Phase 3 — Profile
             </Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">Shortlist</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">

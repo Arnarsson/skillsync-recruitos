@@ -842,11 +842,6 @@ export default function PipelinePage() {
       <div className="max-w-7xl mx-auto">
         {/* Phase Indicator */}
         <PhaseIndicator currentPhase={2} />
-        
-        {/* Workflow Stepper - Legacy, will be removed */}
-        {/* <div className="mb-6">
-          <WorkflowStepper currentStep={3} />
-        </div> */}
 
         {/* Compact Header with Job Context */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
