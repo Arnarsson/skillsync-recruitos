@@ -22,6 +22,8 @@ import {
   AlertTriangle,
   User,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface ScoreBreakdown {
@@ -70,15 +72,54 @@ interface CandidateDetailPanelProps {
   candidate: Candidate;
   onClose: () => void;
   onOutreach: (candidate: Candidate) => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 export function CandidateDetailPanel({
   candidate,
   onClose,
   onOutreach,
+  onNext,
+  onPrevious,
+  hasNext = false,
+  hasPrevious = false,
+  currentIndex,
+  totalCount,
 }: CandidateDetailPanelProps) {
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+
+  // Keyboard navigation support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if we have navigation functions
+      if (!onNext && !onPrevious) return;
+
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === "ArrowRight" && hasNext && onNext) {
+        e.preventDefault();
+        onNext();
+      } else if (e.key === "ArrowLeft" && hasPrevious && onPrevious) {
+        e.preventDefault();
+        onPrevious();
+      } else if (e.key === "Escape" && onClose) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onNext, onPrevious, onClose, hasNext, hasPrevious]);
 
   // Fetch deep analysis on mount
   const fetchDeepAnalysis = useCallback(async () => {
@@ -118,23 +159,61 @@ export function CandidateDetailPanel({
       className="h-full flex flex-col bg-card border-l"
     >
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between bg-muted/30">
-        <div className="flex items-center gap-3">
-          <img
-            src={candidate.avatar}
-            alt={candidate.name}
-            className="w-12 h-12 rounded-full"
-          />
-          <div>
-            <h2 className="font-semibold text-lg">{candidate.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {candidate.currentRole}
-            </p>
+      <div className="p-4 border-b bg-muted/30">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <img
+              src={candidate.avatar}
+              alt={candidate.name}
+              className="w-12 h-12 rounded-full"
+            />
+            <div>
+              <h2 className="font-semibold text-lg">{candidate.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {candidate.currentRole}
+              </p>
+            </div>
           </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
+        
+        {/* Navigation Controls */}
+        {(onNext || onPrevious) && (
+          <div className="pt-2 border-t space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onPrevious}
+                disabled={!hasPrevious}
+                className="gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+              {currentIndex !== undefined && totalCount !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  {currentIndex + 1} of {totalCount}
+                </span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNext}
+                disabled={!hasNext}
+                className="gap-1"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="text-center text-[10px] text-muted-foreground">
+              Use ← → arrow keys or Esc to close
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content - Scrollable */}

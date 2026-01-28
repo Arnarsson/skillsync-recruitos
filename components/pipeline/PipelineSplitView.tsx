@@ -58,10 +58,26 @@ export function PipelineSplitView({
   renderListItem,
 }: PipelineSplitViewProps) {
   const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId);
+  const currentIndex = candidates.findIndex((c) => c.id === selectedCandidateId);
 
   const handleClosePanel = useCallback(() => {
     onSelectCandidate(null);
   }, [onSelectCandidate]);
+
+  const handleNext = useCallback(() => {
+    if (currentIndex < candidates.length - 1) {
+      onSelectCandidate(candidates[currentIndex + 1].id);
+    }
+  }, [currentIndex, candidates, onSelectCandidate]);
+
+  const handlePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      onSelectCandidate(candidates[currentIndex - 1].id);
+    }
+  }, [currentIndex, candidates, onSelectCandidate]);
+
+  const hasNext = currentIndex >= 0 && currentIndex < candidates.length - 1;
+  const hasPrevious = currentIndex > 0;
 
   return (
     <div className="relative">
@@ -138,6 +154,12 @@ export function PipelineSplitView({
                 candidate={selectedCandidate}
                 onClose={handleClosePanel}
                 onOutreach={onOutreach}
+                onNext={handleNext}
+                onPrevious={handlePrevious}
+                hasNext={hasNext}
+                hasPrevious={hasPrevious}
+                currentIndex={currentIndex}
+                totalCount={candidates.length}
               />
             </motion.div>
           )}
