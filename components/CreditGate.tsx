@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CREDITS_TO_EUR, PRICING } from "@/types";
 import { Coins, AlertTriangle, X, ArrowRight, Zap } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useAdmin } from "@/lib/adminContext";
 
 interface CreditGateProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function CreditGate({
   currentBalance,
 }: CreditGateProps) {
   const { t } = useLanguage();
+  const { isDemoMode } = useAdmin();
 
   const STAGE_CONFIG = {
     "deep-dive": {
@@ -47,6 +49,11 @@ export default function CreditGate({
   const hasInsufficientBalance = currentBalance < totalCost;
   const remainingBalance = currentBalance - totalCost;
   const StageIcon = config.icon;
+
+  // Don't show credit gate in demo mode
+  if (isDemoMode) {
+    return null;
+  }
 
   return (
     <AnimatePresence>

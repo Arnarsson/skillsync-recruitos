@@ -90,7 +90,7 @@ function SearchResults() {
   const router = useRouter();
   const { data: session } = useSession();
   const { t, lang } = useLanguage();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isDemoMode } = useAdmin();
 
   // Get recruiter's GitHub username from OAuth session
   const recruiterGitHubUsername = (session?.user as { login?: string })?.login;
@@ -127,14 +127,14 @@ function SearchResults() {
     }
   }, []);
 
-  const isLocked = !isAdmin && searchCount >= FREE_SEARCHES;
+  const isLocked = !isAdmin && !isDemoMode && searchCount >= FREE_SEARCHES;
 
   const incrementSearchCount = useCallback(() => {
-    if (isAdmin) return; // Admin has unlimited searches
+    if (isAdmin || isDemoMode) return; // Admin and demo have unlimited searches
     const newCount = searchCount + 1;
     setSearchCount(newCount);
     localStorage.setItem(SEARCH_COUNT_KEY, newCount.toString());
-  }, [searchCount, isAdmin]);
+  }, [searchCount, isAdmin, isDemoMode]);
 
   const searchDevelopers = useCallback(async (q: string, skipLockCheck = false) => {
     if (!q.trim()) {
@@ -144,7 +144,7 @@ function SearchResults() {
     }
 
     // Check if locked (unless skipping for initial load of previous search)
-    if (!skipLockCheck && !isAdmin && searchCount >= FREE_SEARCHES) {
+    if (!skipLockCheck && !isAdmin && !isDemoMode && searchCount >= FREE_SEARCHES) {
       setShowSignupModal(true);
       return;
     }
@@ -184,7 +184,7 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, searchCount, incrementSearchCount, includeLinkedIn, includeGoogle]);
+  }, [isAdmin, isDemoMode, searchCount, incrementSearchCount, includeLinkedIn, includeGoogle]);
 
   // Trigger LinkedIn search via Bright Data
   const triggerLinkedInSearch = async (q: string, interp: SearchInterpretation | null) => {
@@ -1116,7 +1116,7 @@ function SearchResults() {
 
       {/* Signup Modal */}
       <AnimatePresence>
-        {showSignupModal && (
+        {showSignupModal && !isDemoMode && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
