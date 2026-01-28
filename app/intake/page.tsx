@@ -59,7 +59,7 @@ Requirements:
 
 export default function IntakePage() {
   const router = useRouter();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isDemoMode } = useAdmin();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("url");
   const [jobUrl, setJobUrl] = useState("");
@@ -67,6 +67,7 @@ export default function IntakePage() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [demoAutoLoaded, setDemoAutoLoaded] = useState(false);
 
   // Progressive loading animation (4 steps)
   useEffect(() => {
@@ -150,6 +151,29 @@ export default function IntakePage() {
       setPendingSearch(pending);
     }
   }, []);
+
+  // Auto-load demo data when in demo mode (on first visit)
+  useEffect(() => {
+    if (isDemoMode && !demoAutoLoaded && !calibration) {
+      console.log("[Intake] Demo mode detected - auto-loading demo data");
+      setDemoAutoLoaded(true);
+      
+      // Check if we're coming from the demo URL param
+      const urlParams = new URLSearchParams(window.location.search);
+      const demoParam = urlParams.get("demo");
+      
+      if (demoParam === "true" || !localStorage.getItem("apex_job_context")) {
+        // Auto-load demo data
+        setTimeout(() => {
+          setCalibration(DEMO_JOB_CONTEXT);
+          setCompanyUrl("https://linkedin.com/company/stripe");
+          toast.success("Demo tilstand aktiveret / Demo mode activated", {
+            description: "Prøv RecruitOS med eksempel-data / Try RecruitOS with sample data",
+          });
+        }, 500);
+      }
+    }
+  }, [isDemoMode, demoAutoLoaded, calibration]);
 
   // Auto-navigate after successful analysis
   useEffect(() => {

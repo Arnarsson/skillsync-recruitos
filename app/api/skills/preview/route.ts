@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createOctokit } from "@/lib/github";
 import { normalizeSkill, getGitHubLanguage, FRAMEWORK_TO_LANGUAGE } from "@/lib/search/skillNormalizer";
+import type { HardRequirementsConfig } from "@/types";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -105,7 +106,8 @@ async function getSkillCandidateCount(
  * Request body:
  * {
  *   skills: [{ name: "React", tier: "must-have" }, ...],
- *   location?: "copenhagen"
+ *   location?: "copenhagen",
+ *   hardRequirements?: HardRequirementsConfig
  * }
  *
  * Response:
@@ -119,9 +121,10 @@ async function getSkillCandidateCount(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { skills, location } = body as {
+    const { skills, location, hardRequirements } = body as {
       skills: SkillInput[];
       location?: string;
+      hardRequirements?: HardRequirementsConfig;
     };
 
     if (!skills || !Array.isArray(skills) || skills.length === 0) {
@@ -165,6 +168,42 @@ export async function POST(request: NextRequest) {
     } else {
       // No must-haves, use max of all skills
       totalCandidates = skillCounts.reduce((max, s) => Math.max(max, s.count), 0);
+    }
+
+    // Apply hard requirements filtering (approximate impact)
+    if (hardRequirements?.enabled && hardRequirements.requirements.length > 0) {
+      const enabledHardReqs = hardRequirements.requirements.filter(r => r.enabled && r.isMustHave);
+      
+      // Apply multipliers for each must-have hard requirement
+      enabledHardReqs.forEach(req => {
+        if (req.type === 'location' && req.value) {
+          // Location typically reduces pool by 70-90% depending on specificity
+          const locationMultiplier = req.value === 'remote' ? 0.9 : 0.3;
+          totalCandidates = Math.floor(totalCandidates * locationMultiplier);
+        } else if (req.type === 'experience' && typeof req.value === 'number') {
+          // Experience requirements reduce pool progressively
+          const expMultipliers: Record<number, number> = {
+            0: 1.0,
+            1: 0.9,
+            2: 0.8,
+            3: 0.7,
+            5: 0.5,
+            7: 0.35,
+            10: 0.2,
+            15: 0.1,
+          };
+          const multiplier = expMultipliers[req.value] || 0.1;
+          totalCandidates = Math.floor(totalCandidates * multiplier);
+        } else if (req.type === 'language' && req.value) {
+          // Language requirements reduce pool by ~40-60% depending on rarity
+          const commonLanguages = ['english'];
+          const multiplier = commonLanguages.includes(String(req.value).toLowerCase()) ? 0.8 : 0.5;
+          totalCandidates = Math.floor(totalCandidates * multiplier);
+        }
+      });
+
+      // Ensure we don't go below 0
+      totalCandidates = Math.max(0, totalCandidates);
     }
 
     // Process each skill

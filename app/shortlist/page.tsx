@@ -137,7 +137,7 @@ export default function ShortlistPage() {
               <Link href="/pipeline">
                 <Button>
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Pipeline
+                  Back to Candidates
                 </Button>
               </Link>
             </CardContent>
@@ -161,7 +161,7 @@ export default function ShortlistPage() {
             </Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">Shortlist</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {candidates.length} candidate{candidates.length !== 1 ? "s" : ""} ready for deep dive
+              {candidates.length} candidate{candidates.length !== 1 ? "s" : ""} ready for deep profile
               {jobContext && ` for ${jobContext.title}`}
             </p>
           </div>
@@ -169,7 +169,7 @@ export default function ShortlistPage() {
             <Link href="/pipeline">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Back to Pipeline</span>
+                <span className="hidden sm:inline">Back to Candidates</span>
               </Button>
             </Link>
           </div>

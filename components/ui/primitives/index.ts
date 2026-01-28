@@ -8,7 +8,7 @@
  * import { Button, Card, Input, Badge, ProfileCard } from '@/components/ui/primitives';
  */
 
-export { Button } from './Button';
+export { Button } from '../button';
 export { Card, CardHeader, CardContent, CardFooter } from './Card';
 export { Input, Textarea, Select } from './Input';
 export { Badge, ScoreBadge } from './Badge';

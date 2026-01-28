@@ -163,7 +163,9 @@ export function CandidatePipelineItem({
       <div className="w-full bg-card border rounded-xl transition-all duration-300 border-border hover:border-primary/30">
         <div className="flex items-center gap-3 p-3">
           {/* Checkbox */}
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={(e) => {
               e.stopPropagation();
               onToggleSelect(candidate.id);
@@ -175,7 +177,7 @@ export function CandidatePipelineItem({
             ) : (
               <Square className="w-4 h-4" />
             )}
-          </button>
+          </Button>
 
           {/* Avatar */}
           <img
@@ -237,7 +239,9 @@ export function CandidatePipelineItem({
               {/* Always Visible Header */}
               <div className="flex items-center gap-4 p-4">
                 {/* Checkbox - stop propagation to prevent expand */}
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleSelect(candidate.id);
@@ -249,7 +253,7 @@ export function CandidatePipelineItem({
                   ) : (
                     <Square className="w-5 h-5" />
                   )}
-                </button>
+                </Button>
 
                 {/* Avatar */}
                 <img
@@ -311,16 +315,18 @@ export function CandidatePipelineItem({
 
                 {/* Score - Clickable for explainer */}
                 <div className="flex-shrink-0">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowScoreExplainer(true);
                     }}
-                    className="hover:scale-105 transition-transform cursor-pointer"
+                    className="hover:scale-105 transition-transform cursor-pointer h-auto p-0"
                     title="Click to see score breakdown"
                   >
                     <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Expand Indicator */}
@@ -613,12 +619,14 @@ export function CandidatePipelineItem({
                           </a>
                         )}
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => setSelectedEvidence(null)}
                         className="text-muted-foreground hover:text-foreground"
                       >
                         <ChevronDown className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </motion.div>
                 )}

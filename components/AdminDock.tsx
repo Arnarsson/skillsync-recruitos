@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils";
 export default function AdminDock() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAdmin, toggleAdmin } = useAdmin();
+  const { isAdmin, toggleAdmin, isDemoMode } = useAdmin();
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, href: "/" },
     { id: "intake", label: "Intake", icon: FileText, href: "/intake" },
     { id: "search", label: "Search", icon: Search, href: "/search" },
-    { id: "pipeline", label: "Pipeline", icon: Users, href: "/pipeline" },
+    { id: "pipeline", label: "Candidates", icon: Users, href: "/pipeline" },
     { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
   ];
 
@@ -25,7 +25,8 @@ export default function AdminDock() {
   };
 
   // Floating power button when admin mode is off
-  if (!isAdmin) {
+  // Hide the power button in demo mode (since admin mode is auto-enabled)
+  if (!isAdmin && !isDemoMode) {
     return (
       <button
         onClick={toggleAdmin}
@@ -38,6 +39,11 @@ export default function AdminDock() {
         </span>
       </button>
     );
+  }
+
+  // In demo mode but admin is off, auto-enable it
+  if (!isAdmin && isDemoMode) {
+    return null;
   }
 
   // Mac-style dock when admin mode is on
@@ -60,21 +66,30 @@ export default function AdminDock() {
           </DockCard>
         ))}
 
-        <DockDivider />
+        {/* Hide power button in demo mode */}
+        {!isDemoMode && (
+          <>
+            <DockDivider />
 
-        <DockCard id="power">
-          <DockCardInner
-            onClick={toggleAdmin}
-            className="cursor-pointer bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
-          >
-            <Power className="w-5 h-5 sm:w-6 sm:h-6" />
-          </DockCardInner>
-        </DockCard>
+            <DockCard id="power">
+              <DockCardInner
+                onClick={toggleAdmin}
+                className="cursor-pointer bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+              >
+                <Power className="w-5 h-5 sm:w-6 sm:h-6" />
+              </DockCardInner>
+            </DockCard>
+          </>
+        )}
       </Dock>
 
-      {/* Keyboard hint - hidden on mobile */}
+      {/* Keyboard hint or demo mode indicator */}
       <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground whitespace-nowrap opacity-60 hidden sm:block">
-        Ctrl+Shift+A to toggle
+        {isDemoMode ? (
+          <span className="text-primary">Demo Mode Active</span>
+        ) : (
+          "Ctrl+Shift+A to toggle"
+        )}
       </div>
     </div>
   );

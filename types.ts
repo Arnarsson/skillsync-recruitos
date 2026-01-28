@@ -537,6 +537,20 @@ export const STAGE_PRICING = {
   OUTREACH: { perCandidate: 50, description: 'Persona + outreach generation' }
 };
 
+// Hard Requirements for early filtering
+export interface HardRequirement {
+  id: string;
+  type: 'location' | 'experience' | 'language';
+  value: string | number;
+  enabled: boolean;
+  isMustHave: boolean; // Toggle: must-have vs nice-to-have
+}
+
+export interface HardRequirementsConfig {
+  requirements: HardRequirement[];
+  enabled: boolean;
+}
+
 // Skills configuration for the skills review step
 export interface SkillTier {
   name: string;
@@ -548,6 +562,7 @@ export interface SkillTier {
 export interface SkillsConfig {
   skills: SkillTier[];
   customSkills: string[];
+  hardRequirements?: HardRequirementsConfig; // NEW: Include hard requirements
 }
 
 // Shortlist state for candidate selection

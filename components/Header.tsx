@@ -18,7 +18,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
   const { t, lang, setLang } = useLanguage();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isDemoMode } = useAdmin();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -29,7 +29,21 @@ export default function Header() {
             <Link href="/" className="font-medium tracking-tight lowercase">
               {t("header.logo")}
             </Link>
-            {isAdmin && (
+            {isDemoMode && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge className="bg-primary/20 text-primary border-primary/30">
+                      Demo
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>You&apos;re exploring RecruitOS with sample data</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {isAdmin && !isDemoMode && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -80,7 +94,34 @@ export default function Header() {
             </a>
             <span className="text-muted-foreground">/</span>
 
-            {status === "loading" ? (
+            {isDemoMode ? (
+              <>
+                <Link
+                  href="/intake"
+                  className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                >
+                  {t("common.intake")}
+                </Link>
+                <span className="text-muted-foreground">/</span>
+                <Link
+                  href="/pipeline"
+                  className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                >
+                  {t("common.pipeline")}
+                </Link>
+                <span className="text-muted-foreground">/</span>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("recruitos_demo_mode");
+                    localStorage.removeItem("recruitos_admin_mode");
+                    window.location.href = "/";
+                  }}
+                  className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                >
+                  EXIT DEMO
+                </button>
+              </>
+            ) : status === "loading" ? (
               <span className="text-muted-foreground">...</span>
             ) : session?.user ? (
               <>
@@ -175,7 +216,35 @@ export default function Header() {
                 {t("common.bookDemo")}
               </a>
 
-              {session?.user ? (
+              {isDemoMode ? (
+                <>
+                  <Link
+                    href="/intake"
+                    className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t("common.intake")}
+                  </Link>
+                  <Link
+                    href="/pipeline"
+                    className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t("common.pipeline")}
+                  </Link>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem("recruitos_demo_mode");
+                      localStorage.removeItem("recruitos_admin_mode");
+                      window.location.href = "/";
+                      setIsMenuOpen(false);
+                    }}
+                    className="text-left text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                  >
+                    EXIT DEMO
+                  </button>
+                </>
+              ) : session?.user ? (
                 <>
                   <Link
                     href="/pipeline"

@@ -385,7 +385,7 @@ export default function DashboardPage() {
                   <Users className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">View Pipeline</p>
+                  <p className="font-medium">View Candidates</p>
                   <p className="text-sm text-muted-foreground">Manage your candidates</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground" />

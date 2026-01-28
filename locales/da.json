@@ -5,7 +5,7 @@
     "signIn": "LOG IND",
     "signOut": "LOG UD",
     "getStarted": "BEGYND AT ANSÆTTE",
-    "pipeline": "PIPELINE",
+    "pipeline": "KANDIDATER",
     "intake": "OPTAG",
     "loading": "Indlæser...",
     "search": "Søg",
@@ -146,7 +146,7 @@
             "credits": "5 credits/kandidat"
           },
           "deepDive": {
-            "title": "Dybdeanalyse",
+            "title": "Dybdeprofil",
             "desc": "AI-analyse af udvalgte",
             "credits": "25 credits/kandidat"
           },
@@ -265,15 +265,15 @@
       "preferredSkills": "Foretrukne Kompetencer",
       "aiSummary": "AI Opsummering",
       "startOver": "Start Forfra",
-      "initializePipeline": "Initialiser Pipeline",
-      "initializingPipeline": "Initialiserer pipeline & finder kandidater..."
+      "initializePipeline": "Initialiser Kandidater",
+      "initializingPipeline": "Initialiserer kandidatsøgning..."
     },
     "processPreview": {
       "title": "Proces Forhåndsvisning",
       "steps": {
         "jobIntake": "Jobbrief",
         "jobIntakeDesc": "Kontekst & kalibrering",
-        "talentPipeline": "Find + score",
+        "talentPipeline": "Kandidater",
         "talentPipelineDesc": "GitHub + LinkedIn + portfolio",
         "deepProfile": "Dybdeprofil (beviser)",
         "deepProfileDesc": "Kvitteringer + buildprint",
@@ -288,7 +288,7 @@
   },
   "pipeline": {
     "step": "Trin 2 af 4",
-    "title": "Kandidat-pipeline",
+    "title": "Kandidater",
     "subtitle": "Kilder: GitHub · LinkedIn · CV/portfolio",
     "import": "Importér",
     "editJob": "Redigér jobbrief",
@@ -335,7 +335,7 @@
     "candidate": {
       "at": "hos",
       "deepProfile": "Dybdeprofil",
-      "deleteConfirm": "Slet denne kandidat fra pipeline?",
+      "deleteConfirm": "Slet denne kandidat?",
       "whyScore": "Hvorfor {score}?",
       "scoreBreakdown": "Score-fordeling",
       "topReasons": "Top 3 grunde",
@@ -444,7 +444,7 @@
     },
     "quickSteps": {
       "job": "Indsæt job URL eller beskrivelse",
-      "pipeline": "AI finder kandidater fra GitHub + LinkedIn",
+      "pipeline": "Søg kandidater fra GitHub + LinkedIn",
       "profile": "Buildprint & kvitteringer",
       "outreach": "Personaliserede beskeder"
     },
@@ -472,7 +472,7 @@
         ]
       },
       "talentPipeline": {
-        "title": "Trin 2: Talent Pipeline",
+        "title": "Trin 2: Kandidater",
         "subtitle": "Multi-Source Sourcing",
         "description": "Søg GitHub, LinkedIn og portfolios samtidigt. Hver kandidat scores på tværs af alle tilgængelige kilder.",
         "features": [

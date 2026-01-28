@@ -5,7 +5,7 @@
     "signIn": "SIGN IN",
     "signOut": "SIGN OUT",
     "getStarted": "START HIRING",
-    "pipeline": "PIPELINE",
+    "pipeline": "CANDIDATES",
     "intake": "INTAKE",
     "loading": "Loading...",
     "search": "Search",
@@ -146,7 +146,7 @@
             "credits": "5 credits/candidate"
           },
           "deepDive": {
-            "title": "Deep Dive",
+            "title": "Deep Profile",
             "desc": "AI analysis on selected",
             "credits": "25 credits/candidate"
           },
@@ -263,15 +263,15 @@
       "preferredSkills": "Preferred Skills",
       "aiSummary": "AI Summary",
       "startOver": "Start Over",
-      "initializePipeline": "Initialize Pipeline",
-      "initializingPipeline": "Initializing pipeline & finding candidates..."
+      "initializePipeline": "Initialize Candidates",
+      "initializingPipeline": "Initializing candidate search..."
     },
     "processPreview": {
       "title": "Process Preview",
       "steps": {
         "jobIntake": "Job Intake",
         "jobIntakeDesc": "Context & calibration",
-        "talentPipeline": "Talent Pipeline",
+        "talentPipeline": "Candidates",
         "talentPipelineDesc": "Source & score candidates",
         "deepProfile": "Deep Profile",
         "deepProfileDesc": "Evidence-based analysis",
@@ -286,11 +286,11 @@
   },
   "pipeline": {
     "step": "Step 2 of 4",
-    "title": "Talent Pipeline",
+    "title": "Candidates",
     "import": "Import",
     "editJob": "Edit Job",
     "intelligence": {
-      "title": "Pipeline Intelligence",
+      "title": "Candidate Intelligence",
       "distribution": "Score distribution across {count} candidates",
       "topMatch": "Top Match"
     },
@@ -320,7 +320,7 @@
     "candidate": {
       "at": "at",
       "deepProfile": "Deep Profile",
-      "deleteConfirm": "Delete this candidate from the pipeline?",
+      "deleteConfirm": "Delete this candidate?",
       "whyScore": "Why?",
       "scoreBreakdown": "Score Breakdown",
       "baseScore": "Base",
@@ -427,7 +427,7 @@
     },
     "quickSteps": {
       "job": "Paste job URL or description",
-      "pipeline": "AI finds candidates from GitHub + LinkedIn",
+      "pipeline": "Search candidates from GitHub + LinkedIn",
       "profile": "Buildprint & receipts",
       "outreach": "Personalized messages"
     },
@@ -455,7 +455,7 @@
         ]
       },
       "talentPipeline": {
-        "title": "Step 2: Talent Pipeline",
+        "title": "Step 2: Candidates",
         "subtitle": "Multi-Source Sourcing",
         "description": "Search GitHub, LinkedIn and portfolios simultaneously. Each candidate is scored across all available sources.",
         "features": [

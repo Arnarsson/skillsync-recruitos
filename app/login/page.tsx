@@ -1,12 +1,25 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { Github } from "lucide-react";
+import { Github, Play } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const handleGitHubLogin = () => {
     signIn("github", { callbackUrl: "/intake" });
+  };
+
+  const handleDemoMode = () => {
+    // Enable demo mode in localStorage
+    localStorage.setItem("recruitos_demo_mode", "true");
+    localStorage.setItem("recruitos_admin_mode", "true");
+    
+    // Navigate to intake page with demo data
+    router.push("/intake?demo=true");
   };
 
   return (
@@ -24,14 +37,36 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-[#1a1b1e] rounded-2xl border border-white/10 p-8">
-          <button
+        <div className="bg-[#1a1b1e] rounded-2xl border border-white/10 p-8 space-y-4">
+          {/* Demo Button - Prominent */}
+          <Button
+            size="lg"
+            onClick={handleDemoMode}
+            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
+          >
+            <Play className="w-5 h-5" />
+            Prøv Demo / Try Demo
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-white/10" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-[#1a1b1e] px-2 text-gray-500">Or</span>
+            </div>
+          </div>
+
+          {/* GitHub Login */}
+          <Button
+            size="lg"
+            variant="outline"
             onClick={handleGitHubLogin}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-[#141517] rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            className="w-full bg-white text-[#141517] hover:bg-gray-200 border-transparent"
           >
             <Github className="w-5 h-5" />
             Continue with GitHub
-          </button>
+          </Button>
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Don&apos;t have an account?{" "}

@@ -357,7 +357,7 @@ Generate a comprehensive Network Pathfinding Dossier with strategic intelligence
    - Professional communities they likely engage with (conferences, Slack groups, meetups)
    - Thought leadership presence (speaking, writing, open source contributions)
 
-3. **CULTURAL FIT** - Deep Dive Analysis
+3. **CULTURAL FIT** - Deep Profile Analysis
    - Current culture profile: What's it like working at ${candidate.company}? (pace, structure, values)
    - Target culture match: How does the target company culture align or differ?
    - Adaptation challenges: What friction points might arise in transition?

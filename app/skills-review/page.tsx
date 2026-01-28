@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
+import { HardRequirementsFilter } from "@/components/HardRequirementsFilter";
+import type { HardRequirementsConfig } from "@/types";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -42,6 +44,7 @@ interface Skill {
 interface SkillsConfig {
   skills: { name: string; tier: SkillTier; weight: number; order: number }[];
   customSkills: string[];
+  hardRequirements?: HardRequirementsConfig;
 }
 
 interface JobContext {
@@ -412,6 +415,19 @@ export default function SkillsReviewPage() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
+  // Hard requirements state
+  const [hardRequirements, setHardRequirements] = useState<HardRequirementsConfig>(() => {
+    // Try to load from localStorage
+    const stored = typeof window !== "undefined" ? localStorage.getItem("apex_skills_draft") : null;
+    if (stored) {
+      try {
+        const draft = JSON.parse(stored);
+        if (draft.hardRequirements) return draft.hardRequirements;
+      } catch {}
+    }
+    return { requirements: [], enabled: false };
+  });
+
   // Show toast messages after mount
   useEffect(() => {
     if (toastShownRef.current) return;
@@ -442,6 +458,7 @@ export default function SkillsReviewPage() {
         body: JSON.stringify({
           skills: skills.map((s) => ({ name: s.name, tier: s.tier })),
           location,
+          hardRequirements,
         }),
       });
 
@@ -455,7 +472,7 @@ export default function SkillsReviewPage() {
     } finally {
       setIsLoadingPreview(false);
     }
-  }, [skills, location, lastFetchTime]);
+  }, [skills, location, hardRequirements, lastFetchTime]);
 
   // Initial fetch
   useEffect(() => {
@@ -475,10 +492,11 @@ export default function SkillsReviewPage() {
           order: i,
         })),
         customSkills,
+        hardRequirements,
       };
       localStorage.setItem("apex_skills_draft", JSON.stringify(draft));
     }
-  }, [skills, customSkills]);
+  }, [skills, customSkills, hardRequirements]);
 
   // Skills by tier
   const skillsByTier = useMemo(() => ({
@@ -551,6 +569,7 @@ export default function SkillsReviewPage() {
         order: i,
       })),
       customSkills,
+      hardRequirements,
     };
 
     localStorage.setItem("apex_skills_config", JSON.stringify(skillsConfig));
@@ -558,7 +577,7 @@ export default function SkillsReviewPage() {
     localStorage.removeItem("apex_skills_draft");
     toast.success("Skills saved");
     router.push("/pipeline");
-  }, [skills, customSkills, router]);
+  }, [skills, customSkills, hardRequirements, router]);
 
   const hasChanges = JSON.stringify(skills) !== JSON.stringify(originalSkills) || customSkills.length > 0;
   const limitingCount = preview ? Object.entries(preview.perSkill).filter(([name, s]) =>
@@ -652,6 +671,19 @@ export default function SkillsReviewPage() {
           </CardContent>
         </Card>
 
+        {/* Hard Requirements Filter */}
+        <div className="mb-6">
+          <HardRequirementsFilter
+            initialRequirements={hardRequirements}
+            candidateCount={preview?.totalCandidates}
+            isLoadingCount={isLoadingPreview}
+            onChange={(config) => {
+              setHardRequirements(config);
+              setPreview(null); // Clear preview to force refresh
+            }}
+          />
+        </div>
+
         {/* Three-column layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {TIER_ORDER.map((tier) => (
@@ -697,7 +729,7 @@ export default function SkillsReviewPage() {
             )}
           </div>
           <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto">
-            Continue to Pipeline
+            Continue to Candidates
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { Github, Check } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function SignupPage() {
   const handleGitHubSignup = () => {
@@ -25,13 +26,15 @@ export default function SignupPage() {
         </div>
 
         <div className="bg-[#1a1b1e] rounded-2xl border border-white/10 p-8">
-          <button
+          <Button
+            size="lg"
+            variant="outline"
             onClick={handleGitHubSignup}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-[#141517] rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            className="w-full bg-white text-[#141517] hover:bg-gray-200 border-transparent"
           >
             <Github className="w-5 h-5" />
             Sign up with GitHub
-          </button>
+          </Button>
 
           <div className="mt-6 space-y-3">
             <div className="flex items-start gap-3 text-sm text-gray-400">

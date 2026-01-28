@@ -616,7 +616,7 @@ export default function DeepProfilePage() {
           <Link href={`/pipeline`}>
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Pipeline
+              Back to Candidates
             </Button>
           </Link>
         </div>
@@ -1007,7 +1007,7 @@ export default function DeepProfilePage() {
                   </TooltipProvider>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
                 <Plus className="w-3 h-3" />
                 Tilføj kilde
               </Button>

@@ -75,12 +75,21 @@ export default function Home() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-primary">{t("home.enter")}</span>{" "}
-              {t("home.lang") === "da" ? "for at søge" : "to search"},{" "}
-              <span className="text-primary">{t("home.shiftEnter")}</span>{" "}
-              {t("home.lang") === "da" ? "for ny linje" : "for new line"}
-            </p>
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-xs text-muted-foreground">
+                <span className="text-primary">{t("home.enter")}</span>{" "}
+                {t("home.lang") === "da" ? "for at søge" : "to search"},{" "}
+                <span className="text-primary">{t("home.shiftEnter")}</span>{" "}
+                {t("home.lang") === "da" ? "for ny linje" : "for new line"}
+              </p>
+              <Link
+                href="/login?demo=true"
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                {t("home.lang") === "da" ? "Prøv Demo" : "Try Demo"}
+              </Link>
+            </div>
           </div>
 
           {/* Quick Search Tags */}
@@ -173,7 +182,7 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Stage 2: Deep Dive */}
+              {/* Stage 2: Deep Profile */}
               <div className="p-4 rounded-lg bg-muted/30 border border-border">
                 <div className="flex items-center gap-2 mb-2">
                   <Microscope className="w-4 h-4 text-primary" />
