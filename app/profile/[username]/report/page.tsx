@@ -214,7 +214,135 @@ export default function ReportPage() {
     : [];
 
   return (
-    <div className="min-h-screen bg-white text-black print:p-0 p-8 font-sans">
+    <>
+      {/* ─── Print Styles ─── */}
+      <style jsx global>{`
+        @media print {
+          /* ═══ Force light mode and print optimization ═══ */
+          html, body {
+            background: #fff !important;
+            color: #000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* ═══ Hide screen-only controls ═══ */
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          /* ═══ Page breaks ═══ */
+          .print\\:break-before-page {
+            page-break-before: always !important;
+          }
+
+          /* ═══ Remove padding from print container ═══ */
+          .print\\:p-0 {
+            padding: 0 !important;
+          }
+
+          .print\\:max-w-none {
+            max-width: none !important;
+          }
+
+          /* ═══ Preserve grayscale for avatar ═══ */
+          .print\\:grayscale-0 {
+            filter: grayscale(0) !important;
+          }
+
+          /* ═══ Ensure all backgrounds are print-friendly ═══ */
+          * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+          }
+
+          /* ═══ Optimize colors for printing ═══ */
+          .bg-gray-50 {
+            background-color: #f9fafb !important;
+          }
+
+          .bg-gray-100 {
+            background-color: #f3f4f6 !important;
+          }
+
+          .bg-green-50\\/50,
+          .bg-green-50 {
+            background-color: #ecfdf5 !important;
+          }
+
+          .border-green-100 {
+            border-color: #d1fae5 !important;
+          }
+
+          .text-green-600,
+          .bg-green-500 {
+            color: #10b981 !important;
+          }
+
+          .text-amber-500,
+          .bg-amber-500 {
+            color: #f59e0b !important;
+          }
+
+          .text-primary {
+            color: #000 !important;
+          }
+
+          /* ═══ Ensure proper text contrast ═══ */
+          .text-gray-400 {
+            color: #9ca3af !important;
+          }
+
+          .text-gray-500 {
+            color: #6b7280 !important;
+          }
+
+          .text-gray-600 {
+            color: #4b5563 !important;
+          }
+
+          .text-gray-700 {
+            color: #374151 !important;
+          }
+
+          .text-gray-800 {
+            color: #1f2937 !important;
+          }
+
+          /* ═══ SVG elements optimization ═══ */
+          svg {
+            color: inherit !important;
+          }
+
+          svg text {
+            fill: #6b7280 !important;
+          }
+
+          svg line,
+          svg path[stroke] {
+            stroke: #e5e7eb !important;
+          }
+
+          /* ═══ Images ═══ */
+          img {
+            max-width: 100%;
+            page-break-inside: avoid;
+          }
+
+          /* ═══ Avoid breaking inside key sections ═══ */
+          section {
+            page-break-inside: avoid;
+          }
+        }
+
+        @page {
+          margin: 0.75in;
+          size: letter;
+        }
+      `}</style>
+
+      <div className="min-h-screen bg-white text-black print:p-0 p-8 font-sans">
       {/* Print Controls (Hidden in Print) */}
       <div className="max-w-[210mm] mx-auto mb-8 print:hidden flex justify-between items-center">
         <Button variant="outline" onClick={() => window.history.back()}>
@@ -318,7 +446,7 @@ export default function ReportPage() {
             </section>
           </div>
 
-          {/* Column 2 & 3: Deep Dive */}
+          {/* Column 2 & 3: Deep Profile */}
           <div className="col-span-2 space-y-8">
             
             {/* Key Strengths (Green Flags) */}

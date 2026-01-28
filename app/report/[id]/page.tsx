@@ -256,25 +256,243 @@ export default function SharedReportPage() {
       {/* ─── Print Styles ─── */}
       <style jsx global>{`
         @media print {
-          html, body { background: #fff !important; color: #111 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-print { display: none !important; }
-          .print-break { page-break-before: always; }
-          .print-avoid { page-break-inside: avoid; }
-          .report-page { background: #fff !important; }
-          .rp-card { background: #f9fafb !important; border-color: #e5e7eb !important; }
-          .rp-card h3, .rp-card h4, .rp-card p, .rp-card span, .rp-card li, .rp-card div { color: #374151 !important; }
-          .rp-card .rp-heading { color: #111827 !important; }
-          .rp-header { background: #f3f4f6 !important; border-color: #d1d5db !important; }
-          .rp-header * { color: #111827 !important; }
-          .rp-badge { background: #e5e7eb !important; color: #374151 !important; border: none !important; }
-          .rp-bar-track { background: #e5e7eb !important; }
-          .rp-green { background: #ecfdf5 !important; border-color: #a7f3d0 !important; }
-          .rp-green * { color: #065f46 !important; }
-          .rp-red { background: #fef2f2 !important; border-color: #fecaca !important; }
-          .rp-red * { color: #991b1b !important; }
-          .print-brand { display: block !important; }
+          /* ═══ Force light mode regardless of user theme ═══ */
+          html, body {
+            background: #fff !important;
+            color: #1f2937 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* ═══ Hide screen-only elements ═══ */
+          .no-print {
+            display: none !important;
+          }
+
+          /* ═══ Page break control ═══ */
+          .print-break {
+            page-break-before: always;
+          }
+          .print-avoid {
+            page-break-inside: avoid;
+          }
+
+          /* ═══ Override ALL background colors to light ═══ */
+          .report-page,
+          .report-page * {
+            background: #fff !important;
+          }
+
+          /* ═══ Cards and sections - light gray background ═══ */
+          .rp-card {
+            background: #f9fafb !important;
+            border: 1px solid #e5e7eb !important;
+          }
+
+          /* ═══ Header section ═══ */
+          .rp-header {
+            background: #f3f4f6 !important;
+            border: 1px solid #d1d5db !important;
+          }
+
+          /* ═══ All text to dark for readability ═══ */
+          .report-page h1,
+          .report-page h2,
+          .report-page h3,
+          .report-page h4,
+          .report-page h5,
+          .report-page h6,
+          .report-page p,
+          .report-page span,
+          .report-page div,
+          .report-page li,
+          .report-page a {
+            color: #1f2937 !important;
+          }
+
+          /* ═══ Headings - darker ═══ */
+          .rp-heading {
+            color: #111827 !important;
+          }
+
+          /* ═══ Muted text (descriptions, labels) ═══ */
+          .text-zinc-400,
+          .text-zinc-500,
+          .text-zinc-600,
+          .text-muted-foreground {
+            color: #6b7280 !important;
+          }
+
+          /* ═══ Very muted text (tertiary info) ═══ */
+          .text-zinc-700,
+          .text-zinc-800 {
+            color: #4b5563 !important;
+          }
+
+          /* ═══ Badges and pills ═══ */
+          .rp-badge {
+            background: #e5e7eb !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db !important;
+          }
+
+          /* ═══ Score ring and metrics - preserve brand colors ═══ */
+          .text-emerald-400,
+          .text-emerald-500 {
+            color: #10b981 !important;
+          }
+          .text-blue-400,
+          .text-blue-500 {
+            color: #3b82f6 !important;
+          }
+          .text-yellow-400,
+          .text-yellow-500 {
+            color: #f59e0b !important;
+          }
+          .text-orange-400,
+          .text-orange-500 {
+            color: #f97316 !important;
+          }
+          .text-red-400,
+          .text-red-500 {
+            color: #ef4444 !important;
+          }
+          .text-purple-400,
+          .text-purple-500 {
+            color: #a855f7 !important;
+          }
+          .text-cyan-400,
+          .text-cyan-500 {
+            color: #06b6d4 !important;
+          }
+          .text-indigo-400,
+          .text-indigo-500 {
+            color: #6366f1 !important;
+          }
+          .text-violet-400,
+          .text-violet-500 {
+            color: #8b5cf6 !important;
+          }
+          .text-rose-400,
+          .text-rose-500 {
+            color: #f43f5e !important;
+          }
+          .text-sky-400,
+          .text-sky-500 {
+            color: #0ea5e9 !important;
+          }
+          .text-amber-400,
+          .text-amber-500 {
+            color: #f59e0b !important;
+          }
+          .text-teal-400,
+          .text-teal-500 {
+            color: #14b8a6 !important;
+          }
+
+          /* ═══ Progress bars - preserve colors ═══ */
+          .rp-bar-track {
+            background: #e5e7eb !important;
+          }
+          .bg-gradient-to-r {
+            background: #3b82f6 !important;
+          }
+
+          /* ═══ Green flags section ═══ */
+          .rp-green {
+            background: #ecfdf5 !important;
+            border: 1px solid #a7f3d0 !important;
+          }
+          .rp-green * {
+            color: #065f46 !important;
+          }
+          .rp-green svg {
+            color: #10b981 !important;
+          }
+
+          /* ═══ Red flags section ═══ */
+          .rp-red {
+            background: #fef2f2 !important;
+            border: 1px solid #fecaca !important;
+          }
+          .rp-red * {
+            color: #991b1b !important;
+          }
+          .rp-red svg {
+            color: #ef4444 !important;
+          }
+
+          /* ═══ Icon containers and decorative elements ═══ */
+          .bg-purple-500\\/10,
+          .bg-blue-500\\/10,
+          .bg-indigo-500\\/10,
+          .bg-emerald-500\\/10,
+          .bg-cyan-500\\/10,
+          .bg-orange-500\\/10,
+          .bg-violet-500\\/10,
+          .bg-sky-500\\/10,
+          .bg-amber-500\\/10,
+          .bg-rose-500\\/10,
+          .bg-teal-500\\/10,
+          [class*="bg-"][class*="/10"],
+          [class*="bg-"][class*="/20"] {
+            background: #f3f4f6 !important;
+          }
+
+          /* ═══ Borders - consistent light gray ═══ */
+          .border-zinc-700,
+          .border-zinc-800,
+          .border-zinc-800\\/80,
+          .border-zinc-800\\/60,
+          .border-zinc-700\\/30,
+          .border-zinc-700\\/50 {
+            border-color: #e5e7eb !important;
+          }
+
+          /* ═══ Radar chart and SVG elements ═══ */
+          svg text {
+            fill: #374151 !important;
+          }
+          svg line,
+          svg path[stroke] {
+            stroke: #d1d5db !important;
+          }
+
+          /* ═══ Score ring backgrounds ═══ */
+          [class*="from-"][class*="-500"],
+          [class*="to-"][class*="-500"],
+          .bg-gradient-to-br {
+            background: #f9fafb !important;
+          }
+
+          /* ═══ Shadow removal for print ═══ */
+          * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+          }
+
+          /* ═══ Ensure proper spacing ═══ */
+          .report-page {
+            padding: 0 !important;
+          }
+
+          /* ═══ Images remain visible ═══ */
+          img {
+            max-width: 100%;
+            page-break-inside: avoid;
+          }
+
+          /* ═══ Links - show as regular text ═══ */
+          a {
+            text-decoration: none !important;
+          }
         }
-        @page { margin: 0.75in; }
+
+        @page {
+          margin: 0.75in;
+          size: letter;
+        }
       `}</style>
 
       <div className="report-page min-h-screen bg-[#0a0a0f] text-zinc-100">
