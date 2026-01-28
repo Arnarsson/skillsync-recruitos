@@ -79,8 +79,8 @@ const TIER_CONFIG: Record<SkillTier, { weight: number; label: string; icon: Reac
     weight: 0.6,
     label: "Nice-to-have",
     icon: <Star className="w-4 h-4" />,
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-500/10 border-yellow-500/30",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/10 border-amber-500/30",
   },
   bonus: {
     weight: 0.3,
@@ -203,8 +203,8 @@ function ConfidenceDot({ confidence, source }: { confidence?: 'high' | 'medium' 
 
   const config = {
     high: { color: 'bg-green-500', label: 'High confidence' },
-    medium: { color: 'bg-yellow-500', label: 'Medium confidence' },
-    low: { color: 'bg-orange-500', label: 'Low confidence (may be inferred)' },
+    medium: { color: 'bg-amber-500', label: 'Medium confidence' },
+    low: { color: 'bg-amber-500', label: 'Low confidence (may be inferred)' },
   };
 
   const { color, label } = config[confidence];
@@ -245,7 +245,7 @@ function SkillChip({
   return (
     <div className={cn(
       "group flex items-center gap-1 p-2 rounded-lg border bg-card transition-all",
-      isLimiting && "border-yellow-500/50 bg-yellow-500/5"
+      isLimiting && "border-amber-500/50 bg-amber-500/5"
     )}>
       {/* Move left */}
       <button
@@ -277,10 +277,10 @@ function SkillChip({
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
           ) : insight ? (
             <>
-              {isLimiting && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
+              {isLimiting && <AlertTriangle className="w-3 h-3 text-amber-500" />}
               <span className={cn(
                 "text-xs",
-                isLimiting ? "text-yellow-500" : "text-muted-foreground"
+                isLimiting ? "text-amber-500" : "text-muted-foreground"
               )}>
                 {insight.count.toLocaleString()} candidates
               </span>
@@ -681,7 +681,7 @@ export default function SkillsReviewPage() {
               </div>
             </div>
             {limitingCount > 0 && (
-              <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-yellow-500/10 text-yellow-500 text-sm">
+              <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-amber-500/10 text-amber-500 text-sm">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                 <span>{limitingCount} must-have skill{limitingCount !== 1 && "s"} limiting your pool. Consider demoting.</span>
               </div>
@@ -734,9 +734,9 @@ export default function SkillsReviewPage() {
               <span className="text-red-400">{skillsByTier["must-have"].length}</span>
               <span className="text-muted-foreground ml-1.5">{t('skillsReview.mustHave')}</span>
             </Badge>
-            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-yellow-500/30 bg-yellow-500/10">
-              <Star className="w-4 h-4 mr-2 text-yellow-400" />
-              <span className="text-yellow-400">{skillsByTier["nice-to-have"].length}</span>
+            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-amber-500/30 bg-amber-500/10">
+              <Star className="w-4 h-4 mr-2 text-amber-400" />
+              <span className="text-amber-400">{skillsByTier["nice-to-have"].length}</span>
               <span className="text-muted-foreground ml-1.5">{t('skillsReview.niceToHave')}</span>
             </Badge>
             <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-green-500/30 bg-green-500/10">

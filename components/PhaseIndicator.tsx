@@ -17,7 +17,7 @@ const PHASES = [
     description: "Define skills + requirements", 
     icon: Search, 
     path: "/search",
-    color: "blue",
+    color: "teal",
     requiresCompletion: false
   },
   { 
@@ -27,7 +27,7 @@ const PHASES = [
     description: "See results → Select candidates", 
     icon: List, 
     path: "/pipeline",
-    color: "purple",
+    color: "teal",
     requiresCompletion: true
   },
   { 
@@ -37,7 +37,7 @@ const PHASES = [
     description: "Deep dive on selections", 
     icon: Microscope, 
     path: "/analyse",
-    color: "green",
+    color: "teal",
     requiresCompletion: true
   },
   { 
@@ -47,35 +47,17 @@ const PHASES = [
     description: "Generate messages", 
     icon: MessageSquare, 
     path: "/shortlist",
-    color: "orange",
+    color: "teal",
     requiresCompletion: true
   },
 ] as const;
 
 const PHASE_COLORS = {
-  blue: {
-    bg: "bg-blue-500",
-    text: "text-blue-500",
-    ring: "ring-blue-500/20",
-    border: "border-blue-500",
-  },
-  purple: {
-    bg: "bg-purple-500",
-    text: "text-purple-500",
-    ring: "ring-purple-500/20",
-    border: "border-purple-500",
-  },
-  green: {
-    bg: "bg-green-500",
-    text: "text-green-500",
-    ring: "ring-green-500/20",
-    border: "border-green-500",
-  },
-  orange: {
-    bg: "bg-orange-500",
-    text: "text-orange-500",
-    ring: "ring-orange-500/20",
-    border: "border-orange-500",
+  teal: {
+    bg: "bg-primary",
+    text: "text-primary",
+    ring: "ring-primary/20",
+    border: "border-primary",
   },
 };
 
@@ -102,9 +84,9 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
               <div
                 className={cn(
                   "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all relative",
-                  isCompleted && "bg-green-500/20 border border-green-500/30",
-                  isCurrent && `${colors.bg} text-white ring-4 ${colors.ring}`,
-                  isFuture && "bg-muted/30 opacity-40 cursor-not-allowed",
+                  isCompleted && "bg-green-500/20 border border-green-500/30 text-green-600 dark:text-green-400",
+                  isCurrent && "bg-primary text-white ring-4 ring-primary/20",
+                  isFuture && "bg-muted/30 opacity-40 cursor-not-allowed text-muted-foreground",
                   isClickable && !isFuture && "cursor-pointer hover:scale-105"
                 )}
                 title={isFuture ? "Complete previous stages first" : ""}
@@ -159,10 +141,9 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
             <>
               {(() => {
                 const PhaseIcon = PHASES[currentPhase - 1].icon;
-                const colors = PHASE_COLORS[PHASES[currentPhase - 1].color];
                 return (
                   <>
-                    <div className={cn("p-2 rounded-lg", colors.bg)}>
+                    <div className="p-2 rounded-lg bg-primary">
                       <PhaseIcon className="w-4 h-4 text-white" />
                     </div>
                     <div>

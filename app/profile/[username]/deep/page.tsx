@@ -560,14 +560,14 @@ export default function DeepProfilePage() {
   }, [candidate, enrichmentData, enrichmentStatus.loading]);
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
+    if (score >= 70) return "text-green-500";
+    if (score >= 50) return "text-amber-500";
     return "text-red-500";
   };
 
   const getScoreBarColor = (score: number) => {
-    if (score >= 80) return "bg-green-500";
-    if (score >= 60) return "bg-yellow-500";
+    if (score >= 70) return "bg-green-500";
+    if (score >= 50) return "bg-amber-500";
     return "bg-red-500";
   };
 
@@ -589,9 +589,9 @@ export default function DeepProfilePage() {
       case 'bio':
         return { icon: <FileText className="w-3 h-3" />, label: 'Bio', color: 'text-cyan-500' };
       case 'inferred':
-        return { icon: <Lightbulb className="w-3 h-3" />, label: 'Inferred', color: 'text-yellow-500' };
+        return { icon: <Lightbulb className="w-3 h-3" />, label: 'Inferred', color: 'text-amber-500' };
       case 'location_data':
-        return { icon: <Globe className="w-3 h-3" />, label: 'Location', color: 'text-orange-500' };
+        return { icon: <Globe className="w-3 h-3" />, label: 'Location', color: 'text-primary' };
       default:
         return { icon: <Info className="w-3 h-3" />, label: 'Unknown', color: 'text-muted-foreground' };
     }
@@ -1512,7 +1512,7 @@ export default function DeepProfilePage() {
                       <div>
                         <span className="text-sm text-muted-foreground">Primary Motivator</span>
                         <div className="mt-1">
-                          <Badge className="bg-blue-500/20 text-blue-500 border-blue-500/30">
+                          <Badge className="bg-primary/20 text-primary border-primary/30">
                             {candidate.persona.psychometric.primaryMotivator}
                           </Badge>
                         </div>
@@ -1530,7 +1530,7 @@ export default function DeepProfilePage() {
                               candidate.persona.psychometric.riskTolerance?.toLowerCase() === 'high'
                                 ? 'w-full bg-red-500'
                                 : candidate.persona.psychometric.riskTolerance?.toLowerCase() === 'moderate'
-                                ? 'w-2/3 bg-yellow-500'
+                                ? 'w-2/3 bg-amber-500'
                                 : 'w-1/3 bg-green-500'
                             }`}
                           />
@@ -1541,7 +1541,7 @@ export default function DeepProfilePage() {
                       <div>
                         <span className="text-sm text-muted-foreground">Leadership Potential</span>
                         <div className="mt-1">
-                          <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30">
+                          <Badge className="bg-primary/20 text-primary border-primary/30">
                             {candidate.persona.psychometric.leadershipPotential}
                           </Badge>
                         </div>
@@ -1576,7 +1576,7 @@ export default function DeepProfilePage() {
                                 key={level}
                                 className={`h-2 flex-1 rounded-full ${
                                   candidate.persona?.careerTrajectory?.growthVelocity === level
-                                    ? level === 'rapid' ? 'bg-green-500' : level === 'steady' ? 'bg-yellow-500' : 'bg-orange-500'
+                                    ? level === 'rapid' ? 'bg-green-500' : level === 'steady' ? 'bg-amber-500' : 'bg-red-500'
                                     : 'bg-muted'
                                 }`}
                               />
@@ -1596,7 +1596,7 @@ export default function DeepProfilePage() {
                                 key={level}
                                 className={`h-2 flex-1 rounded-full ${
                                   candidate.persona?.careerTrajectory?.promotionFrequency === level
-                                    ? level === 'high' ? 'bg-green-500' : level === 'moderate' ? 'bg-yellow-500' : 'bg-orange-500'
+                                    ? level === 'high' ? 'bg-green-500' : level === 'moderate' ? 'bg-amber-500' : 'bg-red-500'
                                     : 'bg-muted'
                                 }`}
                               />
@@ -1722,17 +1722,17 @@ export default function DeepProfilePage() {
                             {candidate.persona.compensationIntelligence.compensationGrowthRate === 'aggressive' ? (
                               <TrendingUp className="w-4 h-4 text-green-500" />
                             ) : candidate.persona.compensationIntelligence.compensationGrowthRate === 'steady' ? (
-                              <TrendingUp className="w-4 h-4 text-yellow-500 rotate-[-15deg]" />
+                              <TrendingUp className="w-4 h-4 text-amber-500 rotate-[-15deg]" />
                             ) : (
-                              <TrendingDown className="w-4 h-4 text-orange-500" />
+                              <TrendingDown className="w-4 h-4 text-red-500" />
                             )}
                           </div>
                           <div className={`text-sm font-bold capitalize ${
                             candidate.persona.compensationIntelligence.compensationGrowthRate === 'aggressive'
                               ? 'text-green-500'
                               : candidate.persona.compensationIntelligence.compensationGrowthRate === 'steady'
-                              ? 'text-yellow-500'
-                              : 'text-orange-500'
+                              ? 'text-amber-500'
+                              : 'text-red-500'
                           }`}>
                             {candidate.persona.compensationIntelligence.compensationGrowthRate}
                           </div>
@@ -1768,8 +1768,8 @@ export default function DeepProfilePage() {
                       </div>
 
                       {/* Context Note */}
-                      <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         <p className="text-xs text-muted-foreground">
                           Compensation estimates are based on role seniority, location, and industry benchmarks.
                           {candidate.persona.compensationIntelligence.equityIndicators && (
@@ -1942,7 +1942,7 @@ export default function DeepProfilePage() {
                           <p className="text-sm text-muted-foreground mb-2">Flight Risk Factors</p>
                           <div className="flex flex-wrap gap-2">
                             {candidate.persona.riskAssessment.flightRiskFactors.map((factor, i) => (
-                              <Badge key={i} variant="outline" className="border-orange-500/50 text-orange-500">
+                              <Badge key={i} variant="outline" className="border-amber-500/50 text-amber-500">
                                 <AlertTriangle className="w-3 h-3 mr-1" />
                                 {factor}
                               </Badge>
@@ -2003,10 +2003,10 @@ export default function DeepProfilePage() {
         {activeTab === "github" && (
           <div className="space-y-6">
             {/* GitHub Data Context Banner */}
-            <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-500">Public Activity Only</p>
+                <p className="text-sm font-medium text-primary">Public Activity Only</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   This analysis reflects public GitHub activity only. Private repositories and
                   enterprise work are not included. Contribution data may underrepresent actual
@@ -2155,8 +2155,8 @@ export default function DeepProfilePage() {
                               githubAnalysis.contributionPatterns.consistency === 'high'
                                 ? 'border-green-500 text-green-500'
                                 : githubAnalysis.contributionPatterns.consistency === 'moderate'
-                                ? 'border-yellow-500 text-yellow-500'
-                                : 'border-orange-500 text-orange-500'
+                                ? 'border-amber-500 text-amber-500'
+                                : 'border-amber-500 text-amber-500'
                             }`}
                           >
                             {githubAnalysis.contributionPatterns.consistency}
