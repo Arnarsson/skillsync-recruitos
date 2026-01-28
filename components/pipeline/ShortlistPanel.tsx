@@ -120,14 +120,14 @@ export function ShortlistPanel({
                   Clear
                 </Button>
 
-                {/* Move to Deep Dive CTA */}
+                {/* Continue to Analysis CTA */}
                 <Button
                   size="sm"
                   onClick={onMoveToDeepDive}
-                  className="gap-1.5"
+                  className="gap-1.5 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
                 >
-                  <span className="hidden sm:inline">Move to Deep Dive</span>
-                  <span className="sm:hidden">Deep Dive</span>
+                  <span className="hidden sm:inline">Continue to Analysis</span>
+                  <span className="sm:hidden">Analyse</span>
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>

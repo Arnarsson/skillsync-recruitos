@@ -79,9 +79,23 @@ interface SkillsConfigItem {
   order: number;
 }
 
+interface HardRequirement {
+  id: string;
+  type: 'location' | 'experience' | 'language';
+  value: string | number;
+  enabled: boolean;
+  isMustHave: boolean;
+}
+
+interface HardRequirementsConfig {
+  requirements: HardRequirement[];
+  enabled: boolean;
+}
+
 interface SkillsConfig {
   skills: SkillsConfigItem[];
   customSkills: string[];
+  hardRequirements?: HardRequirementsConfig;
 }
 
 interface Candidate {
@@ -140,8 +154,9 @@ export default function PipelinePage() {
   // Hard requirements filter - exclude candidates missing must-have skills
   const [enforceHardRequirements, setEnforceHardRequirements] = useState(false);
   const [mustHaveSkills, setMustHaveSkills] = useState<string[]>([]);
+  const [hardRequirementsConfig, setHardRequirementsConfig] = useState<SkillsConfig["hardRequirements"]>(null);
 
-  // Load must-have skills from skills config
+  // Load must-have skills and hard requirements from skills config
   useEffect(() => {
     const skillsConfigStr = localStorage.getItem("apex_skills_config");
     if (skillsConfigStr) {
@@ -151,6 +166,7 @@ export default function PipelinePage() {
           .filter(s => s.tier === "must-have")
           .map(s => s.name.toLowerCase());
         setMustHaveSkills(mustHaves);
+        setHardRequirementsConfig(config.hardRequirements || null);
       } catch {}
     }
   }, []);
@@ -754,6 +770,47 @@ export default function PipelinePage() {
       });
     }
 
+    // Apply new hard requirements (location, experience, languages)
+    if (hardRequirementsConfig?.enabled && hardRequirementsConfig.requirements.length > 0) {
+      const enabledReqs = hardRequirementsConfig.requirements.filter(r => r.enabled && r.isMustHave);
+      
+      filtered = filtered.filter((candidate) => {
+        return enabledReqs.every(req => {
+          if (req.type === 'location') {
+            const candidateLocation = candidate.location?.toLowerCase() || '';
+            const requiredLocation = String(req.value).toLowerCase();
+            
+            // Special cases
+            if (requiredLocation === 'remote') return true; // Everyone can work remote
+            if (requiredLocation === 'europe') {
+              const europeanCountries = ['denmark', 'sweden', 'norway', 'finland', 'germany', 
+                                         'uk', 'france', 'spain', 'italy', 'netherlands', 'poland'];
+              return europeanCountries.some(country => candidateLocation.includes(country));
+            }
+            
+            // Check if candidate location contains required location
+            return candidateLocation.includes(requiredLocation);
+          }
+          
+          if (req.type === 'experience') {
+            const minYears = Number(req.value);
+            const candidateYears = candidate.yearsExperience || 0;
+            return candidateYears >= minYears;
+          }
+          
+          if (req.type === 'language') {
+            const requiredLang = String(req.value).toLowerCase();
+            const candidateBio = `${candidate.currentRole} ${candidate.company} ${candidate.location}`.toLowerCase();
+            // Simple heuristic: check if language name appears in bio or location
+            // In a real app, you'd have structured language data
+            return candidateBio.includes(requiredLang);
+          }
+          
+          return true;
+        });
+      });
+    }
+
     // Apply histogram range filter
     if (filterRange) {
       filtered = filtered.filter((c) => {
@@ -854,7 +911,7 @@ export default function PipelinePage() {
                 {jobContext?.title || t("pipeline.title")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {jobContext?.company || "Your Pipeline"} • {candidates.length} candidates found
+                {jobContext?.company || "Your Candidates"} • {candidates.length} candidates found
               </p>
             </div>
           </div>
@@ -968,13 +1025,13 @@ export default function PipelinePage() {
                     {/* One-Click Actions */}
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Link href={`/profile/${candidate.id}`} className="flex-1">
-                        <Button size="sm" variant="outline" className="w-full text-xs h-8">
+                        <Button size="sm" variant="outline" className="w-full text-xs">
                           View Profile
                         </Button>
                       </Link>
                       <Button
                         size="sm"
-                        className="flex-1 text-xs h-8"
+                        className="flex-1 text-xs"
                         onClick={() => {
                           setOutreachCandidate(candidate);
                           setShowOutreach(true);
@@ -1641,10 +1698,10 @@ export default function PipelinePage() {
         onCompare={() => setShowComparison(true)}
         onClearSelection={() => setSelectedIds([])}
         onMoveToDeepDive={() => {
-          // Save selected IDs to localStorage and navigate to shortlist page
+          // Save selected IDs to localStorage and navigate to analyse page (Stage 3)
           if (selectedCandidates.length > 0) {
             localStorage.setItem("apex_shortlist", JSON.stringify(selectedIds));
-            router.push("/shortlist");
+            router.push("/analyse");
           }
         }}
         onRemoveCandidate={(id) => setSelectedIds((prev) => prev.filter((i) => i !== id))}

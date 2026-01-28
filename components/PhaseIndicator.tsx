@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ListFilter, Microscope, Mail } from "lucide-react";
+import { Search, List, Microscope, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -12,35 +12,43 @@ interface PhaseIndicatorProps {
 const PHASES = [
   { 
     id: 1, 
-    label: "SEARCH", 
-    description: "Find candidates", 
+    label: "SØGNING", 
+    labelEn: "SEARCH",
+    description: "Define skills + requirements", 
     icon: Search, 
     path: "/search",
-    color: "blue"
+    color: "blue",
+    requiresCompletion: false
   },
   { 
     id: 2, 
-    label: "SHORTLIST", 
-    description: "Review & compare", 
-    icon: ListFilter, 
+    label: "LISTE", 
+    labelEn: "LIST",
+    description: "See results → Select candidates", 
+    icon: List, 
     path: "/pipeline",
-    color: "purple"
+    color: "purple",
+    requiresCompletion: true
   },
   { 
     id: 3, 
-    label: "PROFILE", 
-    description: "Deep analysis", 
+    label: "ANALYSE", 
+    labelEn: "ANALYZE",
+    description: "Deep dive on selections", 
     icon: Microscope, 
-    path: "/profile",
-    color: "green"
+    path: "/analyse",
+    color: "green",
+    requiresCompletion: true
   },
   { 
     id: 4, 
-    label: "OUTREACH", 
-    description: "Contact candidates", 
-    icon: Mail, 
+    label: "HANDLING", 
+    labelEn: "OUTREACH",
+    description: "Generate messages", 
+    icon: MessageSquare, 
     path: "/shortlist",
-    color: "orange"
+    color: "orange",
+    requiresCompletion: true
   },
 ] as const;
 
@@ -72,6 +80,11 @@ const PHASE_COLORS = {
 };
 
 export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorProps) {
+  // Gated progression: can only access completed phases or current phase
+  const canAccessPhase = (phaseId: number) => {
+    return phaseId <= currentPhase;
+  };
+
   return (
     <div className={cn("w-full mb-6", className)}>
       {/* Desktop: Horizontal layout */}
@@ -80,7 +93,7 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
           const isCompleted = phase.id < currentPhase;
           const isCurrent = phase.id === currentPhase;
           const isFuture = phase.id > currentPhase;
-          const isClickable = isCompleted || isCurrent;
+          const isClickable = canAccessPhase(phase.id);
           const PhaseIcon = phase.icon;
           const colors = PHASE_COLORS[phase.color];
 
@@ -88,29 +101,38 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all",
-                  isCompleted && "bg-muted/50 opacity-60",
+                  "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all relative",
+                  isCompleted && "bg-green-500/20 border border-green-500/30",
                   isCurrent && `${colors.bg} text-white ring-4 ${colors.ring}`,
-                  isFuture && "bg-muted/30 opacity-40",
-                  isClickable && "cursor-pointer hover:scale-105"
+                  isFuture && "bg-muted/30 opacity-40 cursor-not-allowed",
+                  isClickable && !isFuture && "cursor-pointer hover:scale-105"
                 )}
+                title={isFuture ? "Complete previous stages first" : ""}
               >
                 <PhaseIcon className="w-5 h-5" />
                 <div className="flex flex-col">
                   <span className="text-xs font-bold uppercase tracking-wider">
-                    {phase.label}
+                    {phase.labelEn}
                   </span>
                   <span className="text-[10px] opacity-90">
                     {phase.description}
                   </span>
                 </div>
+                {/* Completed checkmark */}
+                {isCompleted && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
               </div>
               
               {/* Connector arrow */}
               {index < PHASES.length - 1 && (
                 <div className={cn(
                   "w-8 h-0.5 transition-all",
-                  phase.id < currentPhase ? "bg-primary" : "bg-muted"
+                  phase.id < currentPhase ? "bg-green-500" : "bg-muted"
                 )} />
               )}
             </div>
@@ -118,7 +140,7 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
 
           return (
             <div key={phase.id}>
-              {isClickable ? (
+              {isClickable && !isFuture ? (
                 <Link href={phase.path} className="transition-transform">
                   {stepContent}
                 </Link>
