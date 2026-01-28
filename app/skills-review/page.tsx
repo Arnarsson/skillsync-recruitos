@@ -26,9 +26,10 @@ import {
   GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { WorkflowStepper } from "@/components/WorkflowStepper";
+import { PhaseIndicator } from "@/components/PhaseIndicator";
 import { HardRequirementsFilter } from "@/components/HardRequirementsFilter";
 import type { HardRequirementsConfig } from "@/types";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -405,6 +406,7 @@ function TierColumn({
 export default function SkillsReviewPage() {
   const router = useRouter();
   const toastShownRef = useRef(false);
+  const { t } = useLanguage();
 
   const [skills, setSkills] = useState<Skill[]>(() => loadSkillsFromStorage().skills);
   const [originalSkills] = useState<Skill[]>(() => loadSkillsFromStorage().skills);
@@ -414,6 +416,7 @@ export default function SkillsReviewPage() {
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const [totalCandidatesWithoutFilters, setTotalCandidatesWithoutFilters] = useState<number | undefined>();
 
   // Hard requirements state
   const [hardRequirements, setHardRequirements] = useState<HardRequirementsConfig>(() => {
@@ -452,6 +455,7 @@ export default function SkillsReviewPage() {
 
     setIsLoadingPreview(true);
     try {
+      // Fetch with filters
       const response = await fetch("/api/skills/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -467,6 +471,25 @@ export default function SkillsReviewPage() {
       const data: PreviewResponse = await response.json();
       setPreview(data);
       setLastFetchTime(now);
+
+      // Fetch without hard requirements to get baseline count
+      if (hardRequirements.enabled && hardRequirements.requirements.length > 0) {
+        const baselineResponse = await fetch("/api/skills/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            skills: skills.map((s) => ({ name: s.name, tier: s.tier })),
+            location,
+            hardRequirements: { requirements: [], enabled: false },
+          }),
+        });
+        if (baselineResponse.ok) {
+          const baselineData: PreviewResponse = await baselineResponse.json();
+          setTotalCandidatesWithoutFilters(baselineData.totalCandidates);
+        }
+      } else {
+        setTotalCandidatesWithoutFilters(data.totalCandidates);
+      }
     } catch (error) {
       console.error("Preview fetch error:", error);
     } finally {
@@ -606,20 +629,15 @@ export default function SkillsReviewPage() {
   return (
     <div className="min-h-screen pt-20 sm:pt-24 pb-32 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Workflow Stepper */}
-        <div className="mb-6">
-          <WorkflowStepper currentStep={3} />
-        </div>
+        {/* Phase Indicator */}
+        <PhaseIndicator currentPhase={2} className="mb-6" />
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <Badge className="mb-2 bg-purple-500/20 text-purple-400 text-xs">
-              Phase 2 — Shortlist
-            </Badge>
-            <h1 className="text-2xl sm:text-3xl font-bold">Skills Review</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t('skillsReview.title')}</h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Drag skills between columns to adjust priorities
+              {t('skillsReview.description')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -676,6 +694,7 @@ export default function SkillsReviewPage() {
           <HardRequirementsFilter
             initialRequirements={hardRequirements}
             candidateCount={preview?.totalCandidates}
+            totalCandidates={totalCandidatesWithoutFilters}
             isLoadingCount={isLoadingPreview}
             onChange={(config) => {
               setHardRequirements(config);
@@ -707,29 +726,34 @@ export default function SkillsReviewPage() {
       </div>
 
       {/* Fixed Continue Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-md border-t z-50">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/98 backdrop-blur-lg border-t-2 border-border shadow-lg z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="hidden sm:flex items-center gap-6 text-sm">
-            <span>
-              <span className="font-semibold text-red-400">{skillsByTier["must-have"].length}</span>
-              <span className="text-muted-foreground ml-1">must-have</span>
-            </span>
-            <span>
-              <span className="font-semibold text-yellow-400">{skillsByTier["nice-to-have"].length}</span>
-              <span className="text-muted-foreground ml-1">nice-to-have</span>
-            </span>
-            <span>
-              <span className="font-semibold text-green-400">{skillsByTier["bonus"].length}</span>
-              <span className="text-muted-foreground ml-1">bonus</span>
-            </span>
+          <div className="hidden sm:flex items-center gap-4">
+            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-red-500/30 bg-red-500/10">
+              <Target className="w-4 h-4 mr-2 text-red-400" />
+              <span className="text-red-400">{skillsByTier["must-have"].length}</span>
+              <span className="text-muted-foreground ml-1.5">{t('skillsReview.mustHave')}</span>
+            </Badge>
+            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-yellow-500/30 bg-yellow-500/10">
+              <Star className="w-4 h-4 mr-2 text-yellow-400" />
+              <span className="text-yellow-400">{skillsByTier["nice-to-have"].length}</span>
+              <span className="text-muted-foreground ml-1.5">{t('skillsReview.niceToHave')}</span>
+            </Badge>
+            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-green-500/30 bg-green-500/10">
+              <Sparkles className="w-4 h-4 mr-2 text-green-400" />
+              <span className="text-green-400">{skillsByTier["bonus"].length}</span>
+              <span className="text-muted-foreground ml-1.5">{t('skillsReview.bonus')}</span>
+            </Badge>
             {preview && (
-              <span className="text-muted-foreground">
-                <span className="font-semibold text-foreground">{preview.totalCandidates.toLocaleString()}</span> candidates
-              </span>
+              <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-primary/30 bg-primary/10">
+                <Users className="w-4 h-4 mr-2 text-primary" />
+                <span className="text-foreground font-bold">{preview.totalCandidates.toLocaleString()}</span>
+                <span className="text-muted-foreground ml-1.5">{t('skillsReview.candidates')}</span>
+              </Badge>
             )}
           </div>
           <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto">
-            Continue to Candidates
+            {t('skillsReview.continueButton')}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

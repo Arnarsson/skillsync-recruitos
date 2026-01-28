@@ -516,5 +516,15 @@
         ]
       }
     }
+  },
+  "skillsReview": {
+    "title": "Skills Review",
+    "description": "Træk færdigheder mellem kolonner for at justere prioriteter",
+    "mustHave": "must-have",
+    "niceToHave": "nice-to-have",
+    "bonus": "bonus",
+    "candidates": "kandidater",
+    "continueButton": "Fortsæt til Kandidater",
+    "candidateCount": "{matched} af {total} kandidater matcher"
   }
 }

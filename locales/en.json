@@ -499,5 +499,15 @@
         ]
       }
     }
+  },
+  "skillsReview": {
+    "title": "Skills Review",
+    "description": "Drag skills between columns to adjust priorities",
+    "mustHave": "must-have",
+    "niceToHave": "nice-to-have",
+    "bonus": "bonus",
+    "candidates": "candidates",
+    "continueButton": "Continue to Candidates",
+    "candidateCount": "{matched} of {total} candidates match"
   }
 }

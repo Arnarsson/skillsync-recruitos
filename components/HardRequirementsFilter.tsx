@@ -32,6 +32,7 @@ import { HardRequirement, HardRequirementsConfig } from "@/types";
 interface HardRequirementsFilterProps {
   initialRequirements?: HardRequirementsConfig;
   candidateCount?: number;
+  totalCandidates?: number;
   isLoadingCount?: boolean;
   onChange?: (config: HardRequirementsConfig) => void;
   onCountChange?: (delta: number) => void;
@@ -79,6 +80,7 @@ const EXPERIENCE_OPTIONS = [
 export function HardRequirementsFilter({
   initialRequirements,
   candidateCount,
+  totalCandidates,
   isLoadingCount = false,
   onChange,
   onCountChange,
@@ -162,11 +164,15 @@ export function HardRequirementsFilter({
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 Hard Requirements
-                {enabledCount > 0 && (
+                {config.enabled && candidateCount !== undefined && totalCandidates !== undefined ? (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    ({candidateCount.toLocaleString()} of {totalCandidates.toLocaleString()} candidates match)
+                  </span>
+                ) : enabledCount > 0 ? (
                   <Badge variant="secondary" className="text-xs">
                     {enabledCount} active
                   </Badge>
-                )}
+                ) : null}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Filter on must-haves early (geography, experience, languages)
