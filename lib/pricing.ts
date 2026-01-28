@@ -1,15 +1,13 @@
 /**
- * Pricing Models - Scout-inspired Pricing Structure
+ * Pricing Models - RecruitOS Pricing Structure
  *
  * Three tiers:
- * - Starter: Pay-per-search ($15/search)
- * - Pro: Monthly subscription ($99/month, 20 searches)
+ * - Personality Profile: 2,000 DKK per profile
+ * - Full Recruiting: 5,000 DKK per successful hire
  * - Enterprise: Custom pricing with team features
- *
- * Plus optional "Hire Guarantee" add-on (success-based fee)
  */
 
-export type PricingTier = 'starter' | 'pro' | 'enterprise';
+export type PricingTier = 'personality' | 'recruiting' | 'enterprise';
 
 export interface PricingPlan {
   id: PricingTier;
@@ -17,8 +15,8 @@ export interface PricingPlan {
   tagline: string;
   price: {
     amount: number;
-    currency: 'USD' | 'EUR';
-    period: 'once' | 'month' | 'year' | 'custom';
+    currency: 'DKK' | 'USD' | 'EUR';
+    period: 'profile' | 'hire' | 'custom';
   };
   stripePriceId?: string;
   features: string[];
@@ -34,53 +32,58 @@ export interface PricingPlan {
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
-    id: 'starter',
-    name: 'Starter',
-    tagline: 'Perfect for occasional hiring needs',
+    id: 'personality',
+    name: 'Personality Profile',
+    tagline: 'Deep personality insights for better candidate evaluation',
     price: {
-      amount: 15,
-      currency: 'USD',
-      period: 'once',
+      amount: 2000,
+      currency: 'DKK',
+      period: 'profile',
     },
+    stripePriceId: process.env.STRIPE_PERSONALITY_PRICE_ID,
     features: [
-      '1 search',
-      'Deep profile analysis',
-      'AI-powered outreach generation',
-      'Behavioral insights',
-      'Email support',
+      'Deep personality analysis',
+      'Behavioral insights & traits',
+      'Work style assessment',
+      'Team fit evaluation',
+      'Communication style report',
+      'Strengths & development areas',
+      'PDF export',
     ],
     limits: {
-      searchesPerMonth: 1,
+      searchesPerMonth: 'unlimited',
       deepProfiles: 1,
       teamSeats: 1,
-      savedSearches: 0,
+      savedSearches: 5,
       apiAccess: false,
     },
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    tagline: 'For growing teams with regular hiring',
+    id: 'recruiting',
+    name: 'Full Recruiting',
+    tagline: 'Complete recruiting service - only pay on successful hire',
     price: {
-      amount: 99,
-      currency: 'USD',
-      period: 'month',
+      amount: 5000,
+      currency: 'DKK',
+      period: 'hire',
     },
-    stripePriceId: process.env.STRIPE_PRO_PRICE_ID,
+    stripePriceId: process.env.STRIPE_RECRUITING_PRICE_ID,
     features: [
-      '20 searches/month',
-      'Unlimited deep profiles',
-      'AI-powered outreach generation',
-      'Behavioral insights',
-      'Saved searches',
+      'Full recruiting process management',
+      'Candidate sourcing & screening',
+      'Unlimited personality profiles',
+      'AI-powered candidate matching',
+      'Interview scheduling & coordination',
+      'Reference checking',
+      'Offer negotiation support',
+      'Only pay when you hire',
       'Priority support',
-      'Export to CSV',
     ],
     limits: {
-      searchesPerMonth: 20,
+      searchesPerMonth: 'unlimited',
       deepProfiles: 'unlimited',
       teamSeats: 3,
-      savedSearches: 10,
+      savedSearches: 20,
       apiAccess: false,
     },
     popular: true,
@@ -88,22 +91,23 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    tagline: 'For large organizations with custom needs',
+    tagline: 'Custom solutions for large organizations',
     price: {
       amount: 0, // Custom
-      currency: 'USD',
+      currency: 'DKK',
       period: 'custom',
     },
     features: [
-      'Unlimited searches',
-      'Unlimited deep profiles',
-      'Team workspaces',
-      'Shared pipelines',
-      'API access',
-      'Custom integrations (ATS)',
+      'Everything in Full Recruiting',
       'Dedicated account manager',
+      'Custom integrations (ATS)',
+      'Team workspaces & shared pipelines',
+      'API access',
+      'White-label options',
+      'Advanced analytics & reporting',
       'SLA guarantee',
-      'SAML/SSO',
+      'SAML/SSO authentication',
+      'Custom pricing models',
     ],
     limits: {
       searchesPerMonth: 'unlimited',
@@ -206,11 +210,16 @@ export function formatPrice(plan: PricingPlan): string {
     return 'Custom';
   }
 
-  const symbol = plan.price.currency === 'USD' ? '$' : '€';
-  const period = plan.price.period === 'month' ? '/mo' :
-                 plan.price.period === 'year' ? '/yr' : '';
+  const symbol = plan.price.currency === 'USD' ? '$' : 
+                 plan.price.currency === 'EUR' ? '€' : 
+                 plan.price.currency + ' ';
+  
+  const formatted = `${symbol}${plan.price.amount.toLocaleString('da-DK')}`;
+  
+  const period = plan.price.period === 'profile' ? '/profile' :
+                 plan.price.period === 'hire' ? '/hire' : '';
 
-  return `${symbol}${plan.price.amount}${period}`;
+  return `${formatted}${period}`;
 }
 
 /**
@@ -272,9 +281,9 @@ export const STORAGE_KEYS = {
  * Get current plan from localStorage
  */
 export function getCurrentPlan(): PricingTier {
-  if (typeof window === 'undefined') return 'starter';
+  if (typeof window === 'undefined') return 'personality';
   const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_PLAN);
-  return (stored as PricingTier) || 'starter';
+  return (stored as PricingTier) || 'personality';
 }
 
 /**

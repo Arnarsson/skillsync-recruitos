@@ -834,7 +834,6 @@ export default function PipelinePage() {
       .slice(0, 5);
   }, [candidates]);
 
-<<<<<<< HEAD
   // Collapsible chart state
   const [showChart, setShowChart] = useState(false);
 
@@ -863,30 +862,6 @@ export default function PipelinePage() {
                 {jobContext?.company || "Your Pipeline"} • {candidates.length} candidates found
               </p>
             </div>
-=======
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Badge className="mb-2 bg-emerald-500/20 text-emerald-400">Phase 4 — Outreach</Badge>
-            <h1 className="text-3xl font-bold">Talent Pipeline</h1>
-            {jobContext && (
-              <>
-                <p className="text-muted-foreground mt-1">
-                  {jobContext.title} at {jobContext.company}
-                </p>
-                {jobContext.requiredSkills && jobContext.requiredSkills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground mr-1">Færdigheder:</span>
-                    {jobContext.requiredSkills.slice(0, 5).map((skill) => (
-                      <Badge key={skill} variant="outline" className="text-xs">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
->>>>>>> 57816c0 (feat(7-167): implement 4-phase stepper workflow)
           </div>
           <div className="flex gap-2">
             <Link href={`/intake${adminSuffix}`}>

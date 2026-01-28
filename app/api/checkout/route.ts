@@ -11,8 +11,6 @@ import { PRICING_PLANS, type PricingTier } from "@/lib/pricing";
 
 interface CheckoutRequest {
   planId: PricingTier;
-  annual?: boolean;
-  hireGuarantee?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -35,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CheckoutRequest = await request.json();
-    const { planId, annual = false } = body;
+    const { planId } = body;
 
     // Validate plan
     const plan = PRICING_PLANS.find(p => p.id === planId);
@@ -74,57 +72,68 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const successUrl = `${baseUrl}/pipeline?checkout=success`;
+    const successUrl = `${baseUrl}/dashboard?checkout=success&plan=${planId}`;
     const cancelUrl = `${baseUrl}/pricing?checkout=cancelled`;
 
-    // Handle different plan types
-    if (planId === 'starter') {
-      // Starter is pay-per-search - create one-time payment
-      const checkoutUrl = await createCreditCheckout(
-        customerId,
-        1, // 1 search credit
-        plan.price.amount * 100, // Convert to cents
-        successUrl,
-        cancelUrl
-      );
-      return NextResponse.json({ url: checkoutUrl });
-    }
-
-    if (planId === 'pro') {
-      // Pro is subscription
-      const priceId = annual
-        ? process.env.STRIPE_PRO_YEARLY_PRICE_ID
-        : process.env.STRIPE_PRO_MONTHLY_PRICE_ID;
+    // Handle Personality Profile (one-time payment)
+    if (planId === 'personality') {
+      const priceId = plan.stripePriceId;
 
       if (!priceId) {
         // Create a dynamic price if no price ID configured
         const price = await stripe.prices.create({
-          currency: 'usd',
-          unit_amount: annual ? 99000 : 9900, // $990/yr or $99/mo
-          recurring: {
-            interval: annual ? 'year' : 'month',
-          },
+          currency: 'dkk',
+          unit_amount: plan.price.amount * 100, // Convert DKK to øre
           product_data: {
-            name: annual ? 'RecruitOS Pro Annual' : 'RecruitOS Pro Monthly',
+            name: 'Personality Profile',
           },
         });
 
-        const checkoutUrl = await createSubscriptionCheckout(
-          customerId,
-          price.id,
-          successUrl,
-          cancelUrl
-        );
-        return NextResponse.json({ url: checkoutUrl });
+        const checkoutSession = await stripe.checkout.sessions.create({
+          customer: customerId,
+          mode: 'payment',
+          line_items: [{
+            price: price.id,
+            quantity: 1,
+          }],
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          metadata: {
+            planId,
+            userId: session.user.email!,
+          },
+        });
+
+        return NextResponse.json({ url: checkoutSession.url });
       }
 
-      const checkoutUrl = await createSubscriptionCheckout(
-        customerId,
-        priceId,
-        successUrl,
-        cancelUrl
-      );
-      return NextResponse.json({ url: checkoutUrl });
+      const checkoutSession = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'payment',
+        line_items: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: {
+          planId,
+          userId: session.user.email!,
+        },
+      });
+
+      return NextResponse.json({ url: checkoutSession.url });
+    }
+
+    // Handle Full Recruiting (success-based, no upfront payment)
+    if (planId === 'recruiting') {
+      // For recruiting, we don't charge upfront - just register them
+      // They'll be charged 5000 DKK when they mark a candidate as hired
+      return NextResponse.json({
+        success: true,
+        message: "Registered for success-based recruiting. You'll only pay 5,000 DKK per successful hire.",
+        redirectUrl: `${baseUrl}/dashboard?plan=recruiting&success=true`,
+      });
     }
 
     return NextResponse.json(

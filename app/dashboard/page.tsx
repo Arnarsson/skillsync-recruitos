@@ -158,7 +158,11 @@ export default function DashboardPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-lg">{plan.name} Plan</h3>
-                      <Badge variant="outline">{plan.price.period === 'once' ? 'Pay as you go' : 'Subscription'}</Badge>
+                      <Badge variant="outline">
+                        {plan.price.period === 'profile' ? 'Per Profile' : 
+                         plan.price.period === 'hire' ? 'Success-Based' : 
+                         plan.price.period === 'custom' ? 'Custom' : 'Subscription'}
+                      </Badge>
                     </div>
                     <p className="text-muted-foreground text-sm">
                       {remaining?.searches === 'unlimited'

@@ -24,14 +24,6 @@ import { PRICING_PLANS, HIRE_GUARANTEE, formatPrice, type PricingPlan } from "@/
 
 export default function PricingPage() {
   const router = useRouter();
-  const [showAnnual, setShowAnnual] = useState(false);
-  const [showHireGuarantee, setShowHireGuarantee] = useState(false);
-
-  // Calculate annual discount (2 months free)
-  const getAnnualPrice = (plan: PricingPlan) => {
-    if (plan.price.period !== 'month') return null;
-    return Math.round(plan.price.amount * 10); // 10 months instead of 12
-  };
 
   const handleSelectPlan = async (planId: string) => {
     if (planId === 'enterprise') {
@@ -40,34 +32,38 @@ export default function PricingPage() {
       return;
     }
 
-    // For starter, redirect directly to search
-    if (planId === 'starter') {
-      router.push('/search');
-      return;
-    }
-
-    // For pro, redirect to checkout
-    // In a real implementation, this would create a Stripe checkout session
+    // For personality profile or recruiting, redirect to checkout
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId,
-          annual: showAnnual,
-          hireGuarantee: showHireGuarantee,
         }),
       });
 
       if (response.ok) {
-        const { url } = await response.json();
-        if (url) {
-          // External redirect to Stripe checkout
-          window.location.assign(url);
+        const data = await response.json();
+        
+        // For recruiting plan (no upfront payment), redirect to dashboard
+        if (data.redirectUrl) {
+          router.push(data.redirectUrl);
+          return;
         }
+        
+        // For personality profile (Stripe checkout), redirect to payment
+        if (data.url) {
+          window.location.assign(data.url);
+          return;
+        }
+      } else {
+        // Fallback: redirect to signup
+        router.push(`/signup?plan=${planId}`);
       }
     } catch (error) {
       console.error('Checkout error:', error);
+      // Fallback on error
+      router.push(`/signup?plan=${planId}`);
     }
   };
 
@@ -81,36 +77,14 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Find the perfect plan for your hiring needs. Start free, scale as you grow.
+            Choose the right solution for your hiring needs. From personality insights to full recruiting support.
           </p>
-        </div>
-
-        {/* Billing Toggle */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <span className={`text-sm ${!showAnnual ? 'font-medium' : 'text-muted-foreground'}`}>
-            Monthly
-          </span>
-          <Switch
-            checked={showAnnual}
-            onCheckedChange={setShowAnnual}
-          />
-          <span className={`text-sm ${showAnnual ? 'font-medium' : 'text-muted-foreground'}`}>
-            Annual
-          </span>
-          {showAnnual && (
-            <Badge variant="secondary" className="bg-green-500/20 text-green-600">
-              Save 17%
-            </Badge>
-          )}
         </div>
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           {PRICING_PLANS.map((plan, index) => {
-            const annualPrice = getAnnualPrice(plan);
-            const displayPrice = showAnnual && annualPrice
-              ? `$${annualPrice}/yr`
-              : formatPrice(plan);
+            const displayPrice = formatPrice(plan);
 
             return (
               <motion.div
@@ -134,8 +108,8 @@ export default function PricingPage() {
 
                   <CardHeader className="text-center pb-2">
                     <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      {plan.id === 'starter' && <Zap className="w-6 h-6 text-primary" />}
-                      {plan.id === 'pro' && <Sparkles className="w-6 h-6 text-primary" />}
+                      {plan.id === 'personality' && <Zap className="w-6 h-6 text-primary" />}
+                      {plan.id === 'recruiting' && <Sparkles className="w-6 h-6 text-primary" />}
                       {plan.id === 'enterprise' && <Building2 className="w-6 h-6 text-primary" />}
                     </div>
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
@@ -148,14 +122,11 @@ export default function PricingPage() {
                       <div className="text-4xl font-bold">
                         {displayPrice}
                       </div>
-                      {plan.price.period === 'once' && (
-                        <p className="text-sm text-muted-foreground">per search</p>
+                      {plan.price.period === 'profile' && (
+                        <p className="text-sm text-muted-foreground">per personality profile</p>
                       )}
-                      {plan.price.period === 'month' && !showAnnual && (
-                        <p className="text-sm text-muted-foreground">per month</p>
-                      )}
-                      {plan.price.period === 'month' && showAnnual && (
-                        <p className="text-sm text-muted-foreground">per year (billed annually)</p>
+                      {plan.price.period === 'hire' && (
+                        <p className="text-sm text-muted-foreground">only pay when you hire</p>
                       )}
                       {plan.price.period === 'custom' && (
                         <p className="text-sm text-muted-foreground">contact us for pricing</p>
@@ -168,8 +139,8 @@ export default function PricingPage() {
                       variant={plan.popular ? 'default' : 'outline'}
                       onClick={() => handleSelectPlan(plan.id)}
                     >
-                      {plan.id === 'starter' && 'Start Searching'}
-                      {plan.id === 'pro' && 'Subscribe Now'}
+                      {plan.id === 'personality' && 'Get Started'}
+                      {plan.id === 'recruiting' && 'Start Recruiting'}
                       {plan.id === 'enterprise' && 'Contact Sales'}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
@@ -208,44 +179,20 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* Hire Guarantee Add-on */}
-        <Card className="mb-12 border-dashed">
+        {/* Success-Based Pricing Highlight */}
+        <Card className="mb-12 border-dashed bg-green-500/5">
           <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-green-500" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Hire Guarantee</h3>
-                  <p className="text-muted-foreground">
-                    Only pay €{HIRE_GUARANTEE.successFee} if you successfully hire through our platform
-                  </p>
-                </div>
+            <div className="flex items-center justify-center gap-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-green-500" />
               </div>
-              <div className="flex items-center gap-4">
-                <Switch
-                  checked={showHireGuarantee}
-                  onCheckedChange={setShowHireGuarantee}
-                />
-                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-                  No Cure, No Pay
-                </Badge>
+              <div>
+                <h3 className="font-semibold text-lg">Success-Based Pricing</h3>
+                <p className="text-muted-foreground">
+                  With Full Recruiting, you only pay 5,000 DKK when you successfully make a hire. No upfront fees, no monthly subscriptions.
+                </p>
               </div>
             </div>
-            {showHireGuarantee && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="mt-4 pt-4 border-t text-sm text-muted-foreground"
-              >
-                <p>
-                  With Hire Guarantee, you only pay the success fee when you mark a candidate
-                  as &quot;Hired&quot; in your pipeline. This is perfect for teams who want to
-                  minimize upfront risk while still getting access to premium features.
-                </p>
-              </motion.div>
-            )}
           </CardContent>
         </Card>
 
@@ -268,24 +215,32 @@ export default function PricingPage() {
                   </thead>
                   <tbody>
                     <ComparisonRow
-                      feature="Searches"
-                      values={['1 per purchase', '20/month', 'Unlimited']}
-                    />
-                    <ComparisonRow
-                      feature="Deep Profiles"
+                      feature="Personality Analysis"
                       values={['1 per purchase', 'Unlimited', 'Unlimited']}
-                    />
-                    <ComparisonRow
-                      feature="AI Outreach"
-                      values={[true, true, true]}
                     />
                     <ComparisonRow
                       feature="Behavioral Insights"
                       values={[true, true, true]}
                     />
                     <ComparisonRow
-                      feature="Saved Searches"
-                      values={[false, '10', 'Unlimited']}
+                      feature="Work Style Assessment"
+                      values={[true, true, true]}
+                    />
+                    <ComparisonRow
+                      feature="Candidate Sourcing"
+                      values={[false, true, true]}
+                    />
+                    <ComparisonRow
+                      feature="Interview Coordination"
+                      values={[false, true, true]}
+                    />
+                    <ComparisonRow
+                      feature="Reference Checking"
+                      values={[false, true, true]}
+                    />
+                    <ComparisonRow
+                      feature="Success-Based Pricing"
+                      values={[false, true, 'Custom']}
                     />
                     <ComparisonRow
                       feature="Team Seats"
@@ -308,7 +263,7 @@ export default function PricingPage() {
                       values={[false, true, true]}
                     />
                     <ComparisonRow
-                      feature="Dedicated CSM"
+                      feature="Dedicated Account Manager"
                       values={[false, false, true]}
                     />
                   </tbody>
