@@ -156,13 +156,8 @@ export default function ShortlistPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-<<<<<<< HEAD
             <Badge className="mb-2 bg-primary/20 text-primary text-xs">
               Step 4 of 5
-=======
-            <Badge className="mb-2 bg-amber-500/20 text-amber-400 text-xs">
-              Phase 3 — Analysis
->>>>>>> 57816c0 (feat(7-167): implement 4-phase stepper workflow)
             </Badge>
             <h1 className="text-2xl sm:text-3xl font-bold">Shortlist</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
