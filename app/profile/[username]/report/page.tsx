@@ -172,6 +172,10 @@ export default function ReportPage() {
   }, [username]);
 
   const handlePrint = () => {
+    // Block export while analyzing
+    if (loading) {
+      return; // Don't allow print while loading
+    }
     window.print();
   };
 
@@ -218,26 +222,77 @@ export default function ReportPage() {
       {/* ─── Print Styles ─── */}
       <style jsx global>{`
         @media print {
-          /* ═══ Force light mode and print optimization ═══ */
-          html, body {
-            background: #fff !important;
-            color: #000 !important;
+          /* Force white background on EVERYTHING */
+          *, *::before, *::after {
+            background: white !important;
+            background-color: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            color-adjust: exact !important;
+          }
+          
+          /* Force dark text */
+          body, p, h1, h2, h3, h4, h5, h6, span, div, label {
+            color: black !important;
+          }
+          
+          /* Hide ALL navigation, headers, footers */
+          header[class*="Header"],
+          footer[class*="Footer"],
+          nav,
+          [class*="nav"],
+          [class*="Nav"],
+          [class*="header"],
+          [class*="Header"],
+          [class*="footer"],
+          [class*="Footer"],
+          [class*="sidebar"],
+          [class*="Sidebar"],
+          [class*="menu"],
+          [class*="Menu"],
+          [class*="toolbar"],
+          [class*="Toolbar"],
+          [class*="bottom"],
+          [class*="Bottom"],
+          [class*="dock"],
+          [class*="Dock"],
+          [class*="AdminDock"] {
+            display: none !important;
+          }
+          
+          /* Hide buttons */
+          button,
+          [role="button"],
+          .btn,
+          [class*="button"],
+          [class*="Button"] {
+            display: none !important;
+          }
+          
+          /* Hide demo badge */
+          [class*="demo"],
+          [class*="Demo"] {
+            display: none !important;
+          }
+          
+          /* Ensure main content is full width */
+          main, .main, [class*="content"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
           }
 
-          /* ═══ Hide screen-only controls ═══ */
+          /* Hide screen-only controls */
           .print\\:hidden {
             display: none !important;
           }
 
-          /* ═══ Page breaks ═══ */
+          /* Page breaks */
           .print\\:break-before-page {
             page-break-before: always !important;
           }
 
-          /* ═══ Remove padding from print container ═══ */
+          /* Remove padding from print container */
           .print\\:p-0 {
             padding: 0 !important;
           }
@@ -246,75 +301,18 @@ export default function ReportPage() {
             max-width: none !important;
           }
 
-          /* ═══ Preserve grayscale for avatar ═══ */
+          /* Preserve grayscale for avatar */
           .print\\:grayscale-0 {
             filter: grayscale(0) !important;
           }
 
-          /* ═══ Ensure all backgrounds are print-friendly ═══ */
+          /* Remove shadows */
           * {
             box-shadow: none !important;
             text-shadow: none !important;
           }
 
-          /* ═══ Optimize colors for printing ═══ */
-          .bg-gray-50 {
-            background-color: #f9fafb !important;
-          }
-
-          .bg-gray-100 {
-            background-color: #f3f4f6 !important;
-          }
-
-          .bg-green-50\\/50,
-          .bg-green-50 {
-            background-color: #ecfdf5 !important;
-          }
-
-          .border-green-100 {
-            border-color: #d1fae5 !important;
-          }
-
-          .text-green-600,
-          .bg-green-500 {
-            color: #10b981 !important;
-          }
-
-          .text-amber-500,
-          .bg-amber-500 {
-            color: #f59e0b !important;
-          }
-
-          .text-primary {
-            color: #000 !important;
-          }
-
-          /* ═══ Ensure proper text contrast ═══ */
-          .text-gray-400 {
-            color: #9ca3af !important;
-          }
-
-          .text-gray-500 {
-            color: #6b7280 !important;
-          }
-
-          .text-gray-600 {
-            color: #4b5563 !important;
-          }
-
-          .text-gray-700 {
-            color: #374151 !important;
-          }
-
-          .text-gray-800 {
-            color: #1f2937 !important;
-          }
-
-          /* ═══ SVG elements optimization ═══ */
-          svg {
-            color: inherit !important;
-          }
-
+          /* SVG elements */
           svg text {
             fill: #6b7280 !important;
           }
@@ -324,13 +322,13 @@ export default function ReportPage() {
             stroke: #e5e7eb !important;
           }
 
-          /* ═══ Images ═══ */
+          /* Images */
           img {
             max-width: 100%;
             page-break-inside: avoid;
           }
 
-          /* ═══ Avoid breaking inside key sections ═══ */
+          /* Avoid breaking inside key sections */
           section {
             page-break-inside: avoid;
           }
@@ -349,9 +347,9 @@ export default function ReportPage() {
           ← Back
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
+          <Button variant="outline" onClick={handlePrint} disabled={loading}>
             <Printer className="w-4 h-4 mr-2" />
-            Print / PDF
+            {loading ? 'Loading...' : 'Print / PDF'}
           </Button>
           <Button>
             <Share2 className="w-4 h-4 mr-2" />

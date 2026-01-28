@@ -256,21 +256,68 @@ export default function SharedReportPage() {
       {/* ─── Print Styles ─── */}
       <style jsx global>{`
         @media print {
-          /* ═══ Force light mode regardless of user theme ═══ */
-          html, body {
-            background: #fff !important;
-            color: #1f2937 !important;
+          /* Force white background on EVERYTHING */
+          *, *::before, *::after {
+            background: white !important;
+            background-color: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            color-adjust: exact !important;
           }
-
-          /* ═══ Hide screen-only elements ═══ */
+          
+          /* Force dark text */
+          body, p, h1, h2, h3, h4, h5, h6, span, div, label {
+            color: black !important;
+          }
+          
+          /* Hide ALL navigation, headers, footers */
+          header[class*="Header"],
+          footer[class*="Footer"],
+          nav,
+          [class*="nav"],
+          [class*="Nav"],
+          [class*="header"],
+          [class*="Header"],
+          [class*="footer"],
+          [class*="Footer"],
+          [class*="sidebar"],
+          [class*="Sidebar"],
+          [class*="menu"],
+          [class*="Menu"],
+          [class*="toolbar"],
+          [class*="Toolbar"],
+          [class*="bottom"],
+          [class*="Bottom"],
+          [class*="dock"],
+          [class*="Dock"],
+          [class*="AdminDock"],
           .no-print {
             display: none !important;
           }
+          
+          /* Hide buttons */
+          button,
+          [role="button"],
+          .btn,
+          [class*="button"],
+          [class*="Button"] {
+            display: none !important;
+          }
+          
+          /* Hide demo badge */
+          [class*="demo"],
+          [class*="Demo"] {
+            display: none !important;
+          }
+          
+          /* Ensure main content is full width */
+          main, .main, [class*="content"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
 
-          /* ═══ Page break control ═══ */
+          /* Page break control */
           .print-break {
             page-break-before: always;
           }
@@ -278,179 +325,18 @@ export default function SharedReportPage() {
             page-break-inside: avoid;
           }
 
-          /* ═══ Override ALL background colors to light ═══ */
-          .report-page,
-          .report-page * {
-            background: #fff !important;
+          /* Ensure proper spacing */
+          .report-page {
+            padding: 0 !important;
           }
 
-          /* ═══ Cards and sections - light gray background ═══ */
-          .rp-card {
-            background: #f9fafb !important;
-            border: 1px solid #e5e7eb !important;
+          /* Remove shadows */
+          * {
+            box-shadow: none !important;
+            text-shadow: none !important;
           }
 
-          /* ═══ Header section ═══ */
-          .rp-header {
-            background: #f3f4f6 !important;
-            border: 1px solid #d1d5db !important;
-          }
-
-          /* ═══ All text to dark for readability ═══ */
-          .report-page h1,
-          .report-page h2,
-          .report-page h3,
-          .report-page h4,
-          .report-page h5,
-          .report-page h6,
-          .report-page p,
-          .report-page span,
-          .report-page div,
-          .report-page li,
-          .report-page a {
-            color: #1f2937 !important;
-          }
-
-          /* ═══ Headings - darker ═══ */
-          .rp-heading {
-            color: #111827 !important;
-          }
-
-          /* ═══ Muted text (descriptions, labels) ═══ */
-          .text-zinc-400,
-          .text-zinc-500,
-          .text-zinc-600,
-          .text-muted-foreground {
-            color: #6b7280 !important;
-          }
-
-          /* ═══ Very muted text (tertiary info) ═══ */
-          .text-zinc-700,
-          .text-zinc-800 {
-            color: #4b5563 !important;
-          }
-
-          /* ═══ Badges and pills ═══ */
-          .rp-badge {
-            background: #e5e7eb !important;
-            color: #374151 !important;
-            border: 1px solid #d1d5db !important;
-          }
-
-          /* ═══ Score ring and metrics - preserve brand colors ═══ */
-          .text-emerald-400,
-          .text-emerald-500 {
-            color: #10b981 !important;
-          }
-          .text-blue-400,
-          .text-blue-500 {
-            color: #3b82f6 !important;
-          }
-          .text-yellow-400,
-          .text-yellow-500 {
-            color: #f59e0b !important;
-          }
-          .text-orange-400,
-          .text-orange-500 {
-            color: #f97316 !important;
-          }
-          .text-red-400,
-          .text-red-500 {
-            color: #ef4444 !important;
-          }
-          .text-purple-400,
-          .text-purple-500 {
-            color: #a855f7 !important;
-          }
-          .text-cyan-400,
-          .text-cyan-500 {
-            color: #06b6d4 !important;
-          }
-          .text-indigo-400,
-          .text-indigo-500 {
-            color: #6366f1 !important;
-          }
-          .text-violet-400,
-          .text-violet-500 {
-            color: #8b5cf6 !important;
-          }
-          .text-rose-400,
-          .text-rose-500 {
-            color: #f43f5e !important;
-          }
-          .text-sky-400,
-          .text-sky-500 {
-            color: #0ea5e9 !important;
-          }
-          .text-amber-400,
-          .text-amber-500 {
-            color: #f59e0b !important;
-          }
-          .text-teal-400,
-          .text-teal-500 {
-            color: #14b8a6 !important;
-          }
-
-          /* ═══ Progress bars - preserve colors ═══ */
-          .rp-bar-track {
-            background: #e5e7eb !important;
-          }
-          .bg-gradient-to-r {
-            background: #3b82f6 !important;
-          }
-
-          /* ═══ Green flags section ═══ */
-          .rp-green {
-            background: #ecfdf5 !important;
-            border: 1px solid #a7f3d0 !important;
-          }
-          .rp-green * {
-            color: #065f46 !important;
-          }
-          .rp-green svg {
-            color: #10b981 !important;
-          }
-
-          /* ═══ Red flags section ═══ */
-          .rp-red {
-            background: #fef2f2 !important;
-            border: 1px solid #fecaca !important;
-          }
-          .rp-red * {
-            color: #991b1b !important;
-          }
-          .rp-red svg {
-            color: #ef4444 !important;
-          }
-
-          /* ═══ Icon containers and decorative elements ═══ */
-          .bg-purple-500\\/10,
-          .bg-blue-500\\/10,
-          .bg-indigo-500\\/10,
-          .bg-emerald-500\\/10,
-          .bg-cyan-500\\/10,
-          .bg-orange-500\\/10,
-          .bg-violet-500\\/10,
-          .bg-sky-500\\/10,
-          .bg-amber-500\\/10,
-          .bg-rose-500\\/10,
-          .bg-teal-500\\/10,
-          [class*="bg-"][class*="/10"],
-          [class*="bg-"][class*="/20"] {
-            background: #f3f4f6 !important;
-          }
-
-          /* ═══ Borders - consistent light gray ═══ */
-          .border-zinc-700,
-          .border-zinc-800,
-          .border-zinc-800\\/80,
-          .border-zinc-800\\/60,
-          .border-zinc-700\\/30,
-          .border-zinc-700\\/50 {
-            border-color: #e5e7eb !important;
-          }
-
-          /* ═══ Radar chart and SVG elements ═══ */
+          /* SVG elements */
           svg text {
             fill: #374151 !important;
           }
@@ -459,33 +345,20 @@ export default function SharedReportPage() {
             stroke: #d1d5db !important;
           }
 
-          /* ═══ Score ring backgrounds ═══ */
-          [class*="from-"][class*="-500"],
-          [class*="to-"][class*="-500"],
-          .bg-gradient-to-br {
-            background: #f9fafb !important;
-          }
-
-          /* ═══ Shadow removal for print ═══ */
-          * {
-            box-shadow: none !important;
-            text-shadow: none !important;
-          }
-
-          /* ═══ Ensure proper spacing ═══ */
-          .report-page {
-            padding: 0 !important;
-          }
-
-          /* ═══ Images remain visible ═══ */
+          /* Images remain visible */
           img {
             max-width: 100%;
             page-break-inside: avoid;
           }
 
-          /* ═══ Links - show as regular text ═══ */
+          /* Links - show as regular text */
           a {
             text-decoration: none !important;
+          }
+
+          /* Avoid breaking inside key sections */
+          section {
+            page-break-inside: avoid;
           }
         }
 
@@ -526,11 +399,18 @@ export default function SharedReportPage() {
                 )}
               </button>
               <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/20"
+                onClick={() => {
+                  // Block export while loading
+                  if (loading) {
+                    return;
+                  }
+                  window.print();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
               >
                 <Download className="w-4 h-4" />
-                Export PDF
+                {loading ? 'Loading...' : 'Export PDF'}
               </button>
             </div>
           </div>
