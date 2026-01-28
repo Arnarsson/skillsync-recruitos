@@ -21,7 +21,8 @@
     "score": "Score",
     "skills": "Kompetencer",
     "location": "Lokation",
-    "company": "Virksomhed"
+    "company": "Virksomhed",
+    "and": "og"
   },
   "header": {
     "logo": "recruitos"
@@ -184,7 +185,8 @@
         "title": "vigtige begrænsninger",
         "note": "Private repos og enterprise-arbejde er ikke synligt. '0 commits' betyder ikke dårlig udvikler — de arbejder muligvis på private/enterprise-projekter."
       }
-    }
+    },
+    "freeTrialBanner": "Start gratis med 3 dybdeprofil-kreditter"
   },
   "search": {
     "placeholder": "Søg efter kompetencer... (f.eks. 'React state management', 'Rust systems programmering')",
@@ -516,5 +518,27 @@
         ]
       }
     }
+  },
+  "auth": {
+    "signup": {
+      "title": "Opret din konto",
+      "subtitle": "Find top-ingeniører på få minutter",
+      "githubButton": "Tilmeld med GitHub",
+      "benefits": {
+        "freeCredits": "Start gratis — 3 dybdeprofil-kreditter inkluderet",
+        "noCard": "Intet kreditkort påkrævet",
+        "cancelAnytime": "Annuller når som helst"
+      },
+      "hasAccount": "Har du allerede en konto?",
+      "signInLink": "Log ind"
+    },
+    "login": {
+      "title": "Velkommen tilbage",
+      "subtitle": "Log ind for at fortsætte med at finde top-ingeniører",
+      "githubButton": "Fortsæt med GitHub",
+      "noAccount": "Har du ikke en konto?",
+      "signUpLink": "Tilmeld dig"
+    },
+    "termsNotice": "Ved at tilmelde dig accepterer du vores"
   }
 }

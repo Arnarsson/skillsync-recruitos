@@ -21,7 +21,8 @@
     "score": "Score",
     "skills": "Skills",
     "location": "Location",
-    "company": "Company"
+    "company": "Company",
+    "and": "and"
   },
   "header": {
     "logo": "recruitos"
@@ -184,7 +185,8 @@
         "title": "important limitations",
         "note": "Private repos and enterprise work aren't visible. '0 commits' doesn't mean bad developer — they may work on private/enterprise projects."
       }
-    }
+    },
+    "freeTrialBanner": "Start free with 3 deep profile credits"
   },
   "search": {
     "placeholder": "Search by capabilities... (e.g., 'React state management', 'Rust systems programming')",
@@ -499,5 +501,27 @@
         ]
       }
     }
+  },
+  "auth": {
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Start finding top engineers in minutes",
+      "githubButton": "Sign up with GitHub",
+      "benefits": {
+        "freeCredits": "Start free — 3 deep profile credits included",
+        "noCard": "No credit card required",
+        "cancelAnytime": "Cancel anytime"
+      },
+      "hasAccount": "Already have an account?",
+      "signInLink": "Sign in"
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to continue finding top engineers",
+      "githubButton": "Continue with GitHub",
+      "noAccount": "Dont have an account?",
+      "signUpLink": "Sign up"
+    },
+    "termsNotice": "By signing up, you agree to our"
   }
 }

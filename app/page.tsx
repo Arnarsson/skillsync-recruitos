@@ -45,7 +45,7 @@ export default function Home() {
           {/* Free Credits Banner */}
           <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/30">
             <Zap className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Start gratis med 5 dybdeprofil-kreditter</span>
+            <span className="text-sm font-medium">{t("home.freeTrialBanner")}</span>
           </div>
 
           {/* Headline */}
