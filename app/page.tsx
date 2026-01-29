@@ -92,6 +92,21 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Wizard CTA */}
+          <div className="mt-4 text-center">
+            <Link
+              href="/wizard"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-colors"
+            >
+              <Zap className="w-4 h-4" />
+              {t("home.lang") === "da" ? "Start guidet opsætning" : "Start Guided Setup"}
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <p className="text-xs text-muted-foreground mt-2">
+              {t("home.lang") === "da" ? "3-trins wizard til at finde din første shortlist" : "3-step wizard to find your first shortlist"}
+            </p>
+          </div>
+
           {/* Quick Search Tags */}
           <div className="flex flex-wrap justify-center gap-2">
             {quickSearches.map((q) => (
