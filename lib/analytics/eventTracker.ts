@@ -76,10 +76,10 @@ export async function trackEvent({
     // Log event for now (until schema is migrated)
     console.log('[Analytics] Event:', { userId, type, stage, searchId, candidateId });
 
-    // Also update candidate status if applicable
-    if (candidateId && searchId) {
-      await updateCandidateStatus(userId, candidateId, searchId, type, metadata);
-    }
+    // TODO: Uncomment when CandidateStatus model is added to Prisma schema
+    // if (candidateId && searchId) {
+    //   await updateCandidateStatus(userId, candidateId, searchId, type, metadata);
+    // }
   } catch (error) {
     // Log error but don't throw - analytics should never break app flow
     console.error('[Analytics] Failed to track event:', {
