@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -35,6 +36,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <Script
+          src="https://sourcetrace.vercel.app/t.js"
+          data-key="st_a9ecf75601de46ab8c97a017f6d57960"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className={`${inter.variable} antialiased bg-[#141517] text-white min-h-screen`}>
         <Providers>
           <Header />
