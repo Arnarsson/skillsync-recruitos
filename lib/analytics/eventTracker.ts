@@ -47,6 +47,8 @@ interface TrackEventOptions {
 
 /**
  * Track a funnel event
+ * TODO: Add FunnelEvent model to Prisma schema and run migration
+ * For now, this logs events but doesn't persist (schema not yet created)
  */
 export async function trackEvent({
   userId,
@@ -58,17 +60,21 @@ export async function trackEvent({
   try {
     const stage = EVENT_STAGE_MAP[type];
 
-    await prisma.funnelEvent.create({
-      data: {
-        userId,
-        type,
-        stage,
-        searchId,
-        candidateId,
-        metadata: metadata || {},
-        timestamp: new Date(),
-      },
-    });
+    // TODO: Uncomment when FunnelEvent model is added to Prisma schema
+    // await prisma.funnelEvent.create({
+    //   data: {
+    //     userId,
+    //     type,
+    //     stage,
+    //     searchId,
+    //     candidateId,
+    //     metadata: metadata || {},
+    //     timestamp: new Date(),
+    //   },
+    // });
+    
+    // Log event for now (until schema is migrated)
+    console.log('[Analytics] Event:', { userId, type, stage, searchId, candidateId });
 
     // Also update candidate status if applicable
     if (candidateId && searchId) {
