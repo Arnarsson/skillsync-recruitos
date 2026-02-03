@@ -85,7 +85,7 @@ export interface OutreachSentMetadata {
 
 export interface CandidateRepliedMetadata {
   replyChannel: 'email' | 'linkedin' | 'phone' | 'other';
-  timeSinceOutreach Ms: number;
+  timeSinceOutreachMs: number;
   sentiment?: 'positive' | 'neutral' | 'negative';
 }
 
@@ -151,5 +151,5 @@ export interface ModelTuningData {
     locationMatch: boolean;
     [key: string]: any;
   };
-  outcome Timestamp: Date;
+  outcomeTimestamp: Date;
 }

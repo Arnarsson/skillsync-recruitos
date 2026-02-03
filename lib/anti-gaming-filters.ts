@@ -300,7 +300,14 @@ export async function calculateQualitySignals(
     }
     
     // 3. Check commit patterns
-    const burstAnalysis = await detectCommitBursts(events);
+    const filteredEvents = events
+      .filter(e => e.type !== null)
+      .map(e => ({ 
+        type: e.type as string, 
+        created_at: e.created_at ?? undefined,
+        payload: e.payload 
+      }));
+    const burstAnalysis = await detectCommitBursts(filteredEvents);
     result.hasCommitBursts = burstAnalysis.hasBursts;
     
     if (burstAnalysis.hasBursts) {

@@ -97,7 +97,7 @@ export class TeamTailorService {
         };
       }
 
-      const teamTailorCandidate = this.transformCandidate(candidate, options);
+      const teamTailorCandidate = this.transformCandidate(candidate, { ...options, email: options.email! });
       
       const response = await fetch(`${this.baseUrl}/${this.apiVersion}/candidates`, {
         method: 'POST',

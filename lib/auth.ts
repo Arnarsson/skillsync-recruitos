@@ -22,7 +22,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, account, profile }) {
       if (account && profile) {
         token.accessToken = account.access_token;
-        token.id = (profile as { id?: string | number }).id;
+        const profileId = (profile as { id?: string | number }).id;
+        token.id = profileId !== undefined ? String(profileId) : undefined;
       }
       return token;
     },
