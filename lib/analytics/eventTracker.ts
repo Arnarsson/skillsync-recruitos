@@ -150,23 +150,25 @@ async function updateCandidateStatus(
       break;
   }
 
-  await prisma.candidateStatus.upsert({
-    where: {
-      candidateId_searchId_userId: {
-        candidateId,
-        searchId,
-        userId,
-      },
-    },
-    update: updates,
-    create: {
-      candidateId,
-      searchId,
-      userId,
-      discoveredAt: new Date(),
-      ...updates,
-    },
-  });
+  // TODO: Uncomment when CandidateStatus model is added to Prisma schema
+  // await prisma.candidateStatus.upsert({
+  //   where: {
+  //     candidateId_searchId_userId: {
+  //       candidateId,
+  //       searchId,
+  //       userId,
+  //     },
+  //   },
+  //   update: updates,
+  //   create: {
+  //     candidateId,
+  //     searchId,
+  //     userId,
+  //     discoveredAt: new Date(),
+  //     ...updates,
+  //   },
+  // });
+  console.log('[Analytics] CandidateStatus update:', { userId, candidateId, searchId, eventType });
 }
 
 /**
