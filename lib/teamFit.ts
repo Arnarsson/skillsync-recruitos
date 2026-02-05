@@ -22,7 +22,6 @@ export interface CandidateActivity {
   followers?: number;
   createdAt?: string;
   bio?: string;
-  topRepos?: any[];
 }
 
 /**
