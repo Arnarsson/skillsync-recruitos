@@ -353,11 +353,13 @@ function OverviewTab({ report }: { report: NetworkIntelligenceReport }) {
 // ============================================================================
 
 function HealthTab({ health }: { health: NetworkIntelligenceReport['relationshipHealth'] }) {
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  
   return (
     <div className="bg-gray-900 rounded-xl overflow-hidden">
       <div className="p-4 border-b border-gray-800">
         <h2 className="text-lg font-semibold text-white">Relationship Health</h2>
-        <p className="text-gray-400 text-sm">Based on half-life decay model (180 days = 50% decay)</p>
+        <p className="text-gray-400 text-sm">Based on half-life decay model (180 days = 50% decay) • Click row for details</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -367,24 +369,74 @@ function HealthTab({ health }: { health: NetworkIntelligenceReport['relationship
               <th className="text-left px-4 py-3 text-gray-400 font-medium">Company</th>
               <th className="text-center px-4 py-3 text-gray-400 font-medium">Strength</th>
               <th className="text-center px-4 py-3 text-gray-400 font-medium">Status</th>
-              <th className="text-center px-4 py-3 text-gray-400 font-medium">Days Since Contact</th>
-              <th className="text-center px-4 py-3 text-gray-400 font-medium">Messages</th>
+              <th className="text-center px-4 py-3 text-gray-400 font-medium">Half-Life</th>
+              <th className="text-center px-4 py-3 text-gray-400 font-medium">Days Silent</th>
+              <th className="text-left px-4 py-3 text-gray-400 font-medium">Why</th>
             </tr>
           </thead>
           <tbody>
             {health.slice(0, 50).map((item, i) => (
-              <tr key={i} className="border-t border-gray-800 hover:bg-gray-800/30">
-                <td className="px-4 py-3 text-white font-medium">{item.connection.fullName}</td>
-                <td className="px-4 py-3 text-gray-400">{item.connection.company || '—'}</td>
-                <td className="px-4 py-3 text-center">
-                  <StrengthBadge value={item.currentStrength} />
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <StatusBadge status={item.status} />
-                </td>
-                <td className="px-4 py-3 text-center text-gray-400">{item.daysSinceContact}d</td>
-                <td className="px-4 py-3 text-center text-gray-400">{item.messageCount}</td>
-              </tr>
+              <React.Fragment key={i}>
+                <tr 
+                  className="border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer"
+                  onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                >
+                  <td className="px-4 py-3 text-white font-medium">{item.connection.fullName}</td>
+                  <td className="px-4 py-3 text-gray-400">{item.connection.company || '—'}</td>
+                  <td className="px-4 py-3 text-center">
+                    <StrengthBadge value={item.currentStrength} />
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <StatusBadge status={item.status} />
+                  </td>
+                  <td className="px-4 py-3 text-center text-gray-400">{item.adjustedHalfLife}d</td>
+                  <td className="px-4 py-3 text-center text-gray-400">{item.daysSinceContact}d</td>
+                  <td className="px-4 py-3 text-left">
+                    {item.modifiers && item.modifiers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {item.modifiers.map((mod, j) => (
+                          <span 
+                            key={j} 
+                            className={`text-xs px-2 py-0.5 rounded ${
+                              mod.includes('×1.') ? 'bg-green-500/20 text-green-400' :
+                              mod.includes('×0.') ? 'bg-red-500/20 text-red-400' :
+                              'bg-gray-700 text-gray-300'
+                            }`}
+                          >
+                            {mod.split(' ')[0]}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-600 text-xs">base rate</span>
+                    )}
+                  </td>
+                </tr>
+                {expandedRow === i && (
+                  <tr className="bg-gray-800/50">
+                    <td colSpan={7} className="px-4 py-3">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">Messages</p>
+                          <p className="text-white">{item.messageCount} ({item.avgMessageDepth} avg chars)</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Last Contact</p>
+                          <p className="text-white">{item.lastInteraction?.toLocaleDateString() || 'Never'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Half-Life Modifiers</p>
+                          <p className="text-white">{item.modifiers?.join(', ') || 'None (base 180d)'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Decay Formula</p>
+                          <p className="text-white font-mono text-xs">100 × 0.5^({item.daysSinceContact}/{item.adjustedHalfLife}) = {item.currentStrength}</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

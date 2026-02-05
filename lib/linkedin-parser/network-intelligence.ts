@@ -31,6 +31,7 @@ export interface RelationshipHealth {
   lastInteraction?: Date;
   messageCount: number;
   avgMessageDepth: number; // average chars per message
+  modifiers?: string[]; // Half-life modifiers applied (e.g., "substantive_messages ×1.3")
 }
 
 /**
@@ -64,6 +65,10 @@ export function calculateRelationshipHealth(
   const BASE_HALF_LIFE = 180; // days
   const now = new Date();
   
+  // Check for shared companies (your positions)
+  const myCompanies = new Set<string>();
+  // Note: We don't have Positions.csv in basic export, but company from profile would go here
+  
   return data.connections.map(connection => {
     // Find messages with this connection (from or to)
     const messages = data.messages.filter(m => 
@@ -76,6 +81,14 @@ export function calculateRelationshipHealth(
     );
     const endorsementsGiven = data.endorsementsGiven.filter(e =>
       matchesPerson(e.endorserFullName, connection)
+    );
+    
+    // Find recommendations
+    const recsReceived = data.recommendationsReceived.filter(r =>
+      matchesPerson(r.fullName, connection)
+    );
+    const recsGiven = data.recommendationsGiven.filter(r =>
+      matchesPerson(r.fullName, connection)
     );
     
     // Calculate last interaction
@@ -92,21 +105,45 @@ export function calculateRelationshipHealth(
       ? messages.reduce((sum, m) => sum + m.content.length, 0) / messages.length
       : 0;
     
-    // Adjust half-life based on relationship signals
+    // Check for substantive vs shallow messages
+    const hasSubstantive = messages.some(m => m.content.length >= 200 || (m.content.includes('?') && m.content.length >= 80));
+    const hasShallowOnly = messages.length > 0 && !hasSubstantive && avgMessageDepth < 50;
+    
+    // Adjust half-life based on relationship signals with EXPLAINABILITY
     let adjustedHalfLife = BASE_HALF_LIFE;
+    const modifiers: string[] = [];
     
-    // Deep messages (>200 chars) = slower decay
-    if (avgMessageDepth > 200) adjustedHalfLife *= 1.3;
-    // Shallow messages = faster decay
-    else if (avgMessageDepth < 50 && messages.length > 0) adjustedHalfLife *= 0.9;
+    // Shared company approximation (connection's current company matches your history)
+    const sharedCompany = myCompanies.has((connection.company || '').toLowerCase());
+    if (sharedCompany) {
+      adjustedHalfLife *= 1.5;
+      modifiers.push('shared_company ×1.5');
+    }
     
-    // Multiple interaction types = slower decay
-    if (messages.length > 0 && (endorsementsReceived.length > 0 || endorsementsGiven.length > 0)) {
+    // Deep/substantive messages = slower decay
+    if (hasSubstantive) {
+      adjustedHalfLife *= 1.3;
+      modifiers.push('substantive_messages ×1.3');
+    }
+    // Shallow messages only = faster decay
+    else if (hasShallowOnly) {
+      adjustedHalfLife *= 0.9;
+      modifiers.push('shallow_only ×0.9');
+    }
+    
+    // Multiple touchpoints (messages + endorsements/recs) = slower decay
+    const hasMultipleTouchpoints = messages.length > 0 && 
+      (endorsementsReceived.length > 0 || endorsementsGiven.length > 0 || recsReceived.length > 0 || recsGiven.length > 0);
+    if (hasMultipleTouchpoints) {
       adjustedHalfLife *= 1.4;
+      modifiers.push('multiple_touchpoints ×1.4');
     }
     
     // Never messaged = faster decay
-    if (messages.length === 0) adjustedHalfLife *= 0.7;
+    if (messages.length === 0) {
+      adjustedHalfLife *= 0.7;
+      modifiers.push('never_messaged ×0.7');
+    }
     
     // Calculate current strength using decay formula
     const currentStrength = Math.round(
@@ -129,6 +166,7 @@ export function calculateRelationshipHealth(
       lastInteraction: lastMessage,
       messageCount: messages.length,
       avgMessageDepth: Math.round(avgMessageDepth),
+      modifiers, // NEW: Explainability
     };
   }).sort((a, b) => b.currentStrength - a.currentStrength);
 }
