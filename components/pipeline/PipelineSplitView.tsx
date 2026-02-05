@@ -25,7 +25,7 @@ interface Candidate {
   location: string;
   alignmentScore: number;
   avatar: string;
-  skills: string[];
+  skills?: string[];
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
@@ -36,6 +36,10 @@ interface Candidate {
       attritionRisk?: string;
     };
   };
+  // Demo profile fields
+  buildprint?: any;
+  topRepos?: any[];
+  hasReceipts?: boolean;
 }
 
 interface PipelineSplitViewProps {

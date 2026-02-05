@@ -79,7 +79,7 @@ interface Candidate {
   location: string;
   alignmentScore: number;
   avatar: string;
-  skills: string[];
+  skills?: string[];
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
@@ -91,6 +91,10 @@ interface Candidate {
       attritionRisk?: string;
     };
   };
+  // Demo profile fields
+  buildprint?: any;
+  topRepos?: any[];
+  hasReceipts?: boolean;
 }
 
 interface CandidatePipelineItemProps {
@@ -201,16 +205,16 @@ export function CandidatePipelineItem({
         </div>
 
         {/* Compact Skills Preview */}
-        {candidate.skills && candidate.skills.length > 0 && (
+        {candidate.skills && (candidate.skills || []).length > 0 && (
           <div className="px-3 pb-3 flex flex-wrap gap-1">
-            {candidate.skills.slice(0, 3).map((skill) => (
+            {(candidate.skills || []).slice(0, 3).map((skill) => (
               <Badge key={skill} variant="secondary" className="text-[10px] px-1.5 py-0">
                 {skill}
               </Badge>
             ))}
-            {candidate.skills.length > 3 && (
+            {(candidate.skills || []).length > 3 && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                +{candidate.skills.length - 3}
+                +{(candidate.skills || []).length - 3}
               </Badge>
             )}
           </div>
@@ -296,16 +300,16 @@ export function CandidatePipelineItem({
                     </span>
                   </div>
                   {/* Skill Badges on collapsed card */}
-                  {candidate.skills && candidate.skills.length > 0 && (
+                  {candidate.skills && (candidate.skills || []).length > 0 && (
                     <div className="hidden sm:flex flex-wrap gap-1 mt-2">
-                      {candidate.skills.slice(0, 3).map((skill) => (
+                      {(candidate.skills || []).slice(0, 3).map((skill) => (
                         <Badge key={skill} variant="secondary" className="text-[10px] px-1.5 py-0">
                           {skill}
                         </Badge>
                       ))}
-                      {candidate.skills.length > 3 && (
+                      {(candidate.skills || []).length > 3 && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          +{candidate.skills.length - 3}
+                          +{(candidate.skills || []).length - 3}
                         </Badge>
                       )}
                     </div>

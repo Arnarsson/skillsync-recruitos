@@ -46,7 +46,7 @@ interface SharedProfile {
     company?: string;
     location?: string;
     avatar?: string;
-    skills: string[];
+    skills?: string[];
     yearsExperience?: number;
     alignmentScore: number;
     persona?: {
@@ -499,10 +499,10 @@ export default function SharedReportPage() {
             </div>
 
             {/* Skills */}
-            {d.skills.length > 0 && (
+            {(d.skills || []).length > 0 && (
               <div className="mt-5 pt-4 border-t border-zinc-800/60">
                 <div className="flex flex-wrap gap-2">
-                  {d.skills.slice(0, 12).map((skill) => (
+                  {(d.skills || []).slice(0, 12).map((skill) => (
                     <span
                       key={skill}
                       className="rp-badge px-3 py-1.5 bg-zinc-800/60 text-zinc-300 rounded-lg text-xs font-medium border border-zinc-700/30"

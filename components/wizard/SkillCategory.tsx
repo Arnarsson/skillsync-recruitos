@@ -9,7 +9,7 @@ export function SkillCategory({
   editable = true,
 }: {
   title: string;
-  skills: string[];
+  skills?: string[];
   onChange: (next: string[]) => void;
   editable?: boolean;
 }) {
@@ -19,13 +19,13 @@ export function SkillCategory({
       {editable ? (
         <SkillChips
           label=""
-          value={skills}
+          value={skills || []}
           onChange={onChange}
           placeholder="Add skills…"
         />
       ) : (
         <div className="text-sm text-muted-foreground">
-          {skills.length ? skills.join(", ") : "—"}
+          {(skills || []).length ? (skills || []).join(", ") : "—"}
         </div>
       )}
     </div>

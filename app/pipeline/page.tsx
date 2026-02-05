@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAdmin } from "@/lib/adminContext";
+import { getDemoCandidates } from "@/lib/demoData";
 import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -106,7 +107,7 @@ interface Candidate {
   location: string;
   alignmentScore: number;
   avatar: string;
-  skills: string[];
+  skills?: string[];
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
@@ -117,11 +118,20 @@ interface Candidate {
       attritionRisk?: string;
     };
   };
+  // Demo profile fields
+  buildprint?: any;
+  topRepos?: any[];
+  languages?: any[];
+  hasReceipts?: boolean;
+  yearsExperience?: number;
+  shortlistSummary?: string;
+  sourceUrl?: string;
+  rawProfileText?: string;
 }
 
 export default function PipelinePage() {
   const { t } = useLanguage();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isDemoMode } = useAdmin();
   const router = useRouter();
   const searchParams = useSearchParams();
   const adminSuffix = ""; // No longer needed with context-based admin
@@ -224,6 +234,23 @@ export default function PipelinePage() {
     let isActive = true;
 
     const initializePipeline = async () => {
+      // DEMO MODE: Load real demo profiles with receipts
+      if (isDemoMode) {
+        console.log("[Pipeline] Demo mode - loading real demo profiles");
+        const demoCandidates = getDemoCandidates();
+        if (isActive) {
+          // Cast to local Candidate type (safe because we control the demo data structure)
+          setCandidates(demoCandidates as unknown as Candidate[]);
+          setJobContext({
+            title: "Senior Full-Stack Engineer",
+            company: "FinTech Startup",
+            requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL"],
+            location: "Remote",
+          });
+        }
+        return; // Skip normal initialization in demo mode
+      }
+
       const stored = localStorage.getItem("apex_job_context");
       let parsedJobContext = null;
       if (stored) {
@@ -319,7 +346,7 @@ export default function PipelinePage() {
                 bio: string;
                 location: string;
                 company: string;
-                skills: string[];
+                skills?: string[];
                 score: number;
               }) => {
                 // Calculate alignment score based on job requirements
@@ -398,11 +425,11 @@ export default function PipelinePage() {
     return () => {
       isActive = false;
     };
-  }, []); // Empty dependency array - run only on mount
+  }, [isDemoMode]); // Re-run if demo mode changes
 
   // Calculate alignment score based on job requirements and skills config
   const calculateAlignmentScore = (
-    user: { skills: string[]; bio: string; location: string },
+    user: { skills?: string[]; bio: string; location: string },
     jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
   ): { score: number; breakdown: ScoreBreakdown } => {
     const baseScore = 40;
@@ -410,7 +437,7 @@ export default function PipelinePage() {
     let preferredScore = 0;
     let locationScore = 0;
 
-    const userSkillsLower = user.skills.map((s) => s.toLowerCase());
+    const userSkillsLower = (user.skills || []).map((s) => s.toLowerCase());
     const userBioLower = (user.bio || "").toLowerCase();
 
     // Helper to check if user has a skill
@@ -554,7 +581,7 @@ export default function PipelinePage() {
           bio: string;
           location: string;
           company: string;
-          skills: string[];
+          skills?: string[];
           score: number;
         }) => {
           // Calculate alignment score based on job requirements
@@ -616,7 +643,7 @@ export default function PipelinePage() {
           bio: string;
           location: string;
           company: string;
-          skills: string[];
+          skills?: string[];
           score: number;
         }) => {
           // Calculate alignment score based on job requirements
@@ -1599,8 +1626,8 @@ export default function PipelinePage() {
                                   {skill}
                                 </Badge>
                               ))}
-                              {c.skills && c.skills.length > 8 && (
-                                <Badge variant="outline" className="text-[10px]">+{c.skills.length - 8}</Badge>
+                              {c.skills && (c.skills || []).length > 8 && (
+                                <Badge variant="outline" className="text-[10px]">+{(c.skills || []).length - 8}</Badge>
                               )}
                             </div>
                           </td>

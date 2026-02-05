@@ -55,7 +55,7 @@ interface Candidate {
   location: string;
   alignmentScore: number;
   avatar: string;
-  skills: string[];
+  skills?: string[];
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
@@ -66,6 +66,10 @@ interface Candidate {
       attritionRisk?: string;
     };
   };
+  // Demo profile fields
+  buildprint?: any;
+  topRepos?: any[];
+  hasReceipts?: boolean;
 }
 
 interface CandidateDetailPanelProps {
@@ -240,14 +244,14 @@ export function CandidateDetailPanel({
         <div>
           <h3 className="text-xs uppercase text-muted-foreground mb-2">Skills</h3>
           <div className="flex flex-wrap gap-1.5">
-            {candidate.skills.slice(0, 8).map((skill) => (
+            {(candidate.skills || []).slice(0, 8).map((skill) => (
               <Badge key={skill} variant="secondary" className="text-xs">
                 {skill}
               </Badge>
             ))}
-            {candidate.skills.length > 8 && (
+            {(candidate.skills || []).length > 8 && (
               <Badge variant="outline" className="text-xs">
-                +{candidate.skills.length - 8}
+                +{(candidate.skills || []).length - 8}
               </Badge>
             )}
           </div>

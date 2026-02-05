@@ -249,7 +249,7 @@ interface Candidate {
   location: string;
   alignmentScore: number;
   avatar: string;
-  skills: string[];
+  skills?: string[];
   yearsExperience?: number;
   shortlistSummary?: string;
   keyEvidence?: string[];
@@ -938,7 +938,7 @@ export default function DeepProfilePage() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-4">
-                  {candidate.skills.slice(0, 6).map((skill) => (
+                  {(candidate.skills || []).slice(0, 6).map((skill) => (
                     <Badge key={skill} variant="secondary">
                       {skill}
                     </Badge>
@@ -1085,7 +1085,7 @@ export default function DeepProfilePage() {
                     <span className="text-sm text-muted-foreground font-medium">Top Skills</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {candidate.skills.slice(0, 3).map((skill) => (
+                    {(candidate.skills || []).slice(0, 3).map((skill) => (
                       <Badge key={skill} variant="secondary" className="text-xs">
                         {skill}
                       </Badge>

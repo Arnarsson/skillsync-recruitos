@@ -62,7 +62,7 @@ interface ProfileData {
   };
   repos: Repo[];
   totalStars: number;
-  skills: string[];
+  skills?: string[];
   contributions: number;
   deep: boolean;
   contact?: {
@@ -724,11 +724,11 @@ export default function ProfilePage({
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Skills */}
-            {skills.length > 0 && (
+            {(skills || []).length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Skills & Technologies</h2>
                 <div className="flex flex-wrap gap-2">
-                  {skills.map((skill) => (
+                  {(skills || []).map((skill) => (
                     <Badge key={skill} variant="secondary" className="px-4 py-2">
                       {skill}
                     </Badge>
@@ -913,7 +913,7 @@ export default function ProfilePage({
                       <br />
                       <p>
                         I came across your work on {repos[0]?.name || "GitHub"} and was impressed by
-                        {skills[0] ? ` your ${skills[0]} expertise` : " your contributions"}.
+                        {(skills || [])[0] ? ` your ${(skills || [])[0]} expertise` : " your contributions"}.
                       </p>
                       <br />
                       <p>

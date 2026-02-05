@@ -246,6 +246,45 @@ export interface Candidate {
 
   // Advanced Enrichment Profile (10x better data)
   advancedProfile?: AdvancedCandidateProfile;
+
+  // Demo profile data (real GitHub data with receipts)
+  buildprint?: {
+    impact: MetricWithReceipts;
+    collaboration: MetricWithReceipts;
+    consistency: MetricWithReceipts;
+    complexity: MetricWithReceipts;
+    ownership: MetricWithReceipts;
+    overallScore: number;
+  };
+  topRepos?: Array<{
+    name: string;
+    fullName: string;
+    description: string;
+    url: string;
+    stars: number;
+    forks: number;
+    language: string;
+    topics: string[];
+    updatedAt: string;
+  }>;
+  languages?: Array<{
+    name: string;
+    percentage: number;
+    color: string;
+  }>;
+  skills?: string[];
+  hasReceipts?: boolean;
+}
+
+interface MetricWithReceipts {
+  value: number;
+  label: string;
+  receipts: Array<{
+    label: string;
+    value: string | number;
+    url: string;
+    type: "repo" | "pr" | "commit" | "profile" | "stat";
+  }>;
 }
 
 export interface JobContext {

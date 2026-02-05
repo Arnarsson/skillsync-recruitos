@@ -108,7 +108,7 @@ interface Candidate {
   location: string;
   alignmentScore: number;
   avatar: string;
-  skills: string[];
+  skills?: string[];
   persona?: Persona;
   deepProfile?: DeepProfile;
   scoreBreakdown?: {
