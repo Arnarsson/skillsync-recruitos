@@ -545,7 +545,7 @@ function WarmPathsTab({ paths }: { paths: WarmPath[] }) {
       <div className="bg-gray-900 rounded-xl p-12 text-center">
         <Target className="w-12 h-12 text-gray-600 mx-auto mb-4" />
         <h3 className="text-white font-medium">No warm paths found</h3>
-        <p className="text-gray-500 mt-1">Search for a company name to find warm paths through your network</p>
+        <p className="text-gray-500 mt-1">Search for a company name or executive (e.g., "Stripe", "Satya Nadella")</p>
       </div>
     );
   }
@@ -553,40 +553,78 @@ function WarmPathsTab({ paths }: { paths: WarmPath[] }) {
   return (
     <div className="bg-gray-900 rounded-xl overflow-hidden">
       <div className="p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">Warm Paths to {paths[0]?.targetCompany}</h2>
-        <p className="text-gray-400 text-sm">Ranked by combined relationship strength and relevance</p>
+        <h2 className="text-lg font-semibold text-white">
+          🎯 Warm Paths to {paths[0]?.targetName || paths[0]?.targetCompany}
+        </h2>
+        <p className="text-gray-400 text-sm">
+          Ranked by evidence-based scoring • {paths.length} connection{paths.length !== 1 ? 's' : ''} found
+        </p>
       </div>
       <div className="divide-y divide-gray-800">
-        {paths.map((path, i) => (
-          <div key={i} className="p-4 hover:bg-gray-800/30">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                  You
+        {paths.map((path, i) => {
+          const scoreColor = path.score >= 13 ? 'green' : path.score >= 10 ? 'yellow' : 'orange';
+          const scoreLabel = path.score >= 13 ? 'EXCELLENT' : path.score >= 10 ? 'GOOD' : 'POSSIBLE';
+          
+          return (
+            <div key={i} className="p-4 hover:bg-gray-800/30">
+              {/* Header with path visualization */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                    You
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-500" />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                    scoreColor === 'green' ? 'bg-green-600' : scoreColor === 'yellow' ? 'bg-yellow-600' : 'bg-orange-600'
+                  }`}>
+                    {path.bridgePerson.firstName?.[0] || path.bridgePerson.fullName[0]}
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-500" />
+                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    🎯
+                  </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-gray-500" />
-                <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  {path.bridgePerson.firstName[0]}
+                <div className="flex-1">
+                  <h3 className="text-white font-medium">{path.bridgePerson.fullName}</h3>
+                  <p className="text-gray-500 text-sm">{path.bridgePerson.position} at {path.bridgePerson.company}</p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-gray-500" />
-                <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  🎯
+                <div className="text-right">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    scoreColor === 'green' ? 'bg-green-500/20 text-green-400' :
+                    scoreColor === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-orange-500/20 text-orange-400'
+                  }`}>
+                    {path.score}/15 {scoreLabel}
+                  </span>
                 </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-white font-medium">{path.bridgePerson.fullName}</h3>
-                <p className="text-gray-500 text-sm">{path.bridgePerson.position} at {path.bridgePerson.company}</p>
-              </div>
-              <div className="text-right">
-                <StrengthBadge value={path.pathStrength} />
-                <p className="text-gray-500 text-xs mt-1">Path Strength</p>
+              
+              {/* Evidence section */}
+              {path.evidence && path.evidence.length > 0 && (
+                <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-400 text-xs font-medium mb-2">📊 EVIDENCE</p>
+                  <ul className="space-y-1">
+                    {path.evidence.map((e, j) => (
+                      <li key={j} className="text-gray-300 text-sm flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        {e}
+                      </li>
+                    ))}
+                  </ul>
+                  {path.reasoning && (
+                    <p className="text-gray-500 text-sm mt-2 italic">{path.reasoning}</p>
+                  )}
+                </div>
+              )}
+              
+              {/* Suggested approach */}
+              <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <p className="text-blue-400 text-xs font-medium mb-1">💬 SUGGESTED MESSAGE</p>
+                <p className="text-blue-300 text-sm">{path.suggestedApproach}</p>
               </div>
             </div>
-            <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <p className="text-blue-400 text-sm">{path.suggestedApproach}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

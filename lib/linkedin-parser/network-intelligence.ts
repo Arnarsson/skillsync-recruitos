@@ -475,7 +475,8 @@ export function classifyNetworkArchetype(
 }
 
 // ============================================================================
-// 6. WARM PATH DISCOVERY (Recruiter-focused)
+// 6. WARM PATH DISCOVERY (6degrees-Enhanced)
+// Evidence-based scoring from 6degrees pathfinder
 // ============================================================================
 
 export interface WarmPath {
@@ -483,89 +484,205 @@ export interface WarmPath {
   targetCompany?: string;
   bridgePerson: LinkedInConnection;
   pathStrength: number; // 0-100
+  score: number; // Evidence-based score (0-15)
+  evidence: string[]; // Why this person is a good path
+  reasoning: string; // Human-readable explanation
   relationshipHealth: RelationshipHealth;
   vouchScore: VouchScore;
   suggestedApproach: string;
 }
 
+// Known executives → companies mapping (from 6degrees)
+const KNOWN_EXECUTIVES: Record<string, string[]> = {
+  'satya nadella': ['microsoft'],
+  'elon musk': ['tesla', 'spacex', 'twitter', 'x corp', 'x', 'boring company', 'neuralink', 'xai'],
+  'sundar pichai': ['google', 'alphabet'],
+  'tim cook': ['apple'],
+  'mark zuckerberg': ['meta', 'facebook'],
+  'jensen huang': ['nvidia'],
+  'sam altman': ['openai'],
+  'bill gates': ['microsoft', 'bill & melinda gates foundation'],
+  'dara khosrowshahi': ['uber'],
+  'brian chesky': ['airbnb'],
+  'daniel ek': ['spotify'],
+  'reed hastings': ['netflix'],
+  'andy jassy': ['amazon', 'aws'],
+  'arvind krishna': ['ibm'],
+  'pat gelsinger': ['intel'],
+  'lisa su': ['amd'],
+};
+
+// Senior title patterns
+const SENIOR_TITLES = [
+  'CEO', 'CTO', 'CFO', 'COO', 'CMO', 'CRO', 'CPO', 'CHRO',
+  'VP', 'Vice President', 'SVP', 'EVP',
+  'Director', 'Head of', 'Chief', 'President', 'Partner',
+  'Principal', 'Senior Director', 'Managing Director'
+];
+
+/**
+ * Resolve target name to company using known executives or pattern matching
+ */
+function resolveTargetCompany(targetInput: string): { name?: string; companies: string[] } {
+  const lower = targetInput.toLowerCase().trim();
+  
+  // Check known executives
+  for (const [exec, companies] of Object.entries(KNOWN_EXECUTIVES)) {
+    if (lower.includes(exec)) {
+      return { name: targetInput, companies };
+    }
+  }
+  
+  // Extract company from pattern like "CEO at Company" or "CTO @ Stripe"
+  const companyMatch = targetInput.match(/(?:CEO|CTO|CFO|CMO|COO|President|Founder|Director|VP|Head).*?(?:at|@|of)\s+(.+)/i);
+  if (companyMatch) {
+    return { name: targetInput, companies: [companyMatch[1].trim()] };
+  }
+  
+  // Treat as company name directly
+  return { companies: [targetInput] };
+}
+
+/**
+ * Score a connection based on EVIDENCE (6degrees pattern)
+ */
+function scoreConnection(
+  connection: LinkedInConnection,
+  targetCompanies: string[],
+  targetName?: string
+): { score: number; evidence: string[]; reasoning: string } {
+  let score = 0;
+  const evidence: string[] = [];
+  
+  const company = (connection.company || '').toLowerCase();
+  const position = (connection.position || '').toLowerCase();
+  
+  // Evidence 1: Works at target company (+10 pts)
+  const worksAtTarget = targetCompanies.some(tc => company.includes(tc.toLowerCase()));
+  if (worksAtTarget) {
+    score += 10;
+    evidence.push(`Works at ${connection.company} (verified 1st-degree connection)`);
+  }
+  
+  // Evidence 2: Senior role (+3 pts)
+  const isSenior = SENIOR_TITLES.some(title => position.includes(title.toLowerCase()));
+  if (isSenior) {
+    score += 3;
+    evidence.push(`Senior role: ${connection.position} (more likely to know executives)`);
+  }
+  
+  // Evidence 3: Relevant department (+2 pts)
+  if (targetName) {
+    const deptKeywords = ['engineering', 'product', 'marketing', 'sales', 'operations', 'finance', 'design'];
+    for (const dept of deptKeywords) {
+      if (targetName.toLowerCase().includes(dept) && position.includes(dept)) {
+        score += 2;
+        evidence.push(`Same department: ${dept} (works in same area)`);
+        break;
+      }
+    }
+  }
+  
+  // Build reasoning
+  let reasoning: string;
+  if (score >= 13) {
+    reasoning = `EXCELLENT - Senior at ${connection.company}, very likely knows target`;
+  } else if (score >= 10) {
+    reasoning = `GOOD - Works at ${connection.company}, can likely facilitate intro`;
+  } else if (score >= 5) {
+    reasoning = `POSSIBLE - Related role, worth exploring`;
+  } else {
+    reasoning = `WEAK - Tangential connection`;
+  }
+  
+  return { score, evidence, reasoning };
+}
+
 /**
  * Find warm paths to a target candidate or company
- * For recruiters: who in your network can intro you to this person/company?
+ * Enhanced with 6degrees evidence-based scoring
  */
 export function findWarmPaths(
   data: ParsedLinkedInData,
   targetName?: string,
   targetCompany?: string
 ): WarmPath[] {
-  if (!targetName && !targetCompany) return [];
+  // Resolve target to companies
+  const targetInput = targetName || targetCompany || '';
+  if (!targetInput) return [];
+  
+  const { name: resolvedName, companies: targetCompanies } = resolveTargetCompany(targetInput);
+  const displayName = resolvedName || targetInput;
+  const displayCompany = targetCompanies[0] || targetCompany;
   
   const healthScores = calculateRelationshipHealth(data);
   const vouchScores = calculateVouchScores(data);
   
   const paths: WarmPath[] = [];
   
-  // Find connections who might know the target
+  // Find and score connections
   data.connections.forEach(connection => {
-    let relevance = 0;
+    // Check if connection works at or relates to target companies
+    const company = (connection.company || '').toLowerCase();
+    const matchesTarget = targetCompanies.some(tc => company.includes(tc.toLowerCase()));
     
-    // Check if connection works at target company
-    if (targetCompany && connection.company?.toLowerCase().includes(targetCompany.toLowerCase())) {
-      relevance = 100;
-    }
-    // Check if connection's company is related (same industry indicators)
-    else if (targetCompany && connection.company) {
-      // Simple relevance based on shared keywords
-      const targetWords = targetCompany.toLowerCase().split(/\s+/);
-      const connectionWords = connection.company.toLowerCase().split(/\s+/);
-      const sharedWords = targetWords.filter(w => connectionWords.includes(w));
-      relevance = (sharedWords.length / targetWords.length) * 50;
-    }
+    if (!matchesTarget) return;
     
-    if (relevance === 0) return;
+    const { score, evidence, reasoning } = scoreConnection(connection, targetCompanies, displayName);
     
-    const health = healthScores.find(h => 
-      h.connection.fullName === connection.fullName
-    );
-    const vouch = vouchScores.find(v => 
-      v.connection.fullName === connection.fullName
-    );
+    if (score === 0) return;
+    
+    const health = healthScores.find(h => h.connection.fullName === connection.fullName);
+    const vouch = vouchScores.find(v => v.connection.fullName === connection.fullName);
     
     if (!health || !vouch) return;
     
-    // Calculate path strength
+    // Combine evidence score with relationship health
     const pathStrength = Math.round(
-      (health.currentStrength * 0.4) + 
-      (vouch.score * 0.4) + 
-      (relevance * 0.2)
+      (score * 5) + // Evidence score weighted heavily
+      (health.currentStrength * 0.3) + 
+      (vouch.score * 0.2)
     );
     
     paths.push({
-      targetName: targetName || '',
-      targetCompany,
+      targetName: displayName,
+      targetCompany: displayCompany,
       bridgePerson: connection,
-      pathStrength,
+      pathStrength: Math.min(100, pathStrength),
+      score,
+      evidence,
+      reasoning,
       relationshipHealth: health,
       vouchScore: vouch,
-      suggestedApproach: generateApproachMessage(connection, targetName, targetCompany, vouch.score),
+      suggestedApproach: generateApproachMessage(connection, displayName, displayCompany, score, vouch.score),
     });
   });
   
-  return paths.sort((a, b) => b.pathStrength - a.pathStrength).slice(0, 10);
+  return paths.sort((a, b) => b.score - a.score || b.pathStrength - a.pathStrength).slice(0, 10);
 }
 
 function generateApproachMessage(
   bridge: LinkedInConnection,
   targetName?: string,
   targetCompany?: string,
+  evidenceScore?: number,
   vouchScore?: number
 ): string {
   const target = targetName || `someone at ${targetCompany}`;
+  const firstName = bridge.firstName || bridge.fullName.split(' ')[0];
   
-  if (vouchScore && vouchScore >= 60) {
-    return `Hey ${bridge.firstName}! I'm trying to connect with ${target} and thought you might be able to help with an intro. Would you be open to making a connection?`;
-  } else {
-    return `Hi ${bridge.firstName}, hope you're well! I noticed you might have connections at ${targetCompany || 'the company'}. I'm trying to reach ${target} - any chance you could point me in the right direction?`;
+  // High evidence score = direct ask
+  if (evidenceScore && evidenceScore >= 13) {
+    return `Hey ${firstName}! I see you're a ${bridge.position} at ${bridge.company}. I'm trying to connect with ${target} - would you be open to making an introduction?`;
   }
+  
+  // Good evidence = warm approach
+  if (evidenceScore && evidenceScore >= 10) {
+    return `Hi ${firstName}, hope you're well! I noticed you work at ${bridge.company}. I'm trying to reach ${target} - could you help connect me with someone who might know them?`;
+  }
+  
+  // Lower evidence = exploratory
+  return `Hi ${firstName}, I'm exploring connections to ${targetCompany || 'the company'}. Any chance you could point me in the right direction to reach ${target}?`;
 }
 
 // ============================================================================
