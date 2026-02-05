@@ -9,7 +9,7 @@ export interface PipelineState {
   filterRange: string | null;
   selected: string[];
   scrollTo: string | null;
-  viewMode: 'list' | 'split';
+  viewMode: 'list' | 'split' | 'kanban';
 }
 
 const DEFAULT_STATE: PipelineState = {
@@ -86,7 +86,7 @@ export function deserializePipelineState(searchParams: URLSearchParams): Pipelin
   }
 
   const viewMode = searchParams.get('view');
-  if (viewMode && ['list', 'split'].includes(viewMode)) {
+  if (viewMode && ['list', 'split', 'kanban'].includes(viewMode)) {
     state.viewMode = viewMode as PipelineState['viewMode'];
   }
 

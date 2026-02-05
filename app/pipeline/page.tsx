@@ -39,6 +39,9 @@ import {
   HelpCircle,
   Check,
   AlertTriangle,
+  List,
+  LayoutGrid,
+  Code2,
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
 import ScoreBadge from "@/components/ScoreBadge";
@@ -47,6 +50,10 @@ import { CandidatePipelineItem } from "@/components/pipeline/CandidatePipelineIt
 import { PipelineSplitView } from "@/components/pipeline/PipelineSplitView";
 import { PipelineLoadingScramble } from "@/components/ui/loading-scramble";
 import { ShortlistPanel } from "@/components/pipeline/ShortlistPanel";
+import { PipelineKanban, PipelineCandidate, PipelineStage } from "@/components/pipeline/PipelineKanban";
+import { FunnelAnalyticsPanel } from "@/components/pipeline/FunnelAnalyticsPanel";
+import { TechStackFilter } from "@/components/pipeline/TechStackFilter";
+import { TechStackFilter as TechStackFilterType, filterByTechStack } from "@/lib/techStackMatching";
 import ScoreLegend from "@/components/ScoreLegend";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { PhaseIndicator } from "@/components/PhaseIndicator";
@@ -184,12 +191,23 @@ export default function PipelinePage() {
   // Histogram filter state
   const [filterRange, setFilterRange] = useState<string | null>(initialUrlState.filterRange);
 
-  // Split view state
-  const [viewMode, setViewMode] = useState<"list" | "split">(initialUrlState.viewMode);
+  // View mode state (list, split, or kanban)
+  const [viewMode, setViewMode] = useState<"list" | "split" | "kanban">(initialUrlState.viewMode);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
 
   // Multi-select for comparison - initialized from URL state
   const [selectedIds, setSelectedIds] = useState<string[]>(initialUrlState.selected);
+  
+  // Kanban stage tracking - maps candidateId to their pipeline stage
+  const [candidateStages, setCandidateStages] = useState<Record<string, PipelineStage>>({});
+
+  // Tech stack filter
+  const [techStackFilter, setTechStackFilter] = useState<TechStackFilterType>({
+    required: [],
+    preferred: [],
+    exclude: [],
+  });
+  const [showTechStackFilter, setShowTechStackFilter] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
   // Scroll to candidate from URL state
@@ -760,6 +778,29 @@ export default function PipelinePage() {
     });
   }, []);
 
+  // Kanban stage change handler
+  const handleStageChange = useCallback((candidateId: string, newStage: PipelineStage) => {
+    setCandidateStages((prev) => {
+      const updated = { ...prev, [candidateId]: newStage };
+      // Persist to localStorage
+      localStorage.setItem("apex_candidate_stages", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  // Load candidate stages from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("apex_candidate_stages");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setCandidateStages(parsed);
+      } catch (err) {
+        console.error("Failed to parse candidate stages:", err);
+      }
+    }
+  }, []);
+
   // Sorting
   const sortedCandidates = useMemo(() => {
     const sorted = [...candidates];
@@ -875,8 +916,36 @@ export default function PipelinePage() {
       }
     }
 
+    // Apply tech stack filter
+    const hasTechFilter = techStackFilter.required.length > 0 || 
+                          techStackFilter.preferred.length > 0 || 
+                          techStackFilter.exclude.length > 0;
+    if (hasTechFilter) {
+      filtered = filterByTechStack(filtered, techStackFilter, techStackFilter.required.length > 0);
+    }
+
     return filtered;
-  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills]);
+  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills, techStackFilter]);
+
+  // Convert candidates to Kanban format
+  const kanbanCandidates: PipelineCandidate[] = useMemo(() => {
+    return filteredCandidates.map((c) => ({
+      id: c.id,
+      name: c.name,
+      username: c.id,
+      avatar: c.avatar,
+      role: c.currentRole,
+      score: c.alignmentScore,
+      stage: candidateStages[c.id] || "sourced",
+      addedAt: c.createdAt || new Date().toISOString(),
+      lastActivity: c.createdAt,
+    }));
+  }, [filteredCandidates, candidateStages]);
+
+  // Handle Kanban candidate click - open profile
+  const handleKanbanCandidateClick = useCallback((candidate: PipelineCandidate) => {
+    router.push(`/profile/${candidate.id}`);
+  }, [router]);
 
   // Score distribution for chart
   const scoreDistribution = useMemo(() => {
@@ -1210,10 +1279,37 @@ export default function PipelinePage() {
                 {filteredCandidates.length} of {candidates.length}
               </Badge>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add More
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* View Toggle */}
+              <div className="flex items-center border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`px-3 py-1.5 flex items-center gap-1.5 text-sm transition-colors ${
+                    viewMode === "list"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  List
+                </button>
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  className={`px-3 py-1.5 flex items-center gap-1.5 text-sm transition-colors ${
+                    viewMode === "kanban"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  Kanban
+                </button>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add More
+              </Button>
+            </div>
           </div>
         )}
 
@@ -1306,6 +1402,21 @@ export default function PipelinePage() {
                         )}
                       </div>
                     )}
+                    {/* Tech Stack Filter Toggle */}
+                    <Button
+                      variant={showTechStackFilter ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowTechStackFilter(!showTechStackFilter)}
+                      className="gap-2"
+                    >
+                      <Code2 className="w-4 h-4" />
+                      Tech Stack
+                      {(techStackFilter.required.length + techStackFilter.preferred.length) > 0 && (
+                        <Badge variant="secondary" className="ml-1">
+                          {techStackFilter.required.length + techStackFilter.preferred.length}
+                        </Badge>
+                      )}
+                    </Button>
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
                         <Badge>{selectedIds.length} {t("common.selected")}</Badge>
@@ -1323,6 +1434,28 @@ export default function PipelinePage() {
             </AnimatePresence>
           </CardContent>
         </Card>
+
+        {/* Tech Stack Filter Panel (Collapsible) */}
+        <AnimatePresence>
+          {showTechStackFilter && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mb-4 overflow-hidden"
+            >
+              <div className="grid lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2">
+                  <TechStackFilter
+                    filter={techStackFilter}
+                    onChange={setTechStackFilter}
+                  />
+                </div>
+                <FunnelAnalyticsPanel candidateStages={candidateStages} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Loading State with Text Scramble */}
         {loading && candidates.length === 0 && (
@@ -1372,7 +1505,7 @@ export default function PipelinePage() {
           </div>
         )}
 
-        {/* Candidates List with Split View */}
+        {/* Candidates List with Split View or Kanban */}
         {!loading && filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
@@ -1390,38 +1523,48 @@ export default function PipelinePage() {
             </CardContent>
           </Card>
         ) : filteredCandidates.length > 0 ? (
-          <PipelineSplitView
-            candidates={filteredCandidates}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            selectedCandidateId={selectedCandidateId}
-            onSelectCandidate={setSelectedCandidateId}
-            onOutreach={(c) => {
-              setOutreachCandidate(c);
-              setShowOutreach(true);
-            }}
-            renderListItem={(candidate, isCompact) => (
-              <motion.div
-                key={candidate.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                layout
-              >
-                <CandidatePipelineItem
-                  candidate={candidate}
-                  isSelected={selectedIds.includes(candidate.id)}
-                  onToggleSelect={toggleSelect}
-                  onDelete={handleDelete}
-                  onOutreach={(c) => {
-                    setOutreachCandidate(c);
-                    setShowOutreach(true);
-                  }}
-                  compact={isCompact}
-                />
-              </motion.div>
-            )}
-          />
+          viewMode === "kanban" ? (
+            <div className="overflow-x-auto pb-4">
+              <PipelineKanban
+                candidates={kanbanCandidates}
+                onStageChange={handleStageChange}
+                onCandidateClick={handleKanbanCandidateClick}
+              />
+            </div>
+          ) : (
+            <PipelineSplitView
+              candidates={filteredCandidates}
+              viewMode={viewMode === "split" ? "split" : "list"}
+              onViewModeChange={(mode) => setViewMode(mode as "list" | "split" | "kanban")}
+              selectedCandidateId={selectedCandidateId}
+              onSelectCandidate={setSelectedCandidateId}
+              onOutreach={(c) => {
+                setOutreachCandidate(c);
+                setShowOutreach(true);
+              }}
+              renderListItem={(candidate, isCompact) => (
+                <motion.div
+                  key={candidate.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  layout
+                >
+                  <CandidatePipelineItem
+                    candidate={candidate}
+                    isSelected={selectedIds.includes(candidate.id)}
+                    onToggleSelect={toggleSelect}
+                    onDelete={handleDelete}
+                    onOutreach={(c) => {
+                      setOutreachCandidate(c);
+                      setShowOutreach(true);
+                    }}
+                    compact={isCompact}
+                  />
+                </motion.div>
+              )}
+            />
+          )
         ) : null}
 
         {/* Import Modal */}
