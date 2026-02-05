@@ -23,6 +23,14 @@ import {
   findWarmPaths,
   WarmPath
 } from '@/lib/linkedin-parser/network-intelligence';
+import {
+  SAMPLE_CONNECTIONS_CSV,
+  SAMPLE_MESSAGES_CSV,
+  SAMPLE_ENDORSEMENTS_RECEIVED_CSV,
+  SAMPLE_ENDORSEMENTS_GIVEN_CSV,
+  SAMPLE_RECOMMENDATIONS_RECEIVED_CSV,
+  SAMPLE_RECOMMENDATIONS_GIVEN_CSV,
+} from '@/lib/linkedin-parser/sample-data';
 
 // ============================================================================
 // TYPES
@@ -44,6 +52,31 @@ export function NetworkIntelligence() {
   // Warm path search
   const [searchTarget, setSearchTarget] = useState('');
   const [warmPaths, setWarmPaths] = useState<WarmPath[]>([]);
+
+  // Load demo data
+  const handleLoadDemo = useCallback(async () => {
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      const data = await parseLinkedInExport({
+        connections: SAMPLE_CONNECTIONS_CSV,
+        messages: SAMPLE_MESSAGES_CSV,
+        endorsementsReceived: SAMPLE_ENDORSEMENTS_RECEIVED_CSV,
+        endorsementsGiven: SAMPLE_ENDORSEMENTS_GIVEN_CSV,
+        recommendationsReceived: SAMPLE_RECOMMENDATIONS_RECEIVED_CSV,
+        recommendationsGiven: SAMPLE_RECOMMENDATIONS_GIVEN_CSV,
+      });
+      
+      setLinkedInData(data);
+      const intelligenceReport = generateNetworkIntelligenceReport(data);
+      setReport(intelligenceReport);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load demo data');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
 
   // Handle file upload
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +136,7 @@ export function NetworkIntelligence() {
 
   // Render upload state
   if (!linkedInData) {
-    return <UploadState onFileUpload={handleFileUpload} isProcessing={isProcessing} error={error} />;
+    return <UploadState onFileUpload={handleFileUpload} onLoadDemo={handleLoadDemo} isProcessing={isProcessing} error={error} />;
   }
 
   // Render dashboard
@@ -183,10 +216,12 @@ export function NetworkIntelligence() {
 
 function UploadState({ 
   onFileUpload, 
+  onLoadDemo,
   isProcessing, 
   error 
 }: { 
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onLoadDemo: () => void;
   isProcessing: boolean;
   error: string | null;
 }) {
@@ -240,6 +275,18 @@ function UploadState({
             {error}
           </div>
         )}
+
+        <div className="text-center">
+          <p className="text-gray-500 text-sm mb-3">or</p>
+          <button
+            onClick={onLoadDemo}
+            disabled={isProcessing}
+            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+          >
+            🎯 Try with Demo Data
+          </button>
+          <p className="text-gray-500 text-xs mt-2">See how it works with sample LinkedIn data</p>
+        </div>
 
         <div className="bg-gray-900/50 rounded-lg p-4">
           <h3 className="font-medium text-white mb-2">How to export your LinkedIn data:</h3>

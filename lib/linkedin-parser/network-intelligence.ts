@@ -13,7 +13,9 @@
 import { 
   ParsedLinkedInData, 
   LinkedInConnection, 
-  LinkedInMessage 
+  LinkedInMessage,
+  LinkedInEndorsement,
+  LinkedInRecommendation
 } from './index';
 
 // ============================================================================
@@ -35,6 +37,27 @@ export interface RelationshipHealth {
  * Calculate relationship strength using half-life decay model
  * Base half-life: 180 days (relationship loses 50% strength without contact)
  */
+/**
+ * Match a connection to messages by name (case-insensitive, handles partial matches)
+ */
+function matchesPerson(personName: string, connection: LinkedInConnection): boolean {
+  const nameLower = personName.toLowerCase();
+  const fullNameLower = connection.fullName.toLowerCase();
+  const firstNameLower = connection.firstName.toLowerCase();
+  const lastNameLower = connection.lastName.toLowerCase();
+  
+  // Exact full name match
+  if (nameLower === fullNameLower) return true;
+  
+  // First + Last name present
+  if (nameLower.includes(firstNameLower) && nameLower.includes(lastNameLower)) return true;
+  
+  // Handle "First Last" format with different spacing
+  if (fullNameLower && nameLower.includes(fullNameLower)) return true;
+  
+  return false;
+}
+
 export function calculateRelationshipHealth(
   data: ParsedLinkedInData
 ): RelationshipHealth[] {
@@ -42,18 +65,17 @@ export function calculateRelationshipHealth(
   const now = new Date();
   
   return data.connections.map(connection => {
-    // Find messages with this connection
+    // Find messages with this connection (from or to)
     const messages = data.messages.filter(m => 
-      m.senderName.toLowerCase().includes(connection.firstName.toLowerCase()) ||
-      m.recipientName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(m.from, connection) || matchesPerson(m.to, connection)
     );
     
     // Find endorsements
     const endorsementsReceived = data.endorsementsReceived.filter(e =>
-      e.endorserName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(e.endorserFullName, connection)
     );
     const endorsementsGiven = data.endorsementsGiven.filter(e =>
-      e.endorserName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(e.endorserFullName, connection)
     );
     
     // Calculate last interaction
@@ -139,18 +161,17 @@ export function calculateVouchScores(
   return data.connections.map(connection => {
     // Find recommendation from this person
     const hasRecommendation = data.recommendationsReceived.some(r =>
-      r.recommenderName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(r.fullName, connection)
     );
     
     // Count endorsements from this person
     const endorsementCount = data.endorsementsReceived.filter(e =>
-      e.endorserName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(e.endorserFullName, connection)
     ).length;
     
     // Find messages
     const messages = data.messages.filter(m => 
-      m.senderName.toLowerCase().includes(connection.firstName.toLowerCase()) ||
-      m.recipientName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(m.from, connection) || matchesPerson(m.to, connection)
     );
     
     const lastMessage = messages.length > 0 
@@ -227,26 +248,27 @@ export function calculateReciprocityLedger(
   myName: string
 ): ReciprocityEntry[] {
   return data.connections.map(connection => {
-    // Recommendations
+    // Recommendations I gave to this person
     const recommendationsGiven = data.recommendationsGiven.filter(r =>
-      r.recommenderName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(r.fullName, connection)
     ).length;
+    // Recommendations I received from this person
     const recommendationsReceived = data.recommendationsReceived.filter(r =>
-      r.recommenderName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(r.fullName, connection)
     ).length;
     
-    // Endorsements
+    // Endorsements I gave to this person
     const endorsementsGiven = data.endorsementsGiven.filter(e =>
-      e.endorserName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(e.endorserFullName, connection)
     ).length;
+    // Endorsements I received from this person
     const endorsementsReceived = data.endorsementsReceived.filter(e =>
-      e.endorserName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(e.endorserFullName, connection)
     ).length;
     
-    // Messages
+    // Messages with this person
     const messages = data.messages.filter(m => 
-      m.senderName.toLowerCase().includes(connection.firstName.toLowerCase()) ||
-      m.recipientName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(m.from, connection) || matchesPerson(m.to, connection)
     );
     const messagesInitiated = messages.filter(m => m.isFromMe).length;
     const messagesReceived = messages.filter(m => !m.isFromMe).length;
@@ -311,21 +333,9 @@ export function findResurrectionOpportunities(
   
   const opportunities: ResurrectionOpportunity[] = [];
   
-  // Group messages by connection
-  const connectionMessages = new Map<string, LinkedInMessage[]>();
-  
-  data.messages.forEach(msg => {
-    const key = msg.senderName.toLowerCase();
-    if (!connectionMessages.has(key)) {
-      connectionMessages.set(key, []);
-    }
-    connectionMessages.get(key)!.push(msg);
-  });
-  
   data.connections.forEach(connection => {
     const messages = data.messages.filter(m =>
-      m.senderName.toLowerCase().includes(connection.firstName.toLowerCase()) ||
-      m.recipientName.toLowerCase().includes(connection.firstName.toLowerCase())
+      matchesPerson(m.from, connection) || matchesPerson(m.to, connection)
     ).sort((a, b) => b.date.getTime() - a.date.getTime());
     
     if (messages.length === 0) return;
