@@ -348,20 +348,75 @@ export function calculateReciprocityLedger(
 }
 
 // ============================================================================
-// 4. CONVERSATION RESURRECTION
+// 4. CONVERSATION RESURRECTION (Enhanced with hook detection)
 // ============================================================================
 
 export interface ResurrectionOpportunity {
   connection: LinkedInConnection;
   daysDormant: number;
   hook: string;
-  hookType: 'promised_catchup' | 'unanswered_question' | 'dropped_topic' | 'opportunity_mentioned' | 'generic';
+  hookType: 'unfollowed_plan' | 'unanswered_help' | 'intro_opportunity' | 'meet_never_scheduled' | 'ended_mid_topic' | 'thanks_only' | 'generic';
+  hookSnippet?: string; // The actual message snippet that triggered the hook
   lastMessage: string;
   suggestedOpener: string;
+  priority: 'high' | 'medium' | 'low';
 }
+
+// Hook detection patterns (from 6degrees Python script)
+const HOOK_PATTERNS: Array<{
+  type: ResurrectionOpportunity['hookType'];
+  pattern: RegExp;
+  hook: string;
+  priority: ResurrectionOpportunity['priority'];
+  opener: (name: string) => string;
+}> = [
+  {
+    type: 'unfollowed_plan',
+    pattern: /\b(let's catch up|we should (connect|sync|chat|talk)|let me know|circle back|follow up|get together|grab (coffee|lunch|drinks))\b/i,
+    hook: 'You mentioned plans but never followed through',
+    priority: 'high',
+    opener: (name) => `Hey ${name}, I was looking back at our thread and realized we mentioned catching up but never made it happen. Want to grab a quick 15-min call next week?`,
+  },
+  {
+    type: 'unanswered_help',
+    pattern: /\b(can you|could you|would you|any chance|do you know|advice|help|recommend|suggest|thoughts on)\b.*\?/i,
+    hook: 'They asked for help/advice you may not have answered',
+    priority: 'high',
+    opener: (name) => `Hey ${name}, I was going through old messages and realized I didn't fully reply to your question. If it's still relevant, happy to help!`,
+  },
+  {
+    type: 'intro_opportunity',
+    pattern: /\b(intro|introduction|connect you|put you in touch|warm intro|know someone|introduce you to)\b/i,
+    hook: 'An introduction was mentioned',
+    priority: 'high',
+    opener: (name) => `Hey ${name}, you mentioned an intro/connection opportunity a while back. If it's still on the table, I'd love to pick it up!`,
+  },
+  {
+    type: 'meet_never_scheduled',
+    pattern: /\b(coffee|lunch|dinner|drinks|meet|meeting|call|zoom|sync)\b/i,
+    hook: 'Meeting was discussed but never scheduled',
+    priority: 'medium',
+    opener: (name) => `Hey ${name}, we talked about meeting up but it never happened. Are you around for a quick coffee sometime soon?`,
+  },
+  {
+    type: 'ended_mid_topic',
+    pattern: /\b(as discussed|following up|continuing|next steps|moving forward|circling back|regarding|about the)\b/i,
+    hook: 'Conversation ended mid-topic',
+    priority: 'medium',
+    opener: (name) => `Hey ${name}, we left our conversation mid-topic last time. Want to continue where we left off?`,
+  },
+  {
+    type: 'thanks_only',
+    pattern: /^(thanks|thank you|thx|appreciate it|cheers|great|awesome|nice|👍|🙏)\s*[.!]?$/i,
+    hook: 'Last message was just a thank you',
+    priority: 'low',
+    opener: (name) => `Hey ${name}, appreciate that note back then! Would love to hear what you're working on these days.`,
+  },
+];
 
 /**
  * Find dormant conversations with natural re-engagement hooks
+ * Enhanced with 6degrees-style hook detection
  */
 export function findResurrectionOpportunities(
   data: ParsedLinkedInData
@@ -385,48 +440,53 @@ export function findResurrectionOpportunities(
     
     if (daysDormant < DORMANT_THRESHOLD) return;
     
-    // Analyze last messages for hooks
-    const lastContent = lastMessage.content.toLowerCase();
-    let hookType: ResurrectionOpportunity['hookType'] = 'generic';
-    let hook = 'Conversation went dormant';
-    let suggestedOpener = `Hey ${connection.firstName}, it's been a while! Hope you're doing well.`;
+    // Scan entire thread for hook patterns
+    const allContent = messages.map(m => m.content).join(' ');
+    const firstName = connection.firstName || connection.fullName.split(' ')[0];
     
-    // Check for "let's catch up" patterns
-    if (lastContent.includes("catch up") || 
-        lastContent.includes("let's connect") ||
-        lastContent.includes("we should") ||
-        lastContent.includes("let me know")) {
-      hookType = 'promised_catchup';
-      hook = 'You mentioned catching up but never followed through';
-      suggestedOpener = `Hey ${connection.firstName}! I realized we mentioned catching up a while back but never made it happen. How have things been?`;
+    let foundHook: typeof HOOK_PATTERNS[0] | null = null;
+    let hookSnippet: string | undefined;
+    
+    for (const hookDef of HOOK_PATTERNS) {
+      const match = hookDef.pattern.exec(allContent);
+      if (match) {
+        foundHook = hookDef;
+        // Extract snippet around the match
+        const start = Math.max(0, match.index - 30);
+        const end = Math.min(allContent.length, match.index + match[0].length + 30);
+        hookSnippet = '...' + allContent.slice(start, end).trim() + '...';
+        break;
+      }
     }
-    // Check for questions
-    else if (lastContent.includes("?") && !lastMessage.isFromMe) {
-      hookType = 'unanswered_question';
-      hook = 'They asked a question you may not have fully answered';
-      suggestedOpener = `Hey ${connection.firstName}, I was looking back at our conversation and realized I might not have gotten back to you properly. How are things going?`;
-    }
-    // Check for opportunity mentions
-    else if (lastContent.includes("opportunity") ||
-             lastContent.includes("position") ||
-             lastContent.includes("role") ||
-             lastContent.includes("job")) {
-      hookType = 'opportunity_mentioned';
-      hook = 'An opportunity or role was discussed';
-      suggestedOpener = `Hi ${connection.firstName}! I remember we discussed some opportunities a while back. Curious how things have developed since then?`;
+    
+    // Default to generic if no pattern found
+    if (!foundHook) {
+      foundHook = {
+        type: 'generic',
+        pattern: /.*/,
+        hook: 'Conversation went dormant',
+        priority: 'low',
+        opener: (name) => `Hey ${name}, it's been a while! Hope you're doing well. What have you been up to?`,
+      };
     }
     
     opportunities.push({
       connection,
       daysDormant,
-      hook,
-      hookType,
-      lastMessage: lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : ''),
-      suggestedOpener,
+      hook: foundHook.hook,
+      hookType: foundHook.type,
+      hookSnippet,
+      lastMessage: lastMessage.content.substring(0, 150) + (lastMessage.content.length > 150 ? '...' : ''),
+      suggestedOpener: foundHook.opener(firstName),
+      priority: foundHook.priority,
     });
   });
   
-  return opportunities.sort((a, b) => a.daysDormant - b.daysDormant);
+  // Sort by priority (high first) then by days dormant (more recent first)
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  return opportunities
+    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority] || a.daysDormant - b.daysDormant)
+    .slice(0, 25); // Top 25 opportunities
 }
 
 // ============================================================================

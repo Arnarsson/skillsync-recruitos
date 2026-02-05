@@ -511,41 +511,115 @@ function ReciprocityTab({ ledger }: { ledger: NetworkIntelligenceReport['recipro
   const theyOweMe = ledger.filter(e => e.status === 'they_owe_me');
   const iOweThem = ledger.filter(e => e.status === 'i_owe_them');
   
+  // Generate actionable suggestion based on breakdown
+  const getSuggestion = (item: typeof ledger[0], oweMe: boolean): string => {
+    const firstName = item.connection.firstName || item.connection.fullName.split(' ')[0];
+    const { recommendationsGiven, recommendationsReceived, endorsementsGiven, endorsementsReceived } = item.breakdown;
+    
+    if (oweMe) {
+      // They owe you - suggest asking for something
+      if (recommendationsGiven > 0 && recommendationsReceived === 0) {
+        return `You wrote them a recommendation. Ask: "Hey ${firstName}, would you mind writing a quick recommendation for me too?"`;
+      }
+      if (endorsementsGiven > 3 && endorsementsReceived < 2) {
+        return `You've endorsed them ${endorsementsGiven}× but only got ${endorsementsReceived} back. Ask for an endorsement.`;
+      }
+      return `You've invested +${item.netBalance} points. Good time to ask for an intro or favor.`;
+    } else {
+      // You owe them - suggest giving back
+      if (recommendationsReceived > 0 && recommendationsGiven === 0) {
+        return `They wrote you a recommendation! Return the favor with a recommendation.`;
+      }
+      if (endorsementsReceived > 3 && endorsementsGiven < 2) {
+        return `They've endorsed you ${endorsementsReceived}×. Endorse them back!`;
+      }
+      return `You owe ${Math.abs(item.netBalance)} points. Consider reaching out to offer help.`;
+    }
+  };
+  
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <div className="bg-gray-900 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-800 bg-green-500/10">
-          <h2 className="text-lg font-semibold text-green-400">They Owe You ({theyOweMe.length})</h2>
-          <p className="text-gray-400 text-sm">You've invested more in these relationships</p>
+    <div className="space-y-6">
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
+          <p className="text-green-400 text-2xl font-bold">{theyOweMe.length}</p>
+          <p className="text-gray-400 text-sm">Owe you favors</p>
         </div>
-        <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-          {theyOweMe.slice(0, 20).map((item, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <div>
-                <p className="text-white font-medium">{item.connection.fullName}</p>
-                <p className="text-gray-500 text-sm">{item.connection.company}</p>
-              </div>
-              <span className="text-green-400 font-bold">+{item.netBalance}</span>
-            </div>
-          ))}
+        <div className="bg-gray-800 rounded-xl p-4">
+          <p className="text-gray-400 text-2xl font-bold">{ledger.filter(e => e.status === 'balanced').length}</p>
+          <p className="text-gray-500 text-sm">Balanced</p>
+        </div>
+        <div className="bg-amber-500/10 rounded-xl p-4 border border-amber-500/20">
+          <p className="text-amber-400 text-2xl font-bold">{iOweThem.length}</p>
+          <p className="text-gray-400 text-sm">You owe</p>
         </div>
       </div>
       
-      <div className="bg-gray-900 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-800 bg-amber-500/10">
-          <h2 className="text-lg font-semibold text-amber-400">You Owe Them ({iOweThem.length})</h2>
-          <p className="text-gray-400 text-sm">They've invested more in you</p>
-        </div>
-        <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-          {iOweThem.slice(0, 20).map((item, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <div>
-                <p className="text-white font-medium">{item.connection.fullName}</p>
-                <p className="text-gray-500 text-sm">{item.connection.company}</p>
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* They Owe You */}
+        <div className="bg-gray-900 rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-gray-800 bg-green-500/10">
+            <h2 className="text-lg font-semibold text-green-400">💰 They Owe You ({theyOweMe.length})</h2>
+            <p className="text-gray-400 text-sm">You've invested more — time to collect</p>
+          </div>
+          <div className="divide-y divide-gray-800 max-h-[500px] overflow-y-auto">
+            {theyOweMe.slice(0, 15).map((item, i) => (
+              <div key={i} className="p-4 hover:bg-gray-800/30">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-white font-medium">{item.connection.fullName}</p>
+                    <p className="text-gray-500 text-sm">{item.connection.company}</p>
+                  </div>
+                  <span className="text-green-400 font-bold text-lg">+{item.netBalance}</span>
+                </div>
+                <div className="mt-2 flex gap-2 text-xs">
+                  {item.breakdown.recommendationsGiven > 0 && (
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">📝 Gave rec</span>
+                  )}
+                  {item.breakdown.endorsementsGiven > 0 && (
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">👍 {item.breakdown.endorsementsGiven} endorsed</span>
+                  )}
+                  {item.breakdown.messagesInitiated > item.breakdown.messagesReceived && (
+                    <span className="px-2 py-1 bg-gray-700 text-gray-400 rounded">💬 You msg more</span>
+                  )}
+                </div>
+                <p className="mt-2 text-green-400/80 text-sm">{getSuggestion(item, true)}</p>
               </div>
-              <span className="text-amber-400 font-bold">{item.netBalance}</span>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        
+        {/* You Owe Them */}
+        <div className="bg-gray-900 rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-gray-800 bg-amber-500/10">
+            <h2 className="text-lg font-semibold text-amber-400">🙏 You Owe Them ({iOweThem.length})</h2>
+            <p className="text-gray-400 text-sm">They've invested more — return the favor</p>
+          </div>
+          <div className="divide-y divide-gray-800 max-h-[500px] overflow-y-auto">
+            {iOweThem.slice(0, 15).map((item, i) => (
+              <div key={i} className="p-4 hover:bg-gray-800/30">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-white font-medium">{item.connection.fullName}</p>
+                    <p className="text-gray-500 text-sm">{item.connection.company}</p>
+                  </div>
+                  <span className="text-amber-400 font-bold text-lg">{item.netBalance}</span>
+                </div>
+                <div className="mt-2 flex gap-2 text-xs">
+                  {item.breakdown.recommendationsReceived > 0 && (
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">📝 Got rec</span>
+                  )}
+                  {item.breakdown.endorsementsReceived > 0 && (
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">👍 {item.breakdown.endorsementsReceived} from them</span>
+                  )}
+                  {item.breakdown.messagesReceived > item.breakdown.messagesInitiated && (
+                    <span className="px-2 py-1 bg-gray-700 text-gray-400 rounded">💬 They msg more</span>
+                  )}
+                </div>
+                <p className="mt-2 text-amber-400/80 text-sm">{getSuggestion(item, false)}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -553,35 +627,97 @@ function ReciprocityTab({ ledger }: { ledger: NetworkIntelligenceReport['recipro
 }
 
 // ============================================================================
-// RESURRECTION TAB
+// RESURRECTION TAB (Enhanced with hook detection)
 // ============================================================================
 
 function ResurrectionTab({ opportunities }: { opportunities: NetworkIntelligenceReport['resurrectionOpportunities'] }) {
+  const highPriority = opportunities.filter(o => o.priority === 'high');
+  const mediumPriority = opportunities.filter(o => o.priority === 'medium');
+  const lowPriority = opportunities.filter(o => o.priority === 'low');
+  
+  const priorityColors = {
+    high: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
+    medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
+    low: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30' },
+  };
+  
+  const hookTypeEmoji: Record<string, string> = {
+    'unfollowed_plan': '📅',
+    'unanswered_help': '🙋',
+    'intro_opportunity': '🤝',
+    'meet_never_scheduled': '☕',
+    'ended_mid_topic': '💬',
+    'thanks_only': '👋',
+    'generic': '💤',
+  };
+  
   return (
     <div className="bg-gray-900 rounded-xl overflow-hidden">
       <div className="p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">Conversation Resurrection</h2>
-        <p className="text-gray-400 text-sm">Dormant threads with natural re-engagement hooks</p>
+        <h2 className="text-lg font-semibold text-white">🔄 Conversation Resurrection</h2>
+        <p className="text-gray-400 text-sm">
+          Dormant threads with natural re-engagement hooks • 
+          <span className="text-red-400 ml-2">{highPriority.length} high</span> •
+          <span className="text-yellow-400 ml-2">{mediumPriority.length} medium</span> •
+          <span className="text-gray-400 ml-2">{lowPriority.length} low</span>
+        </p>
       </div>
       <div className="divide-y divide-gray-800">
-        {opportunities.slice(0, 20).map((opp, i) => (
-          <div key={i} className="p-4 hover:bg-gray-800/30">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-white font-medium">{opp.connection.fullName}</h3>
-                <p className="text-gray-500 text-sm">{opp.connection.company}</p>
+        {opportunities.slice(0, 25).map((opp, i) => {
+          const colors = priorityColors[opp.priority || 'low'];
+          const emoji = hookTypeEmoji[opp.hookType] || '💤';
+          
+          return (
+            <div key={i} className="p-4 hover:bg-gray-800/30">
+              {/* Header with priority badge */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-white font-medium">{opp.connection.fullName}</h3>
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${colors.bg} ${colors.text}`}>
+                      {opp.priority?.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-gray-500 text-sm">{opp.connection.company} • {opp.connection.position}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-400 text-sm font-mono">{opp.daysDormant}d</span>
+                  <p className="text-gray-600 text-xs">dormant</p>
+                </div>
               </div>
-              <span className="text-gray-500 text-sm">{opp.daysDormant} days dormant</span>
+              
+              {/* Hook with emoji and snippet */}
+              <div className={`mt-3 p-3 rounded-lg border ${colors.bg} ${colors.border}`}>
+                <div className="flex items-start gap-2">
+                  <span className="text-xl">{emoji}</span>
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${colors.text}`}>{opp.hook}</p>
+                    {opp.hookSnippet && (
+                      <p className="text-gray-400 text-xs mt-1 font-mono bg-gray-900/50 px-2 py-1 rounded">
+                        {opp.hookSnippet}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Last message preview */}
+              <div className="mt-2 text-gray-500 text-sm italic">
+                Last message: "{opp.lastMessage}"
+              </div>
+              
+              {/* Suggested opener - copy-ready */}
+              <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="text-blue-400 text-xs font-medium mb-1">💬 COPY-READY OPENER</p>
+                    <p className="text-blue-300 text-sm">{opp.suggestedOpener}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="mt-2 p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-amber-400 text-sm font-medium">{opp.hook}</p>
-              <p className="text-gray-400 text-sm mt-1 italic">"{opp.lastMessage}"</p>
-            </div>
-            <div className="mt-2 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <p className="text-blue-400 text-sm">{opp.suggestedOpener}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
