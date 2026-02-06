@@ -47,3 +47,5 @@ next-env.d.ts
 
 # Shared profile storage
 .data/
+# Test data (real LinkedIn exports - don't commit)
+test-data/linkedin-export/*.csv

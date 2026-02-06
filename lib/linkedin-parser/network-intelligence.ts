@@ -15,7 +15,10 @@ import {
   LinkedInConnection, 
   LinkedInMessage,
   LinkedInEndorsement,
-  LinkedInRecommendation
+  LinkedInRecommendation,
+  LinkedInPosition,
+  LinkedInInvitation,
+  LinkedInReaction
 } from './index';
 
 // ============================================================================
@@ -65,9 +68,18 @@ export function calculateRelationshipHealth(
   const BASE_HALF_LIFE = 180; // days
   const now = new Date();
   
-  // Check for shared companies (your positions)
-  const myCompanies = new Set<string>();
-  // Note: We don't have Positions.csv in basic export, but company from profile would go here
+  // Build set of your companies from Positions.csv with date ranges
+  const myPositions = data.positions || [];
+  const myCompanies = new Set<string>(
+    myPositions.map(p => p.companyName.toLowerCase()).filter(c => c.length > 0)
+  );
+  
+  // Build invitation lookup for "who initiated" signal
+  const invitationsByPerson = new Map<string, LinkedInInvitation>();
+  (data.invitations || []).forEach(inv => {
+    const personName = inv.direction === 'OUTGOING' ? inv.to : inv.from;
+    invitationsByPerson.set(personName.toLowerCase(), inv);
+  });
   
   return data.connections.map(connection => {
     // Find messages with this connection (from or to)
@@ -113,11 +125,42 @@ export function calculateRelationshipHealth(
     let adjustedHalfLife = BASE_HALF_LIFE;
     const modifiers: string[] = [];
     
-    // Shared company approximation (connection's current company matches your history)
-    const sharedCompany = myCompanies.has((connection.company || '').toLowerCase());
-    if (sharedCompany) {
+    // Real shared company detection with position overlap
+    const connectionCompany = (connection.company || '').toLowerCase();
+    const sharedCompany = myCompanies.has(connectionCompany);
+    
+    // Check for actual work overlap using positions
+    let workOverlapYears = 0;
+    if (sharedCompany && myPositions.length > 0) {
+      const myPositionAtCompany = myPositions.find(p => 
+        p.companyName.toLowerCase() === connectionCompany
+      );
+      if (myPositionAtCompany) {
+        // Calculate potential overlap (connection's start date vs my tenure)
+        const myStart = myPositionAtCompany.startedOn?.getTime() || 0;
+        const myEnd = myPositionAtCompany.finishedOn?.getTime() || now.getTime();
+        const connectedOn = connection.connectedOn.getTime();
+        
+        // If they connected during my tenure, calculate overlap
+        if (connectedOn >= myStart && connectedOn <= myEnd) {
+          workOverlapYears = Math.max(0, (Math.min(myEnd, now.getTime()) - connectedOn) / (1000 * 60 * 60 * 24 * 365));
+        }
+      }
+    }
+    
+    if (workOverlapYears >= 2) {
+      adjustedHalfLife *= 1.8; // Strong shared history
+      modifiers.push(`shared_company_${Math.round(workOverlapYears)}yr_overlap ×1.8`);
+    } else if (sharedCompany) {
       adjustedHalfLife *= 1.5;
       modifiers.push('shared_company ×1.5');
+    }
+    
+    // Check if they initiated the connection (stronger signal)
+    const invitation = invitationsByPerson.get(connection.fullName.toLowerCase());
+    if (invitation && invitation.direction === 'INCOMING') {
+      adjustedHalfLife *= 1.2;
+      modifiers.push('they_initiated_connection ×1.2');
     }
     
     // Deep/substantive messages = slower decay
@@ -196,6 +239,12 @@ export function calculateVouchScores(
 ): VouchScore[] {
   const now = new Date();
   
+  // Build positions lookup
+  const myPositions = data.positions || [];
+  const myCompanies = new Set<string>(
+    myPositions.map(p => p.companyName.toLowerCase()).filter(c => c.length > 0)
+  );
+  
   return data.connections.map(connection => {
     // Find recommendation from this person
     const hasRecommendation = data.recommendationsReceived.some(r =>
@@ -224,13 +273,35 @@ export function calculateVouchScores(
       ? messages.reduce((sum, m) => sum + m.content.length, 0) / messages.length
       : 0;
     
+    // Calculate shared history score using positions
+    let sharedHistoryScore = 0;
+    const connectionCompany = (connection.company || '').toLowerCase();
+    if (myCompanies.has(connectionCompany)) {
+      const myPositionAtCompany = myPositions.find(p => 
+        p.companyName.toLowerCase() === connectionCompany
+      );
+      if (myPositionAtCompany) {
+        const myStart = myPositionAtCompany.startedOn?.getTime() || 0;
+        const myEnd = myPositionAtCompany.finishedOn?.getTime() || now.getTime();
+        const connectedOn = connection.connectedOn.getTime();
+        
+        // Calculate overlap years
+        if (connectedOn >= myStart && connectedOn <= myEnd) {
+          const overlapYears = (Math.min(myEnd, now.getTime()) - connectedOn) / (1000 * 60 * 60 * 24 * 365);
+          sharedHistoryScore = Math.min(15, overlapYears * 5); // 5 points per year, max 15
+        } else if (myCompanies.has(connectionCompany)) {
+          sharedHistoryScore = 5; // Worked at same company but maybe different times
+        }
+      }
+    }
+    
     // Calculate factor scores
     const factors = {
       recommendationReceived: hasRecommendation ? 35 : 0,
       endorsementsReceived: Math.min(endorsementCount * 3, 15),
       messageRecency: Math.max(0, Math.min(20, 100 - daysSinceMessage) / 5),
       messageDepth: Math.min(15, avgMessageLength / 10),
-      sharedHistory: 0, // Would need position overlap data
+      sharedHistory: sharedHistoryScore,
     };
     
     const score = Math.round(

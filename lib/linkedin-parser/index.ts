@@ -9,6 +9,9 @@
  * - Endorsement_Given_Info.csv
  * - Recommendations_Received.csv
  * - Recommendations_Given.csv
+ * - Positions.csv (your work history)
+ * - Invitations.csv (sent/received connection invites)
+ * - Reactions.csv (your reactions to posts)
  */
 
 export interface LinkedInConnection {
@@ -56,6 +59,32 @@ export interface LinkedInRecommendation {
   status: string;
 }
 
+export interface LinkedInPosition {
+  companyName: string;
+  title: string;
+  description: string;
+  location: string;
+  startedOn: Date | null;
+  finishedOn: Date | null;
+  isCurrent: boolean;
+}
+
+export interface LinkedInInvitation {
+  from: string;
+  to: string;
+  sentAt: Date;
+  message: string;
+  direction: 'OUTGOING' | 'INCOMING';
+  inviterProfileUrl: string;
+  inviteeProfileUrl: string;
+}
+
+export interface LinkedInReaction {
+  date: Date;
+  type: 'LIKE' | 'PRAISE' | 'EMPATHY' | 'ENTERTAINMENT' | 'CELEBRATE' | 'CURIOUS' | 'SUPPORT' | string;
+  link: string;
+}
+
 export interface ParsedLinkedInData {
   connections: LinkedInConnection[];
   messages: LinkedInMessage[];
@@ -63,6 +92,9 @@ export interface ParsedLinkedInData {
   endorsementsGiven: LinkedInEndorsement[];
   recommendationsReceived: LinkedInRecommendation[];
   recommendationsGiven: LinkedInRecommendation[];
+  positions: LinkedInPosition[];
+  invitations: LinkedInInvitation[];
+  reactions: LinkedInReaction[];
   parseDate: Date;
   myName: string;
 }
@@ -264,6 +296,79 @@ export function parseRecommendations(content: string): LinkedInRecommendation[] 
 }
 
 /**
+ * Parse Positions.csv (your work history)
+ * Format: Company Name,Title,Description,Location,Started On,Finished On
+ */
+export function parsePositions(content: string): LinkedInPosition[] {
+  const rows = parseCSV(content);
+  
+  return rows.map(row => {
+    const startedOn = parsePositionDate(row['Started On'] || '');
+    const finishedOn = parsePositionDate(row['Finished On'] || '');
+    
+    return {
+      companyName: row['Company Name'] || '',
+      title: row['Title'] || '',
+      description: row['Description'] || '',
+      location: row['Location'] || '',
+      startedOn,
+      finishedOn,
+      isCurrent: !finishedOn && !!startedOn,
+    };
+  }).filter(p => p.companyName.length > 0);
+}
+
+/**
+ * Parse position date (format: "Aug 2025", "Dec 2023", etc.)
+ */
+function parsePositionDate(dateStr: string): Date | null {
+  if (!dateStr || dateStr.trim() === '') return null;
+  
+  // Format: "Aug 2025"
+  const monthYear = dateStr.match(/^(\w+)\s+(\d{4})$/);
+  if (monthYear) {
+    const parsed = new Date(`${monthYear[1]} 1, ${monthYear[2]}`);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+  
+  // Fallback: try direct parsing
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Parse Invitations.csv (sent/received connection invites)
+ * Format: From,To,Sent At,Message,Direction,inviterProfileUrl,inviteeProfileUrl
+ */
+export function parseInvitations(content: string): LinkedInInvitation[] {
+  const rows = parseCSV(content);
+  
+  return rows.map(row => ({
+    from: row['From'] || '',
+    to: row['To'] || '',
+    sentAt: parseLinkedInDate(row['Sent At'] || ''),
+    message: row['Message'] || '',
+    direction: (row['Direction'] || 'OUTGOING') as 'OUTGOING' | 'INCOMING',
+    inviterProfileUrl: row['inviterProfileUrl'] || '',
+    inviteeProfileUrl: row['inviteeProfileUrl'] || '',
+  })).filter(i => i.from.length > 0 && i.to.length > 0);
+}
+
+/**
+ * Parse Reactions.csv (your reactions to posts)
+ * Format: Date,Type,Link
+ */
+export function parseReactions(content: string): LinkedInReaction[] {
+  const rows = parseCSV(content);
+  
+  return rows.map(row => ({
+    date: parseLinkedInDate(row['Date'] || ''),
+    type: (row['Type'] || 'LIKE') as LinkedInReaction['type'],
+    link: row['Link'] || '',
+  })).filter(r => r.link.length > 0);
+}
+
+/**
  * Detect user's name from messages (they appear in TO field most often)
  */
 function detectMyName(messages: LinkedInMessage[]): string {
@@ -299,6 +404,9 @@ export async function parseLinkedInExport(files: {
   endorsementsGiven?: string;
   recommendationsReceived?: string;
   recommendationsGiven?: string;
+  positions?: string;
+  invitations?: string;
+  reactions?: string;
 }): Promise<ParsedLinkedInData> {
   // Parse messages first to detect user name
   const messages = files.messages ? parseMessages(files.messages, '') : [];
@@ -314,6 +422,9 @@ export async function parseLinkedInExport(files: {
     endorsementsGiven: files.endorsementsGiven ? parseEndorsements(files.endorsementsGiven, false) : [],
     recommendationsReceived: files.recommendationsReceived ? parseRecommendations(files.recommendationsReceived) : [],
     recommendationsGiven: files.recommendationsGiven ? parseRecommendations(files.recommendationsGiven) : [],
+    positions: files.positions ? parsePositions(files.positions) : [],
+    invitations: files.invitations ? parseInvitations(files.invitations) : [],
+    reactions: files.reactions ? parseReactions(files.reactions) : [],
     parseDate: new Date(),
     myName,
   };
