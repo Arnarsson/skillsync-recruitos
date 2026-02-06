@@ -16,18 +16,29 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
+// In-memory storage for serverless (resets on cold start)
+// TODO: Replace with database
+let memoryCaptures: any[] = [];
+
 async function loadCaptures(): Promise<any[]> {
+  // Try file system first (local dev)
   try {
     const data = await fs.readFile(DATA_FILE, "utf-8");
     return JSON.parse(data);
   } catch {
-    return [];
+    return memoryCaptures;
   }
 }
 
 async function saveCaptures(captures: any[]): Promise<void> {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(captures, null, 2));
+  memoryCaptures = captures;
+  // Try file system (works in local dev, fails silently on Vercel)
+  try {
+    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
+    await fs.writeFile(DATA_FILE, JSON.stringify(captures, null, 2));
+  } catch {
+    // Ignore on Vercel - data is in memory
+  }
 }
 
 /**
