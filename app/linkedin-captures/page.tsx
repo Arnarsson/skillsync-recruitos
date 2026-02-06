@@ -5,6 +5,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,9 +87,11 @@ export default function LinkedInCapturesPage() {
   const [enrichments, setEnrichments] = useState<Record<string, Enrichment>>({});
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCaptures = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/linkedin/candidate?limit=100");
       const data = await res.json();
@@ -95,6 +99,7 @@ export default function LinkedInCapturesPage() {
       setTotal(data.total || 0);
     } catch (error) {
       console.error("Failed to fetch captures:", error);
+      setError("Failed to load captures. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -257,7 +262,7 @@ export default function LinkedInCapturesPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCompanyInsights(!showCompanyInsights)}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
               >
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Insights
@@ -267,7 +272,7 @@ export default function LinkedInCapturesPage() {
                 size="sm"
                 onClick={exportToCSV}
                 disabled={captures.length === 0}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
@@ -277,7 +282,7 @@ export default function LinkedInCapturesPage() {
                 size="sm"
                 onClick={fetchCaptures}
                 disabled={loading}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
                 Refresh
@@ -299,7 +304,7 @@ export default function LinkedInCapturesPage() {
                   className="pl-10 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
                 />
               </div>
-              <Button variant="outline" className="border-slate-700 text-slate-300">
+              <Button variant="outline" className="border-slate-700 text-slate-300 focus-ring touch-target-sm">
                 <Filter className="w-4 h-4 mr-2" />
                 Filters
               </Button>
@@ -424,7 +429,7 @@ export default function LinkedInCapturesPage() {
                           <button
                             key={company}
                             onClick={() => setCompanyFilter(companyFilter === company ? null : company)}
-                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors focus-ring touch-target-sm ${
                               companyFilter === company
                                 ? 'bg-amber-600/20 border border-amber-600/50'
                                 : 'hover:bg-slate-800'
@@ -485,12 +490,15 @@ export default function LinkedInCapturesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setCompanyFilter(null)}
-              className="ml-auto text-xs text-slate-400 hover:text-white"
+              className="ml-auto text-xs text-slate-400 hover:text-white focus-ring touch-target-sm"
             >
               Clear
             </Button>
           </div>
         )}
+
+        {/* Error Banner */}
+        {error && <ErrorBanner message={error} onRetry={fetchCaptures} />}
 
         {/* Captures List */}
         <Card className="card-base">
@@ -502,7 +510,17 @@ export default function LinkedInCapturesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {displayCaptures.length === 0 ? (
+            {loading ? (
+              <div className="p-4">
+                <SkeletonCard count={6} variant="candidate" />
+              </div>
+            ) : displayCaptures.length === 0 && searchQuery ? (
+              <div className="p-8 text-center">
+                <Search className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-400 text-lg mb-2">No candidates match your search</p>
+                <p className="text-slate-500 text-sm">Try adjusting your search terms or filters</p>
+              </div>
+            ) : displayCaptures.length === 0 ? (
               <LinkedInEmptyState type="captures" />
             ) : (
               <div className="divide-y divide-slate-800">
@@ -517,7 +535,7 @@ export default function LinkedInCapturesPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="p-4 card-interactive"
+                      className="p-4 card-interactive card-focusable"
                     >
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
@@ -628,7 +646,7 @@ export default function LinkedInCapturesPage() {
                           {hasRichData && (
                             <button
                               onClick={() => setExpandedId(isExpanded ? null : capture.id)}
-                              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                              className="p-2 hover:bg-slate-700 rounded-lg transition-colors focus-ring touch-target-sm"
                             >
                               {isExpanded ? (
                                 <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -641,13 +659,13 @@ export default function LinkedInCapturesPage() {
                             href={capture.linkedinUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                            className="p-2 hover:bg-slate-700 rounded-lg transition-colors focus-ring touch-target-sm"
                           >
                             <ExternalLink className="w-4 h-4 text-slate-400" />
                           </a>
                           <Button
                             size="sm"
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white focus-ring touch-target-sm px-4"
                           >
                             Add to Pipeline
                           </Button>
@@ -752,7 +770,7 @@ export default function LinkedInCapturesPage() {
                                       size="sm"
                                       onClick={() => enrichCandidate(capture)}
                                       disabled={enrichingId === capture.id}
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7"
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 focus-ring touch-target-sm"
                                     >
                                       {enrichingId === capture.id ? (
                                         <>
@@ -785,7 +803,7 @@ export default function LinkedInCapturesPage() {
                                           <button
                                             key={i}
                                             onClick={() => copyEmail(email)}
-                                            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors"
+                                            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors focus-ring touch-target-sm"
                                           >
                                             {email}
                                             {copiedEmail === email ? (
@@ -812,7 +830,7 @@ export default function LinkedInCapturesPage() {
                                               href={gh.profileUrl}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="inline-flex items-center gap-2 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors"
+                                              className="inline-flex items-center gap-2 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors focus-ring touch-target-sm"
                                             >
                                               <img src={gh.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
                                               {gh.username}

@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import {
   Network,
@@ -13,7 +15,6 @@ import {
   Users,
   MapPin,
   RefreshCw,
-  Loader2,
   ChevronDown,
   ChevronUp,
   Link2,
@@ -60,11 +61,13 @@ interface NetworkAnalysis {
 export default function NetworkMapPage() {
   const [analysis, setAnalysis] = useState<NetworkAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profileCount, setProfileCount] = useState(0);
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
 
   const fetchAndAnalyze = async () => {
     setLoading(true);
+    setError(null);
     try {
       // First fetch all captures
       const capturesRes = await fetch("/api/linkedin/candidate?limit=500");
@@ -90,10 +93,18 @@ export default function NetworkMapPage() {
       if (analysisData.success) {
         setAnalysis(analysisData.analysis);
       }
-    } catch (error) {
-      console.error("Network analysis failed:", error);
+    } catch (err) {
+      console.error("Network analysis failed:", err);
+      setError(err instanceof Error ? err.message : "Failed to analyze network");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCompanyKeyDown = (e: React.KeyboardEvent, company: string) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setExpandedCompany(expandedCompany === company ? null : company);
     }
   };
 
@@ -133,9 +144,15 @@ export default function NetworkMapPage() {
           }
         />
 
+        {error && (
+          <ErrorBanner message={error} onRetry={fetchAndAnalyze} />
+        )}
+
         {loading ? (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+          <div className="grid grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         ) : !analysis || profileCount === 0 ? (
           <Card className="card-base">
@@ -256,10 +273,12 @@ export default function NetworkMapPage() {
                 </CardHeader>
                 <CardContent className="space-y-2 max-h-[500px] overflow-y-auto">
                   {analysis.companies.map((company) => (
-                    <div key={company.company} className="border border-slate-800 rounded-lg overflow-hidden">
+                    <div key={company.company} className="border border-slate-800 rounded-lg overflow-hidden card-focusable">
                       <button
                         onClick={() => setExpandedCompany(expandedCompany === company.company ? null : company.company)}
-                        className="w-full p-3 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                        onKeyDown={(e) => handleCompanyKeyDown(e, company.company)}
+                        tabIndex={0}
+                        className="w-full p-3 flex items-center justify-between hover:bg-slate-800/50 transition-colors focus-ring"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-yellow-600/20 rounded flex items-center justify-center text-yellow-400 font-bold text-sm">
@@ -302,7 +321,7 @@ export default function NetworkMapPage() {
                                       href={`https://linkedin.com/in/${emp.linkedinId}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="p-1 hover:bg-slate-700 rounded"
+                                      className="p-1 hover:bg-slate-700 rounded focus-ring card-focusable"
                                     >
                                       <ExternalLink className="w-3 h-3 text-slate-400" />
                                     </a>

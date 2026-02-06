@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, use, useMemo, useCallback } from "react";
+import { useState, useEffect, use, useCallback } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import {
   MapPin,
@@ -338,6 +339,7 @@ export default function ProfilePage({
         setLinkedInProgress(null);
         // Sync to pipeline localStorage
         syncLinkedInToPipeline(linkedIn);
+        toast.success("LinkedIn profile enriched");
       } else {
         console.warn('[LinkedIn] No profile data returned');
         setLinkedInError("Could not fetch LinkedIn profile. The profile may be private or the URL may be incorrect.");
@@ -426,6 +428,7 @@ export default function ProfilePage({
         setLinkedInProgress(null);
         // Sync to pipeline localStorage
         syncLinkedInToPipeline(linkedIn);
+        toast.success("LinkedIn profile enriched");
       } else {
         setLinkedInError("Could not fetch LinkedIn profile.");
         setLinkedInProgress(null);
@@ -474,7 +477,7 @@ export default function ProfilePage({
       <div className="min-h-screen pt-24 pb-16 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="text-2xl font-bold mb-4">{error || "Developer not found"}</h1>
-          <Button asChild variant="link">
+          <Button asChild variant="link" className="focus-visible:ring-2 focus-visible:ring-primary">
             <Link href="/search">Back to search</Link>
           </Button>
         </div>
@@ -511,26 +514,28 @@ export default function ProfilePage({
                 )}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                   <a
                     href={`https://github.com/${user.login}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="gap-2"
+                    aria-label={`View ${user.name || user.login}'s GitHub profile`}
                   >
-                    <Github className="w-4 h-4" />
+                    <Github className="w-4 h-4" aria-hidden="true" />
                     GitHub
                   </a>
                 </Button>
                 {linkedInProfile && (
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     <a
                       href={linkedInProfile.profileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="gap-2"
+                      aria-label={`View ${linkedInProfile.name}'s LinkedIn profile`}
                     >
-                      <Linkedin className="w-4 h-4" />
+                      <Linkedin className="w-4 h-4" aria-hidden="true" />
                       LinkedIn
                     </a>
                   </Button>
@@ -592,8 +597,17 @@ export default function ProfilePage({
                     {linkedInSuggestions.slice(0, 3).map((suggestion, idx) => (
                       <div
                         key={suggestion.profileUrl}
-                        className={`p-3 rounded-lg border ${idx === 0 ? 'border-emerald-500/40 bg-emerald-600/5' : 'border-slate-700 bg-slate-800/50'} hover:border-indigo-500/50 transition-colors cursor-pointer`}
+                        className={`p-3 rounded-lg border ${idx === 0 ? 'border-emerald-500/40 bg-emerald-600/5' : 'border-slate-700 bg-slate-800/50'} hover:border-indigo-500/50 transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-primary`}
                         onClick={() => handleSelectSuggestion(suggestion)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSelectSuggestion(suggestion);
+                          }
+                        }}
+                        aria-label={`Select ${suggestion.name} (${suggestion.confidence}% match)`}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
@@ -610,7 +624,7 @@ export default function ProfilePage({
                               </p>
                             )}
                           </div>
-                          <Button size="sm" variant={idx === 0 ? "default" : "outline"}>
+                          <Button size="sm" variant={idx === 0 ? "default" : "outline"} className="focus-visible:ring-2 focus-visible:ring-primary">
                             Use This
                           </Button>
                         </div>
@@ -622,7 +636,7 @@ export default function ProfilePage({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs h-7"
+                      className="text-xs h-7 focus-visible:ring-2 focus-visible:ring-primary"
                       onClick={() => setLinkedInSuggestions(null)}
                     >
                       Enter URL manually
@@ -647,9 +661,10 @@ export default function ProfilePage({
                           variant="outline"
                           onClick={handleFindLinkedIn}
                           disabled={linkedInFinding || linkedInLoading}
-                          className="gap-2"
+                          className="gap-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                          aria-label="Find LinkedIn profile using AI"
                         >
-                          <Brain className="w-4 h-4" />
+                          <Brain className="w-4 h-4" aria-hidden="true" />
                           Find LinkedIn
                         </Button>
                         <span className="text-xs text-muted-foreground">or</span>
@@ -665,9 +680,14 @@ export default function ProfilePage({
                               handleLinkedInEnrich();
                             }
                           }}
-                          className={`w-48 ${linkedInError ? 'border-red-500' : ''}`}
+                          className={`w-48 focus-visible:ring-2 focus-visible:ring-primary ${linkedInError ? 'border-red-500' : ''}`}
+                          aria-label="LinkedIn profile URL"
                         />
-                        <Button onClick={handleLinkedInEnrich} disabled={linkedInLoading || !linkedInUrl.trim()}>
+                        <Button 
+                          onClick={handleLinkedInEnrich} 
+                          disabled={linkedInLoading || !linkedInUrl.trim()}
+                          className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        >
                           {linkedInLoading ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -688,8 +708,17 @@ export default function ProfilePage({
                     )}
                   </div>
                   {linkedInError && (
-                    <div className="mt-3 p-2 rounded bg-red-600/10 border border-red-500/20">
-                      <p className="caption text-red-400">{linkedInError}</p>
+                    <div className="mt-3 p-3 rounded bg-red-600/10 border border-red-500/30" role="alert">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="body-sm text-red-400">{linkedInError}</p>
+                        <button
+                          onClick={() => setLinkedInError(null)}
+                          className="text-red-400 hover:text-red-300 focus-visible:ring-2 focus-visible:ring-red-400 rounded p-0.5"
+                          aria-label="Dismiss error"
+                        >
+                          <span aria-hidden="true">×</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                   {linkedInLoading && (
@@ -746,28 +775,29 @@ export default function ProfilePage({
                     <Button
                       size="sm"
                       variant="default"
-                      className="gap-1.5"
+                      className="gap-1.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                       onClick={() => {
                         // Switch to connection tab
-                        const tab = document.querySelector('[value="connection"]') as HTMLButtonElement;
-                        tab?.click();
+                        setActiveTab("connection");
                       }}
+                      aria-label="Find connection path to this candidate"
                     >
-                      <Network className="w-3.5 h-3.5" />
+                      <Network className="w-3.5 h-3.5" aria-hidden="true" />
                       Find Connection Path
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-1.5"
+                      className="gap-1.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                       asChild
                     >
                       <a
                         href={linkedInProfile.profileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        aria-label={`View ${linkedInProfile.name}'s LinkedIn profile in new tab`}
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
                         View LinkedIn
                       </a>
                     </Button>
@@ -787,8 +817,13 @@ export default function ProfilePage({
             { icon: GitCommit, value: formatNumber(contributions), label: "Contributions" },
             { icon: Calendar, value: joinedYear, label: "Joined" },
           ].map((stat) => (
-            <div key={stat.label} className="card-base flex-1 min-w-[100px] p-4 text-center">
-              <stat.icon className="w-5 h-5 mx-auto mb-2 text-slate-400" />
+            <div 
+              key={stat.label} 
+              className="card-base flex-1 min-w-[100px] p-4 text-center"
+              role="group"
+              aria-label={`${stat.label}: ${stat.value}`}
+            >
+              <stat.icon className="w-5 h-5 mx-auto mb-2 text-slate-400" aria-hidden="true" />
               <div className="heading-md">{stat.value}</div>
               <div className="caption">{stat.label}</div>
             </div>
@@ -797,26 +832,26 @@ export default function ProfilePage({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="gap-2">
-              <Github className="w-4 h-4" />
-              Overview
+          <TabsList className="flex w-full overflow-x-auto md:grid md:grid-cols-5 scrollbar-hide">
+            <TabsTrigger value="overview" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <Github className="w-4 h-4" aria-hidden="true" />
+              <span>Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="psychometric" className="gap-2">
-              <Brain className="w-4 h-4" />
-              Psychometric
+            <TabsTrigger value="psychometric" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <Brain className="w-4 h-4" aria-hidden="true" />
+              <span>Psychometric</span>
             </TabsTrigger>
-            <TabsTrigger value="interview" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              Interview
+            <TabsTrigger value="interview" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <Calendar className="w-4 h-4" aria-hidden="true" />
+              <span>Interview</span>
             </TabsTrigger>
-            <TabsTrigger value="connection" className="gap-2">
-              <Users className="w-4 h-4" />
-              Connection
+            <TabsTrigger value="connection" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <Users className="w-4 h-4" aria-hidden="true" />
+              <span>Connection</span>
             </TabsTrigger>
-            <TabsTrigger value="outreach" className="gap-2">
-              <ExternalLink className="w-4 h-4" />
-              Outreach
+            <TabsTrigger value="outreach" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+              <span>Outreach</span>
             </TabsTrigger>
           </TabsList>
 
@@ -842,12 +877,13 @@ export default function ProfilePage({
                 <h2 className="heading-md mb-4">Top Repositories</h2>
                 <div className="grid gap-4">
                   {repos.slice(0, 6).map((repo) => (
-                    <div key={repo.name} className="card-interactive">
+                    <div key={repo.name} className="card-interactive focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background">
                       <a
                         href={`https://github.com/${user.login}/${repo.name}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block p-4"
+                        className="block p-4 focus:outline-none"
+                        aria-label={`View ${repo.name} repository on GitHub${repo.description ? `: ${repo.description}` : ''}`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="heading-sm text-primary">{repo.name}</h3>
@@ -890,7 +926,7 @@ export default function ProfilePage({
                       AI-powered analysis with contribution patterns, code quality metrics, and interview guide.
                     </p>
                   </div>
-                  <Button onClick={handleUnlockDeepProfile}>
+                  <Button onClick={handleUnlockDeepProfile} className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     View Analysis
                   </Button>
                 </div>
@@ -1024,7 +1060,7 @@ export default function ProfilePage({
                       Add your LinkedIn URL in Settings to discover how you&apos;re connected to candidates
                     </p>
                     <Link href="/settings">
-                      <Button size="sm" variant="outline" className="mt-2">
+                      <Button size="sm" variant="outline" className="mt-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                         Go to Settings
                       </Button>
                     </Link>
@@ -1097,7 +1133,7 @@ export default function ProfilePage({
                       <br />
                       <p className="body-md">Would you be open to a quick chat?</p>
                     </div>
-                    <Button className="mt-4 w-full">
+                    <Button className="mt-4 w-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                       Generate AI Message (1 Credit)
                     </Button>
                   </div>
