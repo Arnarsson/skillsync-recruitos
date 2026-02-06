@@ -1,0 +1,268 @@
+// RecruitOS LinkedIn Sync - Background Service Worker
+
+const DEFAULT_API_URL = 'https://recruitos.app/api';
+const STORAGE_KEY = 'recruitos_config';
+const CANDIDATES_QUEUE_KEY = 'recruitos_candidates_queue';
+const MESSAGES_QUEUE_KEY = 'recruitos_messages_queue';
+const PROFILE_VIEWS_KEY = 'recruitos_profile_views';
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+async function getConfig() {
+  try {
+    const result = await chrome.storage.sync.get(STORAGE_KEY);
+    return result[STORAGE_KEY] || {
+      apiUrl: DEFAULT_API_URL,
+      apiKey: '',
+      autoCapture: true,
+      syncMessages: true
+    };
+  } catch (e) {
+    console.error('[RecruitOS] Config error:', e);
+    return { apiUrl: DEFAULT_API_URL, apiKey: '', autoCapture: true, syncMessages: true };
+  }
+}
+
+async function setConfig(config) {
+  await chrome.storage.sync.set({ [STORAGE_KEY]: config });
+}
+
+// ============================================
+// LOCAL STORAGE (for offline / queue)
+// ============================================
+
+async function queueCandidate(profile) {
+  const result = await chrome.storage.local.get(CANDIDATES_QUEUE_KEY);
+  const queue = result[CANDIDATES_QUEUE_KEY] || [];
+  queue.push({ ...profile, queuedAt: Date.now() });
+  await chrome.storage.local.set({ [CANDIDATES_QUEUE_KEY]: queue.slice(-200) });
+}
+
+async function getQueue(key) {
+  const result = await chrome.storage.local.get(key);
+  return result[key] || [];
+}
+
+async function clearQueue(key) {
+  await chrome.storage.local.set({ [key]: [] });
+}
+
+// Track profile views locally
+async function recordProfileView(profile) {
+  const result = await chrome.storage.local.get(PROFILE_VIEWS_KEY);
+  const views = result[PROFILE_VIEWS_KEY] || {};
+  
+  views[profile.linkedinId] = {
+    name: profile.name,
+    headline: profile.headline,
+    lastViewed: new Date().toISOString(),
+    viewCount: (views[profile.linkedinId]?.viewCount || 0) + 1
+  };
+  
+  // Keep last 500 profiles
+  const keys = Object.keys(views);
+  if (keys.length > 500) {
+    const sorted = keys.sort((a, b) => 
+      new Date(views[b].lastViewed) - new Date(views[a].lastViewed)
+    );
+    const toDelete = sorted.slice(500);
+    toDelete.forEach(k => delete views[k]);
+  }
+  
+  await chrome.storage.local.set({ [PROFILE_VIEWS_KEY]: views });
+}
+
+// ============================================
+// API COMMUNICATION
+// ============================================
+
+async function sendToRecruitOS(endpoint, data) {
+  const config = await getConfig();
+  
+  if (!config.apiKey) {
+    console.log('[RecruitOS] No API key configured');
+    return { success: false, error: 'Not configured - set API key in extension settings' };
+  }
+  
+  try {
+    const response = await fetch(`${config.apiUrl}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return { success: true, data: result };
+  } catch (e) {
+    console.error('[RecruitOS] API error:', e);
+    return { success: false, error: e.message };
+  }
+}
+
+async function addCandidate(profile) {
+  // Always record locally first
+  await recordProfileView(profile);
+  
+  const result = await sendToRecruitOS('/linkedin/candidate', {
+    source: 'linkedin_extension',
+    profile: profile,
+    capturedAt: new Date().toISOString()
+  });
+  
+  if (!result.success) {
+    // Queue for later sync
+    await queueCandidate(profile);
+  }
+  
+  return result;
+}
+
+async function syncMessages(messages) {
+  const config = await getConfig();
+  if (!config.syncMessages) return { success: true };
+  
+  return await sendToRecruitOS('/linkedin/messages', {
+    source: 'linkedin_extension',
+    messages: messages,
+    syncedAt: new Date().toISOString()
+  });
+}
+
+// ============================================
+// MESSAGE HANDLERS
+// ============================================
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'ADD_CANDIDATE') {
+    addCandidate(request.profile)
+      .then(sendResponse)
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+  
+  if (request.type === 'PROFILE_VIEW') {
+    recordProfileView(request.profile)
+      .then(() => sendResponse({ success: true }))
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+  
+  if (request.type === 'MESSAGES_SYNC') {
+    syncMessages(request.messages)
+      .then(sendResponse)
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+  
+  if (request.type === 'GET_CONFIG') {
+    getConfig().then(sendResponse);
+    return true;
+  }
+  
+  if (request.type === 'SET_CONFIG') {
+    setConfig(request.config)
+      .then(() => sendResponse({ success: true }))
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+  
+  if (request.type === 'GET_STATS') {
+    Promise.all([
+      getConfig(),
+      chrome.storage.local.get(PROFILE_VIEWS_KEY),
+      getQueue(CANDIDATES_QUEUE_KEY)
+    ]).then(([config, views, queue]) => {
+      const profileViews = views[PROFILE_VIEWS_KEY] || {};
+      sendResponse({
+        configured: !!config.apiKey,
+        profileViewsCount: Object.keys(profileViews).length,
+        queuedCount: queue.length,
+        autoCapture: config.autoCapture,
+        syncMessages: config.syncMessages
+      });
+    });
+    return true;
+  }
+  
+  if (request.type === 'GET_RECENT_VIEWS') {
+    chrome.storage.local.get(PROFILE_VIEWS_KEY).then(result => {
+      const views = result[PROFILE_VIEWS_KEY] || {};
+      const sorted = Object.entries(views)
+        .map(([id, data]) => ({ linkedinId: id, ...data }))
+        .sort((a, b) => new Date(b.lastViewed) - new Date(a.lastViewed))
+        .slice(0, 20);
+      sendResponse(sorted);
+    });
+    return true;
+  }
+  
+  if (request.type === 'SYNC_QUEUED') {
+    processQueue().then(sendResponse);
+    return true;
+  }
+});
+
+// ============================================
+// QUEUE PROCESSING
+// ============================================
+
+async function processQueue() {
+  const queue = await getQueue(CANDIDATES_QUEUE_KEY);
+  if (queue.length === 0) return { processed: 0 };
+  
+  console.log('[RecruitOS] Processing', queue.length, 'queued candidates');
+  
+  let processed = 0;
+  for (const candidate of queue) {
+    const result = await sendToRecruitOS('/linkedin/candidate', {
+      source: 'linkedin_extension',
+      profile: candidate,
+      capturedAt: candidate.queuedAt
+    });
+    
+    if (result.success) {
+      processed++;
+    } else {
+      break; // Stop on first failure
+    }
+  }
+  
+  if (processed > 0) {
+    const remaining = queue.slice(processed);
+    await chrome.storage.local.set({ [CANDIDATES_QUEUE_KEY]: remaining });
+  }
+  
+  return { processed, remaining: queue.length - processed };
+}
+
+// ============================================
+// BADGE UPDATES
+// ============================================
+
+async function updateBadge() {
+  const result = await chrome.storage.local.get(PROFILE_VIEWS_KEY);
+  const views = result[PROFILE_VIEWS_KEY] || {};
+  const count = Object.keys(views).length;
+  
+  if (count > 0) {
+    chrome.action.setBadgeText({ text: count > 99 ? '99+' : count.toString() });
+    chrome.action.setBadgeBackgroundColor({ color: '#6366f1' });
+  } else {
+    chrome.action.setBadgeText({ text: '' });
+  }
+}
+
+// Update badge periodically
+setInterval(updateBadge, 30000);
+updateBadge();
+
+console.log('[RecruitOS] LinkedIn Sync background worker started');

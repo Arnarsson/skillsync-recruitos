@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecruitOS LinkedIn Sync</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+    }
+    
+    .header {
+      padding: 20px;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: #1e293b;
+      margin: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .stat {
+      padding: 16px 8px;
+      text-align: center;
+      background: #0f172a;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #6366f1;
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    
+    .section {
+      padding: 16px;
+    }
+    
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+    
+    .input-group {
+      margin-bottom: 12px;
+    }
+    
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+    
+    .input-group input[type="text"],
+    .input-group input[type="password"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 13px;
+      transition: border-color 0.2s;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    
+    .toggle-group:last-child {
+      border-bottom: none;
+    }
+    
+    .toggle-label {
+      font-size: 13px;
+    }
+    
+    .toggle-desc {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #334155;
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    
+    .toggle input:checked + .toggle-slider {
+      background: #6366f1;
+    }
+    
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    
+    .recent-views {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .view-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    
+    .view-item:last-child {
+      border-bottom: none;
+    }
+    
+    .view-avatar {
+      width: 36px;
+      height: 36px;
+      background: #334155;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6366f1;
+      flex-shrink: 0;
+    }
+    
+    .view-info {
+      flex: 1;
+      min-width: 0;
+      margin-left: 12px;
+    }
+    
+    .view-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .view-headline {
+      font-size: 11px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .view-time {
+      font-size: 10px;
+      color: #475569;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: #4f46e5;
+    }
+    
+    .btn:disabled {
+      background: #334155;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #334155;
+    }
+    
+    .btn-secondary:hover {
+      background: #1e293b;
+    }
+    
+    .status {
+      text-align: center;
+      padding: 8px;
+      font-size: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+    
+    .status-success {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+    }
+    
+    .status-error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+    
+    .status-warning {
+      background: rgba(251, 191, 36, 0.1);
+      color: #fbbf24;
+    }
+    
+    .footer {
+      padding: 16px;
+      text-align: center;
+      border-top: 1px solid #1e293b;
+    }
+    
+    .footer a {
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: #64748b;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>RecruitOS</h1>
+    <p>LinkedIn Sync</p>
+  </div>
+  
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="profileCount">0</div>
+      <div class="stat-label">Profiles</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="queuedCount">0</div>
+      <div class="stat-label">Queued</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statusIcon">⚪</div>
+      <div class="stat-label">Status</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Configuration</div>
+    <div class="input-group">
+      <label>RecruitOS API Key</label>
+      <input type="password" id="apiKey" placeholder="Enter your API key">
+    </div>
+    <button class="btn" id="saveBtn">Save Configuration</button>
+    <div id="saveStatus"></div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Settings</div>
+    <div class="toggle-group">
+      <div>
+        <div class="toggle-label">Auto-capture profiles</div>
+        <div class="toggle-desc">Save profiles you view automatically</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="autoCapture">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-group">
+      <div>
+        <div class="toggle-label">Sync messages</div>
+        <div class="toggle-desc">Send LinkedIn messages to RecruitOS</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="syncMessages">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Recent Profile Views</div>
+    <div class="recent-views" id="recentViews">
+      <div class="empty-state">No profiles captured yet</div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <a href="https://recruitos.app" target="_blank">Open RecruitOS Dashboard →</a>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
