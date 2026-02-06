@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getNotes, addNote, deleteNote, StoredNote } from "@/lib/storage";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,19 +9,6 @@ const corsHeaders = {
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
-}
-
-// In-memory storage (TODO: replace with database)
-const notesStorage = new Map<string, Note[]>();
-
-interface Note {
-  id: string;
-  linkedinId: string;
-  author: string;
-  content: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 /**
@@ -38,12 +26,13 @@ export async function GET(request: NextRequest) {
     );
   }
   
-  const notes = notesStorage.get(linkedinId) || [];
+  const notes = await getNotes(linkedinId);
   
   return NextResponse.json({
     success: true,
     notes,
     count: notes.length,
+    persisted: true,
   }, { headers: corsHeaders });
 }
 
@@ -63,7 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const note: Note = {
+    const note: StoredNote = {
       id: `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       linkedinId,
       author: author || "Anonymous",
@@ -73,13 +62,12 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
     
-    const existingNotes = notesStorage.get(linkedinId) || [];
-    existingNotes.push(note);
-    notesStorage.set(linkedinId, existingNotes);
+    const success = await addNote(note);
     
     return NextResponse.json({
-      success: true,
+      success,
       note,
+      persisted: success,
     }, { headers: corsHeaders });
     
   } catch (error: any) {
@@ -106,12 +94,11 @@ export async function DELETE(request: NextRequest) {
     );
   }
   
-  const notes = notesStorage.get(linkedinId) || [];
-  const filtered = notes.filter(n => n.id !== noteId);
-  notesStorage.set(linkedinId, filtered);
+  const deleted = await deleteNote(linkedinId, noteId);
   
   return NextResponse.json({
     success: true,
-    deleted: notes.length !== filtered.length,
+    deleted,
+    persisted: true,
   }, { headers: corsHeaders });
 }

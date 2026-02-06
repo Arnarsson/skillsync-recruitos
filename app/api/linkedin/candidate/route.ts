@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAllCandidates, saveCandidate, getCandidateByLinkedinId, StoredCandidate } from "@/lib/storage";
 
 // CORS headers for extension
 const corsHeaders = {
@@ -11,10 +12,6 @@ const corsHeaders = {
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
-
-// In-memory storage for serverless (resets on cold start)
-// TODO: Replace with database (Supabase, Vercel KV, etc.)
-const memoryCaptures: any[] = [];
 
 /**
  * POST /api/linkedin/candidate
@@ -38,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Normalize the profile data (including rich capture fields)
-    const candidate = {
+    const candidate: StoredCandidate = {
       id: `li_${profile.linkedinId}_${Date.now()}`,
       linkedinId: profile.linkedinId,
       linkedinUrl: profile.url,
@@ -73,22 +70,10 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
     
-    // Check for duplicates in memory
-    const existingIndex = memoryCaptures.findIndex(c => c.linkedinId === candidate.linkedinId);
-    const isDuplicate = existingIndex !== -1;
+    // Save to persistent storage (Vercel KV)
+    const { success, isNew } = await saveCandidate(candidate);
     
-    if (isDuplicate) {
-      memoryCaptures[existingIndex] = { ...memoryCaptures[existingIndex], ...candidate, updatedAt: new Date().toISOString() };
-    } else {
-      memoryCaptures.unshift(candidate);
-    }
-    
-    // Keep last 500
-    if (memoryCaptures.length > 500) {
-      memoryCaptures.splice(500);
-    }
-    
-    console.log("[LinkedIn Extension] Candidate received:", candidate.name, candidate.linkedinId);
+    console.log("[LinkedIn Extension] Candidate received:", candidate.name, candidate.linkedinId, success ? (isNew ? "NEW" : "UPDATED") : "STORAGE_ERROR");
     
     return NextResponse.json({
       success: true,
@@ -96,9 +81,10 @@ export async function POST(request: NextRequest) {
         id: candidate.id,
         name: candidate.name,
         linkedinId: candidate.linkedinId,
-        status: isDuplicate ? "updated" : "captured",
+        status: isNew ? "captured" : "updated",
       },
-      isDuplicate,
+      isDuplicate: !isNew,
+      persisted: success,
     }, { headers: corsHeaders });
     
   } catch (error: any) {
@@ -123,21 +109,25 @@ export async function GET(request: NextRequest) {
     
     // If looking for specific candidate
     if (linkedinId) {
-      const candidate = memoryCaptures.find(c => c.linkedinId === linkedinId);
+      const candidate = await getCandidateByLinkedinId(linkedinId);
       return NextResponse.json({
         exists: !!candidate,
         candidate: candidate || null,
       }, { headers: corsHeaders });
     }
     
+    // Get all from persistent storage
+    const allCandidates = await getAllCandidates();
+    
     // Return paginated list
-    const paginated = memoryCaptures.slice(offset, offset + limit);
+    const paginated = allCandidates.slice(offset, offset + limit);
     
     return NextResponse.json({
       candidates: paginated,
-      total: memoryCaptures.length,
+      total: allCandidates.length,
       limit,
       offset,
+      persisted: true,
     }, { headers: corsHeaders });
     
   } catch (error) {
