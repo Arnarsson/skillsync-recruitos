@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, X, Shield, Settings } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, X, Shield, Settings, Users, Kanban, Network, ChevronDown, Search } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { useAdmin } from "@/lib/adminContext";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +14,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
   const { t, lang, setLang } = useLanguage();
   const { isAdmin, isDemoMode } = useAdmin();
+  const pathname = usePathname();
+
+  const isLinkedInActive = pathname?.startsWith('/linkedin') || pathname?.startsWith('/network-map');
+  const isSearchActive = pathname === '/search';
+  const isPipelineActive = pathname === '/pipeline';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -127,10 +139,42 @@ export default function Header() {
               <>
                 <Link
                   href="/pipeline"
-                  className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                  className={`${isPipelineActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider`}
                 >
                   {t("common.pipeline")}
                 </Link>
+                <span className="text-muted-foreground">/</span>
+                <Link
+                  href="/search"
+                  className={`${isSearchActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider flex items-center gap-1`}
+                >
+                  <Search className="w-4 h-4" />
+                  SEARCH
+                </Link>
+                <span className="text-muted-foreground">/</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className={`flex items-center gap-1 ${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider text-sm outline-none`}>
+                    LinkedIn
+                    <ChevronDown className="w-3 h-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link href="/linkedin-captures" className="flex items-center gap-2 cursor-pointer">
+                        <Users className="w-4 h-4" /> Captures
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/linkedin-pipeline" className="flex items-center gap-2 cursor-pointer">
+                        <Kanban className="w-4 h-4" /> Pipeline
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/network-map" className="flex items-center gap-2 cursor-pointer">
+                        <Network className="w-4 h-4" /> Network
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <span className="text-muted-foreground">/</span>
                 <Link
                   href="/settings"
@@ -248,11 +292,48 @@ export default function Header() {
                 <>
                   <Link
                     href="/pipeline"
-                    className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+                    className={`${isPipelineActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t("common.pipeline")}
                   </Link>
+                  <Link
+                    href="/search"
+                    className={`${isSearchActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider flex items-center gap-2`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Search className="w-4 h-4" />
+                    SEARCH
+                  </Link>
+                  {/* LinkedIn Tools Section */}
+                  <div className="border-t border-border pt-2 mt-1">
+                    <span className={`text-xs uppercase tracking-wider ${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} mb-2 block`}>
+                      LinkedIn Tools
+                    </span>
+                    <div className="flex flex-col gap-2 pl-2">
+                      <Link
+                        href="/linkedin-captures"
+                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Users className="w-4 h-4" /> Captures
+                      </Link>
+                      <Link
+                        href="/linkedin-pipeline"
+                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Kanban className="w-4 h-4" /> Pipeline
+                      </Link>
+                      <Link
+                        href="/network-map"
+                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Network className="w-4 h-4" /> Network
+                      </Link>
+                    </div>
+                  </div>
                   <Link
                     href="/settings"
                     className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider flex items-center gap-2"

@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/tooltip";
 import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
 import {
   ResponsiveContainer,
@@ -679,6 +680,13 @@ export default function DeepProfilePage() {
         <div className="mb-6">
           <WorkflowStepper currentStep={4} />
         </div>
+
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[
+          { label: "Search", href: "/search" },
+          { label: candidate.name, href: `/profile/${username}` },
+          { label: "Deep Analysis" }
+        ]} />
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">

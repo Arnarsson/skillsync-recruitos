@@ -251,10 +251,10 @@ body {
 
 /* --- Page Layout --- */
 .page-container {
-  @apply min-h-screen bg-slate-950 p-6 pt-8;
+  @apply min-h-screen bg-background pt-20 pb-8 px-6;
 }
 .page-content {
-  @apply max-w-7xl mx-auto space-y-6;
+  @apply max-w-6xl mx-auto space-y-6;
 }
 
 /* Utility classes for brand gradients */

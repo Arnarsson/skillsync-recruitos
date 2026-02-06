@@ -120,8 +120,8 @@ export default function NetworkMapPage() {
     : 0;
 
   return (
-    <div className="page-container">
-      <div className="page-content">
+    <div className="min-h-screen bg-background pt-20 pb-8 px-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Navigation */}
         <LinkedInNav />
         

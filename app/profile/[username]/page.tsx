@@ -21,6 +21,8 @@ import {
   Network,
   Linkedin,
   Check,
+  Plus,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +39,7 @@ import { ConnectionPathCard } from "@/components/SocialMatrix";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
 import { PhaseIndicator } from "@/components/PhaseIndicator";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { BestTimeToReach } from "@/components/profile/BestTimeToReach";
 import { RisingStarBadge } from "@/components/profile/RisingStarBadge";
 import { InterviewPrepPanel } from "@/components/profile/InterviewPrepPanel";
@@ -124,6 +127,10 @@ export default function ProfilePage({
   // Recruiter's LinkedIn URL (for connection path)
   const [recruiterLinkedInUrl, setRecruiterLinkedInUrl] = useState<string | null>(null);
 
+  // Pipeline state
+  const [addingToPipeline, setAddingToPipeline] = useState(false);
+  const [inPipeline, setInPipeline] = useState(false);
+
   // Load recruiter's LinkedIn URL on mount
   useEffect(() => {
     const storedUrl = localStorage.getItem("recruitos_recruiter_linkedin");
@@ -131,6 +138,86 @@ export default function ProfilePage({
       setRecruiterLinkedInUrl(storedUrl);
     }
   }, []);
+
+  // Check if already in pipeline on mount
+  useEffect(() => {
+    const checkPipelineStatus = async () => {
+      try {
+        // Check API for existing candidate (using GitHub username as fallback ID)
+        const response = await fetch(`/api/linkedin/candidate?linkedinId=github_${username}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.exists) {
+            setInPipeline(true);
+          }
+        }
+      } catch (err) {
+        console.error("[Profile] Failed to check pipeline status:", err);
+      }
+    };
+    checkPipelineStatus();
+  }, [username]);
+
+  // Handler to add candidate to pipeline
+  const handleAddToPipeline = async () => {
+    if (!profile || inPipeline) return;
+    
+    setAddingToPipeline(true);
+    try {
+      // Build profile data for the API
+      const candidateProfile = {
+        // Use LinkedIn ID if available, otherwise use GitHub username
+        linkedinId: linkedInProfile?.profileUrl 
+          ? linkedInProfile.profileUrl.split("/in/")[1]?.replace(/\/$/, "") 
+          : `github_${username}`,
+        url: linkedInProfile?.profileUrl || `https://github.com/${username}`,
+        name: linkedInProfile?.name || profile.user.name || profile.user.login,
+        headline: linkedInProfile?.headline || profile.user.bio || `GitHub: @${username}`,
+        location: linkedInProfile?.location || profile.user.location,
+        currentCompany: linkedInProfile?.currentCompany || profile.user.company,
+        photoUrl: linkedInProfile?.profileImage || profile.user.avatar_url,
+        about: profile.user.bio,
+        skills: profile.skills || [],
+        // Include GitHub-specific data
+        githubUsername: username,
+        githubUrl: `https://github.com/${username}`,
+        githubStars: totalStars,
+        githubRepos: profile.user.public_repos,
+        githubFollowers: profile.user.followers,
+      };
+
+      const response = await fetch("/api/linkedin/candidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "profile_page",
+          profile: candidateProfile,
+          capturedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to add to pipeline");
+      }
+
+      setInPipeline(true);
+      toast.success("Added to pipeline", {
+        description: "View in your candidate pipeline",
+        action: {
+          label: "View Pipeline",
+          onClick: () => window.location.href = "/linkedin-pipeline",
+        },
+      });
+    } catch (err) {
+      console.error("[Profile] Failed to add to pipeline:", err);
+      toast.error("Failed to add to pipeline", {
+        description: err instanceof Error ? err.message : "Please try again",
+      });
+    } finally {
+      setAddingToPipeline(false);
+    }
+  };
 
   // Sync LinkedIn data back to pipeline localStorage
   const syncLinkedInToPipeline = useCallback((linkedIn: LinkedInProfile) => {
@@ -494,6 +581,12 @@ export default function ProfilePage({
         {/* Phase Indicator */}
         <PhaseIndicator currentPhase={3} />
         
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[
+          { label: "Search", href: "/search" },
+          { label: user.name || user.login }
+        ]} />
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
           <Avatar className="w-32 h-32">
@@ -514,6 +607,34 @@ export default function ProfilePage({
                 )}
               </div>
               <div className="flex gap-2">
+                {/* Add to Pipeline Button */}
+                <Button
+                  onClick={handleAddToPipeline}
+                  disabled={addingToPipeline || inPipeline}
+                  className={`focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    inPipeline 
+                      ? "bg-emerald-600 hover:bg-emerald-600 cursor-default" 
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
+                  aria-label={inPipeline ? "Already in pipeline" : "Add candidate to pipeline"}
+                >
+                  {addingToPipeline ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+                      Adding...
+                    </>
+                  ) : inPipeline ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" aria-hidden="true" />
+                      In Pipeline
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+                      Add to Pipeline
+                    </>
+                  )}
+                </Button>
                 <Button variant="outline" asChild className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                   <a
                     href={`https://github.com/${user.login}`}
