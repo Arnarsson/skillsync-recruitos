@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
+import { useWorkflowState } from "@/hooks/useWorkflowState";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
 
@@ -402,6 +403,9 @@ function TierColumn({
 export default function SkillsReviewPage() {
   const router = useRouter();
   const toastShownRef = useRef(false);
+  
+  // Workflow state for browser history support (fixes Linear 7-365)
+  const { navigateToStep, getJobHash, isStale, urlState } = useWorkflowState({ step: 3 });
 
   const [skills, setSkills] = useState<Skill[]>(() => loadSkillsFromStorage().skills);
   const [originalSkills] = useState<Skill[]>(() => loadSkillsFromStorage().skills);
@@ -425,7 +429,14 @@ export default function SkillsReviewPage() {
         description: "Please complete the intake step first",
       });
     }
-  }, []);
+    
+    // Warn if state might be stale from browser back navigation (7-365 UX)
+    if (isStale) {
+      toast.warning("Job context may have changed", {
+        description: "Skills shown are from a previous session. Consider starting fresh from Job Intake.",
+      });
+    }
+  }, [isStale]);
 
   // Fetch preview data
   const fetchPreview = useCallback(async (force = false) => {
@@ -557,8 +568,14 @@ export default function SkillsReviewPage() {
     // Clear draft as we've officially saved
     localStorage.removeItem("apex_skills_draft");
     toast.success("Skills saved");
-    router.push("/pipeline");
-  }, [skills, customSkills, router]);
+    
+    // Use workflow navigator for proper history.pushState support (fixes 7-365)
+    navigateToStep('PIPELINE', { 
+      skillsComplete: true, 
+      intakeComplete: urlState.intakeComplete,
+      jobHash: getJobHash() 
+    });
+  }, [skills, customSkills, navigateToStep, urlState.intakeComplete, getJobHash]);
 
   const hasChanges = JSON.stringify(skills) !== JSON.stringify(originalSkills) || customSkills.length > 0;
   const limitingCount = preview ? Object.entries(preview.perSkill).filter(([name, s]) =>

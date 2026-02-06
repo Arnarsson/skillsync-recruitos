@@ -3,6 +3,7 @@
 import { CheckCircle, FileText, ListChecks, Users, Microscope, Mail, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { buildWorkflowUrl, hashJobContext, STORAGE_KEYS } from "@/lib/workflowState";
 
 interface WorkflowStepperProps {
   currentStep: 1 | 2 | 3 | 4 | 5;
@@ -105,7 +106,27 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
 
   const handleStepClick = (step: (typeof STEPS)[number]) => {
     if (step.id <= currentStep) {
-      router.push(step.path);
+      // Get job hash for workflow state tracking (fixes 7-365)
+      let jobHash: string | undefined;
+      if (typeof window !== 'undefined') {
+        const storedContext = localStorage.getItem(STORAGE_KEYS.JOB_CONTEXT);
+        if (storedContext) {
+          try {
+            jobHash = hashJobContext(JSON.parse(storedContext));
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+      
+      // Use workflow URL with state for proper history.pushState support
+      const url = buildWorkflowUrl(step.path, {
+        step: step.id,
+        jobHash,
+        intakeComplete: currentStep > 1 || step.id > 1,
+        skillsComplete: currentStep > 3 || step.id > 3,
+      });
+      router.push(url);
     }
   };
 

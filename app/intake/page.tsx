@@ -31,6 +31,8 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
+import { useWorkflowState } from "@/hooks/useWorkflowState";
+import { hashJobContext } from "@/lib/workflowState";
 
 const DEMO_JOB_CONTEXT = {
   title: "Senior Full-Stack Engineer",
@@ -61,6 +63,10 @@ export default function IntakePage() {
   const router = useRouter();
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
+  
+  // Workflow state for browser history support (fixes Linear 7-365)
+  const { navigateToStep, getJobHash, markComplete } = useWorkflowState({ step: 1 });
+  
   const [activeTab, setActiveTab] = useState("url");
   const [jobUrl, setJobUrl] = useState("");
   const [jobText, setJobText] = useState("");
@@ -177,18 +183,22 @@ export default function IntakePage() {
       localStorage.setItem("apex_pending_auto_search", "true");
       console.log("[Intake] Set flag, skills:", enrichedContext.requiredSkills);
 
-      // Show brief success state then navigate
+      // Show brief success state then navigate with workflow state (fixes 7-365)
       const timer = setTimeout(() => {
+        // Get job hash for state tracking
+        const jobHash = hashJobContext(enrichedContext);
+        
         // Check for pending search from homepage
         const pending = localStorage.getItem("recruitos_pending_search");
         if (pending) {
           console.log("[Intake] Navigating to search with query:", pending);
           localStorage.removeItem("recruitos_pending_search");
-          router.push(`/search?q=${encodeURIComponent(pending)}`);
+          // Use workflow navigator for proper history.pushState support
+          navigateToStep('SEARCH', { intakeComplete: true, jobHash });
         } else {
-          // Navigate to skills review first, not directly to pipeline
+          // Navigate to skills review with workflow state
           console.log("[Intake] Navigating to skills-review...");
-          router.push(`/skills-review`);
+          navigateToStep('SKILLS_REVIEW', { intakeComplete: true, jobHash });
         }
       }, 1500); // 1.5 second delay to show success
 
@@ -294,10 +304,17 @@ export default function IntakePage() {
     const pending = localStorage.getItem("recruitos_pending_search");
     if (pending) {
       localStorage.removeItem("recruitos_pending_search");
-      router.push(`/search?q=${encodeURIComponent(pending)}`);
+      // Use workflow navigator for proper history.pushState support (fixes 7-365)
+      navigateToStep('SEARCH', { 
+        intakeComplete: true, 
+        jobHash: getJobHash() 
+      });
     } else {
-      // Navigate to skills review first, not directly to pipeline
-      router.push(`/skills-review`);
+      // Navigate to skills review with workflow state
+      navigateToStep('SKILLS_REVIEW', { 
+        intakeComplete: true, 
+        jobHash: getJobHash() 
+      });
     }
   };
 
