@@ -4,6 +4,18 @@ import path from "path";
 
 const DATA_FILE = path.join(process.cwd(), ".data", "linkedin-captures.json");
 
+// CORS headers for extension
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// Handle OPTIONS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 async function loadCaptures(): Promise<any[]> {
   try {
     const data = await fs.readFile(DATA_FILE, "utf-8");
@@ -92,13 +104,13 @@ export async function POST(request: NextRequest) {
         status: isDuplicate ? "updated" : "captured",
       },
       isDuplicate,
-    });
+    }, { headers: corsHeaders });
     
   } catch (error) {
     console.error("[LinkedIn Extension] Candidate error:", error);
     return NextResponse.json(
       { error: "Failed to process candidate" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -122,7 +134,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         exists: !!candidate,
         candidate: candidate || null,
-      });
+      }, { headers: corsHeaders });
     }
     
     // Return paginated list
@@ -133,13 +145,13 @@ export async function GET(request: NextRequest) {
       total: captures.length,
       limit,
       offset,
-    });
+    }, { headers: corsHeaders });
     
   } catch (error) {
     console.error("[LinkedIn Extension] Candidate lookup error:", error);
     return NextResponse.json(
       { error: "Failed to lookup candidate" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
