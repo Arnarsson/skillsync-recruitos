@@ -26,6 +26,10 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
+  Download,
+  Building2,
+  TrendingUp,
+  Tag,
 } from "lucide-react";
 
 interface LinkedInCapture {
@@ -61,6 +65,8 @@ export default function LinkedInCapturesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [total, setTotal] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showCompanyInsights, setShowCompanyInsights] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
 
   const fetchCaptures = async () => {
     setLoading(true);
@@ -118,6 +124,65 @@ export default function LinkedInCapturesPage() {
     return parts[0][0].toUpperCase();
   };
 
+  // Compute company frequency map
+  const companyStats = captures.reduce((acc, c) => {
+    const company = c.currentCompany?.trim();
+    if (company) {
+      acc[company] = (acc[company] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topCompanies = Object.entries(companyStats)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Compute skill frequency
+  const skillStats = captures.reduce((acc, c) => {
+    c.skills?.forEach(skill => {
+      acc[skill.name] = (acc[skill.name] || 0) + 1;
+    });
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topSkills = Object.entries(skillStats)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = [
+      'Name', 'Headline', 'Company', 'Location', 'LinkedIn URL', 
+      'Open to Work', 'Connection Degree', 'Skills', 'Captured At'
+    ];
+    
+    const rows = captures.map(c => [
+      c.name || '',
+      (c.headline || '').replace(/,/g, ';'),
+      c.currentCompany || '',
+      c.location || '',
+      c.linkedinUrl || '',
+      c.openToWork ? 'Yes' : 'No',
+      c.connectionDegree || '',
+      (c.skills || []).map(s => s.name).join('; '),
+      c.capturedAt || ''
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `linkedin-captures-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Filter by company if selected
+  const displayCaptures = companyFilter
+    ? filteredCaptures.filter(c => c.currentCompany === companyFilter)
+    : filteredCaptures;
+
   return (
     <div className="min-h-screen bg-slate-950 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -138,6 +203,25 @@ export default function LinkedInCapturesPage() {
             <Badge variant="secondary" className="bg-slate-800 text-slate-300">
               {total} profiles
             </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCompanyInsights(!showCompanyInsights)}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Insights
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToCSV}
+              disabled={captures.length === 0}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -252,6 +336,111 @@ export default function LinkedInCapturesPage() {
           </Card>
         </div>
 
+        {/* Company & Skills Insights Panel */}
+        <AnimatePresence>
+          {showCompanyInsights && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                {/* Top Companies */}
+                <Card className="bg-slate-900 border-slate-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-yellow-400" />
+                      Top Companies
+                      {companyFilter && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCompanyFilter(null)}
+                          className="ml-auto text-xs text-slate-400 hover:text-white h-6 px-2"
+                        >
+                          Clear filter
+                        </Button>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {topCompanies.length === 0 ? (
+                      <p className="text-slate-500 text-sm">No company data yet</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {topCompanies.map(([company, count]) => (
+                          <button
+                            key={company}
+                            onClick={() => setCompanyFilter(companyFilter === company ? null : company)}
+                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+                              companyFilter === company
+                                ? 'bg-yellow-600/20 border border-yellow-600/50'
+                                : 'hover:bg-slate-800'
+                            }`}
+                          >
+                            <span className="text-sm text-slate-300 truncate">{company}</span>
+                            <Badge variant="secondary" className="bg-slate-700 text-slate-300 ml-2">
+                              {count}
+                            </Badge>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Top Skills */}
+                <Card className="bg-slate-900 border-slate-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                      Top Skills Across Captures
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {topSkills.length === 0 ? (
+                      <p className="text-slate-500 text-sm">No skills data yet</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {topSkills.map(([skill, count]) => (
+                          <Badge
+                            key={skill}
+                            variant="outline"
+                            className="border-slate-700 text-slate-300"
+                          >
+                            {skill}
+                            <span className="ml-1 text-indigo-400">({count})</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Company Filter Banner */}
+        {companyFilter && (
+          <div className="flex items-center gap-2 p-3 bg-yellow-600/10 border border-yellow-600/30 rounded-lg">
+            <Building2 className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm text-slate-300">
+              Filtering by: <span className="font-medium text-white">{companyFilter}</span>
+            </span>
+            <span className="text-slate-500">({displayCaptures.length} profiles)</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCompanyFilter(null)}
+              className="ml-auto text-xs text-slate-400 hover:text-white"
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+
         {/* Captures List */}
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="border-b border-slate-800">
@@ -262,7 +451,7 @@ export default function LinkedInCapturesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {filteredCaptures.length === 0 ? (
+            {displayCaptures.length === 0 ? (
               <div className="p-12 text-center">
                 <Linkedin className="w-12 h-12 text-slate-600 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-300 mb-2">
@@ -275,7 +464,7 @@ export default function LinkedInCapturesPage() {
             ) : (
               <div className="divide-y divide-slate-800">
                 <AnimatePresence>
-                  {filteredCaptures.map((capture, index) => {
+                  {displayCaptures.map((capture, index) => {
                     const isExpanded = expandedId === capture.id;
                     const hasRichData = capture.skills?.length > 0 || capture.education?.length > 0 || capture.experience?.length > 1;
                     
