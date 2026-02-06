@@ -30,6 +30,11 @@ import {
   Building2,
   TrendingUp,
   Tag,
+  Mail,
+  Github,
+  Wand2,
+  Copy,
+  Check,
 } from "lucide-react";
 
 interface LinkedInCapture {
@@ -59,6 +64,14 @@ interface LinkedInCapture {
   createdAt: string;
 }
 
+interface Enrichment {
+  linkedinId: string;
+  emailPatterns: string[];
+  githubProfiles: { username: string; profileUrl: string; avatarUrl: string }[];
+  companyDomain: string | null;
+  enrichedAt: string;
+}
+
 export default function LinkedInCapturesPage() {
   const [captures, setCaptures] = useState<LinkedInCapture[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +80,9 @@ export default function LinkedInCapturesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCompanyInsights, setShowCompanyInsights] = useState(false);
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [enrichments, setEnrichments] = useState<Record<string, Enrichment>>({});
+  const [enrichingId, setEnrichingId] = useState<string | null>(null);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
   const fetchCaptures = async () => {
     setLoading(true);
@@ -182,6 +198,40 @@ export default function LinkedInCapturesPage() {
   const displayCaptures = companyFilter
     ? filteredCaptures.filter(c => c.currentCompany === companyFilter)
     : filteredCaptures;
+
+  // Enrich a candidate with email patterns and GitHub profiles
+  const enrichCandidate = async (capture: LinkedInCapture) => {
+    setEnrichingId(capture.id);
+    try {
+      const res = await fetch('/api/linkedin/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: capture.name,
+          company: capture.currentCompany,
+          linkedinId: capture.linkedinId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.enrichment) {
+        setEnrichments(prev => ({
+          ...prev,
+          [capture.id]: data.enrichment,
+        }));
+      }
+    } catch (error) {
+      console.error('Enrichment failed:', error);
+    } finally {
+      setEnrichingId(null);
+    }
+  };
+
+  // Copy email to clipboard
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email);
+    setCopiedEmail(email);
+    setTimeout(() => setCopiedEmail(null), 2000);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 p-6">
@@ -696,6 +746,100 @@ export default function LinkedInCapturesPage() {
                                   </div>
                                 </div>
                               )}
+                              
+                              {/* Enrichment Panel */}
+                              <div className="bg-gradient-to-br from-emerald-900/30 to-slate-800/50 rounded-lg p-3 border border-emerald-600/20 md:col-span-2">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                                    <Wand2 className="w-4 h-4 text-emerald-400" />
+                                    External Enrichment
+                                  </h4>
+                                  {!enrichments[capture.id] && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => enrichCandidate(capture)}
+                                      disabled={enrichingId === capture.id}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7"
+                                    >
+                                      {enrichingId === capture.id ? (
+                                        <>
+                                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                          Enriching...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Wand2 className="w-3 h-3 mr-1" />
+                                          Find Email & GitHub
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                                
+                                {enrichments[capture.id] ? (
+                                  <div className="space-y-3">
+                                    {/* Email Patterns */}
+                                    <div>
+                                      <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
+                                        <Mail className="w-3 h-3" />
+                                        Likely Email Patterns
+                                        {enrichments[capture.id].companyDomain && (
+                                          <span className="text-slate-500">(@{enrichments[capture.id].companyDomain})</span>
+                                        )}
+                                      </p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {enrichments[capture.id].emailPatterns.slice(0, 6).map((email, i) => (
+                                          <button
+                                            key={i}
+                                            onClick={() => copyEmail(email)}
+                                            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors"
+                                          >
+                                            {email}
+                                            {copiedEmail === email ? (
+                                              <Check className="w-3 h-3 text-emerald-400" />
+                                            ) : (
+                                              <Copy className="w-3 h-3 text-slate-500" />
+                                            )}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* GitHub Profiles */}
+                                    {enrichments[capture.id].githubProfiles.length > 0 && (
+                                      <div>
+                                        <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
+                                          <Github className="w-3 h-3" />
+                                          Possible GitHub Profiles
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                          {enrichments[capture.id].githubProfiles.map((gh, i) => (
+                                            <a
+                                              key={i}
+                                              href={gh.profileUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center gap-2 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors"
+                                            >
+                                              <img src={gh.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
+                                              {gh.username}
+                                              <ExternalLink className="w-3 h-3 text-slate-500" />
+                                            </a>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    <p className="text-xs text-slate-500">
+                                      Enriched {new Date(enrichments[capture.id].enrichedAt).toLocaleTimeString()}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-500">
+                                    Click "Find Email & GitHub" to discover contact info and developer profiles
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </motion.div>
                         )}
