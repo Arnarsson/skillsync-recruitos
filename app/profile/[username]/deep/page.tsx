@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAdmin } from "@/lib/adminContext";
+import { useModalHistory } from "@/hooks/useModalHistory";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -286,6 +287,11 @@ export default function DeepProfilePage() {
     company?: string;
     requiredSkills?: string[];
   } | null>(null);
+
+  // Browser history integration for modals
+  const { openModal, closeModal } = useModalHistory({
+    outreach: [showOutreach, setShowOutreach],
+  });
 
   const [hasAutoRun, setHasAutoRun] = useState(false);
 
@@ -575,7 +581,7 @@ export default function DeepProfilePage() {
               <span className="xs:hidden">{candidate.persona ? "Opdatér" : "Analysér"}</span>
             </Button>
             <Button
-              onClick={() => setShowOutreach(true)}
+              onClick={() => openModal('outreach')}
               size="sm"
               className="gap-1.5 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
             >
@@ -2128,7 +2134,7 @@ export default function DeepProfilePage() {
         {candidate && (
           <OutreachModal
             isOpen={showOutreach}
-            onClose={() => setShowOutreach(false)}
+            onClose={() => closeModal('outreach')}
             candidate={{
               name: candidate.name,
               currentRole: candidate.currentRole,

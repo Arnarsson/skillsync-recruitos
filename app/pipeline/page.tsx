@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useModalHistory } from "@/hooks/useModalHistory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,13 @@ export default function PipelinePage() {
   // Outreach modal state
   const [showOutreach, setShowOutreach] = useState(false);
   const [outreachCandidate, setOutreachCandidate] = useState<Candidate | null>(null);
+
+  // Browser history integration for modals
+  const { openModal, closeModal } = useModalHistory({
+    import: [showImport, setShowImport],
+    compare: [showComparison, setShowComparison],
+    outreach: [showOutreach, setShowOutreach],
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem("apex_job_context");
@@ -264,7 +272,7 @@ export default function PipelinePage() {
           return updated;
         });
 
-        setShowImport(false);
+        closeModal('import');
         setImportText("");
       }
     } catch (error) {
@@ -396,7 +404,7 @@ export default function PipelinePage() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+            <Button variant="outline" size="sm" onClick={() => openModal('import')}>
               <FileText className="w-4 h-4 mr-2" />
               Importer
             </Button>
@@ -515,7 +523,7 @@ export default function PipelinePage() {
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
                         <Badge>{selectedIds.length} valgt</Badge>
-                        <Button size="sm" onClick={() => setShowComparison(true)}>
+                        <Button size="sm" onClick={() => openModal('compare')}>
                           Sammenlign
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
@@ -557,7 +565,7 @@ export default function PipelinePage() {
                     Søg efter udviklere på GitHub eller importer et CV
                   </p>
                   <div className="flex gap-2 justify-center">
-                    <Button onClick={() => setShowImport(true)}>
+                    <Button onClick={() => openModal('import')}>
                       <FileText className="w-4 h-4 mr-2" />
                       Importer CV
                     </Button>
@@ -641,7 +649,7 @@ export default function PipelinePage() {
                             variant="outline"
                             onClick={() => {
                               setOutreachCandidate(candidate);
-                              setShowOutreach(true);
+                              openModal('outreach');
                             }}
                           >
                             <MessageSquare className="w-4 h-4" />
@@ -671,7 +679,7 @@ export default function PipelinePage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowImport(false)}
+              onClick={() => closeModal('import')}
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -682,7 +690,7 @@ export default function PipelinePage() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">Importer Kandidat</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowImport(false)}>
+                  <Button variant="ghost" size="sm" onClick={() => closeModal('import')}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -696,7 +704,7 @@ export default function PipelinePage() {
                   className="w-full h-64 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => setShowImport(false)}>
+                  <Button variant="outline" onClick={() => closeModal('import')}>
                     Annuller
                   </Button>
                   <Button onClick={handleImport} disabled={isImporting || !importText.trim()}>
@@ -721,7 +729,7 @@ export default function PipelinePage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowComparison(false)}
+              onClick={() => closeModal('compare')}
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -732,7 +740,7 @@ export default function PipelinePage() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold">Sammenlign Kandidater</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowComparison(false)}>
+                  <Button variant="ghost" size="sm" onClick={() => closeModal('compare')}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -793,7 +801,7 @@ export default function PipelinePage() {
           <OutreachModal
             isOpen={showOutreach}
             onClose={() => {
-              setShowOutreach(false);
+              closeModal('outreach');
               setOutreachCandidate(null);
             }}
             candidate={{
