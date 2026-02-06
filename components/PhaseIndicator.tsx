@@ -3,9 +3,11 @@
 import { Search, ListFilter, Microscope, Mail } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { usePhase } from "@/lib/phaseContext";
 
 interface PhaseIndicatorProps {
-  currentPhase: 1 | 2 | 3 | 4;
+  /** Override current phase (optional - uses context if not provided) */
+  currentPhase?: 1 | 2 | 3 | 4;
   className?: string;
 }
 
@@ -71,7 +73,12 @@ const PHASE_COLORS = {
   },
 };
 
-export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorProps) {
+export function PhaseIndicator({ currentPhase: propPhase, className = "" }: PhaseIndicatorProps) {
+  const { currentPhase: contextPhase, canAccessPhase } = usePhase();
+  
+  // Use prop if provided, otherwise use context
+  const currentPhase = propPhase ?? contextPhase;
+  
   return (
     <div className={cn("w-full mb-6", className)}>
       {/* Desktop: Horizontal layout */}
@@ -80,7 +87,8 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
           const isCompleted = phase.id < currentPhase;
           const isCurrent = phase.id === currentPhase;
           const isFuture = phase.id > currentPhase;
-          const isClickable = isCompleted || isCurrent;
+          // Use context's canAccessPhase for proper access control
+          const isClickable = canAccessPhase(phase.id as 1 | 2 | 3 | 4);
           const PhaseIcon = phase.icon;
           const colors = PHASE_COLORS[phase.color];
 
