@@ -5,6 +5,7 @@ import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import {
   Linkedin,
@@ -38,7 +39,7 @@ const STAGES = [
   { id: "captured", label: "Captured", color: "bg-slate-600" },
   { id: "reviewing", label: "Reviewing", color: "bg-blue-600" },
   { id: "contacting", label: "Contacting", color: "bg-yellow-600" },
-  { id: "interviewing", label: "Interviewing", color: "bg-purple-600" },
+  { id: "interviewing", label: "Interviewing", color: "bg-indigo-600" },
   { id: "offer", label: "Offer", color: "bg-emerald-600" },
   { id: "rejected", label: "Rejected", color: "bg-red-600" },
 ];
@@ -107,37 +108,31 @@ export default function LinkedInPipelinePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 pt-8">
-      <div className="max-w-full mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-950 page-container">
+      <div className="page-content">
         {/* Navigation */}
         <div className="max-w-7xl">
           <LinkedInNav />
         </div>
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600/20 rounded-lg">
-              <Kanban className="w-6 h-6 text-indigo-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Recruiting Pipeline</h1>
-              <p className="text-slate-400 text-sm">
-                Drag candidates between stages • {candidates.length} total
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchCandidates}
-            disabled={loading}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+        <PageHeader
+          icon={Kanban}
+          title="Recruiting Pipeline"
+          subtitle={`Drag candidates between stages • ${candidates.length} total`}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchCandidates}
+              disabled={loading}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          }
+        />
 
         {loading ? (
           <div className="flex items-center justify-center p-12">
@@ -159,7 +154,7 @@ export default function LinkedInPipelinePage() {
               >
                 <Card className="bg-slate-900 border-slate-800 h-full">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-white text-sm flex items-center justify-between">
+                    <CardTitle className="text-white body-sm flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${stage.color}`} />
                         {stage.label}
@@ -199,7 +194,7 @@ export default function LinkedInPipelinePage() {
                                   className={`w-10 h-10 rounded-full object-cover ${candidate.openToWork ? 'ring-2 ring-green-500' : ''}`}
                                 />
                               ) : (
-                                <div className={`w-10 h-10 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-400 font-semibold text-sm ${candidate.openToWork ? 'ring-2 ring-green-500' : ''}`}>
+                                <div className={`w-10 h-10 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-400 font-semibold body-sm ${candidate.openToWork ? 'ring-2 ring-green-500' : ''}`}>
                                   {getInitials(candidate.name)}
                                 </div>
                               )}
@@ -212,15 +207,15 @@ export default function LinkedInPipelinePage() {
                             
                             {/* Info */}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">
+                              <p className="body-sm font-medium text-white truncate">
                                 {candidate.name}
                               </p>
-                              <p className="text-xs text-slate-400 truncate">
+                              <p className="caption text-slate-400 truncate">
                                 {candidate.headline?.substring(0, 50)}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 {candidate.currentCompany && (
-                                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                                  <span className="caption text-slate-500 flex items-center gap-1">
                                     <Briefcase className="w-3 h-3" />
                                     {candidate.currentCompany.substring(0, 20)}
                                   </span>
@@ -240,13 +235,13 @@ export default function LinkedInPipelinePage() {
                             </a>
                           </div>
                           
-                          {/* Quick Actions */}
+                          {/* Quick Actions - min-h-9 ensures 36px touch target */}
                           <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-700">
                             {STAGES.filter(s => s.id !== stage.id && s.id !== 'captured').slice(0, 3).map(s => (
                               <button
                                 key={s.id}
                                 onClick={() => moveCandidate(candidate.id, s.id)}
-                                className={`text-xs px-2 py-1 rounded ${s.color}/20 text-slate-300 hover:${s.color}/40 transition-colors`}
+                                className={`caption px-2 py-2 min-h-9 rounded ${s.color}/20 text-slate-300 hover:${s.color}/40 transition-colors`}
                               >
                                 → {s.label}
                               </button>
@@ -257,7 +252,7 @@ export default function LinkedInPipelinePage() {
                     </AnimatePresence>
                     
                     {getCandidatesForStage(stage.id).length === 0 && (
-                      <div className="text-center py-8 text-slate-600 text-sm">
+                      <div className="text-center py-8 text-slate-600 body-sm">
                         Drop candidates here
                       </div>
                     )}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,62 +236,58 @@ export default function LinkedInCapturesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 pt-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="page-container">
+      <div className="page-content">
         {/* Navigation */}
         <LinkedInNav />
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600/20 rounded-lg">
-              <Linkedin className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">LinkedIn Captures</h1>
-              <p className="text-slate-400 text-sm">
-                Profiles captured from the LinkedIn extension
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="secondary" className="bg-slate-800 text-slate-300">
+        <PageHeader
+          icon={Linkedin}
+          title="LinkedIn Captures"
+          subtitle="Profiles captured from the LinkedIn extension"
+          badge={
+            <Badge variant="secondary" className="badge-neutral">
               {total} profiles
             </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCompanyInsights(!showCompanyInsights)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Insights
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportToCSV}
-              disabled={captures.length === 0}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchCaptures}
-              disabled={loading}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-        </div>
+          }
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCompanyInsights(!showCompanyInsights)}
+                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Insights
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                disabled={captures.length === 0}
+                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchCaptures}
+                disabled={loading}
+                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </>
+          }
+        />
 
         {/* Search & Filters */}
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="card-base">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
@@ -312,7 +309,7 @@ export default function LinkedInCapturesPage() {
 
         {/* Stats Row */}
         <div className="grid grid-cols-5 gap-4">
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="card-base">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-600/20 rounded-lg">
@@ -320,16 +317,16 @@ export default function LinkedInCapturesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">{total}</p>
-                  <p className="text-xs text-slate-400">Total Captured</p>
+                  <p className="caption">Total Captured</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="card-base">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-600/20 rounded-lg">
-                  <UserPlus className="w-5 h-5 text-green-400" />
+                <div className="p-2 bg-emerald-600/20 rounded-lg">
+                  <UserPlus className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">
@@ -338,42 +335,42 @@ export default function LinkedInCapturesPage() {
                       return new Date(c.capturedAt).getTime() > hourAgo;
                     }).length}
                   </p>
-                  <p className="text-xs text-slate-400">Last Hour</p>
+                  <p className="caption">Last Hour</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="card-base">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-600/20 rounded-lg">
-                  <Briefcase className="w-5 h-5 text-yellow-400" />
+                <div className="p-2 bg-amber-600/20 rounded-lg">
+                  <Briefcase className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">
                     {new Set(captures.map((c) => c.currentCompany).filter(Boolean)).size}
                   </p>
-                  <p className="text-xs text-slate-400">Companies</p>
+                  <p className="caption">Companies</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="card-base">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-600/20 rounded-lg">
-                  <MapPin className="w-5 h-5 text-purple-400" />
+                <div className="p-2 bg-indigo-600/20 rounded-lg">
+                  <MapPin className="w-5 h-5 text-indigo-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">
                     {new Set(captures.map((c) => c.location).filter(Boolean)).size}
                   </p>
-                  <p className="text-xs text-slate-400">Locations</p>
+                  <p className="caption">Locations</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="card-base">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-600/20 rounded-lg">
@@ -383,7 +380,7 @@ export default function LinkedInCapturesPage() {
                   <p className="text-2xl font-bold text-white">
                     {captures.filter((c) => c.openToWork).length}
                   </p>
-                  <p className="text-xs text-slate-400">Open to Work</p>
+                  <p className="caption">Open to Work</p>
                 </div>
               </div>
             </CardContent>
@@ -401,10 +398,10 @@ export default function LinkedInCapturesPage() {
             >
               <div className="grid grid-cols-2 gap-4">
                 {/* Top Companies */}
-                <Card className="bg-slate-900 border-slate-800">
+                <Card className="card-base">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-white text-sm flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-yellow-400" />
+                    <CardTitle className="heading-md flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-amber-400" />
                       Top Companies
                       {companyFilter && (
                         <Button
@@ -420,7 +417,7 @@ export default function LinkedInCapturesPage() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     {topCompanies.length === 0 ? (
-                      <p className="text-slate-500 text-sm">No company data yet</p>
+                      <p className="body-sm">No company data yet</p>
                     ) : (
                       <div className="space-y-2">
                         {topCompanies.map(([company, count]) => (
@@ -429,12 +426,12 @@ export default function LinkedInCapturesPage() {
                             onClick={() => setCompanyFilter(companyFilter === company ? null : company)}
                             className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
                               companyFilter === company
-                                ? 'bg-yellow-600/20 border border-yellow-600/50'
+                                ? 'bg-amber-600/20 border border-amber-600/50'
                                 : 'hover:bg-slate-800'
                             }`}
                           >
-                            <span className="text-sm text-slate-300 truncate">{company}</span>
-                            <Badge variant="secondary" className="bg-slate-700 text-slate-300 ml-2">
+                            <span className="body-md truncate">{company}</span>
+                            <Badge variant="secondary" className="badge-neutral ml-2">
                               {count}
                             </Badge>
                           </button>
@@ -445,16 +442,16 @@ export default function LinkedInCapturesPage() {
                 </Card>
 
                 {/* Top Skills */}
-                <Card className="bg-slate-900 border-slate-800">
+                <Card className="card-base">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <CardTitle className="heading-md flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-indigo-400" />
                       Top Skills Across Captures
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
                     {topSkills.length === 0 ? (
-                      <p className="text-slate-500 text-sm">No skills data yet</p>
+                      <p className="body-sm">No skills data yet</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {topSkills.map(([skill, count]) => (
@@ -478,12 +475,12 @@ export default function LinkedInCapturesPage() {
 
         {/* Company Filter Banner */}
         {companyFilter && (
-          <div className="flex items-center gap-2 p-3 bg-yellow-600/10 border border-yellow-600/30 rounded-lg">
-            <Building2 className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-slate-300">
+          <div className="flex items-center gap-2 p-3 bg-amber-600/10 border border-amber-600/30 rounded-lg">
+            <Building2 className="w-4 h-4 text-amber-400" />
+            <span className="body-md">
               Filtering by: <span className="font-medium text-white">{companyFilter}</span>
             </span>
-            <span className="text-slate-500">({displayCaptures.length} profiles)</span>
+            <span className="caption">({displayCaptures.length} profiles)</span>
             <Button
               variant="ghost"
               size="sm"
@@ -496,9 +493,9 @@ export default function LinkedInCapturesPage() {
         )}
 
         {/* Captures List */}
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="card-base">
           <CardHeader className="border-b border-slate-800">
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="heading-md flex items-center gap-2">
               <Clock className="w-4 h-4" />
               Recent Captures
               {loading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
@@ -520,7 +517,7 @@ export default function LinkedInCapturesPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="p-4 hover:bg-slate-800/50 transition-colors"
+                      className="p-4 card-interactive"
                     >
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
@@ -529,15 +526,15 @@ export default function LinkedInCapturesPage() {
                             <img
                               src={capture.photoUrl}
                               alt={capture.name}
-                              className={`w-12 h-12 rounded-full object-cover ${capture.openToWork ? 'ring-2 ring-green-500' : ''}`}
+                              className={`w-12 h-12 rounded-full object-cover ${capture.openToWork ? 'ring-2 ring-emerald-500' : ''}`}
                             />
                           ) : (
-                            <div className={`w-12 h-12 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-400 font-semibold ${capture.openToWork ? 'ring-2 ring-green-500' : ''}`}>
+                            <div className={`w-12 h-12 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-400 font-semibold ${capture.openToWork ? 'ring-2 ring-emerald-500' : ''}`}>
                               {getInitials(capture.name)}
                             </div>
                           )}
                           {capture.openToWork && (
-                            <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5">
+                            <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-0.5">
                               <Zap className="w-3 h-3 text-white" />
                             </div>
                           )}
@@ -550,12 +547,12 @@ export default function LinkedInCapturesPage() {
                               {capture.name}
                             </h3>
                             {capture.openToWork && (
-                              <Badge className="bg-green-600/20 text-green-400 text-xs border-0">
+                              <Badge className="badge-success text-xs border-0">
                                 Open to Work
                               </Badge>
                             )}
                             {capture.isPremium && (
-                              <Badge className="bg-amber-600/20 text-amber-400 text-xs border-0">
+                              <Badge className="badge-warning text-xs border-0">
                                 <Star className="w-3 h-3 mr-1" />
                                 Premium
                               </Badge>
@@ -563,13 +560,13 @@ export default function LinkedInCapturesPage() {
                             {capture.connectionDegree && (
                               <Badge
                                 variant="secondary"
-                                className="bg-blue-600/20 text-blue-400 text-xs"
+                                className="badge-info text-xs"
                               >
                                 {capture.connectionDegree}
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-slate-400 truncate mb-2">
+                          <p className="body-sm truncate mb-2">
                             {capture.headline}
                           </p>
                           <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
@@ -598,7 +595,7 @@ export default function LinkedInCapturesPage() {
                               </span>
                             )}
                             {capture.education?.length > 0 && (
-                              <span className="flex items-center gap-1 text-purple-400">
+                              <span className="flex items-center gap-1 text-indigo-400">
                                 <GraduationCap className="w-3 h-3" />
                                 {capture.education.length} education
                               </span>
@@ -617,7 +614,7 @@ export default function LinkedInCapturesPage() {
                                 </Badge>
                               ))}
                               {capture.skills.length > 5 && (
-                                <span className="text-xs text-slate-500">+{capture.skills.length - 5} more</span>
+                                <span className="caption">+{capture.skills.length - 5} more</span>
                               )}
                             </div>
                           )}
@@ -625,7 +622,7 @@ export default function LinkedInCapturesPage() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs text-slate-500">
+                          <span className="caption">
                             {formatDate(capture.capturedAt)}
                           </span>
                           {hasRichData && (
@@ -671,7 +668,7 @@ export default function LinkedInCapturesPage() {
                               {capture.experience?.length > 0 && (
                                 <div className="bg-slate-800/50 rounded-lg p-3">
                                   <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                                    <Briefcase className="w-4 h-4 text-yellow-400" />
+                                    <Briefcase className="w-4 h-4 text-amber-400" />
                                     Experience ({capture.experience.length})
                                   </h4>
                                   <div className="space-y-2">
@@ -690,7 +687,7 @@ export default function LinkedInCapturesPage() {
                               {capture.education?.length > 0 && (
                                 <div className="bg-slate-800/50 rounded-lg p-3">
                                   <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                                    <GraduationCap className="w-4 h-4 text-purple-400" />
+                                    <GraduationCap className="w-4 h-4 text-indigo-400" />
                                     Education ({capture.education.length})
                                   </h4>
                                   <div className="space-y-2">
@@ -776,14 +773,14 @@ export default function LinkedInCapturesPage() {
                                   <div className="space-y-3">
                                     {/* Email Patterns */}
                                     <div>
-                                      <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
+                                      <p className="caption flex items-center gap-1">
                                         <Mail className="w-3 h-3" />
                                         Likely Email Patterns
                                         {enrichments[capture.id].companyDomain && (
                                           <span className="text-slate-500">(@{enrichments[capture.id].companyDomain})</span>
                                         )}
                                       </p>
-                                      <div className="flex flex-wrap gap-1">
+                                      <div className="flex flex-wrap gap-1 mt-1">
                                         {enrichments[capture.id].emailPatterns.slice(0, 6).map((email, i) => (
                                           <button
                                             key={i}
@@ -804,11 +801,11 @@ export default function LinkedInCapturesPage() {
                                     {/* GitHub Profiles */}
                                     {enrichments[capture.id].githubProfiles.length > 0 && (
                                       <div>
-                                        <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
+                                        <p className="caption flex items-center gap-1">
                                           <Github className="w-3 h-3" />
                                           Possible GitHub Profiles
                                         </p>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-2 mt-1">
                                           {enrichments[capture.id].githubProfiles.map((gh, i) => (
                                             <a
                                               key={i}
@@ -826,12 +823,12 @@ export default function LinkedInCapturesPage() {
                                       </div>
                                     )}
                                     
-                                    <p className="text-xs text-slate-500">
+                                    <p className="caption">
                                       Enriched {new Date(enrichments[capture.id].enrichedAt).toLocaleTimeString()}
                                     </p>
                                   </div>
                                 ) : (
-                                  <p className="text-xs text-slate-500">
+                                  <p className="caption">
                                     Click "Find Email & GitHub" to discover contact info and developer profiles
                                   </p>
                                 )}

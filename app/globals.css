@@ -151,6 +151,86 @@ body {
   }
 }
 
+/* =========================================
+   RECRUITOS DESIGN SYSTEM v2.0
+   ========================================= */
+
+/* --- Accent Color System --- */
+/* Use these instead of hardcoded indigo/purple/blue */
+:root {
+  --accent-primary: oklch(0.585 0.233 277); /* indigo-500 */
+  --accent-primary-muted: oklch(0.585 0.233 277 / 0.2);
+  --accent-success: oklch(0.696 0.17 162.48); /* emerald */
+  --accent-success-muted: oklch(0.696 0.17 162.48 / 0.2);
+  --accent-warning: oklch(0.769 0.188 70.08); /* amber */
+  --accent-warning-muted: oklch(0.769 0.188 70.08 / 0.2);
+  --accent-info: oklch(0.623 0.214 259); /* blue-500 */
+  --accent-info-muted: oklch(0.623 0.214 259 / 0.2);
+}
+
+/* --- Typography Scale --- */
+.heading-xl { @apply text-3xl font-bold text-white tracking-tight; }
+.heading-lg { @apply text-2xl font-semibold text-white; }
+.heading-md { @apply text-lg font-medium text-white; }
+.heading-sm { @apply text-sm font-medium text-slate-200 uppercase tracking-wide; }
+.body-lg { @apply text-base text-slate-300; }
+.body-md { @apply text-sm text-slate-300; }
+.body-sm { @apply text-xs text-slate-400; }
+.caption { @apply text-xs text-slate-500; }
+
+/* --- Spacing Scale (use consistently) --- */
+/* xs: 4px, sm: 8px, md: 16px, lg: 24px, xl: 32px, 2xl: 48px */
+.section-spacing { @apply py-12 px-6; }
+.card-spacing { @apply p-6; }
+.inline-spacing { @apply gap-3; }
+
+/* --- Card Elevation System --- */
+.card-base {
+  @apply bg-slate-900 border border-slate-800 rounded-lg;
+}
+.card-elevated {
+  @apply bg-slate-900 border border-slate-800 rounded-lg;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.card-interactive {
+  @apply bg-slate-900 border border-slate-800 rounded-lg transition-all duration-200;
+}
+.card-interactive:hover {
+  @apply border-slate-700;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+/* --- Accent Badge Colors (consistent) --- */
+.badge-accent { @apply bg-indigo-600/20 text-indigo-400 border-indigo-500/30; }
+.badge-success { @apply bg-emerald-600/20 text-emerald-400 border-emerald-500/30; }
+.badge-warning { @apply bg-amber-600/20 text-amber-400 border-amber-500/30; }
+.badge-info { @apply bg-blue-600/20 text-blue-400 border-blue-500/30; }
+.badge-neutral { @apply bg-slate-700 text-slate-300 border-slate-600; }
+
+/* --- Icon Container (page headers) --- */
+.icon-container {
+  @apply p-2 rounded-lg bg-indigo-600/20;
+}
+.icon-container svg {
+  @apply w-6 h-6 text-indigo-400;
+}
+
+/* --- Touch Targets (accessibility) --- */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px];
+}
+.touch-target-sm {
+  @apply min-h-[36px] min-w-[36px];
+}
+
+/* --- Page Layout --- */
+.page-container {
+  @apply min-h-screen bg-slate-950 p-6 pt-8;
+}
+.page-content {
+  @apply max-w-7xl mx-auto space-y-6;
+}
+
 /* Utility classes for brand gradients */
 .gradient-primary {
   background: linear-gradient(135deg, oklch(0.696 0.17 162.48), oklch(0.627 0.265 303.9));

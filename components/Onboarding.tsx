@@ -40,8 +40,8 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
       icon: <Brain className="w-5 h-5" />,
       title: t("onboarding.steps.deepProfile.title"),
       description: t("onboarding.quickSteps.profile"),
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
+      color: "text-indigo-500",
+      bg: "bg-indigo-500/10",
     },
     {
       icon: <MessageSquare className="w-5 h-5" />,
@@ -76,7 +76,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         <div className="p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary mb-4">
+            <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-indigo-500/20 text-primary mb-4">
               <Sparkles className="w-10 h-10" />
             </div>
             <h2 className="text-2xl font-bold mb-2">{t("onboarding.welcome.title")}</h2>

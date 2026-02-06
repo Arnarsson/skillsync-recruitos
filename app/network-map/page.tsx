@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import {
   Network,
@@ -108,49 +109,43 @@ export default function NetworkMapPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 pt-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="page-container">
+      <div className="page-content">
         {/* Navigation */}
         <LinkedInNav />
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-600/20 rounded-lg">
-              <Network className="w-6 h-6 text-purple-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Network Map</h1>
-              <p className="text-slate-400 text-sm">
-                Relationship intelligence from {profileCount} captured profiles
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchAndAnalyze}
-            disabled={loading}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+        <PageHeader
+          icon={Network}
+          title="Network Map"
+          subtitle={`Relationship intelligence from ${profileCount} captured profiles`}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchAndAnalyze}
+              disabled={loading}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          }
+        />
 
         {loading ? (
           <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
           </div>
         ) : !analysis || profileCount === 0 ? (
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="card-base">
             <LinkedInEmptyState type="network" />
           </Card>
         ) : (
           <>
             {/* Stats Row */}
             <div className="grid grid-cols-4 gap-4">
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="card-base">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-indigo-600/20 rounded-lg">
@@ -163,7 +158,7 @@ export default function NetworkMapPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="card-base">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-yellow-600/20 rounded-lg">
@@ -176,7 +171,7 @@ export default function NetworkMapPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="card-base">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-green-600/20 rounded-lg">
@@ -189,11 +184,11 @@ export default function NetworkMapPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="card-base">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-600/20 rounded-lg">
-                      <Link2 className="w-5 h-5 text-purple-400" />
+                    <div className="p-2 bg-indigo-600/20 rounded-lg">
+                      <Link2 className="w-5 h-5 text-indigo-400" />
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-white">{analysis.potentialColleagues.length}</p>
@@ -205,7 +200,7 @@ export default function NetworkMapPage() {
             </div>
 
             {/* Connection Strength */}
-            <Card className="bg-slate-900 border-slate-800">
+            <Card className="card-base">
               <CardHeader className="pb-2">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-indigo-400" />
@@ -252,7 +247,7 @@ export default function NetworkMapPage() {
 
             <div className="grid grid-cols-2 gap-6">
               {/* Company Org Charts */}
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="card-base">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-yellow-400" />
@@ -326,22 +321,22 @@ export default function NetworkMapPage() {
               {/* Potential Colleagues & Locations */}
               <div className="space-y-6">
                 {/* Potential Colleagues */}
-                <Card className="bg-slate-900 border-slate-800">
+                <Card className="card-base">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
-                      <Link2 className="w-4 h-4 text-purple-400" />
+                      <Link2 className="w-4 h-4 text-indigo-400" />
                       Potential Colleagues
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {analysis.potentialColleagues.length === 0 ? (
-                      <p className="text-sm text-slate-500">No colleague connections found yet. Capture more profiles!</p>
+                      <p className="body-sm">No colleague connections found yet. Capture more profiles!</p>
                     ) : (
                       <div className="space-y-2 max-h-[200px] overflow-y-auto">
                         {analysis.potentialColleagues.slice(0, 10).map((link, i) => (
                           <div key={i} className="flex items-center gap-2 p-2 bg-slate-800/50 rounded text-sm">
                             <span className="text-white">{link.personA}</span>
-                            <span className="text-purple-400">↔</span>
+                            <span className="text-indigo-400">↔</span>
                             <span className="text-white">{link.personB}</span>
                             <Badge variant="outline" className="ml-auto text-xs border-slate-700 text-slate-400">
                               {link.sharedCompany}
@@ -354,7 +349,7 @@ export default function NetworkMapPage() {
                 </Card>
 
                 {/* Top Locations */}
-                <Card className="bg-slate-900 border-slate-800">
+                <Card className="card-base">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-red-400" />
@@ -376,7 +371,7 @@ export default function NetworkMapPage() {
                 </Card>
 
                 {/* Shared Employers */}
-                <Card className="bg-slate-900 border-slate-800">
+                <Card className="card-base">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
                       <Briefcase className="w-4 h-4 text-emerald-400" />
@@ -385,7 +380,7 @@ export default function NetworkMapPage() {
                   </CardHeader>
                   <CardContent>
                     {analysis.sharedEmployers.length === 0 ? (
-                      <p className="text-sm text-slate-500">No shared employers found yet.</p>
+                      <p className="body-sm">No shared employers found yet.</p>
                     ) : (
                       <div className="space-y-2 max-h-[150px] overflow-y-auto">
                         {analysis.sharedEmployers.slice(0, 8).map((employer, i) => (

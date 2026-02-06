@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import PsychometricCard from "@/components/PsychometricCard";
 import NetworkMap from "@/components/NetworkMap";
 import GitHubConnectionPath from "@/components/GitHubConnectionPath";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ConnectionPathCard } from "@/components/SocialMatrix";
 import { analyzeGitHubSignals, generatePsychometricProfile, PsychometricProfile } from "@/lib/psychometrics";
 import { brightDataService, LinkedInProfile, NetworkGraph } from "@/lib/brightdata";
@@ -499,7 +500,7 @@ export default function ProfilePage({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-3xl font-bold">{user.name || user.login}</h1>
+                <h1 className="heading-lg">{user.name || user.login}</h1>
                 {psychProfile && (
                   <Badge className="bg-gradient-to-r from-primary to-purple-500 text-white">
                     {psychProfile.archetype.primary}
@@ -536,10 +537,10 @@ export default function ProfilePage({
                 )}
               </div>
             </div>
-            <p className="text-muted-foreground mb-4">@{user.login}</p>
-            {user.bio && <p className="text-foreground/80 mb-4">{user.bio}</p>}
+            <p className="body-sm mb-4">@{user.login}</p>
+            {user.bio && <p className="body-md mb-4">{user.bio}</p>}
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-4 body-sm">
               {user.location && (
                 <div className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
@@ -564,19 +565,19 @@ export default function ProfilePage({
 
         {/* LinkedIn Enrich Bar */}
         {!linkedInProfile && (
-          <Card className={`mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 ${linkedInError ? 'border-red-500/40' : linkedInSuggestions ? 'border-green-500/40' : 'border-blue-500/20'}`}>
+          <Card className={`mb-6 bg-indigo-600/10 ${linkedInError ? 'border-red-500/40' : linkedInSuggestions ? 'border-emerald-500/40' : 'border-indigo-500/20'}`}>
             <CardContent className="py-4">
               {/* Finding LinkedIn - AI Search in Progress */}
               {linkedInFinding && (
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20 animate-pulse">
-                    <Brain className="w-5 h-5 text-blue-500" />
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600/20 animate-pulse">
+                    <Brain className="w-5 h-5 text-indigo-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-500">Finding LinkedIn...</p>
-                    <p className="text-xs text-muted-foreground">AI is searching for {profile?.user.name || username}&apos;s LinkedIn profile</p>
+                    <p className="heading-sm normal-case text-indigo-400">Finding LinkedIn...</p>
+                    <p className="caption">AI is searching for {profile?.user.name || username}&apos;s LinkedIn profile</p>
                   </div>
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                 </div>
               )}
 
@@ -584,27 +585,27 @@ export default function ProfilePage({
               {!linkedInFinding && linkedInSuggestions && linkedInSuggestions.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-green-500" />
-                    <p className="text-sm font-medium text-green-500">LinkedIn profiles found</p>
+                    <Brain className="w-5 h-5 text-emerald-400" />
+                    <p className="heading-sm normal-case text-emerald-400">LinkedIn profiles found</p>
                   </div>
                   <div className="space-y-2">
                     {linkedInSuggestions.slice(0, 3).map((suggestion, idx) => (
                       <div
                         key={suggestion.profileUrl}
-                        className={`p-3 rounded-lg border ${idx === 0 ? 'border-green-500/40 bg-green-500/5' : 'border-border bg-card/50'} hover:border-primary/50 transition-colors cursor-pointer`}
+                        className={`p-3 rounded-lg border ${idx === 0 ? 'border-emerald-500/40 bg-emerald-600/5' : 'border-slate-700 bg-slate-800/50'} hover:border-indigo-500/50 transition-colors cursor-pointer`}
                         onClick={() => handleSelectSuggestion(suggestion)}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{suggestion.name}</p>
-                              <Badge variant={idx === 0 ? "default" : "secondary"} className="text-xs">
+                              <p className="body-md font-medium truncate">{suggestion.name}</p>
+                              <Badge variant={idx === 0 ? "default" : "secondary"} className={idx === 0 ? "badge-success text-xs" : "badge-neutral text-xs"}>
                                 {suggestion.confidence}% match
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">{suggestion.headline}</p>
+                            <p className="body-sm truncate">{suggestion.headline}</p>
                             {suggestion.reasons.length > 0 && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="caption mt-1">
                                 {suggestion.reasons.slice(0, 2).join(" • ")}
                               </p>
                             )}
@@ -616,8 +617,8 @@ export default function ProfilePage({
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-border">
-                    <span className="text-xs text-muted-foreground">Not the right person?</span>
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                    <span className="caption">Not the right person?</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -634,10 +635,10 @@ export default function ProfilePage({
               {!linkedInFinding && !linkedInSuggestions && (
                 <>
                   <div className="flex items-center gap-4 flex-wrap">
-                    <Linkedin className="w-6 h-6 text-blue-500" />
+                    <Linkedin className="w-6 h-6 text-indigo-400" />
                     <div className="flex-1 min-w-[200px]">
-                      <p className="text-sm font-medium">Enrich with LinkedIn</p>
-                      <p className="text-xs text-muted-foreground">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
+                      <p className="heading-sm normal-case">Enrich with LinkedIn</p>
+                      <p className="caption">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
                     </div>
                     {brightDataService.isConfigured() ? (
                       <div className="flex gap-2 items-center flex-wrap">
@@ -687,16 +688,16 @@ export default function ProfilePage({
                     )}
                   </div>
                   {linkedInError && (
-                    <div className="mt-3 p-2 rounded bg-red-500/10 border border-red-500/20">
-                      <p className="text-xs text-red-500">{linkedInError}</p>
+                    <div className="mt-3 p-2 rounded bg-red-600/10 border border-red-500/20">
+                      <p className="caption text-red-400">{linkedInError}</p>
                     </div>
                   )}
                   {linkedInLoading && (
-                    <div className="mt-3 p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                      <p className="text-xs text-blue-500">
+                    <div className="mt-3 p-2 rounded bg-indigo-600/10 border border-indigo-500/20">
+                      <p className="caption text-indigo-400">
                         {linkedInProgress || "Initializing LinkedIn scrape..."}
                       </p>
-                      <p className="text-xs text-blue-500/70 mt-1">This may take up to 3 minutes for some profiles.</p>
+                      <p className="caption text-indigo-400/70 mt-1">This may take up to 3 minutes for some profiles.</p>
                     </div>
                   )}
                 </>
@@ -707,22 +708,22 @@ export default function ProfilePage({
 
         {/* LinkedIn Profile Card - Shows when enriched */}
         {linkedInProfile && (
-          <Card className="mb-6 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+          <Card className="mb-6 bg-indigo-600/10 border-indigo-500/20">
             <CardContent className="py-4">
               <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/20">
-                  <Linkedin className="w-6 h-6 text-blue-500" />
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-indigo-600/20">
+                  <Linkedin className="w-6 h-6 text-indigo-400" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold">{linkedInProfile.name}</h3>
-                    <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-500">
+                    <h3 className="heading-md">{linkedInProfile.name}</h3>
+                    <Badge variant="secondary" className="badge-success text-xs">
                       <Check className="w-3 h-3 mr-1" />
                       Enriched
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{linkedInProfile.headline}</p>
-                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
+                  <p className="body-sm">{linkedInProfile.headline}</p>
+                  <div className="flex flex-wrap items-center gap-4 mt-2 caption">
                     {linkedInProfile.currentCompany && (
                       <span className="flex items-center gap-1">
                         <Building className="w-3 h-3" />
@@ -778,7 +779,7 @@ export default function ProfilePage({
         )}
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="flex flex-wrap gap-3 mb-8">
           {[
             { icon: GitBranch, value: user.public_repos, label: "Repos" },
             { icon: Star, value: formatNumber(totalStars), label: "Stars" },
@@ -786,13 +787,11 @@ export default function ProfilePage({
             { icon: GitCommit, value: formatNumber(contributions), label: "Contributions" },
             { icon: Calendar, value: joinedYear, label: "Joined" },
           ].map((stat) => (
-            <Card key={stat.label}>
-              <CardContent className="p-4 text-center">
-                <stat.icon className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="text-xs text-muted-foreground">{stat.label}</div>
-              </CardContent>
-            </Card>
+            <div key={stat.label} className="card-base flex-1 min-w-[100px] p-4 text-center">
+              <stat.icon className="w-5 h-5 mx-auto mb-2 text-slate-400" />
+              <div className="heading-md">{stat.value}</div>
+              <div className="caption">{stat.label}</div>
+            </div>
           ))}
         </div>
 
@@ -826,7 +825,7 @@ export default function ProfilePage({
             {/* Skills */}
             {(skills || []).length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Skills & Technologies</h2>
+                <h2 className="heading-md mb-4">Skills & Technologies</h2>
                 <div className="flex flex-wrap gap-2">
                   {(skills || []).map((skill) => (
                     <Badge key={skill} variant="secondary" className="px-4 py-2">
@@ -840,55 +839,54 @@ export default function ProfilePage({
             {/* Top Repos */}
             {repos.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Top Repositories</h2>
+                <h2 className="heading-md mb-4">Top Repositories</h2>
                 <div className="grid gap-4">
                   {repos.slice(0, 6).map((repo) => (
-                    <Card key={repo.name} className="hover:border-ring transition-colors">
+                    <div key={repo.name} className="card-interactive">
                       <a
                         href={`https://github.com/${user.login}/${repo.name}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="block p-4"
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold text-primary">{repo.name}</h3>
-                            {repo.language && (
-                              <Badge variant="outline" className="text-xs">
-                                {repo.language}
-                              </Badge>
-                            )}
-                          </div>
-                          {repo.description && (
-                            <p className="text-muted-foreground text-sm mb-3">{repo.description}</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="heading-sm text-primary">{repo.name}</h3>
+                          {repo.language && (
+                            <Badge variant="outline" className="badge-neutral text-xs">
+                              {repo.language}
+                            </Badge>
                           )}
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4" />
-                              {formatNumber(repo.stargazers_count)}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <GitBranch className="w-4 h-4" />
-                              {formatNumber(repo.forks_count)} forks
-                            </div>
+                        </div>
+                        {repo.description && (
+                          <p className="body-sm mb-3">{repo.description}</p>
+                        )}
+                        <div className="flex items-center gap-4 caption">
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4" />
+                            {formatNumber(repo.stargazers_count)}
                           </div>
-                        </CardContent>
+                          <div className="flex items-center gap-1">
+                            <GitBranch className="w-4 h-4" />
+                            {formatNumber(repo.forks_count)} forks
+                          </div>
+                        </div>
                       </a>
-                    </Card>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
 
             {/* Deep Profile CTA */}
-            <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
-              <CardContent className="p-6">
+            <div className="card-base bg-gradient-to-r from-indigo-600/10 to-indigo-500/5 border-indigo-500/20">
+              <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-5 h-5 text-primary" />
-                      <h3 className="font-semibold">View Deep Profile</h3>
+                      <Brain className="w-5 h-5 text-indigo-400" />
+                      <h3 className="heading-md">View Deep Profile</h3>
                     </div>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="body-sm">
                       AI-powered analysis with contribution patterns, code quality metrics, and interview guide.
                     </p>
                   </div>
@@ -896,36 +894,36 @@ export default function ProfilePage({
                     View Analysis
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {deep && contact && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent>
+              <div className="card-base">
+                <div className="p-4 border-b border-slate-800">
+                  <h3 className="heading-md">Contact Information</h3>
+                </div>
+                <div className="p-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-muted-foreground">Email</label>
-                      <p className="text-foreground">{contact.email}</p>
+                      <label className="caption">Email</label>
+                      <p className="body-md">{contact.email}</p>
                     </div>
                     {contact.twitter && (
                       <div>
-                        <label className="text-sm text-muted-foreground">Twitter</label>
+                        <label className="caption">Twitter</label>
                         <a
                           href={`https://twitter.com/${contact.twitter}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary hover:underline block"
+                          className="text-primary hover:underline block body-md"
                         >
                           @{contact.twitter}
                         </a>
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </TabsContent>
 
@@ -941,12 +939,12 @@ export default function ProfilePage({
                 )}
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Brain className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Generating psychometric profile...</p>
-                </CardContent>
-              </Card>
+              <div className="card-base">
+                <div className="py-12 text-center">
+                  <Brain className="w-12 h-12 mx-auto mb-4 text-slate-500" />
+                  <p className="body-sm">Generating psychometric profile...</p>
+                </div>
+              </div>
             )}
           </TabsContent>
 
@@ -958,12 +956,12 @@ export default function ProfilePage({
                 {interviewPrepKit ? (
                   <InterviewPrepPanel prepKit={interviewPrepKit} />
                 ) : (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
-                      <p className="text-muted-foreground">Generating interview prep kit...</p>
-                    </CardContent>
-                  </Card>
+                  <div className="card-base">
+                    <div className="py-12 text-center">
+                      <Loader2 className="w-12 h-12 mx-auto mb-4 text-slate-500 animate-spin" />
+                      <p className="body-sm">Generating interview prep kit...</p>
+                    </div>
+                  </div>
                 )}
               </div>
               
@@ -974,35 +972,33 @@ export default function ProfilePage({
                 )}
                 
                 {/* Quick Stats for Interview */}
-                <Card className="border-zinc-800 bg-zinc-900/50">
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-white mb-4">Quick Context</h3>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Total Repos</span>
-                        <span className="text-white font-medium">{user.public_repos}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Total Stars</span>
-                        <span className="text-white font-medium">{formatNumber(totalStars)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Followers</span>
-                        <span className="text-white font-medium">{formatNumber(user.followers)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">GitHub Since</span>
-                        <span className="text-white font-medium">{joinedYear}</span>
-                      </div>
-                      {user.location && (
-                        <div className="flex justify-between">
-                          <span className="text-zinc-400">Location</span>
-                          <span className="text-white font-medium">{user.location}</span>
-                        </div>
-                      )}
+                <div className="card-base p-4">
+                  <h3 className="heading-md mb-4">Quick Context</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="body-sm">Total Repos</span>
+                      <span className="body-md font-medium">{user.public_repos}</span>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex justify-between">
+                      <span className="body-sm">Total Stars</span>
+                      <span className="body-md font-medium">{formatNumber(totalStars)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="body-sm">Followers</span>
+                      <span className="body-md font-medium">{formatNumber(user.followers)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="body-sm">GitHub Since</span>
+                      <span className="body-md font-medium">{joinedYear}</span>
+                    </div>
+                    {user.location && (
+                      <div className="flex justify-between">
+                        <span className="body-sm">Location</span>
+                        <span className="body-md font-medium">{user.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Salary Estimator */}
                 <SalaryEstimatorPanel
@@ -1019,24 +1015,22 @@ export default function ProfilePage({
           <TabsContent value="connection" className="space-y-6">
             {/* Social Matrix - Unified Connection Path */}
             {!recruiterLinkedInUrl && (
-              <Card className="border-yellow-500/30 bg-yellow-500/5">
-                <CardContent className="py-4">
-                  <div className="flex items-start gap-3">
-                    <Network className="w-5 h-5 text-yellow-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Set up your LinkedIn to find connection paths</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Add your LinkedIn URL in Settings to discover how you&apos;re connected to candidates
-                      </p>
-                      <Link href="/settings">
-                        <Button size="sm" variant="outline" className="mt-2">
-                          Go to Settings
-                        </Button>
-                      </Link>
-                    </div>
+              <div className="card-base border-amber-500/30 bg-amber-600/5 p-4">
+                <div className="flex items-start gap-3">
+                  <Network className="w-5 h-5 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="heading-sm normal-case">Set up your LinkedIn to find connection paths</p>
+                    <p className="caption mt-1">
+                      Add your LinkedIn URL in Settings to discover how you&apos;re connected to candidates
+                    </p>
+                    <Link href="/settings">
+                      <Button size="sm" variant="outline" className="mt-2">
+                        Go to Settings
+                      </Button>
+                    </Link>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
             <ConnectionPathCard
               recruiterId="recruiter"
@@ -1059,36 +1053,36 @@ export default function ProfilePage({
           <TabsContent value="outreach">
             {psychProfile ? (
               <div className="space-y-6">
-                <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Outreach Strategy</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <div className="card-base bg-gradient-to-br from-indigo-600/10 to-indigo-500/5 border-indigo-500/20">
+                  <div className="p-4 border-b border-slate-800">
+                    <h3 className="heading-md">Outreach Strategy</h3>
+                  </div>
+                  <div className="p-4">
                     <ul className="space-y-3">
                       {psychProfile.outreachTips.map((tip, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <span className="text-primary font-bold">{i + 1}.</span>
-                          <span>{tip}</span>
+                          <span className="text-indigo-400 font-bold">{i + 1}.</span>
+                          <span className="body-md">{tip}</span>
                         </li>
                       ))}
                     </ul>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Message Template</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted rounded-lg p-4 font-mono text-sm">
-                      <p>Hi {user.name?.split(" ")[0] || user.login},</p>
+                <div className="card-base">
+                  <div className="p-4 border-b border-slate-800">
+                    <h3 className="heading-md">Message Template</h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="bg-slate-800/50 rounded-lg p-4 font-mono text-sm">
+                      <p className="body-md">Hi {user.name?.split(" ")[0] || user.login},</p>
                       <br />
-                      <p>
+                      <p className="body-md">
                         I came across your work on {repos[0]?.name || "GitHub"} and was impressed by
                         {(skills || [])[0] ? ` your ${(skills || [])[0]} expertise` : " your contributions"}.
                       </p>
                       <br />
-                      <p>
+                      <p className="body-md">
                         {psychProfile.archetype.primary === "The Architect" &&
                           "We're tackling some interesting system design challenges that I think would resonate with your approach."}
                         {psychProfile.archetype.primary === "The Pioneer" &&
@@ -1101,21 +1095,21 @@ export default function ProfilePage({
                           "I'd love to tell you more about what we're building."}
                       </p>
                       <br />
-                      <p>Would you be open to a quick chat?</p>
+                      <p className="body-md">Would you be open to a quick chat?</p>
                     </div>
                     <Button className="mt-4 w-full">
                       Generate AI Message (1 Credit)
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
-                  <p className="text-muted-foreground">Preparing outreach recommendations...</p>
-                </CardContent>
-              </Card>
+              <div className="card-base">
+                <div className="py-12 text-center">
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-slate-500 animate-spin" />
+                  <p className="body-sm">Preparing outreach recommendations...</p>
+                </div>
+              </div>
             )}
           </TabsContent>
         </Tabs>

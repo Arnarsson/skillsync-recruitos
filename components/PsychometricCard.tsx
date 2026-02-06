@@ -266,7 +266,7 @@ export default function PsychometricCard({ profile }: PsychometricCardProps) {
       </Card>
 
       {/* Outreach Tips */}
-      <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
+      <Card className="bg-indigo-600/5 border-indigo-500/20">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />

@@ -142,7 +142,7 @@ export default function GitHubConnectionPath({
   // Not logged in state - allow manual username input
   if (status === "unauthenticated" && !useManualMode && !connectionPath) {
     return (
-      <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
+      <Card className="bg-gradient-to-br from-primary/5 to-indigo-500/5 border-primary/20">
         <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center text-center py-8">
             <Users className="w-12 h-12 text-muted-foreground mb-4" />
@@ -260,7 +260,7 @@ export default function GitHubConnectionPath({
     <TooltipProvider>
       <div className="space-y-6">
         {/* Main Connection Card */}
-        <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-primary/5 to-indigo-500/5 border-primary/20">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export default function GitHubConnectionPath({
               {/* Connection Arrow/Line */}
               <div className="flex-1 flex flex-col items-center max-w-[200px]">
                 <div className="flex items-center w-full">
-                  <div className="flex-1 h-0.5 bg-gradient-to-r from-primary to-purple-500" />
+                  <div className="flex-1 h-0.5 bg-gradient-to-r from-primary to-indigo-500" />
                   {directConnection.recruiterFollowsCandidate && (
                     <Tooltip>
                       <TooltipTrigger>
@@ -312,8 +312,8 @@ export default function GitHubConnectionPath({
                       <TooltipContent>They follow you</TooltipContent>
                     </Tooltip>
                   )}
-                  <ArrowRight className="w-5 h-5 text-purple-500 mx-1" />
-                  <div className="flex-1 h-0.5 bg-gradient-to-r from-purple-500 to-primary" />
+                  <ArrowRight className="w-5 h-5 text-indigo-500 mx-1" />
+                  <div className="flex-1 h-0.5 bg-gradient-to-r from-indigo-500 to-primary" />
                 </div>
                 <span className="text-xs text-muted-foreground mt-2 text-center px-2">
                   {shortestPath}
@@ -322,7 +322,7 @@ export default function GitHubConnectionPath({
 
               {/* Candidate */}
               <div className="flex flex-col items-center">
-                <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-purple-500">
+                <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-indigo-500">
                   <AvatarImage src={candidateAvatar} />
                   <AvatarFallback>
                     {(candidateName || candidateUsername).charAt(0)}
@@ -607,11 +607,11 @@ function BridgeConnectionCard({ bridge, candidateName }: { bridge: BridgeConnect
           <MessageCircle className="w-3.5 h-3.5 text-green-400" />
           {isType1 ? (
             <span className="text-muted-foreground">
-              <span className="text-green-400">You follow them</span> → they follow <span className="text-purple-400">{candidateName}</span>
+              <span className="text-green-400">You follow them</span> → they follow <span className="text-indigo-400">{candidateName}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">
-              <span className="text-purple-400">{candidateName}</span> follows them → <span className="text-green-400">they follow you</span>
+              <span className="text-indigo-400">{candidateName}</span> follows them → <span className="text-green-400">they follow you</span>
             </span>
           )}
         </div>
