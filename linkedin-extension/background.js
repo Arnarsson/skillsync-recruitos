@@ -1,6 +1,6 @@
 // RecruitOS LinkedIn Sync - Background Service Worker
 
-const DEFAULT_API_URL = 'https://recruitos.app/api';
+const DEFAULT_API_URL = 'https://recruitos.xyz/api';
 const STORAGE_KEY = 'recruitos_config';
 const CANDIDATES_QUEUE_KEY = 'recruitos_candidates_queue';
 const MESSAGES_QUEUE_KEY = 'recruitos_messages_queue';
@@ -81,17 +81,15 @@ async function recordProfileView(profile) {
 async function sendToRecruitOS(endpoint, data) {
   const config = await getConfig();
   
-  if (!config.apiKey) {
-    console.log('[RecruitOS] No API key configured');
-    return { success: false, error: 'Not configured - set API key in extension settings' };
-  }
+  // Use demo key if none configured
+  const apiKey = config.apiKey || 'demo';
   
   try {
     const response = await fetch(`${config.apiUrl}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(data)
     });

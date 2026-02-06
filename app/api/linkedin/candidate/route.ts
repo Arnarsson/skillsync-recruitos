@@ -24,16 +24,10 @@ async function saveCaptures(captures: any[]): Promise<void> {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key from extension (accept any for demo)
+    // For demo/testing: accept requests without API key
+    // TODO: Add proper auth later
     const authHeader = request.headers.get("Authorization");
-    const apiKey = authHeader?.replace("Bearer ", "");
-    
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key required" },
-        { status: 401 }
-      );
-    }
+    const apiKey = authHeader?.replace("Bearer ", "") || "demo";
     
     const body = await request.json();
     const { source, profile, capturedAt } = body;
