@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import {
   Network,
   Building2,
@@ -107,8 +108,11 @@ export default function NetworkMapPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
+    <div className="min-h-screen bg-slate-950 p-6 pt-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Navigation */}
+        <LinkedInNav />
+        
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -140,15 +144,7 @@ export default function NetworkMapPage() {
           </div>
         ) : !analysis || profileCount === 0 ? (
           <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="p-12 text-center">
-              <Network className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-300 mb-2">
-                No network data yet
-              </h3>
-              <p className="text-slate-500 text-sm max-w-md mx-auto">
-                Capture LinkedIn profiles to build your network map. The more profiles you capture, the richer your network intelligence becomes.
-              </p>
-            </CardContent>
+            <LinkedInEmptyState type="network" />
           </Card>
         ) : (
           <>

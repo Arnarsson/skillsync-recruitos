@@ -5,6 +5,7 @@ import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import {
   Linkedin,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   Zap,
   Trash2,
   ArrowRight,
+  Kanban,
 } from "lucide-react";
 
 interface Candidate {
@@ -105,13 +107,18 @@ export default function LinkedInPipelinePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
+    <div className="min-h-screen bg-slate-950 p-6 pt-8">
       <div className="max-w-full mx-auto space-y-6">
+        {/* Navigation */}
+        <div className="max-w-7xl">
+          <LinkedInNav />
+        </div>
+        
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600/20 rounded-lg">
-              <Linkedin className="w-6 h-6 text-indigo-400" />
+              <Kanban className="w-6 h-6 text-indigo-400" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">Recruiting Pipeline</h1>
@@ -136,6 +143,10 @@ export default function LinkedInPipelinePage() {
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
           </div>
+        ) : candidates.length === 0 ? (
+          <Card className="bg-slate-900 border-slate-800">
+            <LinkedInEmptyState type="pipeline" />
+          </Card>
         ) : (
           /* Kanban Board */
           <div className="flex gap-4 overflow-x-auto pb-4">

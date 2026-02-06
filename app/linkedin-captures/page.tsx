@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -234,8 +235,11 @@ export default function LinkedInCapturesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
+    <div className="min-h-screen bg-slate-950 p-6 pt-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Navigation */}
+        <LinkedInNav />
+        
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -502,15 +506,7 @@ export default function LinkedInCapturesPage() {
           </CardHeader>
           <CardContent className="p-0">
             {displayCaptures.length === 0 ? (
-              <div className="p-12 text-center">
-                <Linkedin className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-300 mb-2">
-                  No profiles captured yet
-                </h3>
-                <p className="text-slate-500 text-sm max-w-md mx-auto">
-                  Install the LinkedIn extension and browse profiles. They'll appear here automatically.
-                </p>
-              </div>
+              <LinkedInEmptyState type="captures" />
             ) : (
               <div className="divide-y divide-slate-800">
                 <AnimatePresence>
