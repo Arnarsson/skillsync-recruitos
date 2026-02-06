@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Normalize the profile data
+    // Normalize the profile data (including rich capture fields)
     const candidate = {
       id: `li_${profile.linkedinId}_${Date.now()}`,
       linkedinId: profile.linkedinId,
@@ -48,9 +48,26 @@ export async function POST(request: NextRequest) {
       currentCompany: profile.currentCompany,
       photoUrl: profile.photoUrl,
       about: profile.about,
+      // Rich capture: full work history
       experience: profile.experience || [],
+      // Rich capture: education
+      education: profile.education || [],
+      // Rich capture: skills with endorsements
+      skills: profile.skills || [],
+      // Rich capture: languages
+      languages: profile.languages || [],
+      // Rich capture: certifications
+      certifications: profile.certifications || [],
+      // Connection info
       connectionDegree: profile.connectionDegree,
       mutualConnections: profile.mutualConnections,
+      connectionCount: profile.connectionCount,
+      followers: profile.followers,
+      // Flags
+      openToWork: profile.openToWork || false,
+      isPremium: profile.isPremium || false,
+      isCreator: profile.isCreator || false,
+      // Meta
       source: source || "linkedin_extension",
       capturedAt: capturedAt || new Date().toISOString(),
       createdAt: new Date().toISOString(),

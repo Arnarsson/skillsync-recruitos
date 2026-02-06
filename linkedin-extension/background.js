@@ -13,11 +13,13 @@ const PROFILE_VIEWS_KEY = 'recruitos_profile_views';
 async function getConfig() {
   try {
     const result = await chrome.storage.sync.get(STORAGE_KEY);
-    return result[STORAGE_KEY] || {
+    const config = result[STORAGE_KEY] || {};
+    // Always use the current default URL (overrides any stale cached URL)
+    return {
       apiUrl: DEFAULT_API_URL,
-      apiKey: '',
-      autoCapture: true,
-      syncMessages: true
+      apiKey: config.apiKey || '',
+      autoCapture: config.autoCapture !== false,
+      syncMessages: config.syncMessages !== false
     };
   } catch (e) {
     console.error('[RecruitOS] Config error:', e);
@@ -84,8 +86,11 @@ async function sendToRecruitOS(endpoint, data) {
   // Use demo key if none configured
   const apiKey = config.apiKey || 'demo';
   
+  const fullUrl = `${config.apiUrl}${endpoint}`;
+  console.log('[RecruitOS] Sending to:', fullUrl);
+  
   try {
-    const response = await fetch(`${config.apiUrl}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

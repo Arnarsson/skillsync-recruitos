@@ -19,6 +19,13 @@ import {
   Loader2,
   UserPlus,
   Filter,
+  GraduationCap,
+  Sparkles,
+  Award,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Zap,
 } from "lucide-react";
 
 interface LinkedInCapture {
@@ -31,9 +38,18 @@ interface LinkedInCapture {
   currentCompany: string;
   photoUrl: string;
   about: string;
-  experience: { title: string; company: string }[];
+  experience: { title: string; company: string; duration?: string; dates?: string }[];
+  education: { school: string; degree?: string; dates?: string }[];
+  skills: { name: string; endorsements: number }[];
+  languages: { language: string; proficiency?: string }[];
+  certifications: { name: string; issuer?: string; date?: string }[];
   connectionDegree: string;
   mutualConnections: string;
+  connectionCount?: string;
+  followers?: string;
+  openToWork: boolean;
+  isPremium: boolean;
+  isCreator: boolean;
   source: string;
   capturedAt: string;
   createdAt: string;
@@ -44,6 +60,7 @@ export default function LinkedInCapturesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [total, setTotal] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchCaptures = async () => {
     setLoading(true);
@@ -156,7 +173,7 @@ export default function LinkedInCapturesPage() {
         </Card>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <Card className="bg-slate-900 border-slate-800">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -218,6 +235,21 @@ export default function LinkedInCapturesPage() {
               </div>
             </CardContent>
           </Card>
+          <Card className="bg-slate-900 border-slate-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600/20 rounded-lg">
+                  <Zap className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {captures.filter((c) => c.openToWork).length}
+                  </p>
+                  <p className="text-xs text-slate-400">Open to Work</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Captures List */}
@@ -243,7 +275,11 @@ export default function LinkedInCapturesPage() {
             ) : (
               <div className="divide-y divide-slate-800">
                 <AnimatePresence>
-                  {filteredCaptures.map((capture, index) => (
+                  {filteredCaptures.map((capture, index) => {
+                    const isExpanded = expandedId === capture.id;
+                    const hasRichData = capture.skills?.length > 0 || capture.education?.length > 0 || capture.experience?.length > 1;
+                    
+                    return (
                     <motion.div
                       key={capture.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -253,26 +289,42 @@ export default function LinkedInCapturesPage() {
                     >
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 relative">
                           {capture.photoUrl ? (
                             <img
                               src={capture.photoUrl}
                               alt={capture.name}
-                              className="w-12 h-12 rounded-full object-cover"
+                              className={`w-12 h-12 rounded-full object-cover ${capture.openToWork ? 'ring-2 ring-green-500' : ''}`}
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-400 font-semibold">
+                            <div className={`w-12 h-12 rounded-full bg-indigo-600/30 flex items-center justify-center text-indigo-400 font-semibold ${capture.openToWork ? 'ring-2 ring-green-500' : ''}`}>
                               {getInitials(capture.name)}
+                            </div>
+                          )}
+                          {capture.openToWork && (
+                            <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5">
+                              <Zap className="w-3 h-3 text-white" />
                             </div>
                           )}
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-semibold text-white truncate">
                               {capture.name}
                             </h3>
+                            {capture.openToWork && (
+                              <Badge className="bg-green-600/20 text-green-400 text-xs border-0">
+                                Open to Work
+                              </Badge>
+                            )}
+                            {capture.isPremium && (
+                              <Badge className="bg-amber-600/20 text-amber-400 text-xs border-0">
+                                <Star className="w-3 h-3 mr-1" />
+                                Premium
+                              </Badge>
+                            )}
                             {capture.connectionDegree && (
                               <Badge
                                 variant="secondary"
@@ -285,7 +337,7 @@ export default function LinkedInCapturesPage() {
                           <p className="text-sm text-slate-400 truncate mb-2">
                             {capture.headline}
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-slate-500">
+                          <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                             {capture.currentCompany && (
                               <span className="flex items-center gap-1">
                                 <Briefcase className="w-3 h-3" />
@@ -304,14 +356,55 @@ export default function LinkedInCapturesPage() {
                                 {capture.mutualConnections}
                               </span>
                             )}
+                            {capture.skills?.length > 0 && (
+                              <span className="flex items-center gap-1 text-indigo-400">
+                                <Sparkles className="w-3 h-3" />
+                                {capture.skills.length} skills
+                              </span>
+                            )}
+                            {capture.education?.length > 0 && (
+                              <span className="flex items-center gap-1 text-purple-400">
+                                <GraduationCap className="w-3 h-3" />
+                                {capture.education.length} education
+                              </span>
+                            )}
                           </div>
+                          
+                          {/* Top Skills Preview */}
+                          {capture.skills?.length > 0 && !isExpanded && (
+                            <div className="flex items-center gap-1 mt-2 flex-wrap">
+                              {capture.skills.slice(0, 5).map((skill, i) => (
+                                <Badge key={i} variant="outline" className="text-xs border-slate-700 text-slate-400">
+                                  {skill.name}
+                                  {skill.endorsements > 0 && (
+                                    <span className="ml-1 text-slate-500">({skill.endorsements})</span>
+                                  )}
+                                </Badge>
+                              ))}
+                              {capture.skills.length > 5 && (
+                                <span className="text-xs text-slate-500">+{capture.skills.length - 5} more</span>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-slate-500">
                             {formatDate(capture.capturedAt)}
                           </span>
+                          {hasRichData && (
+                            <button
+                              onClick={() => setExpandedId(isExpanded ? null : capture.id)}
+                              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              )}
+                            </button>
+                          )}
                           <a
                             href={capture.linkedinUrl}
                             target="_blank"
@@ -328,8 +421,98 @@ export default function LinkedInCapturesPage() {
                           </Button>
                         </div>
                       </div>
+                      
+                      {/* Expanded Rich Data */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-4 ml-16 grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Experience */}
+                              {capture.experience?.length > 0 && (
+                                <div className="bg-slate-800/50 rounded-lg p-3">
+                                  <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                                    <Briefcase className="w-4 h-4 text-yellow-400" />
+                                    Experience ({capture.experience.length})
+                                  </h4>
+                                  <div className="space-y-2">
+                                    {capture.experience.slice(0, 5).map((exp, i) => (
+                                      <div key={i} className="text-xs">
+                                        <p className="text-slate-300 font-medium">{exp.title}</p>
+                                        <p className="text-slate-500">{exp.company}</p>
+                                        {exp.dates && <p className="text-slate-600">{exp.dates}</p>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Education */}
+                              {capture.education?.length > 0 && (
+                                <div className="bg-slate-800/50 rounded-lg p-3">
+                                  <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                                    <GraduationCap className="w-4 h-4 text-purple-400" />
+                                    Education ({capture.education.length})
+                                  </h4>
+                                  <div className="space-y-2">
+                                    {capture.education.map((edu, i) => (
+                                      <div key={i} className="text-xs">
+                                        <p className="text-slate-300 font-medium">{edu.school}</p>
+                                        {edu.degree && <p className="text-slate-500">{edu.degree}</p>}
+                                        {edu.dates && <p className="text-slate-600">{edu.dates}</p>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* All Skills */}
+                              {capture.skills?.length > 0 && (
+                                <div className="bg-slate-800/50 rounded-lg p-3">
+                                  <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                                    Skills ({capture.skills.length})
+                                  </h4>
+                                  <div className="flex flex-wrap gap-1">
+                                    {capture.skills.map((skill, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs border-slate-700 text-slate-400">
+                                        {skill.name}
+                                        {skill.endorsements > 0 && (
+                                          <span className="ml-1 text-indigo-400">+{skill.endorsements}</span>
+                                        )}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Certifications */}
+                              {capture.certifications?.length > 0 && (
+                                <div className="bg-slate-800/50 rounded-lg p-3">
+                                  <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                                    <Award className="w-4 h-4 text-amber-400" />
+                                    Certifications ({capture.certifications.length})
+                                  </h4>
+                                  <div className="space-y-2">
+                                    {capture.certifications.map((cert, i) => (
+                                      <div key={i} className="text-xs">
+                                        <p className="text-slate-300 font-medium">{cert.name}</p>
+                                        {cert.issuer && <p className="text-slate-500">{cert.issuer}</p>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
-                  ))}
+                  )})}
                 </AnimatePresence>
               </div>
             )}

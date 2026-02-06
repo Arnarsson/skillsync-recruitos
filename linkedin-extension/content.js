@@ -186,30 +186,216 @@
     const mutualEl = document.querySelector('[href*="facetConnectionOf"] span, [href*="shared_connections"] span');
     profile.mutualConnections = mutualEl?.textContent?.trim() || null;
     
-    // Experience (first 3 positions)
-    profile.experience = [];
-    const expSelectors = [
-      '.pvs-list__paged-list-item',
-      '#experience ~ .pvs-list__outer-container li',
-      'section[id*="experience"] li'
+    // ============================================
+    // RICH CAPTURE: Open to Work
+    // ============================================
+    profile.openToWork = false;
+    const openToWorkSelectors = [
+      '.pv-open-to-carousel-card',
+      '[class*="open-to-work"]',
+      '.pv-top-card-v2-ctas [class*="open-to"]',
+      'span[class*="hiring"]',
+      '.pvs-header__subtitle span'
     ];
-    for (const sel of expSelectors) {
-      const expItems = document.querySelectorAll(sel);
-      if (expItems.length > 0) {
-        expItems.forEach((item, i) => {
-          if (i >= 3) return;
-          const titleEl = item.querySelector('.t-bold span[aria-hidden="true"], .t-bold span, .t-bold');
-          const compEl = item.querySelector('.t-normal span[aria-hidden="true"], .t-normal span, .t-14');
+    for (const sel of openToWorkSelectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        const text = el.textContent?.toLowerCase() || '';
+        if (text.includes('open to work') || text.includes('hiring') || text.includes('actively looking')) {
+          profile.openToWork = true;
+          break;
+        }
+      }
+    }
+    // Also check for the green frame/badge
+    const profileFrame = document.querySelector('img[class*="profile-picture"]')?.closest('div');
+    if (profileFrame?.innerHTML?.includes('#Open_to_work') || profileFrame?.innerHTML?.includes('open-to-work')) {
+      profile.openToWork = true;
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Full Experience History
+    // ============================================
+    profile.experience = [];
+    const experienceSection = document.querySelector('#experience')?.closest('section') 
+      || document.querySelector('section[data-section="experience"]')
+      || document.querySelector('[id*="experience"]')?.closest('section');
+    
+    if (experienceSection) {
+      const expItems = experienceSection.querySelectorAll('li.artdeco-list__item, .pvs-list__paged-list-item');
+      expItems.forEach((item, i) => {
+        if (i >= 10) return; // Cap at 10 positions
+        
+        // Handle grouped experiences (multiple roles at same company)
+        const isGrouped = item.querySelector('.pvs-entity__sub-components');
+        
+        if (isGrouped) {
+          const companyEl = item.querySelector('.hoverable-link-text span[aria-hidden="true"], .t-bold span[aria-hidden="true"]');
+          const company = companyEl?.textContent?.trim();
+          const subRoles = item.querySelectorAll('.pvs-entity__sub-components li');
+          
+          subRoles.forEach(role => {
+            const titleEl = role.querySelector('.t-bold span[aria-hidden="true"]');
+            const durationEl = role.querySelector('.t-normal:not(.t-black--light) span[aria-hidden="true"]');
+            const dateEl = role.querySelector('.t-black--light span[aria-hidden="true"]');
+            
+            if (titleEl?.textContent?.trim()) {
+              profile.experience.push({
+                title: titleEl.textContent.trim(),
+                company: company,
+                duration: durationEl?.textContent?.trim() || null,
+                dates: dateEl?.textContent?.trim() || null
+              });
+            }
+          });
+        } else {
+          const titleEl = item.querySelector('.t-bold span[aria-hidden="true"], .t-bold span');
+          const companyEl = item.querySelector('.t-normal span[aria-hidden="true"], .t-14:not(.t-black--light) span');
+          const durationEl = item.querySelector('.pvs-entity__caption-wrapper span[aria-hidden="true"]');
+          const dateEl = item.querySelector('.t-black--light span[aria-hidden="true"]');
+          const locationEl = item.querySelectorAll('.t-black--light span[aria-hidden="true"]')[1];
+          
           if (titleEl?.textContent?.trim()) {
             profile.experience.push({
               title: titleEl.textContent.trim(),
-              company: compEl?.textContent?.trim() || null
+              company: companyEl?.textContent?.trim()?.replace(/·.*$/, '').trim() || null,
+              duration: durationEl?.textContent?.trim() || null,
+              dates: dateEl?.textContent?.trim() || null,
+              location: locationEl?.textContent?.trim() || null
             });
           }
-        });
+        }
+      });
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Education
+    // ============================================
+    profile.education = [];
+    const educationSection = document.querySelector('#education')?.closest('section')
+      || document.querySelector('section[data-section="education"]');
+    
+    if (educationSection) {
+      const eduItems = educationSection.querySelectorAll('li.artdeco-list__item, .pvs-list__paged-list-item');
+      eduItems.forEach((item, i) => {
+        if (i >= 5) return; // Cap at 5 schools
+        
+        const schoolEl = item.querySelector('.hoverable-link-text span[aria-hidden="true"], .t-bold span[aria-hidden="true"]');
+        const degreeEl = item.querySelector('.t-normal span[aria-hidden="true"]');
+        const dateEl = item.querySelector('.t-black--light span[aria-hidden="true"]');
+        
+        if (schoolEl?.textContent?.trim()) {
+          profile.education.push({
+            school: schoolEl.textContent.trim(),
+            degree: degreeEl?.textContent?.trim() || null,
+            dates: dateEl?.textContent?.trim() || null
+          });
+        }
+      });
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Skills
+    // ============================================
+    profile.skills = [];
+    const skillsSection = document.querySelector('#skills')?.closest('section')
+      || document.querySelector('section[data-section="skills"]');
+    
+    if (skillsSection) {
+      const skillItems = skillsSection.querySelectorAll('li.artdeco-list__item, .pvs-list__paged-list-item');
+      skillItems.forEach((item, i) => {
+        if (i >= 20) return; // Cap at 20 skills
+        
+        const skillEl = item.querySelector('.hoverable-link-text span[aria-hidden="true"], .t-bold span[aria-hidden="true"]');
+        const endorsementEl = item.querySelector('.t-black--light span[aria-hidden="true"]');
+        
+        if (skillEl?.textContent?.trim()) {
+          const endorsementText = endorsementEl?.textContent?.trim() || '';
+          const endorsementMatch = endorsementText.match(/(\d+)\s*endorsement/i);
+          
+          profile.skills.push({
+            name: skillEl.textContent.trim(),
+            endorsements: endorsementMatch ? parseInt(endorsementMatch[1]) : 0
+          });
+        }
+      });
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Languages
+    // ============================================
+    profile.languages = [];
+    const languagesSection = document.querySelector('#languages')?.closest('section');
+    
+    if (languagesSection) {
+      const langItems = languagesSection.querySelectorAll('li.artdeco-list__item, .pvs-list__paged-list-item');
+      langItems.forEach((item, i) => {
+        if (i >= 10) return;
+        
+        const langEl = item.querySelector('.t-bold span[aria-hidden="true"]');
+        const levelEl = item.querySelector('.t-normal span[aria-hidden="true"]');
+        
+        if (langEl?.textContent?.trim()) {
+          profile.languages.push({
+            language: langEl.textContent.trim(),
+            proficiency: levelEl?.textContent?.trim() || null
+          });
+        }
+      });
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Certifications
+    // ============================================
+    profile.certifications = [];
+    const certSection = document.querySelector('#licenses_and_certifications')?.closest('section')
+      || document.querySelector('section[data-section="certifications"]');
+    
+    if (certSection) {
+      const certItems = certSection.querySelectorAll('li.artdeco-list__item, .pvs-list__paged-list-item');
+      certItems.forEach((item, i) => {
+        if (i >= 10) return;
+        
+        const nameEl = item.querySelector('.t-bold span[aria-hidden="true"]');
+        const issuerEl = item.querySelector('.t-normal span[aria-hidden="true"]');
+        const dateEl = item.querySelector('.t-black--light span[aria-hidden="true"]');
+        
+        if (nameEl?.textContent?.trim()) {
+          profile.certifications.push({
+            name: nameEl.textContent.trim(),
+            issuer: issuerEl?.textContent?.trim() || null,
+            date: dateEl?.textContent?.trim() || null
+          });
+        }
+      });
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Follower / Connection Count
+    // ============================================
+    const followerSelectors = [
+      '.pv-recent-activity-section__follower-count',
+      'span[class*="follower"]',
+      '.pvs-header-action-bar__follower-count'
+    ];
+    for (const sel of followerSelectors) {
+      const el = document.querySelector(sel);
+      if (el?.textContent?.trim()) {
+        profile.followers = el.textContent.trim();
         break;
       }
     }
+    
+    const connectionCountEl = document.querySelector('a[href*="connections"] span, [href*="network"] .t-bold');
+    if (connectionCountEl?.textContent?.includes('+') || connectionCountEl?.textContent?.match(/\d/)) {
+      profile.connectionCount = connectionCountEl.textContent.trim();
+    }
+    
+    // ============================================
+    // RICH CAPTURE: Premium / Creator Mode
+    // ============================================
+    profile.isPremium = !!document.querySelector('.premium-icon, [class*="premium"], .pv-member-badge--premium');
+    profile.isCreator = !!document.querySelector('[class*="creator-mode"], .pv-creator-mode-badge');
     
     console.log('[RecruitOS] Extracted profile:', profile);
     return profile;
@@ -315,22 +501,26 @@
     }
     
     try {
+      console.log('[RecruitOS] Sending to background script...');
       const response = await chrome.runtime.sendMessage({
         type: 'ADD_CANDIDATE',
         profile: profile
       });
+      console.log('[RecruitOS] Background response:', response);
       
-      if (response.success) {
+      if (response && response.success) {
         recordCapture();
         updateButtonState('success', '✓ Added!');
         setTimeout(() => updateButtonState('default', 'Add to RecruitOS'), 3000);
       } else {
-        updateButtonState('error', response.error || 'Failed');
+        const errorMsg = response?.error || 'No response from background';
+        console.error('[RecruitOS] Failed:', errorMsg);
+        updateButtonState('error', errorMsg.substring(0, 20));
         setTimeout(() => updateButtonState('default', 'Add to RecruitOS'), 2000);
       }
     } catch (e) {
       console.error('[RecruitOS] Add candidate error:', e);
-      updateButtonState('error', 'Connection error');
+      updateButtonState('error', e.message?.substring(0, 20) || 'Error');
       setTimeout(() => updateButtonState('default', 'Add to RecruitOS'), 2000);
     }
   }
