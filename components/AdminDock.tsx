@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { FileText, Search, Users, Power, Home, Settings } from "lucide-react";
+import { FileText, Search, Users, Power, Home, Settings, BarChart3 } from "lucide-react";
 import { Dock, DockCard, DockCardInner, DockDivider } from "@/components/ui/dock";
 import { useAdmin } from "@/lib/adminContext";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ export default function AdminDock() {
     { id: "intake", label: "Intake", icon: FileText, href: "/intake" },
     { id: "search", label: "Search", icon: Search, href: "/search" },
     { id: "pipeline", label: "Candidates", icon: Users, href: "/pipeline" },
+    { id: "analytics", label: "Analytics", icon: BarChart3, href: "/analytics" },
     { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
   ];
 

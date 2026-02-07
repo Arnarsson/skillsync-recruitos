@@ -42,6 +42,7 @@ import {
   List,
   LayoutGrid,
   Code2,
+  Network,
 } from "lucide-react";
 import OutreachModal from "@/components/OutreachModal";
 import ScoreBadge from "@/components/ScoreBadge";
@@ -1044,6 +1045,12 @@ export default function PipelinePage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href="/graph">
+              <Button variant="outline" size="sm">
+                <Network className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Talent Graph</span>
+              </Button>
+            </Link>
             <Link href={`/intake${adminSuffix}`}>
               <Button variant="outline" size="sm">
                 <Briefcase className="w-4 h-4 sm:mr-2" />
