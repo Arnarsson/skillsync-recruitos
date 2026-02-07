@@ -1,245 +1,162 @@
 
-import { getSupabase } from './supabase';
-import { Candidate, FunnelStage } from '../types';
+import { Candidate } from '../types';
 
-// LocalStorage key for candidates when Supabase is unavailable
-const CANDIDATES_STORAGE_KEY = 'apex_candidates';
+// ===== API-backed Candidate Service =====
+// All persistence is handled by /api/candidates routes (Prisma).
+// No localStorage, no Supabase client imports.
 
-// Helper functions for localStorage persistence
-const loadFromLocalStorage = (): Candidate[] => {
-  try {
-    const stored = localStorage.getItem(CANDIDATES_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (err: unknown) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to load candidates from localStorage:', err);
-    }
-    return [];
-  }
-};
+const BASE_URL = '/api/candidates';
 
-const saveToLocalStorage = (candidates: Candidate[]): void => {
-  try {
-    localStorage.setItem(CANDIDATES_STORAGE_KEY, JSON.stringify(candidates));
-  } catch (err: unknown) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Failed to save candidates to localStorage:', err);
+/** Build a URL with query-string params, omitting undefined/null values. */
+function buildUrl(
+  base: string,
+  params?: Record<string, string | number | boolean | undefined | null>
+): string {
+  if (!params) return base;
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      searchParams.set(key, String(value));
     }
   }
-};
+  const qs = searchParams.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
+/** Shared error handler: reads the JSON body for an error message when the
+ *  response is not OK and throws a descriptive Error. */
+async function handleResponse<T>(response: Response, action: string): Promise<T> {
+  if (!response.ok) {
+    let message = `Failed to ${action}`;
+    try {
+      const body = await response.json();
+      if (body?.error) {
+        message = body.error;
+      }
+    } catch {
+      // response body was not JSON — use default message
+    }
+    throw new Error(message);
+  }
+  return response.json() as Promise<T>;
+}
+
+// ===== Filter types =====
+
+export interface CandidateFilters {
+  sourceType?: 'GITHUB' | 'LINKEDIN' | 'MANUAL';
+  pipelineStage?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  orderBy?: 'createdAt' | 'alignmentScore' | 'name';
+  order?: 'asc' | 'desc';
+}
+
+// ===== Service =====
 
 export const candidateService = {
-  async fetchAll(): Promise<Candidate[]> {
-    const supabase = getSupabase();
-    if (!supabase) {
-      console.warn('Supabase not connected. Using localStorage persistence.');
-      return loadFromLocalStorage();
-    }
+  /**
+   * Fetch a paginated, filterable list of candidates.
+   * Returns both the candidate array and the total count for pagination.
+   */
+  async fetchAll(
+    filters?: CandidateFilters
+  ): Promise<{ candidates: Candidate[]; total: number }> {
+    const url = buildUrl(BASE_URL, filters as Record<string, string | number | undefined>);
+    const response = await fetch(url);
+    const data = await handleResponse<{
+      candidates: Candidate[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(response, 'fetch candidates');
 
-    try {
-      const { data, error } = await supabase
-        .from('candidates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Supabase Fetch Error:', error);
-        return loadFromLocalStorage();
-      }
-
-      // Map DB rows to Candidate objects using actual schema
-      const candidates = data.map((row: {
-        id: string;
-        name: string | null;
-        role_title: string | null;
-        company: string | null;
-        location: string | null;
-        years_experience: number | null;
-        avatar_url: string | null;
-        alignment_score: number | null;
-        score_breakdown: unknown;
-        shortlist_summary: string | null;
-        key_evidence: string[] | null;
-        risks: string[] | null;
-        deep_analysis: string | null;
-        culture_fit: string | null;
-        company_match: unknown;
-        indicators: unknown;
-        interview_guide: unknown;
-        unlocked_steps: FunnelStage[] | null;
-        source_url: string | null;
-        raw_profile_text: string | null;
-        persona: unknown;
-        score_confidence: string | null;
-        score_drivers: string[] | null;
-        score_drags: string[] | null;
-      }) => ({
-        id: row.id,
-        name: row.name || 'Unknown',
-        currentRole: row.role_title || 'Unknown',
-        company: row.company || 'Unknown',
-        location: row.location || 'Unknown',
-        yearsExperience: row.years_experience || 0,
-        avatar: row.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || 'C')}&background=random`,
-        alignmentScore: row.alignment_score || 0,
-        scoreBreakdown: row.score_breakdown || undefined,
-        shortlistSummary: row.shortlist_summary || '',
-        keyEvidence: row.key_evidence || [],
-        risks: row.risks || [],
-        deepAnalysis: row.deep_analysis || undefined,
-        cultureFit: row.culture_fit || undefined,
-        companyMatch: row.company_match || undefined,
-        indicators: row.indicators || undefined,
-        interviewGuide: row.interview_guide || undefined,
-        unlockedSteps: row.unlocked_steps || [],
-        sourceUrl: row.source_url || '',
-        rawProfileText: row.raw_profile_text || '',
-        persona: row.persona || undefined,
-        scoreConfidence: (row.score_confidence as 'high' | 'moderate' | 'low') || undefined,
-        scoreDrivers: row.score_drivers || undefined,
-        scoreDrags: row.score_drags || undefined
-      } as Candidate));
-
-      saveToLocalStorage(candidates);
-      return candidates;
-    } catch (err: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Supabase connection error:', err);
-      }
-      return loadFromLocalStorage();
-    }
+    return { candidates: data.candidates, total: data.total };
   },
 
-  async create(candidate: Candidate) {
-    // Always add to local cache first
-    const cachedCandidates = loadFromLocalStorage();
-    const updatedCandidates = [candidate, ...cachedCandidates.filter(c => c.id !== candidate.id)];
-    saveToLocalStorage(updatedCandidates);
+  /**
+   * Fetch a single candidate by ID (includes notes from the API).
+   * Returns null when the candidate is not found (404).
+   */
+  async getById(id: string): Promise<Candidate | null> {
+    const response = await fetch(`${BASE_URL}/${encodeURIComponent(id)}`);
 
-    const supabase = getSupabase();
-    if (!supabase) {
-      console.warn("Database not configured. Candidate saved locally only.");
-      return [candidate];
+    if (response.status === 404) {
+      return null;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('candidates')
-        .insert([{
-          id: candidate.id,
-          name: candidate.name,
-          role_title: candidate.currentRole,
-          company: candidate.company,
-          location: candidate.location,
-          years_experience: candidate.yearsExperience || 0,
-          avatar_url: candidate.avatar,
-          source_type: 'sourcing',
-          source_url: candidate.sourceUrl || '',
-          alignment_score: candidate.alignmentScore,
-          score_breakdown: candidate.scoreBreakdown || null,
-          shortlist_summary: candidate.shortlistSummary,
-          key_evidence: candidate.keyEvidence || [],
-          risks: candidate.risks || [],
-          unlocked_steps: candidate.unlockedSteps || [FunnelStage.SHORTLIST],
-          // Enhanced scoring fields
-          score_confidence: candidate.scoreConfidence || null,
-          score_drivers: candidate.scoreDrivers || null,
-          score_drags: candidate.scoreDrags || null,
-          // Persona and company match
-          persona: candidate.persona || null,
-          company_match: candidate.companyMatch || null,
-          raw_profile_text: candidate.rawProfileText || null
-        }])
-        .select();
-
-      if (error) {
-        console.error('Supabase Create Error:', error);
-        return [candidate];
-      }
-      return data;
-    } catch (err: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Supabase connection error:', err);
-      }
-      return [candidate];
-    }
+    const data = await handleResponse<{ candidate: Candidate }>(
+      response,
+      'fetch candidate'
+    );
+    return data.candidate;
   },
 
-  async update(candidate: Candidate) {
-    // Update local cache first
-    const cachedCandidates = loadFromLocalStorage();
-    const updatedCandidates = cachedCandidates.map(c => c.id === candidate.id ? candidate : c);
-    saveToLocalStorage(updatedCandidates);
+  /**
+   * Create a new candidate. `name` and `sourceType` are required by the API.
+   */
+  async create(
+    candidate: Partial<Candidate> & { name: string; sourceType: string }
+  ): Promise<Candidate> {
+    const response = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(candidate),
+    });
 
-    const supabase = getSupabase();
-    if (!supabase) {
-      console.warn("Database not configured. Candidate updated locally only.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('candidates')
-        .update({
-          role_title: candidate.currentRole,
-          company: candidate.company,
-          location: candidate.location,
-          alignment_score: candidate.alignmentScore,
-          score_breakdown: candidate.scoreBreakdown || null,
-          shortlist_summary: candidate.shortlistSummary,
-          key_evidence: candidate.keyEvidence || [],
-          risks: candidate.risks || [],
-          deep_analysis: candidate.deepAnalysis || null,
-          culture_fit: candidate.cultureFit || null,
-          indicators: candidate.indicators || null,
-          interview_guide: candidate.interviewGuide || null,
-          unlocked_steps: candidate.unlockedSteps || [],
-          // Enhanced scoring fields
-          score_confidence: candidate.scoreConfidence || null,
-          score_drivers: candidate.scoreDrivers || null,
-          score_drags: candidate.scoreDrags || null,
-          // Persona and company match
-          persona: candidate.persona || null,
-          company_match: candidate.companyMatch || null,
-          raw_profile_text: candidate.rawProfileText || null
-        })
-        .eq('id', candidate.id);
-
-      if (error) {
-        console.error('Supabase Update Error:', error);
-      }
-    } catch (err: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Supabase connection error:', err);
-      }
-    }
+    const data = await handleResponse<{ candidate: Candidate }>(
+      response,
+      'create candidate'
+    );
+    return data.candidate;
   },
 
-  async delete(candidateId: string) {
-    // Remove from local cache first
-    const cachedCandidates = loadFromLocalStorage();
-    const updatedCandidates = cachedCandidates.filter(c => c.id !== candidateId);
-    saveToLocalStorage(updatedCandidates);
+  /**
+   * Partially update an existing candidate. Only the fields present in `data`
+   * are sent to the API.
+   */
+  async update(id: string, data: Partial<Candidate>): Promise<Candidate> {
+    const response = await fetch(`${BASE_URL}/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-    const supabase = getSupabase();
-    if (!supabase) {
-      console.warn("Database not configured. Candidate deleted locally only.");
-      return;
-    }
+    const result = await handleResponse<{ candidate: Candidate }>(
+      response,
+      'update candidate'
+    );
+    return result.candidate;
+  },
 
-    try {
-      const { error } = await supabase
-        .from('candidates')
-        .delete()
-        .eq('id', candidateId);
+  /**
+   * Delete a candidate by ID.
+   */
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`${BASE_URL}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
 
-      if (error) {
-        console.error('Supabase Delete Error:', error);
-      }
-    } catch (err: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Supabase connection error:', err);
-      }
-    }
-  }
+    await handleResponse<{ success: boolean }>(response, 'delete candidate');
+  },
+
+  /**
+   * Convenience method: update only the pipeline stage of a candidate.
+   * `pipelineStage` lives on the Prisma model but not in the client-side
+   * Candidate interface, so we send it as a plain object to the PATCH endpoint.
+   */
+  async updateStage(id: string, stage: string): Promise<Candidate> {
+    const response = await fetch(`${BASE_URL}/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pipelineStage: stage }),
+    });
+
+    const result = await handleResponse<{ candidate: Candidate }>(
+      response,
+      'update candidate stage'
+    );
+    return result.candidate;
+  },
 };
