@@ -208,7 +208,7 @@ function parseLinkedInData(rawData: BrightDataRawProfile, originalUrl: string): 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { recruiterLinkedInUrl, candidateLinkedInUrl, apiKey } = body;
+    const { recruiterLinkedInUrl, candidateLinkedInUrl } = body;
 
     // Validate inputs
     if (!recruiterLinkedInUrl || !candidateLinkedInUrl) {
@@ -218,10 +218,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use server-side API key only (no client-side keys - security fix)
+    const apiKey = process.env.BRIGHTDATA_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'BrightData API key is required' },
-        { status: 400 }
+        { error: 'BrightData API key not configured on server' },
+        { status: 500 }
       );
     }
 

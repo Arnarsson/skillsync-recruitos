@@ -124,14 +124,10 @@ class BrightDataService {
 
   getApiKey(): string | null {
     if (this.apiKey) return this.apiKey;
-    if (typeof window !== 'undefined') {
-      // Check localStorage first (both key formats for compatibility)
-      const storedKey = localStorage.getItem('BRIGHTDATA_API_KEY') || localStorage.getItem('brightdata_api_key');
-      if (storedKey) return storedKey;
-      // Then check NEXT_PUBLIC env var for client-side
-      return process.env.NEXT_PUBLIC_BRIGHTDATA_API_KEY || null;
-    }
-    return process.env.BRIGHTDATA_API_KEY || null;
+    // Server-side only - no localStorage reads (security fix)
+    return (typeof process !== 'undefined' && process.env)
+      ? (process.env.BRIGHTDATA_API_KEY || null)
+      : null;
   }
 
   isConfigured(): boolean {

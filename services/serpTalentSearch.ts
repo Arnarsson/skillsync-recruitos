@@ -49,13 +49,10 @@ interface ProfileExtraction {
 // ===== HELPERS =====
 
 /**
- * Get BrightData API key from env or localStorage
+ * Get BrightData API key from env only (no localStorage - security fix)
  */
 function getBrightDataKey(): string | null {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('BRIGHTDATA_API_KEY') || null;
-  }
-  return process.env.BRIGHTDATA_API_KEY || null;
+  return (typeof process !== 'undefined' && process.env) ? (process.env.BRIGHTDATA_API_KEY || null) : null;
 }
 
 /**

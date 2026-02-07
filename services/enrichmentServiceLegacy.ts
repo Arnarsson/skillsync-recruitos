@@ -105,8 +105,7 @@ const filterPromisingSources = (results: SERPResult[]): string[] => {
  */
 const deepEnrichWithAI = async (snippets: Array<{ url: string; text: string }>): Promise<EnrichedProfile | null> => {
   // Check for OpenRouter API key
-  const openRouterKey = localStorage.getItem('OPENROUTER_API_KEY') ||
-    (typeof process !== 'undefined' && process.env ? process.env.OPENROUTER_API_KEY : undefined);
+  const openRouterKey = (typeof process !== 'undefined' && process.env ? process.env.OPENROUTER_API_KEY : undefined);
 
   if (!openRouterKey) {
     if (process.env.NODE_ENV === 'development') {
@@ -371,9 +370,9 @@ export const enrichSparseProfile = async (candidate: {
   locationHint?: string;
 }): Promise<EnrichedProfile | null> => {
 
-  // Get API keys (check localStorage first, then env vars)
-  const serpApiKey = localStorage.getItem('SERP_API_KEY') || getEnv('SERP_API_KEY');
-  const brightDataKey = localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY');
+  // Get API keys from env only (no localStorage - security fix)
+  const serpApiKey = getEnv('SERP_API_KEY');
+  const brightDataKey = getEnv('BRIGHTDATA_API_KEY');
 
   try {
     if (process.env.NODE_ENV === 'development') {

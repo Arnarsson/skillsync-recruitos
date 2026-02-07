@@ -27,7 +27,7 @@ const getEnv = (key: string): string | undefined => {
 };
 
 const getBrightDataKey = (): string | null => {
-  return localStorage.getItem('BRIGHTDATA_API_KEY') || getEnv('BRIGHTDATA_API_KEY') || null;
+  return getEnv('BRIGHTDATA_API_KEY') || null;
 };
 
 interface LinkedInConnection {

@@ -25,12 +25,9 @@ import type {
 const CACHE_KEY_PREFIX = 'recruitos_deep_research_';
 const JOBS_CACHE_KEY = 'recruitos_deep_research_jobs';
 
-// Helper to safely get env vars or localStorage
+// Helper to safely get env vars (server-side only - no localStorage)
 const getBrightDataKey = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('BRIGHTDATA_API_KEY') || null;
-  }
-  return process.env.BRIGHTDATA_API_KEY || null;
+  return (typeof process !== 'undefined' && process.env) ? (process.env.BRIGHTDATA_API_KEY || null) : null;
 };
 
 // ===== SERP SEARCH =====

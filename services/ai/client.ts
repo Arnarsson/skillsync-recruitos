@@ -11,16 +11,16 @@ const getEnv = (key: string) => {
   }
 };
 
-// Initialize with env key first, then localStorage fallback for local dev
+// Initialize with env key only (no localStorage - security fix)
 export const getAiClient = () => {
-  const apiKey = getEnv('VITE_GEMINI_API_KEY') || localStorage.getItem('GEMINI_API_KEY') || '';
+  const apiKey = getEnv('GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY') || '';
   if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
 };
 
-// Get OpenRouter API key (env first, localStorage fallback)
+// Get OpenRouter API key (server-side only - no localStorage)
 const getOpenRouterKey = () => {
-  return getEnv('VITE_OPENROUTER_API_KEY') || localStorage.getItem('OPENROUTER_API_KEY') || '';
+  return getEnv('OPENROUTER_API_KEY') || getEnv('VITE_OPENROUTER_API_KEY') || '';
 };
 
 // OpenRouter API wrapper (OpenAI-compatible format)

@@ -27,10 +27,12 @@ import {
   Coins,
   Check,
   X,
+  Bot,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
+import { ChatInterface } from "@/components/calibration/ChatInterface";
 
 const DEMO_JOB_CONTEXT = {
   title: "Senior Full-Stack Engineer",
@@ -61,6 +63,7 @@ export default function IntakePage() {
   const router = useRouter();
   const { isAdmin, isDemoMode } = useAdmin();
   const { t } = useLanguage();
+  const [intakeMode, setIntakeMode] = useState<"form" | "ai">("form");
   const [activeTab, setActiveTab] = useState("url");
   const [jobUrl, setJobUrl] = useState("");
   const [jobText, setJobText] = useState("");
@@ -226,6 +229,22 @@ export default function IntakePage() {
     setCompanyUrl("https://linkedin.com/company/stripe");
   };
 
+  // Handler for AI assistant mode finalization
+  const handleAISpecFinalized = (jobContext: {
+    title: string;
+    company: string;
+    requiredSkills: string[];
+    preferredSkills: string[];
+    experienceLevel: string;
+    location: string;
+    summary: string;
+  }) => {
+    setCalibration(jobContext);
+    toast.success("Spec finalized", {
+      description: `${jobContext.title} - ${jobContext.requiredSkills.length} required skills`,
+    });
+  };
+
   const handleUrlSubmit = async () => {
     if (!jobUrl.trim()) return;
     setLoading(true);
@@ -373,6 +392,40 @@ export default function IntakePage() {
               </Button>
             </div>
 
+            {/* Mode Toggle: Form vs AI Assistant */}
+            <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit">
+              <button
+                onClick={() => setIntakeMode("form")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  intakeMode === "form"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Form Mode
+              </button>
+              <button
+                onClick={() => setIntakeMode("ai")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  intakeMode === "ai"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Bot className="w-3.5 h-3.5" />
+                AI Assistant
+              </button>
+            </div>
+
+            {/* AI Assistant Mode */}
+            {intakeMode === "ai" && !calibration && (
+              <ChatInterface onSpecFinalized={handleAISpecFinalized} />
+            )}
+
+            {/* Form Mode — Social Context Card */}
+            {intakeMode === "form" && (
+            <>
             {/* Social Context Card */}
             <Card>
               <CardHeader className="pb-4">
@@ -484,9 +537,11 @@ export default function IntakePage() {
                 </div>
               </CardContent>
             </Card>
+            </>
+            )}
 
-            {/* Job Requirements Card */}
-            {!calibration ? (
+            {/* Job Requirements Card (Form mode only) */}
+            {!calibration && intakeMode === "form" ? (
               <Card>
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
@@ -616,8 +671,10 @@ export default function IntakePage() {
                   )}
                 </CardContent>
               </Card>
-            ) : (
-              /* Calibration Results */
+            ) : null}
+
+            {/* Calibration Results (shown after spec is finalized in either mode) */}
+            {calibration && (
               <div className="space-y-6">
                 <Card className="border-green-500/30 bg-green-500/5">
                   <CardContent className="pt-6">

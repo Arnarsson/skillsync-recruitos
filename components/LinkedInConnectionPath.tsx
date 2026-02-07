@@ -152,12 +152,10 @@ export function LinkedInConnectionPath({
     if (typeof window === "undefined") return;
 
     const storedRecruiterUrl = localStorage.getItem(CACHE_KEY_RECRUITER_URL);
-    const brightDataKey =
-      localStorage.getItem("BRIGHTDATA_API_KEY") ||
-      localStorage.getItem("brightdata_api_key");
 
     setRecruiterUrl(storedRecruiterUrl);
-    setHasBrightDataKey(!!brightDataKey);
+    // API key is now server-side only; assume configured if recruiter URL is set
+    setHasBrightDataKey(true);
 
     // Try to load cached connection path
     if (candidateLinkedInUrl) {
@@ -172,15 +170,6 @@ export function LinkedInConnectionPath({
   const fetchConnectionPath = useCallback(async () => {
     if (!recruiterUrl || !candidateLinkedInUrl) return;
 
-    const brightDataKey =
-      localStorage.getItem("BRIGHTDATA_API_KEY") ||
-      localStorage.getItem("brightdata_api_key");
-
-    if (!brightDataKey) {
-      setError("BrightData API key not configured");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
@@ -193,7 +182,6 @@ export function LinkedInConnectionPath({
         body: JSON.stringify({
           recruiterLinkedInUrl: recruiterUrl,
           candidateLinkedInUrl,
-          apiKey: brightDataKey,
         }),
       });
 

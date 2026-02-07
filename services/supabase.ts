@@ -10,17 +10,13 @@ const getEnv = (key: string): string | undefined => {
   }
 };
 
-// Helper to get credentials from localStorage first, then env vars
+// Get credentials from env only (no localStorage - security fix)
 const getSupabaseUrl = (): string | undefined => {
-  const localUrl = localStorage.getItem('SUPABASE_URL');
-  if (localUrl) return localUrl;
-  return getEnv('SUPABASE_URL');
+  return getEnv('NEXT_PUBLIC_SUPABASE_URL') || getEnv('SUPABASE_URL');
 };
 
 const getSupabaseKey = (): string | undefined => {
-  const localKey = localStorage.getItem('SUPABASE_ANON_KEY');
-  if (localKey) return localKey;
-  return getEnv('SUPABASE_ANON_KEY');
+  return getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY');
 };
 
 // Lazy initialization to allow credentials to be set at runtime

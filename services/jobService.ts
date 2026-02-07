@@ -12,9 +12,9 @@ const getEnv = (key: string) => {
   }
 };
 
-// Initialize with localStorage key if available, otherwise env
+// Initialize with env-only key (no localStorage - security fix)
 const getAiClient = () => {
-  const apiKey = localStorage.getItem('GEMINI_API_KEY') || getEnv('API_KEY') || '';
+  const apiKey = getEnv('GEMINI_API_KEY') || getEnv('API_KEY') || '';
   if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
 };
