@@ -38,6 +38,7 @@ import {
   Info,
   Lock,
   Eye,
+  Activity,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
@@ -642,6 +643,12 @@ export function CandidatePipelineItem({
                       <Brain className="w-4 h-4" />
                       {t("candidate.fullDeepProfile")}
                       <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link href={`/candidates/${candidate.id}/work-analysis`}>
+                    <Button variant="outline" className="gap-1.5" title="Deep Work Analysis">
+                      <Activity className="w-4 h-4 text-emerald-500" />
+                      <span className="hidden sm:inline text-xs">Work</span>
                     </Button>
                   </Link>
                   <Button
