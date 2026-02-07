@@ -5,6 +5,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AdminDock from "@/components/AdminDock";
+import { CalibrationWidget } from "@/components/calibration/CalibrationWidget";
 import Providers from "@/components/Providers";
 import { Toaster } from "sonner";
 
@@ -49,7 +50,8 @@ export default function RootLayout({
           <main>{children}</main>
           <Footer />
           <AdminDock />
-          <Toaster position="bottom-right" theme="dark" richColors />
+          <CalibrationWidget />
+          <Toaster position="bottom-left" theme="dark" richColors />
         </Providers>
       </body>
     </html>

@@ -30,11 +30,11 @@ export default function AdminDock() {
     return (
       <button
         onClick={toggleAdmin}
-        className="fixed bottom-3 sm:bottom-4 right-3 sm:right-4 z-50 p-2.5 sm:p-3 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-lg text-muted-foreground hover:text-primary hover:border-primary/50 transition-all group"
+        className="fixed bottom-3 sm:bottom-4 left-3 sm:left-4 z-50 p-2.5 sm:p-3 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-lg text-muted-foreground hover:text-primary hover:border-primary/50 transition-all group"
         title="Toggle Admin Mode (Ctrl+Shift+A)"
       >
         <Power className="w-4 h-4 sm:w-5 sm:h-5" />
-        <span className="absolute bottom-full right-0 mb-2 px-2 py-1 text-xs bg-card border border-border rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block">
+        <span className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs bg-card border border-border rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block">
           Admin Mode (Ctrl+Shift+A)
         </span>
       </button>
