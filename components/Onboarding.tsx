@@ -8,7 +8,6 @@ import {
   Brain,
   MessageSquare,
   ArrowRight,
-  Sparkles,
   X,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
@@ -76,8 +75,17 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         <div className="p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-indigo-500/20 text-primary mb-4">
-              <Sparkles className="w-10 h-10" />
+            <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-indigo-500/20 mb-4">
+              <div className="grid grid-cols-3 gap-1.5">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3.5 h-3.5 rounded-sm ${
+                      i < 3 || i === 4 ? "bg-foreground" : "bg-transparent"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
             <h2 className="text-2xl font-bold mb-2">{t("onboarding.welcome.title")}</h2>
             <p className="text-muted-foreground">
