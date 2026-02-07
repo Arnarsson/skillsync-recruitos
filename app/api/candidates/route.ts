@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 
 const VALID_ORDER_BY = ["createdAt", "alignmentScore", "name"] as const;
@@ -10,29 +12,37 @@ const DEFAULT_LIMIT = 50;
 // GET - List candidates with filtering, search, and pagination
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse pagination
-    let limit = parseInt(searchParams.get("limit") || String(DEFAULT_LIMIT));
+    let limit = parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT));
     if (isNaN(limit) || limit < 1) limit = DEFAULT_LIMIT;
     if (limit > MAX_LIMIT) limit = MAX_LIMIT;
 
-    let offset = parseInt(searchParams.get("offset") || "0");
+    let offset = parseInt(searchParams.get("offset") ?? "0");
     if (isNaN(offset) || offset < 0) offset = 0;
 
     // Parse ordering
-    const orderByParam = searchParams.get("orderBy") || "createdAt";
+    const orderByParam = searchParams.get("orderBy") ?? "createdAt";
     const orderBy = VALID_ORDER_BY.includes(
       orderByParam as (typeof VALID_ORDER_BY)[number]
     )
       ? orderByParam
       : "createdAt";
 
-    const orderParam = searchParams.get("order") || "desc";
+    const orderParam = searchParams.get("order") ?? "desc";
     const order = orderParam === "asc" ? "asc" : "desc";
 
     // Build where clause
     const where: Prisma.CandidateWhereInput = {};
+
+    // Scope to authenticated user when session is present
+    if (userId) {
+      where.userId = userId;
+    }
 
     // Filter by sourceType
     const sourceType = searchParams.get("sourceType");
@@ -85,6 +95,9 @@ export async function GET(request: NextRequest) {
 // POST - Create a new candidate
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const body = await request.json();
 
     // Validate required fields
@@ -111,18 +124,18 @@ export async function POST(request: NextRequest) {
       data: {
         // Identity
         name: body.name.trim(),
-        headline: body.headline || null,
-        currentRole: body.currentRole || null,
-        company: body.company || null,
-        location: body.location || null,
-        avatar: body.avatar || null,
+        headline: body.headline ?? null,
+        currentRole: body.currentRole ?? null,
+        company: body.company ?? null,
+        location: body.location ?? null,
+        avatar: body.avatar ?? null,
 
         // Source tracking
         sourceType: body.sourceType,
-        githubUsername: body.githubUsername || null,
-        linkedinId: body.linkedinId || null,
-        linkedinUrl: body.linkedinUrl || null,
-        sourceUrl: body.sourceUrl || null,
+        githubUsername: body.githubUsername ?? null,
+        linkedinId: body.linkedinId ?? null,
+        linkedinUrl: body.linkedinUrl ?? null,
+        sourceUrl: body.sourceUrl ?? null,
 
         // Experience
         yearsExperience: body.yearsExperience ?? null,
@@ -138,13 +151,13 @@ export async function POST(request: NextRequest) {
         // AI Scoring
         alignmentScore: body.alignmentScore ?? null,
         scoreBreakdown: body.scoreBreakdown ?? undefined,
-        scoreConfidence: body.scoreConfidence || null,
-        scoreDrivers: body.scoreDrivers || [],
-        scoreDrags: body.scoreDrags || [],
+        scoreConfidence: body.scoreConfidence ?? null,
+        scoreDrivers: body.scoreDrivers ?? [],
+        scoreDrags: body.scoreDrags ?? [],
 
         // AI Analysis
         persona: body.persona ?? undefined,
-        deepAnalysis: body.deepAnalysis || null,
+        deepAnalysis: body.deepAnalysis ?? null,
         companyMatch: body.companyMatch ?? undefined,
         indicators: body.indicators ?? undefined,
         interviewGuide: body.interviewGuide ?? undefined,
@@ -153,21 +166,21 @@ export async function POST(request: NextRequest) {
         buildprint: body.buildprint ?? undefined,
 
         // Pipeline
-        pipelineStage: body.pipelineStage || "sourced",
-        unlockedSteps: body.unlockedSteps || [],
-        shortlistSummary: body.shortlistSummary || null,
-        keyEvidence: body.keyEvidence || [],
-        risks: body.risks || [],
+        pipelineStage: body.pipelineStage ?? "sourced",
+        unlockedSteps: body.unlockedSteps ?? [],
+        shortlistSummary: body.shortlistSummary ?? null,
+        keyEvidence: body.keyEvidence ?? [],
+        risks: body.risks ?? [],
 
         // LinkedIn-specific signals
-        connectionDegree: body.connectionDegree || null,
-        mutualConnections: body.mutualConnections || null,
+        connectionDegree: body.connectionDegree ?? null,
+        mutualConnections: body.mutualConnections ?? null,
         openToWork: body.openToWork ?? null,
         isPremium: body.isPremium ?? null,
-        rawProfileText: body.rawProfileText || null,
+        rawProfileText: body.rawProfileText ?? null,
 
-        // User association
-        userId: body.userId || null,
+        // User association - prefer session userId over body
+        userId: userId ?? body.userId ?? null,
 
         // Timestamps
         capturedAt: body.capturedAt ? new Date(body.capturedAt) : new Date(),

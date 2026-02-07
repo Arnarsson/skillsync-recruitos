@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -8,10 +11,21 @@ interface RouteParams {
 // GET - List notes for a candidate
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const { id } = await params;
 
-    // Verify candidate exists
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    // Verify candidate exists (and belongs to user if authenticated)
+    const candidateWhere: Prisma.CandidateWhereInput = { id };
+    if (userId) {
+      candidateWhere.userId = userId;
+    }
+
+    const candidate = await prisma.candidate.findFirst({
+      where: candidateWhere,
+      select: { id: true },
+    });
     if (!candidate) {
       return NextResponse.json(
         { error: "Candidate not found" },
@@ -37,6 +51,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST - Add a note to a candidate
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -75,8 +92,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Verify candidate exists
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    // Verify candidate exists (and belongs to user if authenticated)
+    const candidateWhere: Prisma.CandidateWhereInput = { id };
+    if (userId) {
+      candidateWhere.userId = userId;
+    }
+
+    const candidate = await prisma.candidate.findFirst({
+      where: candidateWhere,
+      select: { id: true },
+    });
     if (!candidate) {
       return NextResponse.json(
         { error: "Candidate not found" },
@@ -89,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         candidateId: id,
         author: body.author.trim(),
         content: body.content.trim(),
-        tags: body.tags || [],
+        tags: body.tags ?? [],
       },
     });
 

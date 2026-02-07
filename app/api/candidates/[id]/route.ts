@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+
+const VALID_SOURCE_TYPES = ["GITHUB", "LINKEDIN", "MANUAL"] as const;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -9,10 +13,18 @@ interface RouteParams {
 // GET - Get single candidate with notes
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const { id } = await params;
 
-    const candidate = await prisma.candidate.findUnique({
-      where: { id },
+    const where: Prisma.CandidateWhereInput = { id };
+    if (userId) {
+      where.userId = userId;
+    }
+
+    const candidate = await prisma.candidate.findFirst({
+      where,
       include: {
         notes: {
           orderBy: { createdAt: "desc" },
@@ -40,23 +52,43 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH - Update candidate fields
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const { id } = await params;
     const body = await request.json();
 
-    // Check candidate exists
-    const existing = await prisma.candidate.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Candidate not found" },
-        { status: 404 }
-      );
+    // Validate name when provided
+    if (body.name !== undefined) {
+      if (typeof body.name !== "string" || !body.name.trim()) {
+        return NextResponse.json(
+          { error: "name must be a non-empty string" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate sourceType when provided
+    if (body.sourceType !== undefined) {
+      if (
+        !VALID_SOURCE_TYPES.includes(
+          body.sourceType as (typeof VALID_SOURCE_TYPES)[number]
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error: `sourceType must be one of: ${VALID_SOURCE_TYPES.join(", ")}`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Build update data from allowed fields only
     const data: Prisma.CandidateUpdateInput = {};
 
     // Identity fields
-    if (body.name !== undefined) data.name = body.name;
+    if (body.name !== undefined) data.name = body.name.trim();
     if (body.headline !== undefined) data.headline = body.headline;
     if (body.currentRole !== undefined) data.currentRole = body.currentRole;
     if (body.company !== undefined) data.company = body.company;
@@ -129,12 +161,43 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.rawProfileText !== undefined)
       data.rawProfileText = body.rawProfileText;
 
-    const candidate = await prisma.candidate.update({
-      where: { id },
-      data,
-    });
+    // Build where clause scoped to user if authenticated
+    const where: Prisma.CandidateWhereUniqueInput = { id };
 
-    return NextResponse.json({ candidate });
+    // Attempt update directly, catch P2025 for not-found
+    try {
+      // If session exists, verify ownership before updating
+      if (userId) {
+        const existing = await prisma.candidate.findFirst({
+          where: { id, userId },
+          select: { id: true },
+        });
+        if (!existing) {
+          return NextResponse.json(
+            { error: "Candidate not found" },
+            { status: 404 }
+          );
+        }
+      }
+
+      const candidate = await prisma.candidate.update({
+        where,
+        data,
+      });
+
+      return NextResponse.json({ candidate });
+    } catch (updateError) {
+      if (
+        updateError instanceof Prisma.PrismaClientKnownRequestError &&
+        updateError.code === "P2025"
+      ) {
+        return NextResponse.json(
+          { error: "Candidate not found" },
+          { status: 404 }
+        );
+      }
+      throw updateError;
+    }
   } catch (error) {
     console.error("Candidate update error:", error);
 
@@ -158,20 +221,41 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // DELETE - Delete candidate
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
     const { id } = await params;
 
-    // Check candidate exists
-    const existing = await prisma.candidate.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Candidate not found" },
-        { status: 404 }
-      );
+    // If session exists, verify ownership before deleting
+    if (userId) {
+      const existing = await prisma.candidate.findFirst({
+        where: { id, userId },
+        select: { id: true },
+      });
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Candidate not found" },
+          { status: 404 }
+        );
+      }
     }
 
-    await prisma.candidate.delete({ where: { id } });
-
-    return NextResponse.json({ success: true });
+    // Attempt delete directly, catch P2025 for not-found
+    try {
+      await prisma.candidate.delete({ where: { id } });
+      return NextResponse.json({ success: true });
+    } catch (deleteError) {
+      if (
+        deleteError instanceof Prisma.PrismaClientKnownRequestError &&
+        deleteError.code === "P2025"
+      ) {
+        return NextResponse.json(
+          { error: "Candidate not found" },
+          { status: 404 }
+        );
+      }
+      throw deleteError;
+    }
   } catch (error) {
     console.error("Candidate deletion error:", error);
     return NextResponse.json(
