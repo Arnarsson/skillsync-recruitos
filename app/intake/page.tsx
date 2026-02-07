@@ -191,8 +191,8 @@ export default function IntakePage() {
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
 
-      // Clear existing candidates and hash to force auto-search in pipeline
-      localStorage.removeItem("apex_candidates");
+      // Clear hash to force auto-search in pipeline
+      // Note: apex_candidates is now API-backed, no need to clear localStorage
       localStorage.removeItem("apex_job_context_hash");
       // Clear skills config and draft for fresh start
       localStorage.removeItem("apex_skills_config");
@@ -303,8 +303,8 @@ export default function IntakePage() {
       };
       localStorage.setItem("apex_job_context", JSON.stringify(enrichedContext));
 
-      // Clear existing candidates and hash to force auto-search in pipeline
-      localStorage.removeItem("apex_candidates");
+      // Clear hash to force auto-search in pipeline
+      // Note: apex_candidates is now API-backed, no need to clear localStorage
       localStorage.removeItem("apex_job_context_hash");
       // Clear skills config and draft for fresh start
       localStorage.removeItem("apex_skills_config");

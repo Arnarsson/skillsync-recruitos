@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { candidateService } from "@/services/candidateService";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,20 +129,16 @@ export default function ReportPage() {
 
   useEffect(() => {
     async function loadCandidate() {
-      // 1. Try localStorage
-      const stored = localStorage.getItem("apex_candidates");
-      if (stored) {
-        try {
-          const candidates = JSON.parse(stored) as Candidate[];
-          const found = candidates.find((c) => c.id === username);
-          if (found) {
-            setCandidate(found);
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // Ignore
+      // 1. Try API (candidateService)
+      try {
+        const found = await candidateService.getById(username);
+        if (found) {
+          setCandidate(found as unknown as Candidate);
+          setLoading(false);
+          return;
         }
+      } catch {
+        // Candidate not found in API, fall through
       }
 
       // 2. Fallback to GitHub API (if direct link)
@@ -160,7 +157,6 @@ export default function ReportPage() {
             avatar: user.avatar_url,
           };
           setCandidate(githubCandidate);
-          // Trigger analysis automatically? (Maybe later)
         }
       } catch (error) {
         console.error("Failed to fetch GitHub profile:", error);

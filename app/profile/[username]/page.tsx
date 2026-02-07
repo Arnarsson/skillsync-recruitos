@@ -3,6 +3,7 @@
 import { useState, useEffect, use, useCallback } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { candidateService } from "@/services/candidateService";
 import {
   MapPin,
   Building,
@@ -219,46 +220,32 @@ export default function ProfilePage({
     }
   };
 
-  // Sync LinkedIn data back to pipeline localStorage
-  const syncLinkedInToPipeline = useCallback((linkedIn: LinkedInProfile) => {
+  // Sync LinkedIn data back to pipeline via API
+  const syncLinkedInToPipeline = useCallback(async (linkedIn: LinkedInProfile) => {
     try {
-      const stored = localStorage.getItem("apex_candidates");
-      if (stored) {
-        const candidates = JSON.parse(stored);
-        const idx = candidates.findIndex((c: { id: string }) => c.id === username);
-        if (idx !== -1) {
-          candidates[idx] = {
-            ...candidates[idx],
-            linkedInUrl: linkedIn.profileUrl,
-            linkedInProfile: linkedIn,
-            linkedInName: linkedIn.name,
-            linkedInHeadline: linkedIn.headline,
-          };
-          localStorage.setItem("apex_candidates", JSON.stringify(candidates));
-          console.log("[Profile] Synced LinkedIn to pipeline:", username);
-        }
-      }
+      await candidateService.update(username, {
+        linkedinUrl: linkedIn.profileUrl,
+      });
+      console.log("[Profile] Synced LinkedIn to pipeline:", username);
     } catch (err) {
       console.error("[Profile] Failed to sync LinkedIn to pipeline:", err);
     }
   }, [username]);
 
-  // Load existing LinkedIn from pipeline localStorage
+  // Load existing LinkedIn from pipeline via API
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("apex_candidates");
-      if (stored) {
-        const candidates = JSON.parse(stored);
-        const candidate = candidates.find((c: { id: string }) => c.id === username);
-        if (candidate?.linkedInProfile) {
+    async function loadLinkedInFromPipeline() {
+      try {
+        const candidate = await candidateService.getById(username);
+        if (candidate?.linkedinUrl) {
           console.log("[Profile] Loading LinkedIn from pipeline:", username);
-          setLinkedInProfile(candidate.linkedInProfile);
-          setLinkedInUrl(candidate.linkedInUrl || candidate.linkedInProfile.profileUrl || "");
+          setLinkedInUrl(candidate.linkedinUrl);
         }
+      } catch (err) {
+        console.error("[Profile] Failed to load LinkedIn from pipeline:", err);
       }
-    } catch (err) {
-      console.error("[Profile] Failed to load LinkedIn from pipeline:", err);
     }
+    loadLinkedInFromPipeline();
   }, [username]);
 
   useEffect(() => {

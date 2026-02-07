@@ -24,6 +24,7 @@ import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { PhaseIndicator } from "@/components/PhaseIndicator";
 import OutreachModal from "@/components/OutreachModal";
 import { PRICING, CREDITS_TO_EUR } from "@/types";
+import { candidateService } from "@/services/candidateService";
 interface Candidate {
   id: string;
   name: string;
@@ -54,12 +55,9 @@ export default function ShortlistPage() {
 
   // Load shortlist on mount
   useEffect(() => {
-    // Use a flag to track if component is still mounted
     let isMounted = true;
 
-    const loadData = () => {
-      const shortlistIds = localStorage.getItem("apex_shortlist");
-      const allCandidates = localStorage.getItem("apex_candidates");
+    const loadData = async () => {
       const storedJobContext = localStorage.getItem("apex_job_context");
 
       if (!isMounted) return;
@@ -73,17 +71,20 @@ export default function ShortlistPage() {
         }
       }
 
-      if (shortlistIds && allCandidates) {
+      // Load candidates from API instead of localStorage
+      const shortlistIds = localStorage.getItem("apex_shortlist");
+      if (shortlistIds) {
         try {
           const ids: string[] = JSON.parse(shortlistIds);
-          const all: Candidate[] = JSON.parse(allCandidates);
-          const shortlisted = all.filter((c) => ids.includes(c.id));
+          const { candidates: all } = await candidateService.fetchAll();
+          if (!isMounted) return;
+          const shortlisted = (all as unknown as Candidate[]).filter((c) => ids.includes(c.id));
           setCandidates(shortlisted);
         } catch (e) {
-          console.error("Failed to parse shortlist:", e);
+          console.error("Failed to load shortlist:", e);
         }
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     loadData();

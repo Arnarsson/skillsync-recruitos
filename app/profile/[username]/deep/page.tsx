@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAdmin } from "@/lib/adminContext";
+import { candidateService } from "@/services/candidateService";
+import type { Candidate as GlobalCandidate } from "@/types";
 import Link from "next/link";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -338,34 +340,29 @@ export default function DeepProfilePage() {
 
   useEffect(() => {
     async function loadCandidate() {
-      // First try to load candidate from localStorage (pipeline)
-      const stored = localStorage.getItem("apex_candidates");
-      if (stored) {
+      // Load job context from localStorage (not candidate data)
+      const storedJob = localStorage.getItem("apex_job_context");
+      if (storedJob) {
         try {
-          const candidates = JSON.parse(stored) as Candidate[];
-          const found = candidates.find((c) => c.id === username);
-          if (found) {
-            setCandidate(found);
-            setLoading(false);
-            
-            // Load job context
-            const storedJob = localStorage.getItem("apex_job_context");
-            if (storedJob) {
-              try {
-                setJobContext(JSON.parse(storedJob));
-              } catch {
-                // Ignore parse errors
-              }
-            }
-            return;
-          }
+          setJobContext(JSON.parse(storedJob));
         } catch {
           // Ignore parse errors
         }
       }
 
+      // First try to load candidate from API
+      try {
+        const found = await candidateService.getById(username);
+        if (found) {
+          setCandidate(found as unknown as Candidate);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Candidate not found in API, fall through
+      }
+
       // If not in pipeline, fetch from GitHub API
-      // [DEBUG] Fallback trigger verified
       console.log("Candidate not in pipeline, attempting GitHub fallback for:", username);
       try {
         const response = await fetch(`https://api.github.com/users/${username}`);
@@ -379,28 +376,23 @@ export default function DeepProfilePage() {
             currentRole: user.bio ? user.bio.split('.')[0] : 'Software Developer',
             company: user.company?.replace(/^@/, '') || '',
             location: user.location || '',
-            skills: [], // Will be populated by analysis
+            skills: [],
             alignmentScore: 0,
             avatar: user.avatar_url,
             sourceUrl: `https://github.com/${user.login}`,
           };
 
           setCandidate(githubCandidate);
-          
-          // Also store in localStorage for next time
-          const existing = localStorage.getItem("apex_candidates");
-          const candidates = existing ? JSON.parse(existing) : [];
-          candidates.push(githubCandidate);
-          localStorage.setItem("apex_candidates", JSON.stringify(candidates));
-          
-          // Load job context
-          const storedJob = localStorage.getItem("apex_job_context");
-          if (storedJob) {
-            try {
-              setJobContext(JSON.parse(storedJob));
-            } catch {
-              // Ignore parse errors
-            }
+
+          // Also persist to API for next time
+          try {
+            await candidateService.create({
+              ...(githubCandidate as unknown as Partial<GlobalCandidate>),
+              name: githubCandidate.name,
+              sourceType: 'GITHUB',
+            });
+          } catch {
+            // Best-effort — candidate may already exist
           }
         }
       } catch (error) {
@@ -468,15 +460,22 @@ export default function DeepProfilePage() {
         };
         setCandidate(updatedCandidate);
 
-        // Update localStorage
-        const stored = localStorage.getItem("apex_candidates");
-        if (stored) {
-          const candidates = JSON.parse(stored) as Candidate[];
-          const index = candidates.findIndex((c) => c.id === username);
-          if (index !== -1) {
-            candidates[index] = updatedCandidate;
-            localStorage.setItem("apex_candidates", JSON.stringify(candidates));
-          }
+        // Persist analysis results to API
+        try {
+          await candidateService.update(username, {
+            persona: data.persona,
+            deepAnalysis: data.deepProfile?.deepAnalysis,
+            indicators: data.deepProfile?.indicators,
+            interviewGuide: data.deepProfile?.questions,
+            companyMatch: data.deepProfile?.companyMatch,
+            cultureFit: data.deepProfile?.cultureFit,
+            scoreBreakdown: data.scoreBreakdown,
+            keyEvidence: data.keyEvidence,
+            risks: data.risks,
+            networkDossier: data.networkDossier,
+          });
+        } catch (err) {
+          console.error("[Deep] Failed to persist analysis to API:", err);
         }
       }
     } catch (error) {

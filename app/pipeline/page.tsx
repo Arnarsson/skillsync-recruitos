@@ -67,6 +67,8 @@ import {
   Cell,
 } from "recharts";
 import { useLanguage } from "@/lib/i18n";
+import { candidateService } from "@/services/candidateService";
+import type { Candidate as GlobalCandidate } from "@/types";
 
 interface ScoreBreakdown {
   requiredMatched: string[];
@@ -298,23 +300,22 @@ export default function PipelinePage() {
       // Check if job context changed - if so, clear old candidates
       const jobContextChanged = !!(jobContextHash && storedJobHash !== jobContextHash);
 
-      const storedCandidates = localStorage.getItem("apex_candidates");
       let existingCandidates: Candidate[] = [];
 
-      // Load existing candidates ONLY if not fresh from intake and job hasn't changed
-      if (storedCandidates && !jobContextChanged && !freshFromIntake) {
+      // Load existing candidates from API ONLY if not fresh from intake and job hasn't changed
+      if (!jobContextChanged && !freshFromIntake) {
         try {
-          existingCandidates = JSON.parse(storedCandidates);
+          const { candidates: apiCandidates } = await candidateService.fetchAll({ sourceType: 'GITHUB' });
+          existingCandidates = apiCandidates as unknown as Candidate[];
           if (isActive) setCandidates(existingCandidates);
-          console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates");
+          console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates from API");
         } catch {
-          // Ignore
+          // Ignore API errors on load
         }
       } else if (jobContextChanged || freshFromIntake) {
-        // Clear old candidates when job context changes or fresh from intake
-        localStorage.removeItem("apex_candidates");
+        // Start fresh when job context changes
         if (isActive) setCandidates([]);
-        console.log("[Pipeline] Cleared old candidates - jobContextChanged:", jobContextChanged, "freshFromIntake:", freshFromIntake);
+        console.log("[Pipeline] Starting fresh - jobContextChanged:", jobContextChanged, "freshFromIntake:", freshFromIntake);
       }
 
       // Determine if we should auto-search
@@ -420,8 +421,15 @@ export default function PipelinePage() {
               newCandidates.sort((a: Candidate, b: Candidate) => b.alignmentScore - a.alignmentScore);
 
               setCandidates(newCandidates);
-              localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
-              console.log("[Pipeline] Saved", newCandidates.length, "candidates");
+              // Persist new candidates to API (best-effort)
+              for (const c of newCandidates) {
+                try {
+                  await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
+                } catch {
+                  // Candidate may already exist, ignore
+                }
+              }
+              console.log("[Pipeline] Saved", newCandidates.length, "candidates to API");
             }
           } catch (error) {
             console.error("[Pipeline] Auto-search error:", error);
@@ -630,7 +638,14 @@ export default function PipelinePage() {
         newCandidates.sort((a: Candidate, b: Candidate) => b.alignmentScore - a.alignmentScore);
 
         setCandidates(newCandidates);
-        localStorage.setItem("apex_candidates", JSON.stringify(newCandidates));
+        // Persist to API (best-effort)
+        for (const c of newCandidates) {
+          try {
+            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
+          } catch {
+            // Ignore duplicates
+          }
+        }
       }
     } catch (error) {
       console.error("Auto-search error:", error);
@@ -688,6 +703,15 @@ export default function PipelinePage() {
           };
         });
 
+        // Persist new candidates to API (best-effort)
+        for (const c of newCandidates) {
+          try {
+            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
+          } catch {
+            // Ignore duplicates
+          }
+        }
+
         setCandidates((prev) => {
           const merged = [...newCandidates, ...prev];
           const unique = merged.filter(
@@ -695,7 +719,6 @@ export default function PipelinePage() {
           );
           // Sort by alignment score
           unique.sort((a, b) => b.alignmentScore - a.alignmentScore);
-          localStorage.setItem("apex_candidates", JSON.stringify(unique));
           return unique;
         });
       }
@@ -741,11 +764,14 @@ export default function PipelinePage() {
           risks: data.risks,
         };
 
-        setCandidates((prev) => {
-          const updated = [newCandidate, ...prev];
-          localStorage.setItem("apex_candidates", JSON.stringify(updated));
-          return updated;
-        });
+        // Persist to API
+        try {
+          await candidateService.create({ ...(newCandidate as unknown as Partial<GlobalCandidate>), name: newCandidate.name, sourceType: 'MANUAL' });
+        } catch {
+          // Best-effort
+        }
+
+        setCandidates((prev) => [newCandidate, ...prev]);
 
         setShowImport(false);
         setImportText("");
@@ -757,14 +783,16 @@ export default function PipelinePage() {
     }
   };
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (confirm(t("pipeline.candidate.deleteConfirm"))) {
-      setCandidates((prev) => {
-        const updated = prev.filter((c) => c.id !== id);
-        localStorage.setItem("apex_candidates", JSON.stringify(updated));
-        return updated;
-      });
+      setCandidates((prev) => prev.filter((c) => c.id !== id));
       setSelectedIds((prev) => prev.filter((i) => i !== id));
+      // Delete from API (best-effort)
+      try {
+        await candidateService.delete(id);
+      } catch {
+        // Ignore API errors on delete
+      }
     }
   }, [t]);
 
@@ -779,16 +807,20 @@ export default function PipelinePage() {
   }, []);
 
   // Kanban stage change handler
-  const handleStageChange = useCallback((candidateId: string, newStage: PipelineStage) => {
-    setCandidateStages((prev) => {
-      const updated = { ...prev, [candidateId]: newStage };
-      // Persist to localStorage
-      localStorage.setItem("apex_candidate_stages", JSON.stringify(updated));
-      return updated;
-    });
+  const handleStageChange = useCallback(async (candidateId: string, newStage: PipelineStage) => {
+    setCandidateStages((prev) => ({
+      ...prev,
+      [candidateId]: newStage,
+    }));
+    // Persist stage change to API
+    try {
+      await candidateService.updateStage(candidateId, newStage);
+    } catch {
+      // Best-effort — stage is already updated optimistically in local state
+    }
   }, []);
 
-  // Load candidate stages from localStorage on mount
+  // Load candidate stages from localStorage on mount (fallback for existing data)
   useEffect(() => {
     const stored = localStorage.getItem("apex_candidate_stages");
     if (stored) {

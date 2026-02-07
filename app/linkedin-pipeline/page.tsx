@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { candidateService } from "@/services/candidateService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,14 +79,19 @@ export default function LinkedInPipelinePage() {
     fetchCandidates();
   }, []);
 
-  const moveCandidate = (candidateId: string, newStage: string) => {
+  const moveCandidate = async (candidateId: string, newStage: string) => {
     setCandidates(prev =>
       prev.map(c =>
         c.id === candidateId ? { ...c, stage: newStage } : c
       )
     );
     toast.success(`Moved to ${STAGES.find(s => s.id === newStage)?.label}`);
-    // TODO: Persist to API
+    // Persist stage change to API
+    try {
+      await candidateService.updateStage(candidateId, newStage);
+    } catch {
+      // Best-effort — stage already updated optimistically
+    }
   };
 
   const handleDragStart = (candidateId: string) => {

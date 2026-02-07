@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { candidateService } from "@/services/candidateService";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,31 +44,35 @@ export default function AnalysePage() {
   } | null>(null);
 
   useEffect(() => {
-    // Load selected candidates from pipeline (Stage 2)
-    const shortlistIds = localStorage.getItem("apex_shortlist");
-    const allCandidates = localStorage.getItem("apex_candidates");
-    const storedJobContext = localStorage.getItem("apex_job_context");
+    async function loadData() {
+      // Load job context from localStorage (not candidate data)
+      const storedJobContext = localStorage.getItem("apex_job_context");
 
-    if (storedJobContext) {
-      try {
-        setJobContext(JSON.parse(storedJobContext));
-      } catch {
-        // Ignore
+      if (storedJobContext) {
+        try {
+          setJobContext(JSON.parse(storedJobContext));
+        } catch {
+          // Ignore
+        }
       }
+
+      // Load selected candidates from API
+      const shortlistIds = localStorage.getItem("apex_shortlist");
+      if (shortlistIds) {
+        try {
+          const ids: string[] = JSON.parse(shortlistIds);
+          const { candidates: all } = await candidateService.fetchAll();
+          const selected = (all as unknown as Candidate[]).filter((c) => ids.includes(c.id));
+          setSelectedCandidates(selected);
+        } catch (e) {
+          console.error("Failed to load selections:", e);
+        }
+      }
+
+      setLoading(false);
     }
 
-    if (shortlistIds && allCandidates) {
-      try {
-        const ids: string[] = JSON.parse(shortlistIds);
-        const all: Candidate[] = JSON.parse(allCandidates);
-        const selected = all.filter((c) => ids.includes(c.id));
-        setSelectedCandidates(selected);
-      } catch (e) {
-        console.error("Failed to load selections:", e);
-      }
-    }
-
-    setLoading(false);
+    loadData();
   }, []);
 
   const handleContinueToOutreach = () => {
