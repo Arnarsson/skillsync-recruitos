@@ -12,8 +12,9 @@ model User {
   email         String?   @unique
   name          String?
   image         String?
-  githubId      String    @unique
+  githubId      String?   @unique
   githubToken   String?
+  passwordHash  String?
 
   // Credits & Subscription
   credits       Int       @default(3)
@@ -30,6 +31,7 @@ model User {
   searches      Search[]
   payments      Payment[]
   candidates    Candidate[]
+  creditLedger  CreditLedger[]
 }
 
 model ProfileView {
@@ -61,8 +63,11 @@ model Payment {
   id              String   @id @default(cuid())
   userId          String
   stripePaymentId String   @unique
+  stripeSessionId String?
   amount          Int      // in cents
+  currency        String   @default("dkk")
   credits         Int      // credits purchased
+  packageId       String?
   status          String
   createdAt       DateTime @default(now())
 
@@ -110,6 +115,7 @@ enum Plan {
   FREE
   PRO
   ENTERPRISE
+  ANNUAL
 }
 
 enum SourceType {
@@ -208,4 +214,28 @@ model CandidateNote {
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
+}
+
+enum CreditReason {
+  CONSUMPTION
+  PURCHASE
+  SUBSCRIPTION
+  SIGNUP_BONUS
+  REFUND
+  ADMIN
+}
+
+model CreditLedger {
+  id        String       @id @default(cuid())
+  userId    String
+  delta     Int          // positive = credit, negative = debit
+  reason    CreditReason
+  balance   Int          // balance after this entry
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }

@@ -108,9 +108,10 @@ export default function PricingPage() {
 
                   <CardHeader className="text-center pb-2">
                     <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      {plan.id === 'personality' && <Zap className="w-6 h-6 text-primary" />}
-                      {plan.id === 'recruiting' && <Sparkles className="w-6 h-6 text-primary" />}
+                      {plan.id === 'starter' && <Zap className="w-6 h-6 text-primary" />}
+                      {plan.id === 'pro' && <Sparkles className="w-6 h-6 text-primary" />}
                       {plan.id === 'enterprise' && <Building2 className="w-6 h-6 text-primary" />}
+                      {plan.id === 'annual' && <Sparkles className="w-6 h-6 text-primary" />}
                     </div>
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
                     <CardDescription>{plan.tagline}</CardDescription>
@@ -122,14 +123,13 @@ export default function PricingPage() {
                       <div className="text-4xl font-bold">
                         {displayPrice}
                       </div>
-                      {plan.price.period === 'profile' && (
-                        <p className="text-sm text-muted-foreground">per personality profile</p>
+                      {plan.period === 'one-time' && (
+                        <p className="text-sm text-muted-foreground">
+                          {plan.credits === 'unlimited' ? 'unlimited credits' : `${plan.credits} credits`}
+                        </p>
                       )}
-                      {plan.price.period === 'hire' && (
-                        <p className="text-sm text-muted-foreground">only pay when you hire</p>
-                      )}
-                      {plan.price.period === 'custom' && (
-                        <p className="text-sm text-muted-foreground">contact us for pricing</p>
+                      {plan.period === 'annual' && (
+                        <p className="text-sm text-muted-foreground">unlimited credits per year</p>
                       )}
                     </div>
 
@@ -139,9 +139,10 @@ export default function PricingPage() {
                       variant={plan.popular ? 'default' : 'outline'}
                       onClick={() => handleSelectPlan(plan.id)}
                     >
-                      {plan.id === 'personality' && 'Get Started'}
-                      {plan.id === 'recruiting' && 'Start Recruiting'}
+                      {plan.id === 'starter' && 'Get Started'}
+                      {plan.id === 'pro' && 'Buy Credits'}
                       {plan.id === 'enterprise' && 'Contact Sales'}
+                      {plan.id === 'annual' && 'Subscribe'}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
 
@@ -155,20 +156,20 @@ export default function PricingPage() {
                       ))}
                     </div>
 
-                    {/* Limits */}
+                    {/* Credits info */}
                     <div className="pt-4 border-t text-sm text-muted-foreground space-y-2">
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4" />
                         <span>
-                          {plan.limits.teamSeats === -1
-                            ? 'Unlimited team seats'
-                            : `${plan.limits.teamSeats} team seat${plan.limits.teamSeats > 1 ? 's' : ''}`}
+                          {plan.credits === 'unlimited'
+                            ? 'Unlimited analyses'
+                            : `${plan.credits} candidate analyses`}
                         </span>
                       </div>
-                      {plan.limits.apiAccess && (
+                      {plan.pricePerCredit !== null && (
                         <div className="flex items-center gap-2">
                           <Lock className="w-4 h-4" />
-                          <span>API access included</span>
+                          <span>{plan.pricePerCredit} kr per credit</span>
                         </div>
                       )}
                     </div>

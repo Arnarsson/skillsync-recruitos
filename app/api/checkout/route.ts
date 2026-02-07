@@ -75,43 +75,39 @@ export async function POST(request: NextRequest) {
     const successUrl = `${baseUrl}/dashboard?checkout=success&plan=${planId}`;
     const cancelUrl = `${baseUrl}/pricing?checkout=cancelled`;
 
-    // Handle Personality Profile (one-time payment)
-    if (planId === 'personality') {
-      const priceId = plan.stripePriceId;
+    // Determine checkout mode based on period
+    const isSubscription = plan.period === 'annual';
+    const mode = isSubscription ? 'subscription' : 'payment';
 
-      if (!priceId) {
-        // Create a dynamic price if no price ID configured
-        const price = await stripe.prices.create({
-          currency: 'dkk',
-          unit_amount: plan.price.amount * 100, // Convert DKK to øre
-          product_data: {
-            name: 'Personality Profile',
-          },
-        });
+    // Handle annual subscription via Stripe subscription checkout
+    if (isSubscription) {
+      const checkoutUrl = await createSubscriptionCheckout(
+        customerId,
+        plan.stripePriceId || '',
+        successUrl,
+        cancelUrl,
+      );
+      return NextResponse.json({ url: checkoutUrl });
+    }
 
-        const checkoutSession = await stripe.checkout.sessions.create({
-          customer: customerId,
-          mode: 'payment',
-          line_items: [{
-            price: price.id,
-            quantity: 1,
-          }],
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-          metadata: {
-            planId,
-            userId: session.user.email!,
-          },
-        });
+    // Handle one-time credit package purchase
+    const priceId = plan.stripePriceId;
 
-        return NextResponse.json({ url: checkoutSession.url });
-      }
+    if (!priceId) {
+      // Create a dynamic price if no price ID configured
+      const price = await stripe.prices.create({
+        currency: 'dkk',
+        unit_amount: plan.price * 100, // Convert DKK to øre
+        product_data: {
+          name: plan.name,
+        },
+      });
 
       const checkoutSession = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: 'payment',
         line_items: [{
-          price: priceId,
+          price: price.id,
           quantity: 1,
         }],
         success_url: successUrl,
@@ -125,21 +121,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ url: checkoutSession.url });
     }
 
-    // Handle Full Recruiting (success-based, no upfront payment)
-    if (planId === 'recruiting') {
-      // For recruiting, we don't charge upfront - just register them
-      // They'll be charged 5000 DKK when they mark a candidate as hired
-      return NextResponse.json({
-        success: true,
-        message: "Registered for success-based recruiting. You'll only pay 5,000 DKK per successful hire.",
-        redirectUrl: `${baseUrl}/dashboard?plan=recruiting&success=true`,
-      });
-    }
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'payment',
+      line_items: [{
+        price: priceId,
+        quantity: 1,
+      }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        planId,
+        userId: session.user.email!,
+      },
+    });
 
-    return NextResponse.json(
-      { error: "Invalid plan type" },
-      { status: 400 }
-    );
+    return NextResponse.json({ url: checkoutSession.url });
 
   } catch (error) {
     console.error("Checkout error:", error);

@@ -114,8 +114,8 @@ export default function DashboardPage() {
 
   const usagePercent = useMemo(() => {
     if (!plan || !usage) return 0;
-    if (plan.limits.searchesPerMonth === 'unlimited') return 0;
-    return Math.round((usage.searches / plan.limits.searchesPerMonth) * 100);
+    if (plan.credits === 'unlimited') return 0;
+    return Math.round((usage.searches / plan.credits) * 100);
   }, [plan, usage]);
 
   return (
@@ -159,9 +159,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-lg">{plan.name} Plan</h3>
                       <Badge variant="outline">
-                        {plan.price.period === 'profile' ? 'Per Profile' : 
-                         plan.price.period === 'hire' ? 'Success-Based' : 
-                         plan.price.period === 'custom' ? 'Custom' : 'Subscription'}
+                        {plan.period === 'annual' ? 'Annual' : 'Credit Package'}
                       </Badge>
                     </div>
                     <p className="text-muted-foreground text-sm">
@@ -171,11 +169,11 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                {plan.limits.searchesPerMonth !== 'unlimited' && (
+                {plan.credits !== 'unlimited' && (
                   <div className="w-48">
                     <div className="flex justify-between text-sm mb-1">
                       <span>Usage</span>
-                      <span>{usage?.searches || 0} / {plan.limits.searchesPerMonth}</span>
+                      <span>{usage?.searches || 0} / {plan.credits}</span>
                     </div>
                     <Progress value={usagePercent} className="h-2" />
                   </div>
