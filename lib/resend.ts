@@ -1,6 +1,15 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+
+function getResend() {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error('RESEND_API_KEY is not set');
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
 
 export async function sendOutreachEmail({
   to,
@@ -15,7 +24,7 @@ export async function sendOutreachEmail({
 }) {
   const fromAddress = from || process.env.RESEND_FROM_EMAIL || 'outreach@recruitos.xyz';
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: fromAddress,
     to,
     subject,
