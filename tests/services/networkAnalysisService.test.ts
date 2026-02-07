@@ -1,34 +1,30 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
-
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  key: vi.fn(),
-  length: 0
-};
-Object.defineProperty(global, 'localStorage', { value: mockLocalStorage });
 
 import {
   buildNetworkGraph,
   quickNetworkScan
 } from '../../services/networkAnalysisService';
 
+const originalEnv = process.env;
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockLocalStorage.getItem.mockReturnValue(null);
+  process.env = { ...originalEnv };
+  delete process.env.BRIGHTDATA_API_KEY;
+});
+
+afterEach(() => {
+  process.env = originalEnv;
 });
 
 describe('networkAnalysisService', () => {
   describe('buildNetworkGraph', () => {
     it('should return null when BrightData API key is missing', async () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
+      delete process.env.BRIGHTDATA_API_KEY;
 
       const result = await buildNetworkGraph(
         'candidate-1',
@@ -39,7 +35,7 @@ describe('networkAnalysisService', () => {
     });
 
     it('should build network graph when API key is available', async () => {
-      mockLocalStorage.getItem.mockReturnValue('test-brightdata-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-brightdata-key';
 
       // Mock BrightData trigger
       mockFetch.mockResolvedValueOnce({
@@ -97,7 +93,7 @@ describe('networkAnalysisService', () => {
     });
 
     it('should identify shared employers with team members', async () => {
-      mockLocalStorage.getItem.mockReturnValue('test-brightdata-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-brightdata-key';
 
       // Mock candidate profile
       mockFetch.mockResolvedValueOnce({
@@ -152,7 +148,7 @@ describe('networkAnalysisService', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      mockLocalStorage.getItem.mockReturnValue('test-brightdata-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-brightdata-key';
 
       mockFetch.mockRejectedValue(new Error('API Error'));
 
@@ -167,7 +163,7 @@ describe('networkAnalysisService', () => {
 
   describe('quickNetworkScan', () => {
     it('should return minimal network data quickly', async () => {
-      mockLocalStorage.getItem.mockReturnValue('test-brightdata-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-brightdata-key';
 
       // Mock quick LinkedIn fetch
       mockFetch.mockResolvedValueOnce({
@@ -199,7 +195,7 @@ describe('networkAnalysisService', () => {
     });
 
     it('should not compare with team profiles in quick mode', async () => {
-      mockLocalStorage.getItem.mockReturnValue('test-brightdata-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-brightdata-key';
 
       // Should only make one fetch for candidate profile
       mockFetch.mockResolvedValueOnce({

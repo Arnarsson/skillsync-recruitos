@@ -6,9 +6,15 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 describe('scrapingService', () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
+    // Reset process.env for API key tests
+    process.env = { ...originalEnv };
+    delete process.env.FIRECRAWL_API_KEY;
+    delete process.env.BRIGHTDATA_API_KEY;
     // Clear all mocks
     vi.resetAllMocks();
     // Suppress console output in tests
@@ -18,6 +24,7 @@ describe('scrapingService', () => {
   });
 
   afterEach(() => {
+    process.env = originalEnv;
     vi.restoreAllMocks();
   });
 
@@ -35,7 +42,7 @@ describe('scrapingService', () => {
 
     it('should successfully scrape job description with Firecrawl', async () => {
       const firecrawlKey = 'test-firecrawl-key-123';
-      localStorage.setItem('FIRECRAWL_API_KEY', firecrawlKey);
+      process.env.FIRECRAWL_API_KEY = firecrawlKey;
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -65,9 +72,9 @@ describe('scrapingService', () => {
       );
     });
 
-    it('should use FIRECRAWL_API_KEY from localStorage if available', async () => {
+    it('should use FIRECRAWL_API_KEY from process.env', async () => {
       const localStorageKey = 'local-storage-key';
-      localStorage.setItem('FIRECRAWL_API_KEY', localStorageKey);
+      process.env.FIRECRAWL_API_KEY = localStorageKey;
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -98,7 +105,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle Firecrawl API errors gracefully', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -110,7 +117,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle Firecrawl unsupported site errors', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -126,7 +133,7 @@ describe('scrapingService', () => {
     });
 
     it('should throw error if Firecrawl returns success:false', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -143,7 +150,7 @@ describe('scrapingService', () => {
     });
 
     it('should throw error if Firecrawl returns no markdown data', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -158,7 +165,7 @@ describe('scrapingService', () => {
     });
 
     it('should throw error for blocked social media domains', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       await expect(
         scrapeUrlContent('https://facebook.com/profile')
@@ -206,7 +213,7 @@ describe('scrapingService', () => {
 
     it('should successfully scrape LinkedIn profile with BrightData', { timeout: 20000 }, async () => {
       const brightDataKey = 'test-brightdata-key-123';
-      localStorage.setItem('BRIGHTDATA_API_KEY', brightDataKey);
+      process.env.BRIGHTDATA_API_KEY = brightDataKey;
 
       setupTierFailures();
 
@@ -254,7 +261,7 @@ describe('scrapingService', () => {
     });
 
     it.skip('should poll for progress and retrieve snapshot', { timeout: 20000 }, async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -289,7 +296,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle BrightData trigger errors with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -307,7 +314,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle missing snapshot_id in trigger response with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -324,7 +331,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle BrightData scrape failed status with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -348,7 +355,7 @@ describe('scrapingService', () => {
     });
 
     it.skip('should handle BrightData no records found with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -372,7 +379,7 @@ describe('scrapingService', () => {
     });
 
     it('should timeout after max polling attempts and gracefully degrade', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -396,7 +403,7 @@ describe('scrapingService', () => {
     }, 35000); // Increase test timeout for polling
 
     it('should handle progress API errors gracefully and degrade', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -420,7 +427,7 @@ describe('scrapingService', () => {
     }, 35000); // Increase timeout for polling retries
 
     it('should handle empty profile data from BrightData with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -450,7 +457,7 @@ describe('scrapingService', () => {
     });
 
     it.skip('should convert BrightData profile to markdown format', { timeout: 20000 }, async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -482,7 +489,7 @@ describe('scrapingService', () => {
     });
 
     it.skip('should handle profiles with minimal data and require manual input', { timeout: 20000 }, async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       const minimalProfile = {
         name: 'Jane Smith',
@@ -514,7 +521,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle network errors during BrightData scraping with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -528,7 +535,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle malformed JSON responses with graceful degradation', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -549,7 +556,7 @@ describe('scrapingService', () => {
 
   describe('URL routing logic', () => {
     it('should route LinkedIn URLs to BrightData', { timeout: 20000 }, async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
@@ -583,7 +590,7 @@ describe('scrapingService', () => {
     });
 
     it('should route non-LinkedIn URLs to Firecrawl', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -603,7 +610,7 @@ describe('scrapingService', () => {
     });
 
     it('should recognize various LinkedIn URL formats', async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       const linkedInUrls = [
         'https://www.linkedin.com/in/johndoe',
@@ -648,7 +655,7 @@ describe('scrapingService', () => {
 
   describe('error handling edge cases', () => {
     it('should handle unknown error types properly', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockRejectedValueOnce('String error');
 
@@ -656,7 +663,7 @@ describe('scrapingService', () => {
     });
 
     it('should handle fetch response without json method', async () => {
-      localStorage.setItem('FIRECRAWL_API_KEY', 'test-key');
+      process.env.FIRECRAWL_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -668,7 +675,7 @@ describe('scrapingService', () => {
     });
 
     it.skip('should handle profiles with sufficient data successfully', { timeout: 20000 }, async () => {
-      localStorage.setItem('BRIGHTDATA_API_KEY', 'test-key');
+      process.env.BRIGHTDATA_API_KEY = 'test-key';
 
       setupTierFailures();
 
