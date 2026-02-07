@@ -1,257 +1,196 @@
 /**
- * Pricing Models - RecruitOS Pricing Structure
+ * Credit-Based Pricing — DKK
  *
- * Three tiers:
- * - Personality Profile: 2,000 DKK per profile
- * - Full Recruiting: 5,000 DKK per successful hire
- * - Enterprise: Custom pricing with team features
+ * Credit packages:
+ * - Starter: 10 credits for 500 DKK
+ * - Pro: 50 credits for 2,000 DKK
+ * - Enterprise: 200 credits for 5,000 DKK
+ * - Annual: Unlimited for 30,000 DKK/year
+ *
+ * 1 credit = 1 candidate profile analysis
  */
 
-export type PricingTier = 'personality' | 'recruiting' | 'enterprise';
+export type PricingTier = "starter" | "pro" | "enterprise" | "annual";
 
-export interface PricingPlan {
+export interface CreditPackage {
   id: PricingTier;
   name: string;
   tagline: string;
-  price: {
-    amount: number;
-    currency: 'DKK' | 'USD' | 'EUR';
-    period: 'profile' | 'hire' | 'custom';
-  };
-  stripePriceId?: string;
-  features: string[];
-  limits: {
-    searchesPerMonth: number | 'unlimited';
-    deepProfiles: number | 'unlimited';
-    teamSeats: number;
-    savedSearches: number;
-    apiAccess: boolean;
-  };
+  credits: number | "unlimited";
+  price: number; // DKK
+  pricePerCredit: number | null; // DKK per credit (null for unlimited)
+  currency: "DKK";
+  period: "one-time" | "annual";
   popular?: boolean;
+  features: string[];
+  stripePriceId?: string; // Set via env or created dynamically
 }
 
-export const PRICING_PLANS: PricingPlan[] = [
+export const CREDIT_PACKAGES: CreditPackage[] = [
   {
-    id: 'personality',
-    name: 'Personality Profile',
-    tagline: 'Deep personality insights for better candidate evaluation',
-    price: {
-      amount: 2000,
-      currency: 'DKK',
-      period: 'profile',
-    },
-    // stripePriceId loaded server-side from env
+    id: "starter",
+    name: "Starter",
+    tagline: "Prøv platformen med et lille kredit-pakke",
+    credits: 10,
+    price: 500,
+    pricePerCredit: 50,
+    currency: "DKK",
+    period: "one-time",
     features: [
-      'Deep personality analysis',
-      'Behavioral insights & traits',
-      'Work style assessment',
-      'Team fit evaluation',
-      'Communication style report',
-      'Strengths & development areas',
-      'PDF export',
+      "10 kandidat-analyser",
+      "AI-drevet profilanalyse",
+      "Adfærdsindsigter",
+      "E-mail support",
     ],
-    limits: {
-      searchesPerMonth: 'unlimited',
-      deepProfiles: 1,
-      teamSeats: 1,
-      savedSearches: 5,
-      apiAccess: false,
-    },
   },
   {
-    id: 'recruiting',
-    name: 'Full Recruiting',
-    tagline: 'Complete recruiting service - only pay on successful hire',
-    price: {
-      amount: 5000,
-      currency: 'DKK',
-      period: 'hire',
-    },
-    // stripePriceId loaded server-side from env
-    features: [
-      'Full recruiting process management',
-      'Candidate sourcing & screening',
-      'Unlimited personality profiles',
-      'AI-powered candidate matching',
-      'Interview scheduling & coordination',
-      'Reference checking',
-      'Offer negotiation support',
-      'Only pay when you hire',
-      'Priority support',
-    ],
-    limits: {
-      searchesPerMonth: 'unlimited',
-      deepProfiles: 'unlimited',
-      teamSeats: 3,
-      savedSearches: 20,
-      apiAccess: false,
-    },
+    id: "pro",
+    name: "Pro",
+    tagline: "Til teams med løbende rekruttering",
+    credits: 50,
+    price: 2000,
+    pricePerCredit: 40,
+    currency: "DKK",
+    period: "one-time",
     popular: true,
+    features: [
+      "50 kandidat-analyser",
+      "AI-drevet profilanalyse",
+      "Adfærdsindsigter",
+      "Dybe profiler med GitHub-analyse",
+      "Prioriteret support",
+      "CSV-eksport",
+    ],
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    tagline: 'Custom solutions for large organizations',
-    price: {
-      amount: 0, // Custom
-      currency: 'DKK',
-      period: 'custom',
-    },
+    id: "enterprise",
+    name: "Enterprise",
+    tagline: "Til store organisationer",
+    credits: 200,
+    price: 5000,
+    pricePerCredit: 25,
+    currency: "DKK",
+    period: "one-time",
     features: [
-      'Everything in Full Recruiting',
-      'Dedicated account manager',
-      'Custom integrations (ATS)',
-      'Team workspaces & shared pipelines',
-      'API access',
-      'White-label options',
-      'Advanced analytics & reporting',
-      'SLA guarantee',
-      'SAML/SSO authentication',
-      'Custom pricing models',
+      "200 kandidat-analyser",
+      "AI-drevet profilanalyse",
+      "Adfærdsindsigter",
+      "Dybe profiler med GitHub-analyse",
+      "Team-arbejdsrum",
+      "API-adgang",
+      "Dedikeret account manager",
+      "ATS-integration",
     ],
-    limits: {
-      searchesPerMonth: 'unlimited',
-      deepProfiles: 'unlimited',
-      teamSeats: -1, // Unlimited
-      savedSearches: -1, // Unlimited
-      apiAccess: true,
-    },
+  },
+  {
+    id: "annual",
+    name: "Årligt Ubegrænset",
+    tagline: "Ubegrænset adgang hele året",
+    credits: "unlimited",
+    price: 30000,
+    pricePerCredit: null,
+    currency: "DKK",
+    period: "annual",
+    features: [
+      "Ubegrænset kandidat-analyser",
+      "Alt i Enterprise-pakken",
+      "Ubegrænsede team-pladser",
+      "Prioriteret 24/7 support",
+      "Custom integrationer",
+      "SLA-garanti",
+    ],
   },
 ];
 
 /**
- * Hire Guarantee Add-on
- * Optional success-based fee: Only pay if you hire through the platform
+ * Get a credit package by ID
  */
-export interface HireGuarantee {
-  basePrice: number;    // EUR
-  successFee: number;   // EUR (paid only on successful hire)
-  currency: 'EUR';
-}
-
-export const HIRE_GUARANTEE: HireGuarantee = {
-  basePrice: 0,
-  successFee: 500,
-  currency: 'EUR',
-};
-
-/**
- * Usage tracking for subscription plans
- */
-export interface UsageRecord {
-  userId: string;
-  planId: PricingTier;
-  period: {
-    start: string;
-    end: string;
-  };
-  usage: {
-    searches: number;
-    deepProfiles: number;
-    outreachGenerated: number;
-  };
-  lastUpdated: string;
-}
-
-/**
- * Get pricing plan by ID
- */
-export function getPricingPlan(planId: PricingTier): PricingPlan | undefined {
-  return PRICING_PLANS.find(p => p.id === planId);
-}
-
-/**
- * Check if user has exceeded their plan limits
- */
-export function checkUsageLimits(
-  usage: UsageRecord['usage'],
-  plan: PricingPlan
-): { withinLimits: boolean; exceeded: string[] } {
-  const exceeded: string[] = [];
-
-  if (plan.limits.searchesPerMonth !== 'unlimited' &&
-      usage.searches >= plan.limits.searchesPerMonth) {
-    exceeded.push('searches');
-  }
-
-  if (plan.limits.deepProfiles !== 'unlimited' &&
-      usage.deepProfiles >= plan.limits.deepProfiles) {
-    exceeded.push('deepProfiles');
-  }
-
-  return {
-    withinLimits: exceeded.length === 0,
-    exceeded,
-  };
-}
-
-/**
- * Calculate remaining usage
- */
-export function getRemainingUsage(
-  usage: UsageRecord['usage'],
-  plan: PricingPlan
-): { searches: number | 'unlimited'; deepProfiles: number | 'unlimited' } {
-  return {
-    searches: plan.limits.searchesPerMonth === 'unlimited'
-      ? 'unlimited'
-      : Math.max(0, plan.limits.searchesPerMonth - usage.searches),
-    deepProfiles: plan.limits.deepProfiles === 'unlimited'
-      ? 'unlimited'
-      : Math.max(0, plan.limits.deepProfiles - usage.deepProfiles),
-  };
+export function getCreditPackage(id: PricingTier): CreditPackage | undefined {
+  return CREDIT_PACKAGES.find((p) => p.id === id);
 }
 
 /**
  * Format price for display
  */
-export function formatPrice(plan: PricingPlan): string {
-  if (plan.price.period === 'custom') {
-    return 'Custom';
+export function formatPrice(pkg: CreditPackage): string {
+  const formatted = new Intl.NumberFormat("da-DK").format(pkg.price);
+  if (pkg.period === "annual") {
+    return `${formatted} kr/år`;
   }
-
-  const symbol = plan.price.currency === 'USD' ? '$' : 
-                 plan.price.currency === 'EUR' ? '€' : 
-                 plan.price.currency + ' ';
-  
-  const formatted = `${symbol}${plan.price.amount.toLocaleString('da-DK')}`;
-  
-  const period = plan.price.period === 'profile' ? '/profile' :
-                 plan.price.period === 'hire' ? '/hire' : '';
-
-  return `${formatted}${period}`;
+  return `${formatted} kr`;
 }
 
 /**
- * Analytics: Cost per hire calculation
+ * Format price per credit
  */
-export interface CostAnalytics {
-  totalSpent: number;
-  searchesConducted: number;
-  candidatesContacted: number;
-  interviewsConducted: number;
-  hiresCompleted: number;
-  costPerSearch: number;
-  costPerContact: number;
-  costPerInterview: number;
-  costPerHire: number;
-  conversionRates: {
-    searchToContact: number;   // % of searches that led to contact
-    contactToInterview: number; // % of contacts that led to interview
-    interviewToHire: number;   // % of interviews that led to hire
-  };
+export function formatPricePerCredit(pkg: CreditPackage): string | null {
+  if (pkg.pricePerCredit === null) return null;
+  return `${pkg.pricePerCredit} kr/kredit`;
 }
 
 /**
- * Calculate cost analytics from usage data
+ * Check if a user has unlimited credits (annual plan)
  */
+export function isUnlimited(plan: string): boolean {
+  return plan === "ANNUAL";
+}
+
+// --- Legacy exports for backward compatibility ---
+
+export const PRICING_PLANS = CREDIT_PACKAGES;
+
+export interface HireGuarantee {
+  basePrice: number;
+  successFee: number;
+  currency: "EUR";
+}
+
+export const HIRE_GUARANTEE: HireGuarantee = {
+  basePrice: 0,
+  successFee: 500,
+  currency: "EUR",
+};
+
+export type PricingPlan = CreditPackage;
+
+// Storage keys for local usage tracking
+export const STORAGE_KEYS = {
+  CURRENT_PLAN: "recruitos_pricing_plan",
+  USAGE_RECORD: "recruitos_usage_record",
+  HIRE_TRACKING: "recruitos_hire_tracking",
+};
+
+export function getCurrentPlan(): PricingTier {
+  if (typeof window === "undefined") return "starter";
+  const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_PLAN);
+  return (stored as PricingTier) || "starter";
+}
+
+export function getPricingPlan(planId: PricingTier): CreditPackage | undefined {
+  return getCreditPackage(planId);
+}
+
+export function getUsageRecord() {
+  return { searches: 0, deepProfiles: 0, outreachGenerated: 0 };
+}
+
+export function getRemainingUsage(
+  _usage: { searches: number },
+  pkg: CreditPackage,
+) {
+  if (pkg.credits === "unlimited") {
+    return { searches: "unlimited" as const, deepProfiles: "unlimited" as const };
+  }
+  return { searches: pkg.credits, deepProfiles: pkg.credits };
+}
+
 export function calculateCostAnalytics(
   totalSpent: number,
   searches: number,
   contacts: number,
   interviews: number,
-  hires: number
-): CostAnalytics {
+  hires: number,
+) {
   return {
     totalSpent,
     searchesConducted: searches,
@@ -270,70 +209,4 @@ export function calculateCostAnalytics(
   };
 }
 
-// Storage keys for local usage tracking
-export const STORAGE_KEYS = {
-  CURRENT_PLAN: 'recruitos_pricing_plan',
-  USAGE_RECORD: 'recruitos_usage_record',
-  HIRE_TRACKING: 'recruitos_hire_tracking',
-};
-
-/**
- * Get current plan from localStorage
- */
-export function getCurrentPlan(): PricingTier {
-  if (typeof window === 'undefined') return 'personality';
-  const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_PLAN);
-  return (stored as PricingTier) || 'personality';
-}
-
-/**
- * Set current plan in localStorage
- */
-export function setCurrentPlan(planId: PricingTier): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEYS.CURRENT_PLAN, planId);
-}
-
-/**
- * Get usage record from localStorage
- */
-export function getUsageRecord(): UsageRecord['usage'] {
-  if (typeof window === 'undefined') {
-    return { searches: 0, deepProfiles: 0, outreachGenerated: 0 };
-  }
-
-  const stored = localStorage.getItem(STORAGE_KEYS.USAGE_RECORD);
-  if (!stored) {
-    return { searches: 0, deepProfiles: 0, outreachGenerated: 0 };
-  }
-
-  try {
-    const record = JSON.parse(stored);
-    // Check if we need to reset (new month)
-    const now = new Date();
-    const recordDate = new Date(record.periodStart || 0);
-    if (now.getMonth() !== recordDate.getMonth() ||
-        now.getFullYear() !== recordDate.getFullYear()) {
-      // Reset for new month
-      return { searches: 0, deepProfiles: 0, outreachGenerated: 0 };
-    }
-    return record.usage || { searches: 0, deepProfiles: 0, outreachGenerated: 0 };
-  } catch {
-    return { searches: 0, deepProfiles: 0, outreachGenerated: 0 };
-  }
-}
-
-/**
- * Increment usage counter
- */
-export function incrementUsage(type: 'searches' | 'deepProfiles' | 'outreachGenerated'): void {
-  if (typeof window === 'undefined') return;
-
-  const current = getUsageRecord();
-  current[type] = (current[type] || 0) + 1;
-
-  localStorage.setItem(STORAGE_KEYS.USAGE_RECORD, JSON.stringify({
-    periodStart: new Date().toISOString(),
-    usage: current,
-  }));
-}
+export type CostAnalytics = ReturnType<typeof calculateCostAnalytics>;
