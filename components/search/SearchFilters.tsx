@@ -71,10 +71,12 @@ export const DEFAULT_FILTERS: SearchFilters = {
 
 const LOCATIONS = [
   { value: "copenhagen", label: "Copenhagen" },
-  { value: "stockholm", label: "Stockholm" },
+  { value: "london", label: "London" },
   { value: "berlin", label: "Berlin" },
   { value: "amsterdam", label: "Amsterdam" },
-  { value: "london", label: "London" },
+  { value: "new york", label: "New York" },
+  { value: "san francisco", label: "San Francisco" },
+  { value: "stockholm", label: "Stockholm" },
   { value: "oslo", label: "Oslo" },
   { value: "helsinki", label: "Helsinki" },
   { value: "paris", label: "Paris" },
@@ -276,32 +278,35 @@ const FilterContent = ({
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2 pb-4">
-        {availableFilters && availableFilters.locations.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {availableFilters.locations.slice(0, 8).map((loc) => (
-              <Badge
-                key={loc}
-                variant={filters.location === loc.toLowerCase() ? "default" : "outline"}
-                className="cursor-pointer hover:bg-primary/10 transition-colors"
-                onClick={() =>
-                  updateFilter(
-                    "location",
-                    filters.location === loc.toLowerCase() ? null : loc.toLowerCase()
-                  )
-                }
-              >
-                {loc}
-              </Badge>
-            ))}
-            {availableFilters.locations.length > 8 && (
-              <Badge variant="outline" className="text-xs text-muted-foreground">
-                +{availableFilters.locations.length - 8} more
-              </Badge>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No location data available</p>
-        )}
+        {(() => {
+          const locs = availableFilters && availableFilters.locations.length > 0
+            ? availableFilters.locations
+            : LOCATIONS.map((l) => l.label);
+          return (
+            <div className="flex flex-wrap gap-2">
+              {locs.slice(0, 12).map((loc) => (
+                <Badge
+                  key={loc}
+                  variant={filters.location === loc.toLowerCase() ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() =>
+                    updateFilter(
+                      "location",
+                      filters.location === loc.toLowerCase() ? null : loc.toLowerCase()
+                    )
+                  }
+                >
+                  {loc}
+                </Badge>
+              ))}
+              {locs.length > 12 && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  +{locs.length - 12} more
+                </Badge>
+              )}
+            </div>
+          );
+        })()}
       </CollapsibleContent>
     </Collapsible>
 
@@ -329,32 +334,35 @@ const FilterContent = ({
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2 pb-4">
-        {availableFilters && availableFilters.languages.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {availableFilters.languages.slice(0, 12).map((lang) => (
-              <Badge
-                key={lang}
-                variant={filters.language === lang.toLowerCase() ? "default" : "outline"}
-                className="cursor-pointer hover:bg-primary/10 transition-colors"
-                onClick={() =>
-                  updateFilter(
-                    "language",
-                    filters.language === lang.toLowerCase() ? null : lang.toLowerCase()
-                  )
-                }
-              >
-                {lang}
-              </Badge>
-            ))}
-            {availableFilters.languages.length > 12 && (
-              <Badge variant="outline" className="text-xs text-muted-foreground">
-                +{availableFilters.languages.length - 12} more
-              </Badge>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No language data available</p>
-        )}
+        {(() => {
+          const langs = availableFilters && availableFilters.languages.length > 0
+            ? availableFilters.languages
+            : LANGUAGES.map((l) => l.label);
+          return (
+            <div className="flex flex-wrap gap-2">
+              {langs.slice(0, 12).map((lang) => (
+                <Badge
+                  key={lang}
+                  variant={filters.language === lang.toLowerCase() ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() =>
+                    updateFilter(
+                      "language",
+                      filters.language === lang.toLowerCase() ? null : lang.toLowerCase()
+                    )
+                  }
+                >
+                  {lang}
+                </Badge>
+              ))}
+              {langs.length > 12 && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  +{langs.length - 12} more
+                </Badge>
+              )}
+            </div>
+          );
+        })()}
       </CollapsibleContent>
     </Collapsible>
 

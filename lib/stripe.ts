@@ -1,6 +1,8 @@
 import Stripe from "stripe";
+import { CREDIT_PACKAGES, type PricingTier } from "./pricing";
 
-// Lazy-initialize Stripe to avoid build-time errors when env vars aren't set
+// --- Stripe client initialization ---
+
 let stripeInstance: Stripe | null = null;
 
 export function getStripe(): Stripe {
@@ -15,90 +17,91 @@ export function getStripe(): Stripe {
   return stripeInstance;
 }
 
-// Keep the export for backward compatibility but make it lazy
-export const stripe = {
-  get customers() { return getStripe().customers; },
-  get checkout() { return getStripe().checkout; },
-  get billingPortal() { return getStripe().billingPortal; },
-  get prices() { return getStripe().prices; },
-  get webhooks() { return getStripe().webhooks; },
-} as unknown as Stripe;
-
-export const PLANS = {
-  PRO_MONTHLY: {
-    name: "Pro Monthly",
-    price: 49900, // $499.00 in cents
-    priceId: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
-    credits: 50,
-    interval: "month" as const,
+// Proxy for backward compatibility
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return (getStripe() as any)[prop];
   },
-  PRO_YEARLY: {
-    name: "Pro Yearly",
-    price: 479000, // $4,790.00 in cents
-    priceId: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
-    credits: 600,
-    interval: "year" as const,
-  },
-};
+});
 
-export const CREDIT_PACKS = [
-  { credits: 10, price: 9900, name: "10 Credits" },
-  { credits: 25, price: 19900, name: "25 Credits" },
-  { credits: 50, price: 34900, name: "50 Credits" },
-  { credits: 100, price: 59900, name: "100 Credits" },
-];
+// --- Credit packages mapped to Stripe ---
 
-// Create checkout session for subscription
-export async function createSubscriptionCheckout(
-  customerId: string,
-  priceId: string,
-  successUrl: string,
-  cancelUrl: string
-): Promise<string> {
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: "subscription",
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-  });
-
-  return session.url!;
+/**
+ * Amount in smallest DKK unit (øre).
+ * 500 DKK = 50000 øre.
+ */
+function dkkToOre(dkk: number): number {
+  return dkk * 100;
 }
 
-// Create checkout session for credit purchase
-export async function createCreditCheckout(
+/**
+ * Create a Stripe Checkout session for a credit package purchase.
+ */
+export async function createCreditPackageCheckout(
   customerId: string,
-  credits: number,
-  amount: number,
+  packageId: PricingTier,
+  userId: string,
   successUrl: string,
-  cancelUrl: string
+  cancelUrl: string,
 ): Promise<string> {
-  const session = await stripe.checkout.sessions.create({
+  const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
+  if (!pkg) throw new Error(`Unknown package: ${packageId}`);
+
+  const s = getStripe();
+
+  if (pkg.period === "annual") {
+    // Annual unlimited → subscription
+    const session = await s.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "dkk",
+            product_data: {
+              name: `RecruitOS ${pkg.name}`,
+              description: pkg.tagline,
+            },
+            unit_amount: dkkToOre(pkg.price),
+            recurring: { interval: "year" },
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        userId,
+        packageId: pkg.id,
+        credits: "unlimited",
+      },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+    return session.url!;
+  }
+
+  // One-time credit package purchase
+  const session = await s.checkout.sessions.create({
     customer: customerId,
     mode: "payment",
     payment_method_types: ["card"],
     line_items: [
       {
         price_data: {
-          currency: "usd",
+          currency: "dkk",
           product_data: {
-            name: `${credits} Deep Profile Credits`,
-            description: `One-time purchase of ${credits} credits for viewing deep profiles`,
+            name: `RecruitOS ${pkg.name} — ${pkg.credits} kreditter`,
+            description: pkg.tagline,
           },
-          unit_amount: amount,
+          unit_amount: dkkToOre(pkg.price),
         },
         quantity: 1,
       },
     ],
     metadata: {
-      credits: credits.toString(),
+      userId,
+      packageId: pkg.id,
+      credits: String(pkg.credits),
     },
     success_url: successUrl,
     cancel_url: cancelUrl,
@@ -107,42 +110,141 @@ export async function createCreditCheckout(
   return session.url!;
 }
 
-// Create Stripe customer
-export async function createCustomer(
+/**
+ * Get or create a Stripe customer for the given user.
+ */
+export async function getOrCreateCustomer(
   email: string,
   name: string,
-  metadata: Record<string, string> = {}
+  userId: string,
 ): Promise<string> {
-  const customer = await stripe.customers.create({
+  const s = getStripe();
+
+  // Try to find existing customer
+  const existing = await s.customers.list({ email, limit: 1 });
+  if (existing.data.length > 0) {
+    return existing.data[0].id;
+  }
+
+  const customer = await s.customers.create({
     email,
     name,
-    metadata,
+    metadata: { userId, source: "recruitos" },
   });
 
   return customer.id;
 }
 
-// Get customer portal URL
+/**
+ * Verify Stripe webhook signature.
+ */
+export function verifyWebhookSignature(
+  payload: string | Buffer,
+  signature: string,
+): Stripe.Event {
+  return getStripe().webhooks.constructEvent(
+    payload,
+    signature,
+    process.env.STRIPE_WEBHOOK_SECRET!,
+  );
+}
+
+/**
+ * Create a billing portal session for the customer.
+ */
 export async function createPortalSession(
   customerId: string,
-  returnUrl: string
+  returnUrl: string,
 ): Promise<string> {
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
   });
-
   return session.url;
 }
 
-// Verify webhook signature
-export function verifyWebhookSignature(
-  payload: string | Buffer,
-  signature: string
-): Stripe.Event {
-  return stripe.webhooks.constructEvent(
-    payload,
-    signature,
-    process.env.STRIPE_WEBHOOK_SECRET!
-  );
+// Legacy exports for backward compat
+export const PLANS = {
+  PRO_MONTHLY: {
+    name: "Pro Monthly",
+    price: 200000, // 2000 DKK in øre
+    credits: 50,
+    interval: "month" as const,
+  },
+  PRO_YEARLY: {
+    name: "Årligt Ubegrænset",
+    price: 3000000, // 30000 DKK in øre
+    credits: -1, // unlimited
+    interval: "year" as const,
+  },
+};
+
+export const CREDIT_PACKS = CREDIT_PACKAGES.filter(
+  (p) => p.credits !== "unlimited",
+).map((p) => ({
+  credits: p.credits as number,
+  price: dkkToOre(p.price),
+  name: `${p.credits} Credits`,
+}));
+
+// Legacy function kept for backward compat
+export async function createSubscriptionCheckout(
+  customerId: string,
+  priceId: string,
+  successUrl: string,
+  cancelUrl: string,
+): Promise<string> {
+  const session = await getStripe().checkout.sessions.create({
+    customer: customerId,
+    mode: "subscription",
+    payment_method_types: ["card"],
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  });
+  return session.url!;
+}
+
+export async function createCreditCheckout(
+  customerId: string,
+  credits: number,
+  amount: number,
+  successUrl: string,
+  cancelUrl: string,
+): Promise<string> {
+  const session = await getStripe().checkout.sessions.create({
+    customer: customerId,
+    mode: "payment",
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "dkk",
+          product_data: {
+            name: `${credits} Kandidat-analyse Kreditter`,
+            description: `Engangskøb af ${credits} kreditter`,
+          },
+          unit_amount: amount,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: { credits: credits.toString() },
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  });
+  return session.url!;
+}
+
+export async function createCustomer(
+  email: string,
+  name: string,
+  metadata: Record<string, string> = {},
+): Promise<string> {
+  const customer = await getStripe().customers.create({
+    email,
+    name,
+    metadata,
+  });
+  return customer.id;
 }
