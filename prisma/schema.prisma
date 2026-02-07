@@ -29,6 +29,7 @@ model User {
   profileViews  ProfileView[]
   searches      Search[]
   payments      Payment[]
+  candidates    Candidate[]
 }
 
 model ProfileView {
@@ -109,4 +110,102 @@ enum Plan {
   FREE
   PRO
   ENTERPRISE
+}
+
+enum SourceType {
+  GITHUB
+  LINKEDIN
+  MANUAL
+}
+
+model Candidate {
+  id              String   @id @default(cuid())
+  userId          String?
+
+  // Identity (shared fields, normalized)
+  name            String
+  headline        String?
+  currentRole     String?
+  company         String?
+  location        String?
+  avatar          String?
+
+  // Source tracking
+  sourceType      SourceType
+  githubUsername   String?
+  linkedinId      String?
+  linkedinUrl     String?
+  sourceUrl       String?
+
+  // Experience
+  yearsExperience Int?
+  experience      Json?
+  education       Json?
+  certifications  Json?
+  spokenLanguages Json?
+
+  // Skills
+  skills          Json?
+  codingLanguages Json?
+
+  // AI Scoring
+  alignmentScore  Float?
+  scoreBreakdown  Json?
+  scoreConfidence String?
+  scoreDrivers    String[]  @default([])
+  scoreDrags      String[]  @default([])
+
+  // AI Analysis
+  persona         Json?
+  deepAnalysis    String?
+  companyMatch    Json?
+  indicators      Json?
+  interviewGuide  Json?
+  networkDossier  Json?
+  advancedProfile Json?
+  buildprint      Json?
+
+  // Pipeline
+  pipelineStage   String    @default("sourced")
+  unlockedSteps   Int[]     @default([])
+  shortlistSummary String?
+  keyEvidence     String[]  @default([])
+  risks           String[]  @default([])
+
+  // LinkedIn-specific signals
+  connectionDegree   String?
+  mutualConnections  String?
+  openToWork         Boolean?
+  isPremium          Boolean?
+  rawProfileText     String?
+
+  // Metadata
+  capturedAt      DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes           CandidateNote[]
+
+  @@unique([githubUsername, userId])
+  @@unique([linkedinId, userId])
+  @@index([userId])
+  @@index([pipelineStage])
+  @@index([alignmentScore])
+  @@index([sourceType])
+}
+
+model CandidateNote {
+  id          String   @id @default(cuid())
+  candidateId String
+  author      String
+  content     String
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
 }
