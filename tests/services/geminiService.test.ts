@@ -1,65 +1,46 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getAiClient, callOpenRouter } from '../../services/geminiService';
 
-// Mock localStorage
-const mockLocalStorage = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value;
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-  };
-})();
-
-Object.defineProperty(global, 'localStorage', {
-  value: mockLocalStorage,
-  writable: true,
-});
-
 // Mock fetch for OpenRouter API tests
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+const originalEnv = process.env;
+
 describe('geminiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocalStorage.clear();
+    process.env = { ...originalEnv };
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
   });
 
   afterEach(() => {
+    process.env = originalEnv;
     vi.restoreAllMocks();
   });
 
   describe('getAiClient', () => {
     it('should return null when no API key is configured', () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
       const client = getAiClient();
       expect(client).toBeNull();
     });
 
-    it('should initialize client with API key from localStorage', () => {
-      mockLocalStorage.getItem.mockReturnValue('test-api-key-123');
+    it('should initialize client with API key from process.env.GEMINI_API_KEY', () => {
+      process.env.GEMINI_API_KEY = 'test-api-key-123';
       const client = getAiClient();
       expect(client).toBeTruthy();
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('GEMINI_API_KEY');
     });
 
-    it('should prioritize localStorage over environment variables', () => {
-      mockLocalStorage.getItem.mockReturnValue('local-key');
+    it('should fall back to API_KEY env var', () => {
+      process.env.API_KEY = 'fallback-key';
       const client = getAiClient();
       expect(client).toBeTruthy();
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('GEMINI_API_KEY');
     });
 
     it('should handle empty string API key', () => {
-      mockLocalStorage.getItem.mockReturnValue('');
+      process.env.GEMINI_API_KEY = '';
       const client = getAiClient();
       expect(client).toBeNull();
     });
@@ -69,14 +50,11 @@ describe('geminiService', () => {
     const mockApiKey = 'test-openrouter-key';
 
     beforeEach(() => {
-      mockLocalStorage.getItem.mockImplementation((key: string) => {
-        if (key === 'OPENROUTER_API_KEY') return mockApiKey;
-        return null;
-      });
+      process.env.OPENROUTER_API_KEY = mockApiKey;
     });
 
     it('should throw error when OpenRouter API key is missing', async () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
+      delete process.env.OPENROUTER_API_KEY;
 
       await expect(
         callOpenRouter('test prompt')
@@ -299,10 +277,7 @@ describe('geminiService', () => {
 
   describe('AI scoring logic', () => {
     it('should handle malformed JSON responses gracefully', async () => {
-      mockLocalStorage.getItem.mockImplementation((key: string) => {
-        if (key === 'OPENROUTER_API_KEY') return 'test-key';
-        return null;
-      });
+      process.env.OPENROUTER_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -318,10 +293,7 @@ describe('geminiService', () => {
     });
 
     it('should respect retry limit', async () => {
-      mockLocalStorage.getItem.mockImplementation((key: string) => {
-        if (key === 'OPENROUTER_API_KEY') return 'test-key';
-        return null;
-      });
+      process.env.OPENROUTER_API_KEY = 'test-key';
 
       mockFetch.mockResolvedValue({
         ok: false,
