@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllCandidates, saveCandidate, getCandidateByLinkedinId, StoredCandidate } from "@/lib/storage";
+import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 // CORS headers for extension
 const corsHeaders = {
@@ -23,58 +24,80 @@ export async function POST(request: NextRequest) {
     // TODO: Add proper auth later
     const authHeader = request.headers.get("Authorization");
     const apiKey = authHeader?.replace("Bearer ", "") || "demo";
-    
+
     const body = await request.json();
     const { source, profile, capturedAt } = body;
-    
+
     if (!profile || !profile.linkedinId) {
       return NextResponse.json(
         { error: "Profile data with linkedinId required" },
         { status: 400 }
       );
     }
-    
-    // Normalize the profile data (including rich capture fields)
-    const candidate: StoredCandidate = {
-      id: `li_${profile.linkedinId}_${Date.now()}`,
-      linkedinId: profile.linkedinId,
-      linkedinUrl: profile.url,
-      name: profile.name,
-      headline: profile.headline,
-      location: profile.location,
-      currentCompany: profile.currentCompany,
-      photoUrl: profile.photoUrl,
-      about: profile.about,
-      // Rich capture: full work history
-      experience: profile.experience || [],
-      // Rich capture: education
-      education: profile.education || [],
-      // Rich capture: skills with endorsements
-      skills: profile.skills || [],
-      // Rich capture: languages
-      languages: profile.languages || [],
-      // Rich capture: certifications
-      certifications: profile.certifications || [],
-      // Connection info
-      connectionDegree: profile.connectionDegree,
-      mutualConnections: profile.mutualConnections,
-      connectionCount: profile.connectionCount,
-      followers: profile.followers,
-      // Flags
-      openToWork: profile.openToWork || false,
-      isPremium: profile.isPremium || false,
-      isCreator: profile.isCreator || false,
-      // Meta
-      source: source || "linkedin_extension",
-      capturedAt: capturedAt || new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+
+    // Build the advancedProfile JSON for fields that don't have dedicated columns
+    const advancedProfile: Record<string, Prisma.InputJsonValue> = {};
+    if (profile.connectionCount) advancedProfile.connectionCount = String(profile.connectionCount);
+    if (profile.followers) advancedProfile.followers = String(profile.followers);
+    if (profile.isCreator !== undefined) advancedProfile.isCreator = Boolean(profile.isCreator);
+
+    const hasAdvancedProfile = Object.keys(advancedProfile).length > 0;
+
+    // Map extension profile fields to Prisma Candidate fields
+    const candidateFields = {
+      name: (profile.name as string) || "Unknown",
+      headline: (profile.headline as string) || null,
+      company: (profile.currentCompany as string) || null,
+      location: (profile.location as string) || null,
+      avatar: (profile.photoUrl as string) || null,
+      linkedinId: profile.linkedinId as string,
+      linkedinUrl: (profile.url as string) || null,
+      rawProfileText: (profile.about as string) || null,
+      experience: (profile.experience || []) as Prisma.InputJsonValue,
+      education: (profile.education || []) as Prisma.InputJsonValue,
+      skills: (profile.skills || []) as Prisma.InputJsonValue,
+      spokenLanguages: (profile.languages || []) as Prisma.InputJsonValue,
+      certifications: (profile.certifications || []) as Prisma.InputJsonValue,
+      connectionDegree: (profile.connectionDegree as string) || null,
+      mutualConnections: (profile.mutualConnections as string) || null,
+      openToWork: (profile.openToWork as boolean) || false,
+      isPremium: (profile.isPremium as boolean) || false,
+      ...(hasAdvancedProfile ? { advancedProfile: advancedProfile as unknown as Prisma.InputJsonValue } : {}),
+      capturedAt: capturedAt ? new Date(capturedAt as string) : new Date(),
     };
-    
-    // Save to persistent storage (Vercel KV)
-    const { success, isNew } = await saveCandidate(candidate);
-    
-    console.log("[LinkedIn Extension] Candidate received:", candidate.name, candidate.linkedinId, success ? (isNew ? "NEW" : "UPDATED") : "STORAGE_ERROR");
-    
+
+    // Check for existing candidate (findFirst because userId can be null)
+    const existing = await prisma.candidate.findFirst({
+      where: { linkedinId: profile.linkedinId, userId: null },
+    });
+
+    let candidate;
+    let isNew: boolean;
+
+    if (existing) {
+      // Update existing candidate
+      candidate = await prisma.candidate.update({
+        where: { id: existing.id },
+        data: {
+          ...candidateFields,
+          updatedAt: new Date(),
+        },
+      });
+      isNew = false;
+    } else {
+      // Create new candidate
+      candidate = await prisma.candidate.create({
+        data: {
+          ...candidateFields,
+          sourceType: "LINKEDIN",
+          userId: null,
+        },
+      });
+      isNew = true;
+    }
+
+    console.log("[LinkedIn Extension] Candidate received:", candidate.name, candidate.linkedinId, isNew ? "NEW" : "UPDATED");
+
     return NextResponse.json({
       success: true,
       candidate: {
@@ -84,13 +107,14 @@ export async function POST(request: NextRequest) {
         status: isNew ? "captured" : "updated",
       },
       isDuplicate: !isNew,
-      persisted: success,
+      persisted: true,
     }, { headers: corsHeaders });
-    
-  } catch (error: any) {
+
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("[LinkedIn Extension] Candidate error:", error);
     return NextResponse.json(
-      { error: "Failed to process candidate", details: error?.message || String(error) },
+      { error: "Failed to process candidate", details: message },
       { status: 500, headers: corsHeaders }
     );
   }
@@ -106,30 +130,39 @@ export async function GET(request: NextRequest) {
     const linkedinId = searchParams.get("linkedinId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
-    
+
     // If looking for specific candidate
     if (linkedinId) {
-      const candidate = await getCandidateByLinkedinId(linkedinId);
+      const candidate = await prisma.candidate.findFirst({
+        where: { linkedinId, sourceType: "LINKEDIN" },
+      });
       return NextResponse.json({
         exists: !!candidate,
         candidate: candidate || null,
       }, { headers: corsHeaders });
     }
-    
-    // Get all from persistent storage
-    const allCandidates = await getAllCandidates();
-    
-    // Return paginated list
-    const paginated = allCandidates.slice(offset, offset + limit);
-    
+
+    // Get all LinkedIn candidates with pagination
+    const [candidates, total] = await Promise.all([
+      prisma.candidate.findMany({
+        where: { sourceType: "LINKEDIN" },
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.candidate.count({
+        where: { sourceType: "LINKEDIN" },
+      }),
+    ]);
+
     return NextResponse.json({
-      candidates: paginated,
-      total: allCandidates.length,
+      candidates,
+      total,
       limit,
       offset,
       persisted: true,
     }, { headers: corsHeaders });
-    
+
   } catch (error) {
     console.error("[LinkedIn Extension] Candidate lookup error:", error);
     return NextResponse.json(
