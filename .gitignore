@@ -49,3 +49,7 @@ next-env.d.ts
 .data/
 # Test data (real LinkedIn exports - don't commit)
 test-data/linkedin-export/*.csv
+
+# SQLite dev database
+prisma/dev.db
+prisma/dev.db-journal

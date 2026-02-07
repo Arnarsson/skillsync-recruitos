@@ -65,9 +65,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     if (search && search.trim()) {
       where.OR = [
-        { name: { contains: search.trim(), mode: "insensitive" } },
-        { company: { contains: search.trim(), mode: "insensitive" } },
-        { currentRole: { contains: search.trim(), mode: "insensitive" } },
+        { name: { contains: search.trim() } },
+        { company: { contains: search.trim() } },
+        { currentRole: { contains: search.trim() } },
       ];
     }
 

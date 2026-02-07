@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -81,7 +81,7 @@ model SharedProfile {
   company       String?
   location      String?
   avatar        String?
-  skills        String[] // Array of skill strings
+  skills        Json?    // Array of skill strings (Json for SQLite compat)
   yearsExperience Int?
   
   // Personality & Analysis (stored as JSON)
@@ -152,8 +152,8 @@ model Candidate {
   alignmentScore  Float?
   scoreBreakdown  Json?
   scoreConfidence String?
-  scoreDrivers    String[]  @default([])
-  scoreDrags      String[]  @default([])
+  scoreDrivers    Json?     // String[] stored as Json for SQLite compat
+  scoreDrags      Json?     // String[] stored as Json for SQLite compat
 
   // AI Analysis
   persona         Json?
@@ -167,10 +167,10 @@ model Candidate {
 
   // Pipeline
   pipelineStage   String    @default("sourced")
-  unlockedSteps   Int[]     @default([])
+  unlockedSteps   Json?     // Int[] stored as Json for SQLite compat
   shortlistSummary String?
-  keyEvidence     String[]  @default([])
-  risks           String[]  @default([])
+  keyEvidence     Json?     // String[] stored as Json for SQLite compat
+  risks           Json?     // String[] stored as Json for SQLite compat
 
   // LinkedIn-specific signals
   connectionDegree   String?
@@ -201,7 +201,7 @@ model CandidateNote {
   candidateId String
   author      String
   content     String
-  tags        String[] @default([])
+  tags        Json?    // String[] stored as Json for SQLite compat
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
