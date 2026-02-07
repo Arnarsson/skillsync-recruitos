@@ -5,6 +5,7 @@ import { X, Copy, Send, Sparkles, Check, Mail, Linkedin, MessageSquare, RefreshC
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import SendEmailForm from "@/components/outreach/SendEmailForm";
 
 interface OutreachPanelProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface OutreachPanelProps {
     company?: string;
     bio?: string;
     skills?: string[];
+    candidateId?: string;
     topRepos?: Array<{ name: string; stars: number; description?: string }>;
     recentPRs?: Array<{ title: string; repo: string }>;
   };
@@ -40,15 +42,15 @@ function generatePersonalizedMessage(
 ): string {
   const { name, username, company, skills = [], topRepos = [], recentPRs = [] } = candidate;
   const firstName = name?.split(" ")[0] || username;
-  
+
   // Find something specific to mention (REAL data)
   const topRepo = topRepos[0];
   const recentPR = recentPRs[0];
   const topSkill = skills[0];
-  
+
   // Build personalized opening based on what data we have
   let personalizedHook = "";
-  
+
   if (topRepo && topRepo.stars > 100) {
     personalizedHook = `I came across your work on ${topRepo.name}${topRepo.stars > 1000 ? ` (${topRepo.stars.toLocaleString()}+ stars!)` : ""} and was impressed by what you've built.`;
   } else if (recentPR) {
@@ -58,24 +60,24 @@ function generatePersonalizedMessage(
   } else {
     personalizedHook = `Your GitHub profile stood out while I was researching talented engineers.`;
   }
-  
+
   // Job context
-  const jobMention = jobContext?.title 
+  const jobMention = jobContext?.title
     ? `I'm hiring for a ${jobContext.title} role${jobContext.company ? ` at ${jobContext.company}` : ""}`
     : "I'm working on an exciting opportunity";
-  
+
   // Skill match
-  const matchingSkills = skills.filter(s => 
-    jobContext?.requiredSkills?.some(req => 
-      s.toLowerCase().includes(req.toLowerCase()) || 
+  const matchingSkills = skills.filter(s =>
+    jobContext?.requiredSkills?.some(req =>
+      s.toLowerCase().includes(req.toLowerCase()) ||
       req.toLowerCase().includes(s.toLowerCase())
     )
   ).slice(0, 2);
-  
+
   const skillMatch = matchingSkills.length > 0
     ? ` Your background in ${matchingSkills.join(" and ")} is exactly what we're looking for.`
     : "";
-  
+
   // Channel-specific formatting
   if (channel === "linkedin") {
     return `Hi ${firstName},
@@ -88,7 +90,7 @@ Would you be open to a quick chat about it?
 
 Best regards`;
   }
-  
+
   if (channel === "github") {
     return `Hey ${firstName}! 👋
 
@@ -100,7 +102,7 @@ No pressure at all, but if you're open to hearing more, I'd love to tell you abo
 
 Cheers!`;
   }
-  
+
   // Email (default)
   return `Hi ${firstName},
 
@@ -121,6 +123,7 @@ export function OutreachPanel({ isOpen, onClose, candidate, jobContext, onSend }
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   // Generate personalized message when candidate or channel changes
   useEffect(() => {
@@ -245,6 +248,23 @@ export function OutreachPanel({ isOpen, onClose, candidate, jobContext, onSend }
         </div>
       </div>
 
+      {/* Send Email Form (slides in when toggled) */}
+      {showEmailForm && channel === "email" && (
+        <div className="p-4 border-t border-zinc-800 bg-zinc-800/50">
+          <SendEmailForm
+            defaultSubject={`Opportunity for ${candidate.name || candidate.username}`}
+            defaultBody={message}
+            candidateName={candidate.name || candidate.username}
+            candidateId={candidate.candidateId}
+            onSuccess={() => {
+              setShowEmailForm(false);
+              onSend?.(message, channel);
+            }}
+            onClose={() => setShowEmailForm(false)}
+          />
+        </div>
+      )}
+
       {/* Actions */}
       <div className="p-4 border-t border-zinc-800 flex gap-3">
         <Button
@@ -264,14 +284,24 @@ export function OutreachPanel({ isOpen, onClose, candidate, jobContext, onSend }
             </>
           )}
         </Button>
-        <Button
-          className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-          onClick={handleSend}
-          disabled={sending}
-        >
-          <Send className="w-4 h-4 mr-2" />
-          {sending ? "Sending..." : "Mark as Sent"}
-        </Button>
+        {channel === "email" ? (
+          <Button
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => setShowEmailForm(!showEmailForm)}
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            {showEmailForm ? "Hide Form" : "Send Email"}
+          </Button>
+        ) : (
+          <Button
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+            onClick={handleSend}
+            disabled={sending}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            {sending ? "Sending..." : "Mark as Sent"}
+          </Button>
+        )}
       </div>
     </div>
   );

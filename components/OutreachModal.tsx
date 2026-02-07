@@ -18,7 +18,9 @@ import {
   Code,
   Star,
   ExternalLink,
+  Mail,
 } from "lucide-react";
+import SendEmailForm from "@/components/outreach/SendEmailForm";
 
 interface OutreachVariant {
   tone: "professional" | "warm" | "technical";
@@ -38,6 +40,7 @@ interface OutreachModalProps {
     company: string;
     avatar?: string;
     linkedinUrl?: string;
+    candidateId?: string;
     persona?: {
       archetype?: string;
     };
@@ -72,6 +75,7 @@ export default function OutreachModal({
   const [copiedTone, setCopiedTone] = useState<string | null>(null);
   const [instructions, setInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [emailFormTone, setEmailFormTone] = useState<string | null>(null);
 
   const generateMessages = async () => {
     setLoading(true);
@@ -134,6 +138,7 @@ export default function OutreachModal({
     setVariants([]);
     setError(null);
     setInstructions("");
+    setEmailFormTone(null);
     onClose();
   };
 
@@ -308,26 +313,62 @@ export default function OutreachModal({
                           </div>
                         )}
 
-                        {/* Copy Button */}
+                        {/* Action Buttons */}
                         {!variant.error && (
-                          <Button
-                            onClick={() => copyToClipboard(variant.message, variant.tone)}
-                            variant={isCopied ? "default" : "outline"}
-                            size="sm"
-                            className="w-full"
-                          >
-                            {isCopied ? (
-                              <>
-                                <Check className="w-4 h-4 mr-2 text-green-500" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-4 h-4 mr-2" />
-                                Copy Message
-                              </>
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => copyToClipboard(variant.message, variant.tone)}
+                                variant={isCopied ? "default" : "outline"}
+                                size="sm"
+                                className="flex-1"
+                              >
+                                {isCopied ? (
+                                  <>
+                                    <Check className="w-4 h-4 mr-2 text-green-500" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Copy
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  setEmailFormTone(
+                                    emailFormTone === variant.tone ? null : variant.tone
+                                  )
+                                }
+                                variant={emailFormTone === variant.tone ? "default" : "outline"}
+                                size="sm"
+                                className="flex-1"
+                              >
+                                <Mail className="w-4 h-4 mr-2" />
+                                Send Email
+                              </Button>
+                            </div>
+
+                            {/* Inline Email Form */}
+                            {emailFormTone === variant.tone && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="bg-background rounded-lg p-3 border"
+                              >
+                                <SendEmailForm
+                                  defaultSubject={`Opportunity for ${candidate.name}`}
+                                  defaultBody={variant.message}
+                                  candidateName={candidate.name}
+                                  candidateId={candidate.candidateId}
+                                  onSuccess={() => setEmailFormTone(null)}
+                                  onClose={() => setEmailFormTone(null)}
+                                />
+                              </motion.div>
                             )}
-                          </Button>
+                          </div>
                         )}
                       </motion.div>
                     );
