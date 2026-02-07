@@ -1068,7 +1068,7 @@ export default function PipelinePage() {
               {selectedIds.filter(id => topMatches.some(c => c.id === id)).length >= 2 && (
                 <Button
                   size="sm"
-                  onClick={() => setShowComparison(true)}
+                  onClick={() => router.push(`/compare?ids=${selectedIds.join(",")}`)}
                   className="gap-1"
                 >
                   <ArrowUpDown className="w-3.5 h-3.5" />
@@ -1452,7 +1452,16 @@ export default function PipelinePage() {
                     {selectedIds.length > 0 && (
                       <div className="flex items-center gap-2 ml-auto">
                         <Badge>{selectedIds.length} {t("common.selected")}</Badge>
-                        <Button size="sm" onClick={() => setShowComparison(true)}>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (selectedIds.length >= 2) {
+                              router.push(`/compare?ids=${selectedIds.join(",")}`);
+                            } else {
+                              setShowComparison(true);
+                            }
+                          }}
+                        >
                           {t("common.compare")}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
@@ -1897,7 +1906,13 @@ export default function PipelinePage() {
       <ShortlistPanel
         selectedCandidates={selectedCandidates}
         totalCandidates={candidates.length}
-        onCompare={() => setShowComparison(true)}
+        onCompare={() => {
+          if (selectedIds.length >= 2) {
+            router.push(`/compare?ids=${selectedIds.join(",")}`);
+          } else {
+            setShowComparison(true);
+          }
+        }}
         onClearSelection={() => setSelectedIds([])}
         onMoveToDeepDive={() => {
           // Save selected IDs to localStorage and navigate to analyse page (Stage 3)
