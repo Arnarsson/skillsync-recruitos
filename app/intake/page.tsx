@@ -368,7 +368,12 @@ export default function IntakePage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="flex-1 space-y-4 sm:space-y-6">
+          <motion.div
+            className="flex-1 space-y-4 sm:space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
@@ -427,7 +432,7 @@ export default function IntakePage() {
             {intakeMode === "form" && (
             <>
             {/* Social Context Card */}
-            <Card>
+            <Card className="transition-all hover:border-primary/30 hover:shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
@@ -444,23 +449,26 @@ export default function IntakePage() {
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">
                     {t("intake.socialContext.companyLinkedIn")}
                   </label>
-                  <div className="relative">
-                    <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="https://linkedin.com/company/..."
-                      value={companyUrl}
-                      onChange={(e) => handleCompanyUrlChange(e.target.value)}
-                      className={`pl-10 pr-10 ${companyUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : companyUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
-                    />
-                    {companyUrlValidation && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {companyUrlValidation.isValid ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <X className="w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                    )}
+                  <div className="group relative">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="https://linkedin.com/company/..."
+                        value={companyUrl}
+                        onChange={(e) => handleCompanyUrlChange(e.target.value)}
+                        className={`pl-10 pr-10 ${companyUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : companyUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
+                      />
+                      {companyUrlValidation && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {companyUrlValidation.isValid ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <X className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   {companyUrlValidation?.error && (
                     <p className="text-xs text-red-500 mt-1">{companyUrlValidation.error}</p>
@@ -474,23 +482,26 @@ export default function IntakePage() {
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">
                       {t("intake.socialContext.hiringManager")}
                     </label>
-                    <div className="relative">
-                      <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="https://linkedin.com/in/..."
-                        value={managerUrl}
-                        onChange={(e) => handleManagerUrlChange(e.target.value)}
-                        className={`pl-10 pr-10 ${managerUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : managerUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
-                      />
-                      {managerUrlValidation && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          {managerUrlValidation.isValid ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <X className="w-4 h-4 text-red-500" />
-                          )}
-                        </div>
-                      )}
+                    <div className="group relative">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                      <div className="relative">
+                        <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="https://linkedin.com/in/..."
+                          value={managerUrl}
+                          onChange={(e) => handleManagerUrlChange(e.target.value)}
+                          className={`pl-10 pr-10 ${managerUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : managerUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
+                        />
+                        {managerUrlValidation && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {managerUrlValidation.isValid ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <X className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {managerUrlValidation?.error && (
                       <p className="text-xs text-red-500 mt-1">{managerUrlValidation.error}</p>
@@ -503,23 +514,26 @@ export default function IntakePage() {
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">
                       {t("intake.socialContext.topPerformer")}
                     </label>
-                    <div className="relative">
-                      <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="https://linkedin.com/in/..."
-                        value={benchmarkUrl}
-                        onChange={(e) => handleBenchmarkUrlChange(e.target.value)}
-                        className={`pl-10 pr-10 ${benchmarkUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : benchmarkUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
-                      />
-                      {benchmarkUrlValidation && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          {benchmarkUrlValidation.isValid ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <X className="w-4 h-4 text-red-500" />
-                          )}
-                        </div>
-                      )}
+                    <div className="group relative">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                      <div className="relative">
+                        <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="https://linkedin.com/in/..."
+                          value={benchmarkUrl}
+                          onChange={(e) => handleBenchmarkUrlChange(e.target.value)}
+                          className={`pl-10 pr-10 ${benchmarkUrlValidation?.error ? 'border-red-500 focus:ring-red-500' : benchmarkUrlValidation?.isValid ? 'border-green-500 focus:ring-green-500' : ''}`}
+                        />
+                        {benchmarkUrlValidation && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {benchmarkUrlValidation.isValid ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <X className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {benchmarkUrlValidation?.error && (
                       <p className="text-xs text-red-500 mt-1">{benchmarkUrlValidation.error}</p>
@@ -542,7 +556,7 @@ export default function IntakePage() {
 
             {/* Job Requirements Card (Form mode only) */}
             {!calibration && intakeMode === "form" ? (
-              <Card>
+              <Card className="transition-all hover:border-primary/30 hover:shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
@@ -573,18 +587,21 @@ export default function IntakePage() {
                           {t("intake.jobRequirements.jobPostingUrl")}
                         </label>
                         <div className="flex gap-2">
-                          <Input
-                            placeholder="https://boards.greenhouse.io/..."
-                            value={jobUrl}
-                            onChange={(e) => setJobUrl(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
-                            className="flex-1"
-                            disabled={loading}
-                          />
+                          <div className="group relative flex-1">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                            <Input
+                              className="relative"
+                              placeholder="https://boards.greenhouse.io/..."
+                              value={jobUrl}
+                              onChange={(e) => setJobUrl(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
+                              disabled={loading}
+                            />
+                          </div>
                           <Button
                             onClick={handleUrlSubmit}
                             disabled={loading || !jobUrl.trim()}
-                            className="min-w-[120px]"
+                            className="min-w-[120px] bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
                           >
                             {loading ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -618,23 +635,26 @@ export default function IntakePage() {
                         <label className="text-sm font-medium mb-2 block">
                           {t("intake.jobRequirements.jobDescription")}
                         </label>
-                        <div className="relative">
-                          <textarea
-                            placeholder={t("intake.jobRequirements.pastePlaceholder")}
-                            value={jobText}
-                            onChange={(e) => setJobText(e.target.value)}
-                            className="w-full h-48 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                            disabled={loading}
-                          />
-                          <div className="absolute bottom-3 right-3 text-xs text-muted-foreground font-mono">
-                            {jobText.length} {t("intake.jobRequirements.chars")}
+                        <div className="group relative">
+                          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                          <div className="relative">
+                            <textarea
+                              placeholder={t("intake.jobRequirements.pastePlaceholder")}
+                              value={jobText}
+                              onChange={(e) => setJobText(e.target.value)}
+                              className="w-full h-48 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                              disabled={loading}
+                            />
+                            <div className="absolute bottom-3 right-3 text-xs text-muted-foreground font-mono">
+                              {jobText.length} {t("intake.jobRequirements.chars")}
+                            </div>
                           </div>
                         </div>
                       </div>
                       <Button
                         onClick={handleTextSubmit}
                         disabled={loading || !jobText.trim()}
-                        className="w-full gap-2"
+                        className="w-full gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
                       >
                         {loading ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -763,7 +783,7 @@ export default function IntakePage() {
                       >
                         {t("intake.results.startOver")}
                       </Button>
-                      <Button onClick={handleContinue} className="flex-1 gap-2">
+                      <Button onClick={handleContinue} className="flex-1 gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90">
                         {t("intake.results.initializePipeline")}
                         <ArrowRight className="w-4 h-4" />
                       </Button>
@@ -772,11 +792,11 @@ export default function IntakePage() {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Process Preview Sidebar */}
           <div className="w-full lg:w-80 lg:sticky lg:top-24 lg:self-start">
-            <Card>
+            <Card className="transition-all hover:border-primary/30 hover:shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-medium text-muted-foreground">

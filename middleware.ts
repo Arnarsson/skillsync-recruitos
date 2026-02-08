@@ -32,9 +32,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/search", request.url));
   }
 
+  // Allow demo mode to bypass auth (set via cookie from login page)
+  const isDemoMode = request.cookies.get("recruitos_demo")?.value === "true";
+
   // Redirect unauthenticated users to login for protected routes
   if (
     !isAuthenticated &&
+    !isDemoMode &&
     protectedRoutes.some((route) => pathname.startsWith(route))
   ) {
     const loginUrl = new URL("/login", request.url);

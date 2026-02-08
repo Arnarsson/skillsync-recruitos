@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Loader2, ArrowRight, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -89,44 +90,60 @@ export function CandidateList({
   }
 
   return (
-    <div className="space-y-3">
+    <motion.div
+      className="space-y-3"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: 0.05 } },
+      }}
+    >
       {developers.map((dev) => {
         const scoreInfo = getScoreInfo(dev.score);
         return (
-          <Link key={dev.username} href={`/profile/${dev.username}`}>
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardContent className="p-4 flex items-start gap-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={dev.avatar} alt={dev.name} />
-                  <AvatarFallback>{dev.name?.charAt(0) || "?"}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="font-medium truncate">{dev.name}</div>
-                    <Badge className={`${scoreInfo.bg} ${scoreInfo.color} ${scoreInfo.border} border text-xs`}>
-                      <Star className="w-3 h-3 mr-1" />
-                      {dev.score}%
-                    </Badge>
-                    <span className="text-xs text-muted-foreground truncate">@{dev.username}</span>
-                  </div>
-                  {dev.bio ? (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {dev.bio}
-                    </p>
-                  ) : null}
-                  {dev.skills?.length ? (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {dev.skills.slice(0, 6).map((s) => (
-                        <Badge key={s} variant="secondary" className="text-[10px]">
-                          {s}
-                        </Badge>
-                      ))}
+          <motion.div
+            key={dev.username}
+            variants={{
+              hidden: { opacity: 0, y: 10 },
+              visible: { opacity: 1, y: 0 },
+            }}
+          >
+            <Link href={`/profile/${dev.username}`}>
+              <Card className="hover:border-primary/50 hover:shadow-md transition-all">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={dev.avatar} alt={dev.name} />
+                    <AvatarFallback>{dev.name?.charAt(0) || "?"}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="font-medium truncate">{dev.name}</div>
+                      <Badge className={`${scoreInfo.bg} ${scoreInfo.color} ${scoreInfo.border} border text-xs`}>
+                        <Star className="w-3 h-3 mr-1" />
+                        {dev.score}%
+                      </Badge>
+                      <span className="text-xs text-muted-foreground truncate">@{dev.username}</span>
                     </div>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                    {dev.bio ? (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {dev.bio}
+                      </p>
+                    ) : null}
+                    {dev.skills?.length ? (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {dev.skills.slice(0, 6).map((s) => (
+                          <Badge key={s} variant="secondary" className="text-[10px]">
+                            {s}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </motion.div>
         );
       })}
 
@@ -140,6 +157,6 @@ export function CandidateList({
           </Button>
         </div>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

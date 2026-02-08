@@ -81,17 +81,21 @@ export function SkillChips({
       </div>
 
       <div className="flex gap-2">
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addFromDraft();
-            }
-          }}
-          placeholder={placeholder}
-        />
+        <div className="group relative flex-1">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <Input
+            className="relative"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addFromDraft();
+              }
+            }}
+            placeholder={placeholder}
+          />
+        </div>
         <Button type="button" variant="outline" onClick={addFromDraft}>
           Add
         </Button>

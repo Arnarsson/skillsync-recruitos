@@ -17,7 +17,10 @@ export default function LoginPage() {
     // Enable demo mode in localStorage
     localStorage.setItem("recruitos_demo_mode", "true");
     localStorage.setItem("recruitos_admin_mode", "true");
-    
+
+    // Set cookie so middleware can bypass auth for demo mode
+    document.cookie = "recruitos_demo=true; path=/; max-age=86400; SameSite=Lax";
+
     // Navigate to intake page with demo data
     router.push("/intake?demo=true");
   };
@@ -60,9 +63,8 @@ export default function LoginPage() {
           {/* GitHub Login */}
           <Button
             size="lg"
-            variant="outline"
             onClick={handleGitHubLogin}
-            className="w-full bg-white text-[#141517] hover:bg-gray-200 border-transparent"
+            className="w-full bg-white dark:bg-white text-[#141517] hover:bg-gray-200 dark:hover:bg-gray-200 border-transparent"
           >
             <Github className="w-5 h-5" />
             Continue with GitHub

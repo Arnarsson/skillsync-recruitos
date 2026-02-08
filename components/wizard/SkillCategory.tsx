@@ -14,7 +14,7 @@ export function SkillCategory({
   editable?: boolean;
 }) {
   return (
-    <div className="p-4 rounded-lg border border-border bg-card">
+    <div className="p-4 rounded-lg border border-border bg-card transition-all hover:border-primary/30 hover:shadow-sm">
       <div className="text-sm font-semibold mb-3">{title}</div>
       {editable ? (
         <SkillChips

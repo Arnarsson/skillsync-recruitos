@@ -8,7 +8,7 @@ export function EvidencePreview({ label }: { label: string }) {
   ];
 
   return (
-    <div className="p-4 rounded-lg border border-border bg-card">
+    <div className="p-4 rounded-lg border border-border bg-card transition-colors hover:border-primary/30">
       <div className="text-sm font-medium mb-3">{label}</div>
       <ul className="space-y-2 text-sm text-muted-foreground">
         {items.map((item) => (
