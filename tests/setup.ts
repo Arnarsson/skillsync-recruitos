@@ -33,15 +33,8 @@ Object.defineProperty(global, 'localStorage', {
   writable: true,
 });
 
-// Mock window.process for browser environment
-Object.defineProperty(global, 'process', {
-  value: {
-    env: {
-      NODE_ENV: 'test',
-    },
-  },
-  writable: true,
-});
+// Keep the native process object intact; only ensure NODE_ENV for tests.
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 
 // Suppress console errors in tests (optional)
 global.console = {

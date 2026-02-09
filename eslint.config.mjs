@@ -12,6 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Project artifacts / backups:
+    "node_modules/**",
+    "dist/**",
+    "playwright-report/**",
+    "test-results/**",
+    "**/*.bak",
+    "api-vite-bak/**",
+    "recruitos-components-bak/**",
+    "docs/archive/**",
+    "search_page",
+    "wizard_before",
   ]),
 ]);
 

@@ -467,6 +467,8 @@ npx prisma migrate deploy
 4. **Set up Webhook:**
    ```bash
    # Endpoint: https://your-domain.com/api/webhooks/stripe
+   # Canonical endpoint: /api/webhooks/stripe
+   # Legacy endpoint: /api/stripe/webhook (deprecated, sunset December 31, 2026)
    # Events to listen:
    - checkout.session.completed
    - payment_intent.succeeded
@@ -536,6 +538,9 @@ echo $NEXTAUTH_SECRET | wc -c  # Should be > 32 characters
 ```bash
 # Test webhook locally with Stripe CLI
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
+
+# Deprecated compatibility endpoint (avoid for new setups)
+# stripe listen --forward-to localhost:3000/api/stripe/webhook
 
 # Verify webhook secret
 echo $STRIPE_WEBHOOK_SECRET

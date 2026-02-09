@@ -98,5 +98,6 @@ User Action → Component → API Route → External API/DB → Response
 
 ### Add Payment Processing
 1. Install Stripe: `npm install stripe @stripe/stripe-js`
-2. Create webhook endpoint
+2. Create webhook endpoint at `/api/webhooks/stripe`
+   - Legacy compatibility endpoint `/api/stripe/webhook` is deprecated (sunset December 31, 2026)
 3. Add checkout flow to pricing page

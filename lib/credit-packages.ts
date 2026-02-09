@@ -6,6 +6,7 @@
  * - 30,000 DKK/year enterprise
  * - 1 credit = 1 deep profile report
  */
+import { CREDIT_BUNDLE_PACKAGES } from "./pricing-catalog";
 
 export interface CreditPackage {
   id: string
@@ -18,44 +19,9 @@ export interface CreditPackage {
   stripePriceId?: string
 }
 
-export const CREDIT_PACKAGES: CreditPackage[] = [
-  {
-    id: 'starter_10',
-    name: 'Starter Pack',
-    credits: 10,
-    priceInDKK: 5000,
-    priceInCents: 500000,
-    stripePriceId: process.env.STRIPE_CREDITS_10_PRICE_ID,
-  },
-  {
-    id: 'pro_25',
-    name: 'Pro Pack',
-    credits: 25,
-    priceInDKK: 10000,
-    priceInCents: 1000000,
-    discount: 20,
-    popular: true,
-    stripePriceId: process.env.STRIPE_CREDITS_25_PRICE_ID,
-  },
-  {
-    id: 'business_50',
-    name: 'Business Pack',
-    credits: 50,
-    priceInDKK: 18000,
-    priceInCents: 1800000,
-    discount: 28,
-    stripePriceId: process.env.STRIPE_CREDITS_50_PRICE_ID,
-  },
-  {
-    id: 'enterprise_100',
-    name: 'Enterprise Pack',
-    credits: 100,
-    priceInDKK: 30000,
-    priceInCents: 3000000,
-    discount: 40,
-    stripePriceId: process.env.STRIPE_CREDITS_100_PRICE_ID,
-  },
-]
+export const CREDIT_PACKAGES: CreditPackage[] = CREDIT_BUNDLE_PACKAGES.map(
+  (pkg) => ({ ...pkg })
+)
 
 /**
  * Get package by ID

@@ -1,3 +1,5 @@
+import { RECRUITOS_PRICING_PLANS } from "./pricing-catalog";
+
 /**
  * Credit-Based Pricing — DKK
  *
@@ -26,81 +28,12 @@ export interface CreditPackage {
   stripePriceId?: string; // Set via env or created dynamically
 }
 
-export const CREDIT_PACKAGES: CreditPackage[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    tagline: "Prøv platformen med et lille kredit-pakke",
-    credits: 10,
-    price: 500,
-    pricePerCredit: 50,
-    currency: "DKK",
-    period: "one-time",
-    features: [
-      "10 kandidat-analyser",
-      "AI-drevet profilanalyse",
-      "Adfærdsindsigter",
-      "E-mail support",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    tagline: "Til teams med løbende rekruttering",
-    credits: 50,
-    price: 2000,
-    pricePerCredit: 40,
-    currency: "DKK",
-    period: "one-time",
-    popular: true,
-    features: [
-      "50 kandidat-analyser",
-      "AI-drevet profilanalyse",
-      "Adfærdsindsigter",
-      "Dybe profiler med GitHub-analyse",
-      "Prioriteret support",
-      "CSV-eksport",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    tagline: "Til store organisationer",
-    credits: 200,
-    price: 5000,
-    pricePerCredit: 25,
-    currency: "DKK",
-    period: "one-time",
-    features: [
-      "200 kandidat-analyser",
-      "AI-drevet profilanalyse",
-      "Adfærdsindsigter",
-      "Dybe profiler med GitHub-analyse",
-      "Team-arbejdsrum",
-      "API-adgang",
-      "Dedikeret account manager",
-      "ATS-integration",
-    ],
-  },
-  {
-    id: "annual",
-    name: "Årligt Ubegrænset",
-    tagline: "Ubegrænset adgang hele året",
-    credits: "unlimited",
-    price: 30000,
-    pricePerCredit: null,
-    currency: "DKK",
-    period: "annual",
-    features: [
-      "Ubegrænset kandidat-analyser",
-      "Alt i Enterprise-pakken",
-      "Ubegrænsede team-pladser",
-      "Prioriteret 24/7 support",
-      "Custom integrationer",
-      "SLA-garanti",
-    ],
-  },
-];
+export const CREDIT_PACKAGES: CreditPackage[] = RECRUITOS_PRICING_PLANS.map(
+  (plan) => ({
+    ...plan,
+    features: [...plan.features],
+  }),
+);
 
 /**
  * Get a credit package by ID

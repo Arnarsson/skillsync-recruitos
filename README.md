@@ -170,6 +170,8 @@ DATABASE_URL=postgresql://user:pass@host:5432/recruitos
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 ```
+Stripe webhook endpoint (canonical): `/api/webhooks/stripe`
+Legacy compatibility endpoint: `/api/stripe/webhook` (deprecated, sunset December 31, 2026)
 
 **Full documentation**: See `DEPLOYMENT.md`
 

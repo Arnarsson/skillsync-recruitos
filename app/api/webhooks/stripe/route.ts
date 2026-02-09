@@ -1,82 +1,42 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+import { getCheckoutPaymentIntentId, processStripeWebhook } from "@/lib/stripe-webhook";
+import { calculateCreditsFromStripeAmount } from "@/lib/credit-packages";
 
 export async function POST(request: NextRequest) {
-  const body = await request.text();
-  const signature = request.headers.get("stripe-signature");
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: "Missing stripe-signature header" },
-      { status: 400 }
-    );
-  }
-
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error("STRIPE_WEBHOOK_SECRET not configured");
-    return NextResponse.json(
-      { error: "Webhook secret not configured" },
-      { status: 500 }
-    );
-  }
-
-  let event: Stripe.Event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error("Webhook signature verification failed:", err);
-    return NextResponse.json(
-      { error: "Invalid signature" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    switch (event.type) {
-      case "checkout.session.completed": {
+  return processStripeWebhook(
+    request,
+    stripe,
+    {
+      "checkout.session.completed": async (event) => {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutCompleted(session);
-        break;
-      }
-
-      case "customer.subscription.created":
-      case "customer.subscription.updated": {
+      },
+      "customer.subscription.created": async (event) => {
         const subscription = event.data.object as Stripe.Subscription;
         await handleSubscriptionChange(subscription);
-        break;
-      }
-
-      case "customer.subscription.deleted": {
+      },
+      "customer.subscription.updated": async (event) => {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionChange(subscription);
+      },
+      "customer.subscription.deleted": async (event) => {
         const subscription = event.data.object as Stripe.Subscription;
         await handleSubscriptionCancelled(subscription);
-        break;
-      }
-
-      case "payment_intent.succeeded": {
+      },
+      "payment_intent.succeeded": async (event) => {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         await handlePaymentSuccess(paymentIntent);
-        break;
-      }
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("Webhook processing error:", error);
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 }
-    );
-  }
+      },
+    },
+    {
+      onUnhandled: (eventType) => console.log(`Unhandled event type: ${eventType}`),
+      processingErrorMessage: "Webhook processing failed",
+      processingErrorPrefix: "Webhook processing error:",
+    },
+  );
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
@@ -89,9 +49,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // Find user by email
-  const user = await prisma.user.findUnique({
-    where: { email: customerEmail },
-  });
+  const user = await findUserByEmail(customerEmail);
 
   if (!user) {
     console.error(`User not found for email: ${customerEmail}`);
@@ -116,20 +74,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const credits = calculateCreditsFromAmount(amount);
 
       // Add credits to user
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          credits: {
-            increment: credits,
-          },
-        },
-      });
+      await incrementUserCredits(user.id, credits);
 
       // Record payment
       await prisma.payment.create({
         data: {
           userId: user.id,
-          stripePaymentId: session.payment_intent as string,
+          stripePaymentId: getCheckoutPaymentIntentId(session),
           amount,
           credits,
           status: "succeeded",
@@ -144,9 +95,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
 
-  const user = await prisma.user.findUnique({
-    where: { stripeCustomerId: customerId },
-  });
+  const user = await findUserByCustomerId(customerId);
 
   if (!user) {
     console.error(`User not found for customer: ${customerId}`);
@@ -154,7 +103,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   }
 
   // Determine plan from subscription
-  let plan: "FREE" | "PRO" | "ENTERPRISE" = "PRO";
+  const plan: "FREE" | "PRO" | "ENTERPRISE" = "PRO";
   
   // Update user plan and subscription
   await prisma.user.update({
@@ -173,9 +122,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
 
-  const user = await prisma.user.findUnique({
-    where: { stripeCustomerId: customerId },
-  });
+  const user = await findUserByCustomerId(customerId);
 
   if (!user) {
     console.error(`User not found for customer: ${customerId}`);
@@ -201,6 +148,28 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 }
 
 function calculateCreditsFromAmount(amountInCents: number): number {
-  const { calculateCreditsFromStripeAmount } = require("@/lib/credit-packages");
   return calculateCreditsFromStripeAmount(amountInCents);
+}
+
+async function findUserByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: { email },
+  });
+}
+
+async function findUserByCustomerId(customerId: string) {
+  return prisma.user.findUnique({
+    where: { stripeCustomerId: customerId },
+  });
+}
+
+async function incrementUserCredits(userId: string, credits: number) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      credits: {
+        increment: credits,
+      },
+    },
+  });
 }

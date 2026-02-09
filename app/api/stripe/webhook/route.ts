@@ -1,9 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { addCredits, upgradeToAnnual, recordPayment } from "@/lib/credits";
+import {
+  getCheckoutPaymentIntentId,
+  getCheckoutSubscriptionId,
+  processStripeWebhook,
+} from "@/lib/stripe-webhook";
 
 export const dynamic = "force-dynamic";
+const DEPRECATED_PATH_MESSAGE =
+  "Deprecated endpoint. Use /api/webhooks/stripe instead.";
+
+function addDeprecationHeaders(response: Response): Response {
+  response.headers.set("Deprecation", "true");
+  response.headers.set("Sunset", "Wed, 31 Dec 2026 23:59:59 GMT");
+  response.headers.set("X-Deprecated-Endpoint", "/api/stripe/webhook");
+  response.headers.set("X-Replacement-Endpoint", "/api/webhooks/stripe");
+  response.headers.set("Warning", `299 - "${DEPRECATED_PATH_MESSAGE}"`);
+  return response;
+}
 
 /**
  * Stripe Webhook Handler
@@ -12,76 +28,34 @@ export const dynamic = "force-dynamic";
  * - invoice.payment_succeeded → subscription renewal
  */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.text();
-    const signature = request.headers.get("stripe-signature");
-
-    if (!signature) {
-      return NextResponse.json(
-        { error: "Missing stripe-signature header" },
-        { status: 400 },
-      );
-    }
-
-    if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error("STRIPE_WEBHOOK_SECRET not configured");
-      return NextResponse.json(
-        { error: "Webhook secret not configured" },
-        { status: 500 },
-      );
-    }
-
-    let event: Stripe.Event;
-    try {
-      event = getStripe().webhooks.constructEvent(
-        body,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET,
-      );
-    } catch (err) {
-      console.error("Webhook signature verification failed:", err);
-      return NextResponse.json(
-        { error: "Invalid signature" },
-        { status: 400 },
-      );
-    }
-
-    console.log(`[Stripe Webhook] Received event: ${event.type}`);
-
-    switch (event.type) {
-      case "checkout.session.completed": {
+  const response = await processStripeWebhook(
+    request,
+    getStripe(),
+    {
+      "checkout.session.completed": async (event) => {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutComplete(session);
-        break;
-      }
-
-      case "invoice.payment_succeeded": {
+      },
+      "invoice.payment_succeeded": async (event) => {
         const invoice = event.data.object as Stripe.Invoice;
         await handleInvoicePaid(invoice);
-        break;
-      }
-
-      case "customer.subscription.deleted": {
+      },
+      "customer.subscription.deleted": async (event) => {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(
           `[Stripe Webhook] Subscription cancelled: ${subscription.id}`,
         );
         // Could downgrade user plan here
-        break;
-      }
-
-      default:
-        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("[Stripe Webhook] Error:", error);
-    return NextResponse.json(
-      { error: "Webhook handler failed" },
-      { status: 500 },
-    );
-  }
+      },
+    },
+    {
+      onUnhandled: (eventType) =>
+        console.log(`[Stripe Webhook] Unhandled event type: ${eventType}`),
+      processingErrorMessage: "Webhook handler failed",
+      processingErrorPrefix: "[Stripe Webhook] Error:",
+    },
+  );
+  return addDeprecationHeaders(response);
 }
 
 async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
@@ -96,10 +70,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     return;
   }
 
-  const paymentIntentId =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id || session.id;
+  const paymentIntentId = getCheckoutPaymentIntentId(session);
 
   const amount = session.amount_total || 0;
 
@@ -109,10 +80,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 
   if (packageId === "annual") {
     // Annual unlimited subscription
-    const subscriptionId =
-      typeof session.subscription === "string"
-        ? session.subscription
-        : session.subscription?.id || "";
+    const subscriptionId = getCheckoutSubscriptionId(session);
 
     await recordPayment({
       userId,

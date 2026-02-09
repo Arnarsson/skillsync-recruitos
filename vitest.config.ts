@@ -10,6 +10,16 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: path.resolve(__dirname, 'tests/setup.ts'),
     css: true,
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      '.next/**',
+      'playwright/**',
+      'playwright-report/**',
+      'test-results/**',
+      'tests/e2e/**',
+      'tests/qa-checklist.spec.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
