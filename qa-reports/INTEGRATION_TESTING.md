@@ -10,18 +10,11 @@
 
 ## Executive Summary
 
-**IMPORTANT UPDATE:** During QA testing, another team member (security-verifier) patched several unprotected routes. However, their edit to `app/api/candidates/[id]/route.ts` introduced a **syntax error** (extra closing brace on line 179) that **crashes the entire dev server**. All API routes return 500 HTML error pages. This must be fixed before further testing can proceed.
+After the security-verifier patched unprotected routes (commits `1279269` through `7925d1c`), a syntax error in `app/api/candidates/[id]/route.ts` briefly crashed all API routes. This was fixed in commit `7925d1c` and verified after a server restart (Turbopack cache required clearing).
 
-**Before the syntax error**, the application was in a solid state with most integrations working correctly. Authentication, rate limiting, security headers, CORS, and database connectivity all functioned properly. The security-verifier successfully added `requireAuth()` to `/api/search` and other routes, but the candidates/[id] file has a parse error.
+**Post-fix status:** The application is in a **strong state**. 8 of 9 originally unprotected routes are now auth-protected. One low-priority route (`POST /api/skills/preview`) remains unprotected. All other security features (headers, CORS, rate limiting, Zod validation) continue to function correctly.
 
-**Overall Status:** **BROKEN** (syntax error in candidates/[id]/route.ts crashes all API routes)
-
-### Blocking Issue
-
-**File:** `app/api/candidates/[id]/route.ts`, line 179
-**Error:** `Expected a semicolon` (extra `}` closes `try` block prematurely, orphaning `catch`)
-**Impact:** ALL API routes return 500 errors
-**Fix:** Remove the extra `}` on line 179
+**Overall Status:** **FUNCTIONAL** - 8.5/10 (up from 8.1/10 after auth fixes)
 
 ---
 
@@ -456,7 +449,7 @@ The middleware (`middleware.ts`) handles:
 | Integration Area | Status | Score |
 |-----------------|--------|-------|
 | Authentication (NextAuth) | ✅ Working | 9/10 |
-| API Auth Protection | ⚠️ 5 routes unprotected | 7/10 |
+| API Auth Protection | ✅ 1 low-priority route remaining | 9/10 |
 | Rate Limiting | ✅ Working | 9/10 |
 | Security Headers | ✅ Complete | 10/10 |
 | CORS | ✅ Correct | 10/10 |
@@ -470,4 +463,47 @@ The middleware (`middleware.ts`) handles:
 | Password Security | ✅ Scrypt + timing-safe | 10/10 |
 | Webhook Security | ✅ Stripe signature validation | 10/10 |
 
-**Overall Integration Score: 8.1/10**
+**Overall Integration Score: 8.5/10** (up from 8.1 after security fixes in commits `1279269`-`7925d1c`)
+
+---
+
+## Post-Fix Verification (after commit `7925d1c`)
+
+**Date:** 2026-02-09 (second pass, after security-verifier patches)
+
+After the security-verifier team fixed auth gaps and the resulting syntax error was corrected, the server was restarted (Turbopack cache cleared) and all endpoints re-tested.
+
+### Previously Unprotected Routes - Re-verification
+
+| Route | Before | After | Status |
+|-------|--------|-------|--------|
+| `GET /api/candidates/[id]` | 404 (no auth) | 401 | ✅ FIXED |
+| `PATCH /api/candidates/[id]` | 404 (no auth) | 401 | ✅ FIXED |
+| `DELETE /api/candidates/[id]` | 404 (no auth) | 401 | ✅ FIXED |
+| `GET /api/candidates/[id]/notes` | 404 (no auth) | 401 | ✅ FIXED |
+| `POST /api/candidates/[id]/notes` | 400 (no auth) | 401 | ✅ FIXED |
+| `GET /api/candidates/graph` | 200 (empty) | 401 | ✅ FIXED |
+| `GET /api/search` | 200 (real data) | 401 | ✅ FIXED |
+| `GET /api/github/connection-path` | 400 (no auth) | 401 | ✅ FIXED |
+| `POST /api/skills/preview` | 400 (no auth) | 400 (no auth) | ❌ Still unprotected |
+
+**8 of 9 issues resolved.** The remaining `POST /api/skills/preview` is low priority (only proxies GitHub search counts, no user data exposure).
+
+### Stability Checks
+
+| Check | Result |
+|-------|--------|
+| Health endpoint | ✅ `{"status":"ok","database":true}` |
+| Security headers present | ✅ All 5 verified |
+| Rate limiting working | ✅ 429 after 10 req/min on AI routes |
+| CORS blocking | ✅ (not re-tested, middleware unchanged) |
+| Public routes accessible | ✅ Health=200, Signup=201, Webhook=400 |
+| Page redirects for unauth | ✅ All protected pages → /login |
+
+### Remaining Issues
+
+1. **LOW: `POST /api/skills/preview`** - Still no auth check. Uses `session?.accessToken` for GitHub rate limits but functions without auth.
+2. **LOW: `GET /api/developers/[username]`** - Intentionally public (wraps GitHub API), uses optional auth for higher rate limits.
+3. **INFO: `PUT /api/team/[teamId]`** - Returns 405 (no handler). Needs PATCH or PUT export.
+4. **INFO: Rate limiting in-memory** - Not effective multi-instance. Documented migration path exists.
+5. **INFO: `validateEnv()` not called at startup** - Env var issues only surface at runtime.

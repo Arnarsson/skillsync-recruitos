@@ -196,6 +196,8 @@ All security headers are properly configured:
 
 ## API Endpoint Summary
 
+### Initial Test (Pre-Fix)
+
 | Endpoint | Expected | Actual | Status |
 |----------|----------|--------|--------|
 | `GET /api/search` | 401 | 400 | WARN (validates before auth) |
@@ -205,6 +207,16 @@ All security headers are properly configured:
 | `GET /api/checkout` | 405 | 405 | PASS |
 | `GET /api/team` | 401 | 401 | PASS |
 
+### Re-Test After Security Fixes (Commit 7925d1c)
+
+| Endpoint | Expected | Actual | Status |
+|----------|----------|--------|--------|
+| `GET /api/search` | 401 | 401 | PASS (FIXED) |
+| `GET /api/search?q=test` | 401 | 401 | PASS (auth checked before params) |
+| `GET /api/candidates` | 401 | 401 | PASS |
+| `GET /api/candidates/graph` | 401 | 401 | PASS |
+| `GET /api/health` | 200 | 200 | PASS (`{"status":"ok","database":true}`) |
+
 ---
 
 ## Issues Found
@@ -213,7 +225,7 @@ All security headers are properly configured:
 1. **Demo mode auth broken** - Middleware does not check for `recruitos_demo` cookie, making demo mode non-functional. The login page sets the cookie but middleware only checks NextAuth JWT tokens.
 
 ### Medium
-2. **`/api/search` validates before authenticating** - Returns 400 (parameter validation) instead of 401 (unauthorized) for unauthenticated requests. Should check auth first.
+2. **`/api/search` validates before authenticating** - ~~Returns 400 (parameter validation) instead of 401 (unauthorized) for unauthenticated requests. Should check auth first.~~ **FIXED in commit 7925d1c** - Now correctly returns 401.
 
 ### Low
 3. **CSP allows `unsafe-inline`** - Common with Next.js but could be strengthened with nonces.

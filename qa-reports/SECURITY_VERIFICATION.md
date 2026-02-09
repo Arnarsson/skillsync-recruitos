@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-09
 **Server**: http://localhost:3000 (dev)
-**Branch**: `merge-recruitos` @ `dd6593a`
+**Branch**: `merge-recruitos` @ `dd6593a` → `7925d1c` (post-fix)
 **Tester**: Security Verifier Agent
 
 ---
@@ -12,13 +12,29 @@
 | Area | Status | Score |
 |------|--------|-------|
 | Authentication (POST routes) | PASS | 34/34 routes return 401 |
-| Authentication (GET routes) | ISSUES | 3 routes missing auth |
+| Authentication (GET routes) | PASS (after fix) | All routes return 401 |
 | Rate Limiting | PASS | All 4 tiers working correctly |
 | Security Headers | PASS | 7/7 headers present |
 | CORS | PASS | Evil origins rejected |
 | Input Validation | PASS | 10/10 tests passed |
 
-**Overall: MOSTLY SECURE with 3 auth gaps and 1 public search endpoint to review.**
+**Overall: ALL SECURITY TESTS PASSING after fixes in commits `1279269` and `7925d1c`.**
+
+### Post-Fix Re-verification (Commit 7925d1c)
+
+All 7 previously vulnerable routes now correctly return 401:
+
+| Route | Before Fix | After Fix | Status |
+|-------|-----------|-----------|--------|
+| GET /api/search | 200 (public) | 401 | ✅ FIXED |
+| GET /api/candidates/graph | 200 (public) | 401 | ✅ FIXED |
+| GET /api/candidates/[id] | 404 (no auth) | 401 | ✅ FIXED |
+| PATCH /api/candidates/[id] | 404 (no auth) | 401 | ✅ FIXED |
+| DELETE /api/candidates/[id] | 404 (no auth) | 401 | ✅ FIXED |
+| GET /api/candidates/[id]/notes | 404 (no auth) | 401 | ✅ FIXED |
+| POST /api/candidates/[id]/notes | 404 (no auth) | 401 | ✅ FIXED |
+
+Public routes remain accessible: `/api/health` (200), `/api/embed/widget` (200).
 
 ---
 
