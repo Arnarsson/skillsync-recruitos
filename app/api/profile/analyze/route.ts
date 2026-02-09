@@ -35,40 +35,49 @@ export async function POST(request: NextRequest) {
       useComparativeAnalysis = true, // EU AI Act compliant mode (default: true)
     } = body;
 
-    // Deduct credit before generating report
-    try {
-      const creditResponse = await fetch(`${request.nextUrl.origin}/api/credits`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "deduct",
-          username: candidateId,
-        }),
-      });
+    // Check if demo mode (skip credits)
+    const isDemoMode = session.user.email === "demo@recruitos.xyz" || 
+                       request.headers.get("x-demo-mode") === "true" ||
+                       request.nextUrl.searchParams.get("demo") === "true";
 
-      if (!creditResponse.ok) {
-        const errorData = await creditResponse.json();
-        
-        if (creditResponse.status === 402) {
-          return NextResponse.json(
-            { error: "Insufficient credits. Please purchase more credits to continue." },
-            { status: 402 }
-          );
+    // Deduct credit before generating report (skip in demo mode)
+    if (!isDemoMode) {
+      try {
+        const creditResponse = await fetch(`${request.nextUrl.origin}/api/credits`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "deduct",
+            username: candidateId,
+          }),
+        });
+
+        if (!creditResponse.ok) {
+          const errorData = await creditResponse.json();
+          
+          if (creditResponse.status === 402) {
+            return NextResponse.json(
+              { error: "Insufficient credits. Please purchase more credits to continue." },
+              { status: 402 }
+            );
+          }
+          
+          throw new Error(errorData.error || "Failed to deduct credit");
         }
-        
-        throw new Error(errorData.error || "Failed to deduct credit");
-      }
 
-      const creditData = await creditResponse.json();
-      console.log(`Credit deducted for ${candidateName}. Remaining: ${creditData.creditsRemaining}`);
-    } catch (creditError) {
-      console.error("Credit deduction failed:", creditError);
-      return NextResponse.json(
-        { error: "Credit system error. Please try again." },
-        { status: 500 }
-      );
+        const creditData = await creditResponse.json();
+        console.log(`Credit deducted for ${candidateName}. Remaining: ${creditData.creditsRemaining}`);
+      } catch (creditError) {
+        console.error("Credit deduction failed:", creditError);
+        return NextResponse.json(
+          { error: "Credit system error. Please try again." },
+          { status: 500 }
+        );
+      }
+    } else {
+      console.log(`[Demo Mode] Skipping credit deduction for ${candidateName}`);
     }
 
     // Build a profile text from available data
