@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -87,14 +86,14 @@ model SharedProfile {
   company       String?
   location      String?
   avatar        String?
-  skills        String[]
+  skills        Json?   // String[] for PostgreSQL, Json for SQLite compat
   yearsExperience Int?
 
   // Personality & Analysis (stored as JSON)
   persona       Json?    // Full persona object
   scoreBreakdown Json?   // Score breakdown object
-  keyEvidence   String[]
-  risks         String[]
+  keyEvidence   Json?   // String[] for PostgreSQL, Json for SQLite compat
+  risks         Json?   // String[] for PostgreSQL, Json for SQLite compat
   alignmentScore Int     @default(0)
 
   // Sharing metadata
@@ -159,8 +158,8 @@ model Candidate {
   alignmentScore  Float?
   scoreBreakdown  Json?
   scoreConfidence String?
-  scoreDrivers    String[]
-  scoreDrags      String[]
+  scoreDrivers    Json?  // String[] for PostgreSQL, Json for SQLite compat
+  scoreDrags      Json?  // String[] for PostgreSQL, Json for SQLite compat
 
   // AI Analysis
   persona         Json?
@@ -174,10 +173,10 @@ model Candidate {
 
   // Pipeline
   pipelineStage   String    @default("sourced")
-  unlockedSteps   Int[]
+  unlockedSteps   Json?  // Int[] for PostgreSQL, Json for SQLite compat
   shortlistSummary String?
-  keyEvidence     String[]
-  risks           String[]
+  keyEvidence     Json?  // String[] for PostgreSQL, Json for SQLite compat
+  risks           Json?  // String[] for PostgreSQL, Json for SQLite compat
 
   // LinkedIn-specific signals
   connectionDegree   String?
@@ -210,7 +209,7 @@ model CandidateNote {
   candidateId String
   author      String
   content     String
-  tags        String[]
+  tags        Json?  // String[] for PostgreSQL, Json for SQLite compat
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
