@@ -51,10 +51,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PATCH - Update candidate fields
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
+    const userId = session.user.id;
     const { id } = await params;
     const body = await request.json();
 
@@ -161,43 +164,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.rawProfileText !== undefined)
       data.rawProfileText = body.rawProfileText;
 
-    // Build where clause scoped to user if authenticated
-    const where: Prisma.CandidateWhereUniqueInput = { id };
+    // Verify ownership before updating (userId is guaranteed by auth check above)
+    const existing = await prisma.candidate.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
 
-    // Attempt update directly, catch P2025 for not-found
-    try {
-      // If session exists, verify ownership before updating
-      if (userId) {
-        const existing = await prisma.candidate.findFirst({
-          where: { id, userId },
-          select: { id: true },
-        });
-        if (!existing) {
-          return NextResponse.json(
+    if (!existing) {
+      return NextResponse.json(
             { error: "Candidate not found" },
             { status: 404 }
           );
         }
       }
 
-      const candidate = await prisma.candidate.update({
-        where,
-        data,
-      });
+    const candidate = await prisma.candidate.update({
+      where: { id },
+      data,
+    });
 
-      return NextResponse.json({ candidate });
-    } catch (updateError) {
-      if (
-        updateError instanceof Prisma.PrismaClientKnownRequestError &&
-        updateError.code === "P2025"
-      ) {
-        return NextResponse.json(
-          { error: "Candidate not found" },
-          { status: 404 }
-        );
-      }
-      throw updateError;
-    }
+    return NextResponse.json({ candidate });
   } catch (error) {
     console.error("Candidate update error:", error);
 
@@ -220,9 +206,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE - Delete candidate
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+    const userId = session.user.id;
 
     const { id } = await params;
 

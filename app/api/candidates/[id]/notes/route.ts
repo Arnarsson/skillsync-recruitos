@@ -11,17 +11,17 @@ interface RouteParams {
 
 // GET - List notes for a candidate
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
+    const userId = session.user.id;
     const { id } = await params;
 
-    // Verify candidate exists (and belongs to user if authenticated)
-    const candidateWhere: Prisma.CandidateWhereInput = { id };
-    if (userId) {
-      candidateWhere.userId = userId;
-    }
+    // Verify candidate exists and belongs to user
+    const candidateWhere: Prisma.CandidateWhereInput = { id, userId };
 
     const candidate = await prisma.candidate.findFirst({
       where: candidateWhere,
@@ -51,10 +51,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST - Add a note to a candidate
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
+    const userId = session.user.id;
     const { id } = await params;
 
     let rawBody: unknown;

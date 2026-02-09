@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 
 /**
@@ -80,7 +79,9 @@ function parseSkills(raw: unknown): string[] {
 }
 
 // GET /api/candidates/graph - Build a relationship graph from pipeline candidates
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id ?? null;
