@@ -53,6 +53,7 @@ export default function SendEmailForm({
       const response = await fetch("/api/outreach/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           to,
           subject,
