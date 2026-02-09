@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const maxDuration = 60;
 
@@ -38,6 +39,9 @@ interface CompareRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body: CompareRequest = await request.json();
     const { candidates, jobContext } = body;

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 // BrightData Web Scraper API - Trigger a LinkedIn profile scrape
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { apiKey: clientApiKey, url, dataset } = await request.json();
 

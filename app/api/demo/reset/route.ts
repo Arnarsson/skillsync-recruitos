@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-guard';
 
 /**
  * Demo Reset API Endpoint
@@ -14,6 +15,9 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   // Security: Only allow in development or demo mode
   if (
     process.env.NODE_ENV === 'production' &&
@@ -60,6 +64,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   // Health check endpoint
   return NextResponse.json({
     status: 'ok',

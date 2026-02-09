@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { requireAuth } from "@/lib/auth-guard";
+import { candidateImportSchema } from "@/lib/validation/apiSchemas";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -346,32 +348,37 @@ async function processVercelKVBatch(
 // POST handler
 // ---------------------------------------------------------------------------
 
-const VALID_SOURCES = ["localStorage", "vercelKV"] as const;
-type SourceType = (typeof VALID_SOURCES)[number];
-
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
 
-    // Validate source
-    const source = body.source as string;
-    if (!source || !VALID_SOURCES.includes(source as SourceType)) {
+  try {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    const parsed = candidateImportSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
         {
-          error: `source is required and must be one of: ${VALID_SOURCES.join(", ")}`,
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
         },
         { status: 400 }
       );
     }
 
-    // Validate candidates array
-    const candidates = body.candidates;
-    if (!Array.isArray(candidates)) {
-      return NextResponse.json(
-        { error: "candidates must be an array" },
-        { status: 400 }
-      );
-    }
+    const { source, candidates } = parsed.data;
+    const userId: string | null = parsed.data.userId ?? null;
 
     if (candidates.length === 0) {
       return NextResponse.json({
@@ -382,9 +389,6 @@ export async function POST(request: NextRequest) {
         total: 0,
       });
     }
-
-    // Optional userId for scoping (admin imports can omit)
-    const userId: string | null = body.userId ?? null;
 
     // Dispatch to the correct processor
     let result: ImportResult;

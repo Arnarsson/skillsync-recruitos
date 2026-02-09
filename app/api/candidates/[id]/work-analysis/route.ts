@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createOctokit } from "@/lib/github";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const maxDuration = 60;
 
@@ -305,6 +306,9 @@ Respond in JSON with this exact structure:
 // ---- GET handler ----
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { id } = await params;
 

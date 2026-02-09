@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const LINKEDIN_PEOPLE_SEARCH_DATASET = "gd_l1viktl72bvl7bjuj0";
@@ -292,6 +293,9 @@ Only include profiles with confidence > 30. Sort by confidence descending.`;
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { githubProfile } = body;

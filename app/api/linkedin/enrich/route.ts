@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireAuth } from "@/lib/auth-guard";
+import { linkedinEnrichSchema } from "@/lib/validation/apiSchemas";
 
 // Email pattern templates
 const EMAIL_PATTERNS = [
@@ -126,17 +118,36 @@ async function searchGitHub(name: string): Promise<any[]> {
  * Enrich a candidate with email patterns and GitHub profiles
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    const body = await request.json();
-    const { name, company, linkedinId } = body;
-    
-    if (!name) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400, headers: corsHeaders }
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
       );
     }
-    
+
+    const parsed = linkedinEnrichSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { name, company, linkedinId } = parsed.data;
+
     // Generate email patterns
     const emailPatterns = generateEmailPatterns(name, company || '');
     
@@ -161,13 +172,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       enrichment,
-    }, { headers: corsHeaders });
+    });
     
   } catch (error: any) {
     console.error('[Enrich] Error:', error);
     return NextResponse.json(
       { error: "Enrichment failed", details: error?.message },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }

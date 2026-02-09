@@ -15,18 +15,42 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RecruitOS — Hire by what they've built, not what they claim",
-  description: "Stop guessing. Start hiring engineers based on real GitHub contributions, code quality, and technical depth. AI-powered candidate intelligence for modern recruiting.",
-  keywords: ["hiring", "engineers", "GitHub", "recruiting", "talent", "developers", "AI recruiting", "technical hiring"],
+  title: {
+    default: "RecruitOS — AI-Powered Recruitment for Denmark",
+    template: "%s | RecruitOS",
+  },
+  description:
+    "AI-drevet rekrutteringsplatform til det danske marked. Find og vurder software engineers med Google Gemini AI baseret på GitHub-bidrag, kodekvalitet og teknisk dybde.",
+  keywords: [
+    "recruitment",
+    "AI",
+    "Denmark",
+    "hiring",
+    "software engineers",
+    "GitHub",
+    "technical hiring",
+    "rekruttering",
+    "Danmark",
+  ],
+  authors: [{ name: "RecruitOS" }],
   openGraph: {
-    title: "RecruitOS — Hire by what they've built, not what they claim",
-    description: "Stop guessing. Start hiring engineers based on real GitHub contributions, code quality, and technical depth.",
     type: "website",
+    locale: "da_DK",
+    url: "https://recruitos.dk",
+    title: "RecruitOS — AI-Powered Recruitment",
+    description:
+      "AI-drevet rekrutteringsplatform til det danske marked. Find og vurder software engineers med Google Gemini AI.",
+    siteName: "RecruitOS",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RecruitOS — Hire by what they've built, not what they claim",
-    description: "AI-powered candidate intelligence for modern recruiting.",
+    title: "RecruitOS — AI-Powered Recruitment",
+    description:
+      "AI-drevet rekrutteringsplatform til det danske marked. Find og vurder software engineers med Google Gemini AI.",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -36,12 +60,37 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="da" className="dark">
       <head>
         <Script
           src="https://sourcetrace.vercel.app/t.js"
           data-key="st_a9ecf75601de46ab8c97a017f6d57960"
           strategy="afterInteractive"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "RecruitOS",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              description:
+                "AI-drevet rekrutteringsplatform til det danske marked. Find og vurder software engineers med Google Gemini AI.",
+              url: "https://recruitos.dk",
+              creator: {
+                "@type": "Organization",
+                name: "RecruitOS",
+                url: "https://recruitos.dk",
+              },
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "DKK",
+              },
+            }),
+          }}
         />
       </head>
       <body className={`${inter.variable} antialiased bg-[#141517] text-white min-h-screen`}>

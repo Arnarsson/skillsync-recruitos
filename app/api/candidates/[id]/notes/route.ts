@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { candidateNoteCreateSchema } from "@/lib/validation/apiSchemas";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,42 +56,32 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const userId = session?.user?.id ?? null;
 
     const { id } = await params;
-    const body = await request.json();
 
-    // Validate required fields
-    if (!body.author || typeof body.author !== "string" || !body.author.trim()) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "author is required" },
+        { error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
 
-    if (
-      !body.content ||
-      typeof body.content !== "string" ||
-      !body.content.trim()
-    ) {
+    const parsed = candidateNoteCreateSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "content is required" },
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
-    // Validate tags if provided
-    if (body.tags !== undefined) {
-      if (!Array.isArray(body.tags)) {
-        return NextResponse.json(
-          { error: "tags must be an array of strings" },
-          { status: 400 }
-        );
-      }
-      if (!body.tags.every((t: unknown) => typeof t === "string")) {
-        return NextResponse.json(
-          { error: "tags must be an array of strings" },
-          { status: 400 }
-        );
-      }
-    }
+    const body = parsed.data;
 
     // Verify candidate exists (and belongs to user if authenticated)
     const candidateWhere: Prisma.CandidateWhereInput = { id };

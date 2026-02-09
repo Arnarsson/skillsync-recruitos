@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
+
+// Mock Prisma before importing the module
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    stripeEvent: {
+      findUnique: vi.fn(() => Promise.resolve(null)),
+      create: vi.fn(() => Promise.resolve({ id: "1", eventId: "evt_test", type: "checkout.session.completed", processed: true })),
+    },
+  },
+}));
+
 import {
   constructStripeWebhookEvent,
   getCheckoutPaymentIntentId,

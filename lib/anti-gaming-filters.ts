@@ -418,12 +418,12 @@ export function applyQualityAdjustment(
   baseScore: number,
   qualitySignals: QualitySignals
 ): { adjustedScore: number; adjustment: number; reason: string } {
-  const qualityMultiplier = qualitySignals.overallQualityScore / 100;
-  
-  // Apply quality adjustment (can reduce score by up to 50%)
-  const adjustment = baseScore * qualityMultiplier - baseScore;
+  // Center around 50: quality=50 → no change, >50 → boost, <50 → reduce
+  // Max adjustment is ±25% of baseScore
+  const qualityDelta = (qualitySignals.overallQualityScore - 50) / 50; // -1 to +1
+  const adjustment = baseScore * qualityDelta * 0.25;
   const adjustedScore = Math.max(0, Math.min(99, Math.round(baseScore + adjustment)));
-  
+
   let reason = '';
   if (adjustment < -10) {
     reason = 'Score reduced due to low-quality signals';
@@ -432,6 +432,6 @@ export function applyQualityAdjustment(
   } else {
     reason = 'No significant quality adjustment';
   }
-  
+
   return { adjustedScore, adjustment: Math.round(adjustment), reason };
 }

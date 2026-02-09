@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { prisma } from "@/lib/db";
 
 type StripeClientWithWebhooks = Pick<Stripe, "webhooks">;
 type StripeEventHandler = (event: Stripe.Event) => Promise<void> | void;
@@ -67,12 +68,29 @@ export async function processStripeWebhook(
   const event = result.event;
 
   try {
+    // Idempotency check: skip if this event was already processed
+    const existing = await prisma.stripeEvent.findUnique({
+      where: { eventId: event.id },
+    });
+    if (existing) {
+      return NextResponse.json({ received: true, deduplicated: true });
+    }
+
     const handler = handlers[event.type];
     if (handler) {
       await handler(event);
     } else if (options?.onUnhandled) {
       options.onUnhandled(event.type);
     }
+
+    // Record the event as processed
+    await prisma.stripeEvent.create({
+      data: {
+        eventId: event.id,
+        type: event.type,
+        processed: true,
+      },
+    });
 
     return NextResponse.json({ received: true });
   } catch (error) {

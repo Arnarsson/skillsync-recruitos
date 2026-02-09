@@ -1,35 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendOutreachEmail } from "@/lib/resend";
+import { requireAuth } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { outreachSendSchema } from "@/lib/validation/apiSchemas";
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    const body = await request.json();
-    const { to, subject, body: emailBody, candidateId } = body;
-
-    // Validate required fields
-    if (!to || typeof to !== "string" || !EMAIL_REGEX.test(to)) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "A valid email address is required" },
+        { error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
 
-    if (!subject || typeof subject !== "string" || subject.trim().length === 0) {
+    const parsed = outreachSendSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Subject is required" },
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
-    if (!emailBody || typeof emailBody !== "string" || emailBody.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Email body is required" },
-        { status: 400 }
-      );
-    }
+    const { to, subject, body: emailBody, candidateId } = parsed.data;
 
     // Convert plain text body to HTML (preserve line breaks)
     const htmlBody = emailBody

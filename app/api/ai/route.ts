@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const maxDuration = 60;
 
@@ -153,6 +154,9 @@ async function callGemini(
  * Client sends prompt and operation type; server adds API keys.
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body: AIRequestBody = await request.json();
     const { operation, prompt, schema, options } = body;

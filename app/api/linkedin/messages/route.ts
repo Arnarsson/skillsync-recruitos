@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 /**
  * POST /api/linkedin/messages
  * Receives LinkedIn messages from the extension
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    // Validate API key from extension
-    const authHeader = request.headers.get("Authorization");
-    const apiKey = authHeader?.replace("Bearer ", "");
-    
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key required" },
-        { status: 401 }
-      );
-    }
     
     const body = await request.json();
     const { source, messages, syncedAt } = body;
@@ -87,16 +81,10 @@ export async function POST(request: NextRequest) {
  * Retrieve synced messages for a conversation
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    const authHeader = request.headers.get("Authorization");
-    const apiKey = authHeader?.replace("Bearer ", "");
-    
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key required" },
-        { status: 401 }
-      );
-    }
     
     const { searchParams } = new URL(request.url);
     const conversationWith = searchParams.get("conversationWith");

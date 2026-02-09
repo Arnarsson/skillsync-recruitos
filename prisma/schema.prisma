@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model User {
@@ -78,7 +79,7 @@ model Payment {
 
 model SharedProfile {
   id            String   @id @default(cuid())
-  
+
   // Candidate info
   candidateId   String   // GitHub username or internal ID
   name          String
@@ -86,22 +87,22 @@ model SharedProfile {
   company       String?
   location      String?
   avatar        String?
-  skills        Json?    // Array of skill strings (Json for SQLite compat)
+  skills        String[]
   yearsExperience Int?
-  
+
   // Personality & Analysis (stored as JSON)
   persona       Json?    // Full persona object
   scoreBreakdown Json?   // Score breakdown object
-  keyEvidence   Json?    // Array of evidence items
-  risks         Json?    // Array of risk items
+  keyEvidence   String[]
+  risks         String[]
   alignmentScore Int     @default(0)
-  
+
   // Sharing metadata
   createdBy     String?  // User ID who created the share
   viewCount     Int      @default(0)
   isActive      Boolean  @default(true)
   expiresAt     DateTime?
-  
+
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -158,8 +159,8 @@ model Candidate {
   alignmentScore  Float?
   scoreBreakdown  Json?
   scoreConfidence String?
-  scoreDrivers    Json?     // String[] stored as Json for SQLite compat
-  scoreDrags      Json?     // String[] stored as Json for SQLite compat
+  scoreDrivers    String[]
+  scoreDrags      String[]
 
   // AI Analysis
   persona         Json?
@@ -173,10 +174,10 @@ model Candidate {
 
   // Pipeline
   pipelineStage   String    @default("sourced")
-  unlockedSteps   Json?     // Int[] stored as Json for SQLite compat
+  unlockedSteps   Int[]
   shortlistSummary String?
-  keyEvidence     Json?     // String[] stored as Json for SQLite compat
-  risks           Json?     // String[] stored as Json for SQLite compat
+  keyEvidence     String[]
+  risks           String[]
 
   // LinkedIn-specific signals
   connectionDegree   String?
@@ -200,6 +201,8 @@ model Candidate {
   @@index([pipelineStage])
   @@index([alignmentScore])
   @@index([sourceType])
+  @@index([createdAt])
+  @@index([name])
 }
 
 model CandidateNote {
@@ -207,7 +210,7 @@ model CandidateNote {
   candidateId String
   author      String
   content     String
-  tags        Json?    // String[] stored as Json for SQLite compat
+  tags        String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -237,5 +240,17 @@ model CreditLedger {
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([createdAt])
+  @@index([reason])
+}
+
+// Stripe webhook idempotency tracking
+model StripeEvent {
+  id        String   @id @default(cuid())
+  eventId   String   @unique // Stripe event ID (e.g., evt_xxx)
+  type      String           // Event type (e.g., checkout.session.completed)
+  processed Boolean  @default(true)
+  createdAt DateTime @default(now())
+
   @@index([createdAt])
 }

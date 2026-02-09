@@ -91,7 +91,7 @@ npm install
 
 # 3. Set up environment variables
 cp .env.example .env.local
-# Edit .env.local with your credentials (see DEPLOYMENT.md)
+# Edit .env.local with your credentials (see docs/DEPLOYMENT.md)
 
 # 4. Set up database
 npx prisma generate
@@ -173,7 +173,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 Stripe webhook endpoint (canonical): `/api/webhooks/stripe`
 Legacy compatibility endpoint: `/api/stripe/webhook` (deprecated, sunset December 31, 2026)
 
-**Full documentation**: See `DEPLOYMENT.md`
+**Full documentation**: See `docs/DEPLOYMENT.md`
 
 ---
 
@@ -297,9 +297,9 @@ docker-compose exec app npx prisma migrate deploy
 
 ### VPS
 
-See `DEPLOYMENT.md` for detailed VPS deployment instructions with PM2 and Nginx.
+See `docs/DEPLOYMENT.md` for detailed VPS deployment instructions with PM2 and Nginx.
 
-**Full deployment guide**: See `DEPLOYMENT.md`
+**Full deployment guide**: See `docs/DEPLOYMENT.md`
 
 ---
 

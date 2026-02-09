@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchTalentViaSERP } from "@/services/serpTalentSearch";
+import { requireAuth } from "@/lib/auth-guard";
 
 /**
  * SERP Talent Search API
@@ -8,6 +9,9 @@ import { searchTalentViaSERP } from "@/services/serpTalentSearch";
  * Best for niche/specialized queries where GitHub/LinkedIn have limited coverage
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("q");
   const location = searchParams.get("location") || undefined;

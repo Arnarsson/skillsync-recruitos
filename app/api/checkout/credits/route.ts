@@ -4,10 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { stripe, createCustomer } from "@/lib/stripe";
 import { getCreditPackage, CREDIT_PACKAGES } from "@/lib/credit-packages";
 import { prisma } from "@/lib/db";
-
-interface CreditCheckoutRequest {
-  packageId: string;
-}
+import { creditCheckoutSchema } from "@/lib/validation/apiSchemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,8 +25,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: CreditCheckoutRequest = await request.json();
-    const { packageId } = body;
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    const parsed = creditCheckoutSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { packageId } = parsed.data;
 
     // Validate package
     const pkg = getCreditPackage(packageId);

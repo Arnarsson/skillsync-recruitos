@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import dns from "dns";
 import { promisify } from "util";
+import { requireAuth } from "@/lib/auth-guard";
 
 const resolveMx = promisify(dns.resolveMx);
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
 
 // Known disposable email domains
 const DISPOSABLE_DOMAINS = new Set([
@@ -53,6 +44,9 @@ async function checkMxRecord(domain: string): Promise<boolean> {
  * Free email verification: MX check + disposable detection + pattern scoring
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { email, name, company } = body;
@@ -60,7 +54,7 @@ export async function POST(request: NextRequest) {
     if (!email) {
       return NextResponse.json(
         { error: "Email is required" },
-        { status: 400, headers: corsHeaders }
+        { status: 400 }
       );
     }
     
@@ -70,13 +64,13 @@ export async function POST(request: NextRequest) {
       success: true,
       verification: result,
       source: "free",
-    }, { headers: corsHeaders });
+    });
     
   } catch (error: any) {
     console.error("[Verify] Error:", error);
     return NextResponse.json(
       { error: "Verification failed", details: error?.message },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }
@@ -181,13 +175,16 @@ function calculatePatternScore(localPart: string, domain: string, name?: string,
  * Quick verification check
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
   
   if (!email) {
     return NextResponse.json(
       { error: "email query param is required" },
-      { status: 400, headers: corsHeaders }
+      { status: 400 }
     );
   }
   
@@ -196,5 +193,5 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     verification: result,
-  }, { headers: corsHeaders });
+  });
 }

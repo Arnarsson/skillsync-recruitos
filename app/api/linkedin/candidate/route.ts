@@ -1,39 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-
-// CORS headers for extension
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-// Handle OPTIONS preflight
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireAuth } from "@/lib/auth-guard";
+import { linkedinCandidateSchema } from "@/lib/validation/apiSchemas";
 
 /**
  * POST /api/linkedin/candidate
  * Receives candidate profile data from the LinkedIn extension
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    // For demo/testing: accept requests without API key
-    // TODO: Add proper auth later
-    const authHeader = request.headers.get("Authorization");
-    const apiKey = authHeader?.replace("Bearer ", "") || "demo";
-
-    const body = await request.json();
-    const { source, profile, capturedAt } = body;
-
-    if (!profile || !profile.linkedinId) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "Profile data with linkedinId required" },
+        { error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
+
+    const parsed = linkedinCandidateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const body = parsed.data;
+    const { profile, capturedAt } = body;
 
     // Build the advancedProfile JSON for fields that don't have dedicated columns
     const advancedProfile: Record<string, Prisma.InputJsonValue> = {};
@@ -108,14 +113,14 @@ export async function POST(request: NextRequest) {
       },
       isDuplicate: !isNew,
       persisted: true,
-    }, { headers: corsHeaders });
+    });
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[LinkedIn Extension] Candidate error:", error);
     return NextResponse.json(
       { error: "Failed to process candidate", details: message },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }
@@ -125,6 +130,9 @@ export async function POST(request: NextRequest) {
  * List all captures or check if a candidate exists
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { searchParams } = new URL(request.url);
     const linkedinId = searchParams.get("linkedinId");
@@ -139,7 +147,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         exists: !!candidate,
         candidate: candidate || null,
-      }, { headers: corsHeaders });
+      });
     }
 
     // Get all LinkedIn candidates with pagination
@@ -161,13 +169,13 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       persisted: true,
-    }, { headers: corsHeaders });
+    });
 
   } catch (error) {
     console.error("[LinkedIn Extension] Candidate lookup error:", error);
     return NextResponse.json(
       { error: "Failed to lookup candidate" },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }

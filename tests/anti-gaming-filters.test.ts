@@ -103,23 +103,33 @@ describe('Anti-Gaming Filters', () => {
 
   describe('detectCommitBursts', () => {
     it('should detect suspicious commit bursts', async () => {
-      const events = [
-        {
+      // Create events with many normal days (1-3 commits each) plus burst days
+      // We need burst days to exceed 5x average AND >20 commits
+      // With 20 normal days (~2 commits each = 40) + 2 burst days (200 each = 400)
+      // Total = 440, days = 22, avg = 20. 5x avg = 100. 200 > 100 ✓ and > 20 ✓
+      const events: Array<{ type: string; created_at: string; payload: { commits: object[] } }> = [];
+
+      // 20 normal days with 1-3 commits each
+      for (let day = 1; day <= 20; day++) {
+        const dd = String(day).padStart(2, '0');
+        events.push({
           type: 'PushEvent',
-          created_at: '2024-01-15T10:00:00Z',
-          payload: { commits: new Array(50).fill({}) }, // 50 commits in one day
-        },
-        {
-          type: 'PushEvent',
-          created_at: '2024-01-15T14:00:00Z',
-          payload: { commits: new Array(60).fill({}) }, // 60 more commits same day
-        },
-        {
-          type: 'PushEvent',
-          created_at: '2024-01-16T10:00:00Z',
-          payload: { commits: [{}] }, // 1 commit next day
-        },
-      ];
+          created_at: `2024-01-${dd}T10:00:00Z`,
+          payload: { commits: new Array(2).fill({}) },
+        });
+      }
+
+      // 2 burst days with 200 commits each
+      events.push({
+        type: 'PushEvent',
+        created_at: '2024-01-25T10:00:00Z',
+        payload: { commits: new Array(200).fill({}) },
+      });
+      events.push({
+        type: 'PushEvent',
+        created_at: '2024-01-26T10:00:00Z',
+        payload: { commits: new Array(200).fill({}) },
+      });
 
       const result = await detectCommitBursts(events);
       expect(result.hasBursts).toBe(true);

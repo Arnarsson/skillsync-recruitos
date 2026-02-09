@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 import {
   buildSystemPrompt,
   determinePhase,
@@ -108,6 +109,9 @@ function mergeSpec(
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const apiKey = getApiKey();
     if (!apiKey) {

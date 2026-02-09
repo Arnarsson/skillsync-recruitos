@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
+import { outreachGenerateSchema } from "@/lib/validation/apiSchemas";
 
 export const maxDuration = 60;
 
@@ -156,8 +158,34 @@ export interface OutreachVariant {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    const body = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    const parsed = outreachGenerateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       candidateName,
       candidateRole,
@@ -167,15 +195,8 @@ export async function POST(request: NextRequest) {
       connectionPath,
       sharedContext,
       personaArchetype,
-      multiVariant = false // New flag to request all 3 variants
-    } = body;
-
-    if (!candidateName || !jobContext) {
-      return NextResponse.json(
-        { error: "Candidate name and job context are required" },
-        { status: 400 }
-      );
-    }
+      multiVariant,
+    } = parsed.data;
 
     // Build enriched instructions with connection context
     let enrichedInstructions = instructions || "Write a professional, personalized outreach message.";

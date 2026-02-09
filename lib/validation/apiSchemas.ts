@@ -1,6 +1,131 @@
 import { z } from 'zod';
 
-// Common validation schemas
+// ============================================================
+// Reusable primitives
+// ============================================================
+
+const nonEmptyString = z.string().min(1).trim();
+const optionalString = z.string().optional();
+const sourceTypeEnum = z.enum(['GITHUB', 'LINKEDIN', 'MANUAL']);
+
+// ============================================================
+// Candidate schemas
+// ============================================================
+
+export const candidateCreateSchema = z.object({
+  name: nonEmptyString,
+  headline: optionalString,
+  currentRole: optionalString,
+  company: optionalString,
+  location: optionalString,
+  avatar: z.string().url().optional().or(z.literal('')).optional(),
+
+  sourceType: sourceTypeEnum,
+  githubUsername: optionalString,
+  linkedinId: optionalString,
+  linkedinUrl: z.string().url().optional().or(z.literal('')).optional(),
+  sourceUrl: z.string().url().optional().or(z.literal('')).optional(),
+
+  yearsExperience: z.number().int().nonnegative().optional().nullable(),
+  experience: z.unknown().optional(),
+  education: z.unknown().optional(),
+  certifications: z.unknown().optional(),
+  spokenLanguages: z.unknown().optional(),
+
+  skills: z.unknown().optional(),
+  codingLanguages: z.unknown().optional(),
+
+  alignmentScore: z.number().min(0).max(100).optional().nullable(),
+  scoreBreakdown: z.unknown().optional(),
+  scoreConfidence: optionalString,
+  scoreDrivers: z.array(z.string()).optional(),
+  scoreDrags: z.array(z.string()).optional(),
+
+  persona: z.unknown().optional(),
+  deepAnalysis: optionalString,
+  companyMatch: z.unknown().optional(),
+  indicators: z.unknown().optional(),
+  interviewGuide: z.unknown().optional(),
+  networkDossier: z.unknown().optional(),
+  advancedProfile: z.unknown().optional(),
+  buildprint: z.unknown().optional(),
+
+  pipelineStage: z.string().optional().default('sourced'),
+  unlockedSteps: z.array(z.number().int()).optional(),
+  shortlistSummary: optionalString,
+  keyEvidence: z.array(z.string()).optional(),
+  risks: z.array(z.string()).optional(),
+
+  connectionDegree: optionalString,
+  mutualConnections: optionalString,
+  openToWork: z.boolean().optional().nullable(),
+  isPremium: z.boolean().optional().nullable(),
+  rawProfileText: optionalString,
+
+  userId: z.string().optional().nullable(),
+  capturedAt: z.string().datetime().optional(),
+});
+
+export const candidateUpdateSchema = candidateCreateSchema.partial();
+
+export const candidateImportSchema = z.object({
+  source: z.enum(['localStorage', 'vercelKV']),
+  candidates: z.array(z.record(z.string(), z.unknown())).min(0),
+  userId: z.string().optional().nullable(),
+});
+
+export const candidateNoteCreateSchema = z.object({
+  author: nonEmptyString,
+  content: nonEmptyString,
+  tags: z.array(z.string()).optional(),
+});
+
+// ============================================================
+// LinkedIn schemas
+// ============================================================
+
+export const linkedinCandidateSchema = z.object({
+  source: z.string().optional(),
+  capturedAt: z.string().optional(),
+  profile: z.object({
+    linkedinId: nonEmptyString,
+    name: z.string().optional(),
+    headline: z.string().optional(),
+    currentCompany: z.string().optional(),
+    location: z.string().optional(),
+    photoUrl: z.string().optional(),
+    url: z.string().optional(),
+    about: z.string().optional(),
+    experience: z.unknown().optional(),
+    education: z.unknown().optional(),
+    skills: z.unknown().optional(),
+    languages: z.unknown().optional(),
+    certifications: z.unknown().optional(),
+    connectionDegree: z.string().optional(),
+    mutualConnections: z.string().optional(),
+    openToWork: z.boolean().optional(),
+    isPremium: z.boolean().optional(),
+    connectionCount: z.number().optional(),
+    followers: z.number().optional(),
+    isCreator: z.boolean().optional(),
+  }),
+});
+
+export const linkedinEnrichSchema = z.object({
+  name: nonEmptyString,
+  company: z.string().optional(),
+  linkedinId: z.string().optional(),
+});
+
+export const linkedinNoteSchema = z.object({
+  candidateId: nonEmptyString,
+  content: nonEmptyString,
+  tags: z.array(z.string()).optional(),
+});
+
+// ============================================================
+// GitHub schemas
+// ============================================================
 
 export const githubSearchSchema = z.object({
   q: z.string().min(1, 'Query parameter is required'),
@@ -8,10 +133,58 @@ export const githubSearchSchema = z.object({
   perPage: z.coerce.number().int().positive().max(100).optional().default(10),
 });
 
+export const githubDeepSchema = z.object({
+  username: nonEmptyString,
+  jobContext: z.string().optional(),
+});
+
+export const githubQualitySchema = z.object({
+  username: nonEmptyString,
+});
+
+// ============================================================
+// Credit schemas
+// ============================================================
+
 export const creditActionSchema = z.object({
   action: z.literal('deduct'),
   username: z.string().min(1, 'Username is required'),
 });
+
+export const creditConsumeSchema = z.object({
+  candidateUsername: nonEmptyString,
+});
+
+export const creditCheckoutSchema = z.object({
+  packageId: nonEmptyString,
+});
+
+// ============================================================
+// Outreach schemas
+// ============================================================
+
+export const outreachGenerateSchema = z.object({
+  candidateName: nonEmptyString,
+  candidateRole: z.string().optional(),
+  company: z.string().optional(),
+  jobContext: nonEmptyString,
+  instructions: z.string().optional(),
+  connectionPath: z.string().optional(),
+  sharedContext: z.array(z.string()).optional(),
+  personaArchetype: z.string().optional(),
+  multiVariant: z.boolean().optional().default(false),
+});
+
+export const outreachSendSchema = z.object({
+  to: z.string().email('A valid email address is required'),
+  subject: nonEmptyString,
+  body: nonEmptyString,
+  candidateId: z.string().optional(),
+});
+
+// ============================================================
+// Profile schemas
+// ============================================================
 
 export const profileAnalyzeSchema = z.object({
   candidateId: z.string().min(1),
@@ -23,6 +196,34 @@ export const profileAnalyzeSchema = z.object({
   isShortlisted: z.boolean().optional(),
   enrichmentData: z.any().optional(),
   useComparativeAnalysis: z.boolean().optional().default(true),
+});
+
+export const sharedProfileCreateSchema = z.object({
+  candidateId: nonEmptyString,
+  name: nonEmptyString,
+  currentRole: z.string().optional(),
+  company: z.string().optional(),
+  location: z.string().optional(),
+  avatar: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  yearsExperience: z.number().int().optional(),
+  alignmentScore: z.number().int().min(0).max(100).optional().default(0),
+  persona: z.unknown().optional(),
+  keyEvidence: z.unknown().optional(),
+  keyEvidenceWithSources: z.unknown().optional(),
+  risks: z.unknown().optional(),
+  risksWithSources: z.unknown().optional(),
+  scoreBreakdown: z.unknown().optional(),
+  createdBy: z.string().optional(),
+});
+
+// ============================================================
+// Team schemas
+// ============================================================
+
+export const teamCreateSchema = z.object({
+  name: nonEmptyString,
+  description: z.string().optional(),
 });
 
 export const teamMemberSchema = z.object({
@@ -37,13 +238,46 @@ export const pipelineSchema = z.object({
   stages: z.array(z.string()).optional(),
 });
 
+// ============================================================
+// Analytics schemas
+// ============================================================
+
+export const analyticsExportSchema = z.object({
+  format: z.enum(['csv', 'json']).optional().default('json'),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+});
+
+// ============================================================
+// Checkout schemas
+// ============================================================
+
+export const stripeCheckoutSchema = z.object({
+  packageId: nonEmptyString,
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+});
+
+// ============================================================
+// Auth schemas
+// ============================================================
+
+export const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  name: z.string().optional(),
+});
+
+// ============================================================
 // Environment variables schema
+// ============================================================
+
 export const envSchema = z.object({
   // Required
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().min(1),
   NEXTAUTH_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string().min(32),
-  
+
   // Optional but recommended
   GEMINI_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
@@ -51,11 +285,11 @@ export const envSchema = z.object({
   FIRECRAWL_API_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
-  
+
   // OAuth
   GITHUB_ID: z.string().optional(),
   GITHUB_SECRET: z.string().optional(),
-  
+
   NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
 });
 
@@ -73,21 +307,21 @@ export function validateEnv(processEnv: NodeJS.ProcessEnv): EnvConfig {
       const missingVars = error.issues
         .filter(e => e.code === 'invalid_type' && (e as any).received === 'undefined')
         .map(e => e.path.join('.'));
-      
+
       const invalidVars = error.issues
         .filter(e => e.code !== 'invalid_type' || (e as any).received !== 'undefined')
         .map(e => `${e.path.join('.')}: ${e.message}`);
-      
-      let errorMessage = '❌ Environment variable validation failed:\n';
-      
+
+      let errorMessage = 'Environment variable validation failed:\n';
+
       if (missingVars.length > 0) {
         errorMessage += `\nMissing required variables:\n${missingVars.map(v => `  - ${v}`).join('\n')}`;
       }
-      
+
       if (invalidVars.length > 0) {
         errorMessage += `\nInvalid variables:\n${invalidVars.map(v => `  - ${v}`).join('\n')}`;
       }
-      
+
       console.error(errorMessage);
       throw error;
     }

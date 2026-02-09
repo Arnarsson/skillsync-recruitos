@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 // Bright Data dataset IDs
 const LINKEDIN_PEOPLE_SEARCH_DATASET = "gd_l1viktl72bvl7bjuj0"; // LinkedIn People Search
@@ -26,6 +27,9 @@ export interface LinkedInSearchResponse {
  * Uses the same pattern as: linkedin.com/search/results/people/?keywords=X
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { keywords, location, page = 1 } = body;
@@ -91,6 +95,9 @@ export async function POST(request: NextRequest) {
  * Check status of LinkedIn search
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { searchParams } = new URL(request.url);
     const snapshotId = searchParams.get("snapshotId");

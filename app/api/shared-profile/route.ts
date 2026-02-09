@@ -1,24 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSharedProfile, SharedProfileData } from "@/lib/shared-profiles";
+import { requireAuth } from "@/lib/auth-guard";
+import { sharedProfileCreateSchema } from "@/lib/validation/apiSchemas";
 
 /**
  * POST /api/shared-profile
- * 
+ *
  * Creates a shareable personality profile link.
- * No auth required to CREATE — the data is provided by the caller.
- * (In production, add auth to prevent abuse.)
+ * Requires authentication to prevent abuse.
  */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
 
-    // Validate required fields
-    if (!body.candidateId || !body.name) {
+  try {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "candidateId and name are required" },
+        { error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
+
+    const parsed = sharedProfileCreateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const body = parsed.data;
 
     const profileData: SharedProfileData = {
       candidateId: body.candidateId,

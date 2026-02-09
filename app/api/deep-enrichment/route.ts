@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 import {
   enrichFromGitHub,
   findLinkedInProfile,
@@ -25,6 +26,9 @@ interface DeepEnrichmentRequest {
  * Returns comprehensive profile data for deep analysis
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const startTime = Date.now();
 
   try {

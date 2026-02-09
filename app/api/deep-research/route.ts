@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-guard';
 import {
   createResearchJob,
   getResearchJob,
@@ -22,6 +23,9 @@ import type { DeepResearchQuery } from '@/types/socialMatrix';
  * }
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
 
@@ -95,6 +99,9 @@ export async function POST(request: NextRequest) {
  * }
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const { searchParams } = new URL(request.url);
   const jobId = searchParams.get('jobId');
 

@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getNotes, addNote, deleteNote, StoredNote } from "@/lib/storage";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireAuth } from "@/lib/auth-guard";
 
 /**
  * GET /api/linkedin/notes?linkedinId=xxx
  * Get all notes for a candidate
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const { searchParams } = new URL(request.url);
   const linkedinId = searchParams.get("linkedinId");
   
   if (!linkedinId) {
     return NextResponse.json(
       { error: "linkedinId is required" },
-      { status: 400, headers: corsHeaders }
+      { status: 400 }
     );
   }
   
@@ -33,7 +27,7 @@ export async function GET(request: NextRequest) {
     notes,
     count: notes.length,
     persisted: true,
-  }, { headers: corsHeaders });
+  });
 }
 
 /**
@@ -41,6 +35,9 @@ export async function GET(request: NextRequest) {
  * Add a note to a candidate
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { linkedinId, author, content, tags = [] } = body;
@@ -48,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (!linkedinId || !content) {
       return NextResponse.json(
         { error: "linkedinId and content are required" },
-        { status: 400, headers: corsHeaders }
+        { status: 400 }
       );
     }
     
@@ -68,12 +65,12 @@ export async function POST(request: NextRequest) {
       success,
       note,
       persisted: success,
-    }, { headers: corsHeaders });
+    });
     
   } catch (error: any) {
     return NextResponse.json(
       { error: "Failed to add note", details: error?.message },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }
@@ -83,6 +80,9 @@ export async function POST(request: NextRequest) {
  * Delete a note
  */
 export async function DELETE(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const { searchParams } = new URL(request.url);
   const noteId = searchParams.get("noteId");
   const linkedinId = searchParams.get("linkedinId");
@@ -90,7 +90,7 @@ export async function DELETE(request: NextRequest) {
   if (!noteId || !linkedinId) {
     return NextResponse.json(
       { error: "noteId and linkedinId are required" },
-      { status: 400, headers: corsHeaders }
+      { status: 400 }
     );
   }
   
@@ -100,5 +100,5 @@ export async function DELETE(request: NextRequest) {
     success: true,
     deleted,
     persisted: true,
-  }, { headers: corsHeaders });
+  });
 }

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { candidateCreateSchema } from "@/lib/validation/apiSchemas";
+import { requireAuth } from "@/lib/auth-guard";
 
 const VALID_ORDER_BY = ["createdAt", "alignmentScore", "name"] as const;
 const VALID_SOURCE_TYPES = ["GITHUB", "LINKEDIN", "MANUAL"] as const;
@@ -11,9 +11,11 @@ const DEFAULT_LIMIT = 50;
 
 // GET - List candidates with filtering, search, and pagination
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+    const userId = auth.user.id!;
 
     const searchParams = request.nextUrl.searchParams;
 
@@ -36,13 +38,8 @@ export async function GET(request: NextRequest) {
     const orderParam = searchParams.get("order") ?? "desc";
     const order = orderParam === "asc" ? "asc" : "desc";
 
-    // Build where clause
-    const where: Prisma.CandidateWhereInput = {};
-
-    // Scope to authenticated user when session is present
-    if (userId) {
-      where.userId = userId;
-    }
+    // Build where clause — always scope to authenticated user
+    const where: Prisma.CandidateWhereInput = { userId };
 
     // Filter by sourceType
     const sourceType = searchParams.get("sourceType");
@@ -94,36 +91,42 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new candidate
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+    const userId = auth.user.id!;
 
-    const body = await request.json();
-
-    // Validate required fields
-    if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "name is required" },
+        { error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
 
-    if (
-      !body.sourceType ||
-      !VALID_SOURCE_TYPES.includes(body.sourceType)
-    ) {
+    const parsed = candidateCreateSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
         {
-          error: `sourceType is required and must be one of: ${VALID_SOURCE_TYPES.join(", ")}`,
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
         },
         { status: 400 }
       );
     }
 
+    const body = parsed.data;
+
     const candidate = await prisma.candidate.create({
       data: {
         // Identity
-        name: body.name.trim(),
+        name: body.name,
         headline: body.headline ?? null,
         currentRole: body.currentRole ?? null,
         company: body.company ?? null,
@@ -179,8 +182,8 @@ export async function POST(request: NextRequest) {
         isPremium: body.isPremium ?? null,
         rawProfileText: body.rawProfileText ?? null,
 
-        // User association - prefer session userId over body
-        userId: userId ?? body.userId ?? null,
+        // Always associate with authenticated user
+        userId,
 
         // Timestamps
         capturedAt: body.capturedAt ? new Date(body.capturedAt) : new Date(),

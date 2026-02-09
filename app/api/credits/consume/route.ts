@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { consumeCredit } from "@/lib/credits";
 import prisma from "@/lib/db";
+import { creditConsumeSchema } from "@/lib/validation/apiSchemas";
 
 /**
  * POST /api/credits/consume
@@ -18,16 +19,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { candidateUsername } = (await request.json()) as {
-      candidateUsername: string;
-    };
-
-    if (!candidateUsername) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "candidateUsername is required" },
+        { error: "Invalid JSON in request body" },
         { status: 400 },
       );
     }
+
+    const parsed = creditConsumeSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 },
+      );
+    }
+
+    const { candidateUsername } = parsed.data;
 
     const githubId = (session.user as any).id?.toString();
     if (!githubId) {

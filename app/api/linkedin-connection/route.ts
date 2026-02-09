@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-guard';
 
 // BrightData API base URL
 const BRIGHTDATA_BASE_URL = 'https://api.brightdata.com/datasets/v3';
@@ -206,6 +207,9 @@ function parseLinkedInData(rawData: BrightDataRawProfile, originalUrl: string): 
  * Find connection path between recruiter and candidate
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { recruiterLinkedInUrl, candidateLinkedInUrl } = body;
@@ -349,6 +353,9 @@ export async function POST(request: NextRequest) {
  * Quick check using cached recruiter data (if available)
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const searchParams = request.nextUrl.searchParams;
   const recruiterUrl = searchParams.get('recruiter');
   const candidateUrl = searchParams.get('candidate');

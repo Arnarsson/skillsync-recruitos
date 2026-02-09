@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 // Bright Data SERP API endpoint (new format)
 const BRIGHTDATA_SERP_URL = "https://api.brightdata.com/request";
@@ -21,6 +22,9 @@ export interface SerpResponse {
  * Useful for finding developers beyond GitHub
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { query, location, num = 10 } = body;

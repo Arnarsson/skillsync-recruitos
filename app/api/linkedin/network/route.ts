@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireAuth } from "@/lib/auth-guard";
 
 interface CapturedProfile {
   id: string;
@@ -203,6 +194,9 @@ function analyzeNetwork(profiles: CapturedProfile[]): NetworkAnalysis {
  * Analyze network relationships from captured profiles
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { profiles } = body;
@@ -210,7 +204,7 @@ export async function POST(request: NextRequest) {
     if (!profiles || !Array.isArray(profiles)) {
       return NextResponse.json(
         { error: "profiles array is required" },
-        { status: 400, headers: corsHeaders }
+        { status: 400 }
       );
     }
     
@@ -221,13 +215,13 @@ export async function POST(request: NextRequest) {
       analysis,
       profileCount: profiles.length,
       analyzedAt: new Date().toISOString(),
-    }, { headers: corsHeaders });
+    });
     
   } catch (error: any) {
     console.error('[Network] Analysis error:', error);
     return NextResponse.json(
       { error: "Network analysis failed", details: error?.message },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }

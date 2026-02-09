@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAIPsychometricProfile, analyzeGitHubSignals } from "@/lib/psychometrics";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { username } = body;

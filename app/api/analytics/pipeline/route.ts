@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
 
 // Pipeline stage ordering for funnel
 const PIPELINE_STAGES = [
@@ -35,6 +36,9 @@ const SCORE_BUCKETS = [
 ] as const;
 
 export async function GET() {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const candidates = await prisma.candidate.findMany({
       select: {
