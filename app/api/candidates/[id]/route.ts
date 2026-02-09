@@ -172,11 +172,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (!existing) {
       return NextResponse.json(
-            { error: "Candidate not found" },
-            { status: 404 }
-          );
-        }
-      }
+        { error: "Candidate not found" },
+        { status: 404 }
+      );
+    }
 
     const candidate = await prisma.candidate.update({
       where: { id },

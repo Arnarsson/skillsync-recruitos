@@ -82,9 +82,9 @@ function parseSkills(raw: unknown): string[] {
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+    const userId = auth.user.id;
 
     // Build where clause scoped to user if authenticated
     const where: { userId?: string } = {};
