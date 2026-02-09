@@ -62,6 +62,20 @@ interface ExportResult {
   details?: string;
 }
 
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+
+export class TeamTailorApiError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+    public readonly responseBody?: unknown,
+  ) {
+    super(message);
+    this.name = 'TeamTailorApiError';
+  }
+}
+
 export class TeamTailorService {
   private apiToken: string;
   private baseUrl: string;
@@ -71,6 +85,48 @@ export class TeamTailorService {
     this.apiToken = config.apiToken;
     this.baseUrl = config.baseUrl || 'https://api.teamtailor.com';
     this.apiVersion = config.apiVersion || 'v1';
+  }
+
+  /**
+   * Make an API request with retry logic and exponential backoff.
+   * Retries on 429 (rate limit), 502, 503, 504 errors.
+   */
+  private async fetchWithRetry(
+    url: string,
+    options: RequestInit,
+    retries = MAX_RETRIES,
+  ): Promise<Response> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const response = await fetch(url, options);
+
+      // Success or non-retryable client error — return immediately
+      if (response.ok || (response.status >= 400 && response.status < 429)) {
+        return response;
+      }
+
+      // Retryable errors: 429, 502, 503, 504
+      const retryable = [429, 502, 503, 504].includes(response.status);
+      if (!retryable || attempt === retries) {
+        return response;
+      }
+
+      // Calculate backoff: use Retry-After header if present (429), else exponential
+      let delayMs: number;
+      const retryAfter = response.headers.get('Retry-After');
+      if (retryAfter && response.status === 429) {
+        delayMs = parseInt(retryAfter, 10) * 1000 || INITIAL_BACKOFF_MS;
+      } else {
+        delayMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+      }
+
+      console.warn(
+        `[TeamTailor] Request failed with ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${retries})`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    // Unreachable, but TypeScript needs it
+    throw new Error('[TeamTailor] Exhausted all retries');
   }
 
   /**
@@ -99,7 +155,7 @@ export class TeamTailorService {
 
       const teamTailorCandidate = this.transformCandidate(candidate, { ...options, email: options.email! });
       
-      const response = await fetch(`${this.baseUrl}/${this.apiVersion}/candidates`, {
+      const response = await this.fetchWithRetry(`${this.baseUrl}/${this.apiVersion}/candidates`, {
         method: 'POST',
         headers: {
           'Authorization': `Token token=${this.apiToken}`,
@@ -111,12 +167,11 @@ export class TeamTailorService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        return {
-          success: false,
-          candidateId: candidate.id,
-          error: `TEAM_TAILOR_API_ERROR_${response.status}`,
-          details: JSON.stringify(errorData),
-        };
+        throw new TeamTailorApiError(
+          `Team Tailor API returned ${response.status}`,
+          response.status,
+          errorData,
+        );
       }
 
       const result: TeamTailorResponse = await response.json();
@@ -129,6 +184,14 @@ export class TeamTailorService {
       };
 
     } catch (error) {
+      if (error instanceof TeamTailorApiError) {
+        return {
+          success: false,
+          candidateId: candidate.id,
+          error: `TEAM_TAILOR_API_ERROR_${error.statusCode}`,
+          details: JSON.stringify(error.responseBody),
+        };
+      }
       return {
         success: false,
         candidateId: candidate.id,
@@ -275,7 +338,7 @@ export class TeamTailorService {
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/${this.apiVersion}/jobs?page[size]=1`, {
+      const response = await this.fetchWithRetry(`${this.baseUrl}/${this.apiVersion}/jobs?page[size]=1`, {
         headers: {
           'Authorization': `Token token=${this.apiToken}`,
           'X-Api-Version': this.apiVersion,

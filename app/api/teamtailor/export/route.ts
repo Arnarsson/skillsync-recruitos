@@ -12,17 +12,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createTeamTailorService } from '@/services/teamTailorService';
 import { Candidate } from '@/types';
-
-interface ExportRequest {
-  candidates: Array<{
-    candidate: Candidate;
-    email: string; // Required by Team Tailor
-    phone?: string;
-  }>;
-  jobId?: string; // Team Tailor job ID
-  includeEvidence?: boolean;
-  tags?: string[];
-}
+import { teamTailorExportSchema } from '@/lib/validation/apiSchemas';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,28 +25,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse request body
-    const body: ExportRequest = await request.json();
-
-    // Validate request
-    if (!body.candidates || !Array.isArray(body.candidates) || body.candidates.length === 0) {
+    // Parse and validate request body
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: 'Invalid request: candidates array required' },
+        { error: 'Invalid JSON in request body' },
         { status: 400 }
       );
     }
 
-    // Validate all candidates have required email
-    const missingEmail = body.candidates.find(c => !c.email);
-    if (missingEmail) {
+    const parsed = teamTailorExportSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
         {
-          error: 'Invalid request: all candidates must have email',
-          candidateId: missingEmail.candidate.id,
+          error: 'Validation failed',
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join('.'),
+            message: e.message,
+          })),
         },
         { status: 400 }
       );
     }
+
+    const body = parsed.data;
 
     // Initialize Team Tailor service
     const teamTailorService = createTeamTailorService();
@@ -85,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Export candidates
     const results = await teamTailorService.exportCandidates(
       body.candidates.map(c => ({
-        ...c.candidate,
+        ...(c.candidate as unknown as Candidate),
         email: c.email,
         phone: c.phone,
       })),

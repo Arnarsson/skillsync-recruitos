@@ -239,6 +239,21 @@ export const pipelineSchema = z.object({
 });
 
 // ============================================================
+// TeamTailor schemas
+// ============================================================
+
+export const teamTailorExportSchema = z.object({
+  candidates: z.array(z.object({
+    candidate: z.record(z.string(), z.unknown()),
+    email: z.string().email('Each candidate must have a valid email'),
+    phone: z.string().optional(),
+  })).min(1, 'At least one candidate is required'),
+  jobId: z.string().optional(),
+  includeEvidence: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+// ============================================================
 // Analytics schemas
 // ============================================================
 
