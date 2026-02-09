@@ -289,7 +289,7 @@ export const signupSchema = z.object({
 
 export const envSchema = z.object({
   // Required
-  DATABASE_URL: z.string().min(1),
+  POSTGRES_PRISMA_URL: z.string().min(1),
   NEXTAUTH_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string().min(32),
 

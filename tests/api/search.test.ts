@@ -11,8 +11,11 @@ vi.mock('@/lib/github', () => ({
   searchDevelopers: vi.fn(),
 }));
 
-vi.mock('next-auth', () => ({
-  getServerSession: vi.fn(() => Promise.resolve(null)),
+vi.mock('@/lib/auth-guard', () => ({
+  requireAuth: vi.fn(() => Promise.resolve({
+    session: { user: { id: 'test-user', email: 'test@test.com' } },
+    user: { id: 'test-user', email: 'test@test.com' },
+  })),
 }));
 
 vi.mock('@/lib/auth', () => ({

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth-guard";
 import { searchDevelopers } from "@/lib/github";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("q");
   const page = parseInt(searchParams.get("page") || "1");
@@ -17,9 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Get session for authenticated requests (higher rate limits)
-    const session = await getServerSession(authOptions);
-    const accessToken = (session as any)?.accessToken;
+    const accessToken = (auth.session as any)?.accessToken;
 
     // Search GitHub
     const results = await searchDevelopers(query, accessToken, page, perPage);

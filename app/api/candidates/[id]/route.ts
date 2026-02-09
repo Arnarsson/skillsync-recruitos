@@ -12,16 +12,16 @@ interface RouteParams {
 
 // GET - Get single candidate with notes
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ?? null;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
+    const userId = session.user.id;
     const { id } = await params;
 
-    const where: Prisma.CandidateWhereInput = { id };
-    if (userId) {
-      where.userId = userId;
-    }
+    const where: Prisma.CandidateWhereInput = { id, userId };
 
     const candidate = await prisma.candidate.findFirst({
       where,
