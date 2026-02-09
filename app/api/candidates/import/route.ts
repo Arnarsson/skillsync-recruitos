@@ -394,12 +394,12 @@ export async function POST(request: NextRequest) {
     let result: ImportResult;
     if (source === "localStorage") {
       result = await processLocalStorageBatch(
-        candidates as LocalStorageCandidate[],
+        candidates as unknown as LocalStorageCandidate[],
         userId
       );
     } else {
       result = await processVercelKVBatch(
-        candidates as VercelKVCandidate[],
+        candidates as unknown as VercelKVCandidate[],
         userId
       );
     }

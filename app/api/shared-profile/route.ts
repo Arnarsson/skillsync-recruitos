@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     const body = parsed.data;
 
-    const profileData: SharedProfileData = {
+    const profileData = {
       candidateId: body.candidateId,
       name: body.name,
       currentRole: body.currentRole,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       keyEvidence: body.keyEvidence || body.keyEvidenceWithSources,
       risks: body.risks || body.risksWithSources,
       scoreBreakdown: body.scoreBreakdown,
-    };
+    } as SharedProfileData;
 
     const id = await createSharedProfile(profileData, body.createdBy);
 

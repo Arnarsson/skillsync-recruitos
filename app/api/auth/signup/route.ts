@@ -1,33 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { signupSchema } from "@/lib/validation/apiSchemas";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, email, password } = body;
-
-    // Validation
-    if (!email || !password) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "Email og adgangskode er påkrævet" },
+        { error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
 
-    if (typeof email !== "string" || !email.includes("@")) {
+    const parsed = signupSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Ugyldig email-adresse" },
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
-    if (typeof password !== "string" || password.length < 8) {
-      return NextResponse.json(
-        { error: "Adgangskode skal være mindst 8 tegn" },
-        { status: 400 }
-      );
-    }
+    const { name, email, password } = parsed.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({

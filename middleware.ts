@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRateLimitForPath } from "@/lib/rate-limit";
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = new Set([
@@ -45,7 +46,24 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
 }
 
 function getSecurityHeaders(): Record<string, string> {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://sourcetrace.vercel.app",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
+    "img-src 'self' data: https://avatars.githubusercontent.com https://api.dicebear.com",
+    "connect-src 'self' https://api.github.com https://api.firecrawl.dev https://api.brightdata.com https://api.teamtailor.com https://generativelanguage.googleapis.com https://openrouter.ai https://*.stripe.com https://*.ingest.sentry.io https://*.supabase.co wss://*.supabase.co https://sourcetrace.vercel.app",
+    "frame-src 'self'",
+    "frame-ancestors 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+
   return {
+    "Content-Security-Policy": csp,
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -64,8 +82,15 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 204, headers: corsHeaders });
   }
 
-  // For API routes: add CORS + security headers to response
+  // For API routes: rate limit, then add CORS + security headers
   if (pathname.startsWith("/api/")) {
+    // Rate limit check (skip health check and NextAuth internals)
+    if (!pathname.startsWith("/api/auth/") && pathname !== "/api/health") {
+      const rateLimitConfig = getRateLimitForPath(pathname);
+      const rateLimited = checkRateLimit(request, rateLimitConfig);
+      if (rateLimited) return rateLimited;
+    }
+
     const response = NextResponse.next();
     const corsHeaders = getCorsHeaders(request);
     for (const [key, value] of Object.entries(corsHeaders)) {
