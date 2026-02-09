@@ -68,6 +68,7 @@ export function ChatInterface({
         const response = await fetch("/api/calibration/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include", // Send auth cookies
           body: JSON.stringify({
             messages,
             userMessage: text.trim(),
