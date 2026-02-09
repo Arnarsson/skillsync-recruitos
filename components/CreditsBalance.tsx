@@ -31,7 +31,9 @@ export default function CreditsBalance({
 
   const fetchBalance = async () => {
     try {
-      const response = await fetch("/api/credits");
+      const response = await fetch("/api/credits", {
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         setCredits(data.credits || 0);

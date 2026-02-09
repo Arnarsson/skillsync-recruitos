@@ -49,7 +49,9 @@ export function TeamTailorExport({ candidates, onExportComplete }: TeamTailorExp
 
   const checkIntegrationStatus = async () => {
     try {
-      const response = await fetch('/api/teamtailor/export');
+      const response = await fetch('/api/teamtailor/export', {
+        credentials: 'include',
+      });
       const data = await response.json();
       setIntegrationStatus(data);
       return data.available;
@@ -107,6 +109,7 @@ export function TeamTailorExport({ candidates, onExportComplete }: TeamTailorExp
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(exportPayload),
       });
 

@@ -40,7 +40,8 @@ export function DemoResetButton() {
       try {
         const response = await fetch("/api/demo/reset", {
           method: "POST",
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         
         if (response.ok) {

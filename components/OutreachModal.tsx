@@ -85,6 +85,7 @@ export default function OutreachModal({
       const response = await fetch("/api/outreach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           candidateName: candidate.name,
           candidateRole: candidate.currentRole,
