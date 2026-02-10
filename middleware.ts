@@ -109,15 +109,21 @@ export async function middleware(request: NextRequest) {
   });
 
   const isAuthenticated = !!token;
+  const isDemoMode = request.cookies.get("recruitos_demo")?.value === "true";
 
   // Redirect authenticated users away from auth pages
-  if (isAuthenticated && authRoutes.some((route) => pathname === route)) {
+  if (
+    (isAuthenticated || isDemoMode) &&
+    authRoutes.some((route) => pathname === route)
+  ) {
     return NextResponse.redirect(new URL("/search", request.url));
   }
 
   // Redirect unauthenticated users to login for protected routes
+  // Demo mode users with the recruitos_demo cookie bypass this check
   if (
     !isAuthenticated &&
+    !isDemoMode &&
     protectedRoutes.some((route) => pathname.startsWith(route))
   ) {
     const loginUrl = new URL("/login", request.url);

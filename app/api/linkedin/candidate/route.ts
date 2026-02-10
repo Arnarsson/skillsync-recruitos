@@ -71,9 +71,16 @@ export async function POST(request: NextRequest) {
       capturedAt: capturedAt ? new Date(capturedAt as string) : new Date(),
     };
 
-    // Check for existing candidate (findFirst because userId can be null)
+    // Check for existing candidate
+    // Use sourceType and linkedinId to find public candidates (userId = null)
+    // Order by createdAt to get the oldest (first created) if duplicates exist
     const existing = await prisma.candidate.findFirst({
-      where: { linkedinId: profile.linkedinId, userId: null },
+      where: { 
+        linkedinId: profile.linkedinId,
+        sourceType: "LINKEDIN",
+        userId: null
+      },
+      orderBy: { createdAt: 'asc' }
     });
 
     let candidate;
@@ -81,24 +88,68 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing candidate
-      candidate = await prisma.candidate.update({
-        where: { id: existing.id },
-        data: {
-          ...candidateFields,
-          updatedAt: new Date(),
-        },
-      });
-      isNew = false;
+      try {
+        candidate = await prisma.candidate.update({
+          where: { id: existing.id },
+          data: {
+            ...candidateFields,
+            updatedAt: new Date(),
+          },
+        });
+        isNew = false;
+      } catch (updateError) {
+        // If update fails (rare race condition), try to fetch again
+        console.error("[LinkedIn] Update failed, refetching:", updateError);
+        const refetch = await prisma.candidate.findUnique({
+          where: { id: existing.id }
+        });
+        if (!refetch) {
+          // Record was deleted, create new
+          throw new Error("Candidate record vanished during update");
+        }
+        throw updateError;
+      }
     } else {
       // Create new candidate
-      candidate = await prisma.candidate.create({
-        data: {
-          ...candidateFields,
-          sourceType: "LINKEDIN",
-          userId: null,
-        },
-      });
-      isNew = true;
+      try {
+        candidate = await prisma.candidate.create({
+          data: {
+            ...candidateFields,
+            sourceType: "LINKEDIN",
+            userId: null,
+          },
+        });
+        isNew = true;
+      } catch (createError: any) {
+        // Handle unique constraint violation (P2002)
+        if (createError?.code === 'P2002') {
+          // Another request created the record between findFirst and create
+          // Fetch it and update instead
+          console.log("[LinkedIn] Race condition detected, fetching existing record");
+          const raceExisting = await prisma.candidate.findFirst({
+            where: { 
+              linkedinId: profile.linkedinId,
+              sourceType: "LINKEDIN",
+              userId: null
+            }
+          });
+          if (raceExisting) {
+            candidate = await prisma.candidate.update({
+              where: { id: raceExisting.id },
+              data: {
+                ...candidateFields,
+                updatedAt: new Date(),
+              },
+            });
+            isNew = false;
+          } else {
+            // Very rare: couldn't find the record that caused the conflict
+            throw new Error("Unique constraint violated but no matching record found");
+          }
+        } else {
+          throw createError;
+        }
+      }
     }
 
     console.log("[LinkedIn Extension] Candidate received:", candidate.name, candidate.linkedinId, isNew ? "NEW" : "UPDATED");
