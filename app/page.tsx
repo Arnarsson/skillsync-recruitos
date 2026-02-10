@@ -95,7 +95,7 @@ export default function Home() {
           {/* Wizard CTA */}
           <div className="mt-4 text-center">
             <Link
-              href="/wizard"
+              href="/intake"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-colors"
             >
               <Zap className="w-4 h-4" />
