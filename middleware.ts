@@ -121,6 +121,8 @@ export async function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users to login for protected routes
   // Demo mode users with the recruitos_demo cookie bypass this check
+  // DISABLED FOR DEMO - Re-enable after demo by uncommenting below
+  /*
   if (
     !isAuthenticated &&
     !isDemoMode &&
@@ -130,6 +132,7 @@ export async function middleware(request: NextRequest) {
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
+  */
 
   // Add security headers to page responses
   const response = NextResponse.next();
