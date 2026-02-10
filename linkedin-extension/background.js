@@ -140,6 +140,36 @@ async function syncMessages(messages) {
   });
 }
 
+async function syncNotifications(notifications) {
+  // Send to Eureka dashboard (GOG Bridge API)
+  const gogAPIUrl = 'http://localhost:8001/api/linkedin/notifications';
+  
+  console.log(`[RecruitOS] Syncing ${notifications.length} notifications to Eureka`);
+  
+  try {
+    const response = await fetch(gogAPIUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'recruitos-extension',
+        notifications: notifications,
+        capturedAt: new Date().toISOString()
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`[RecruitOS] Synced ${result.inserted || 0} new notifications`);
+    return { success: true, data: result };
+  } catch (e) {
+    console.error('[RecruitOS] Notification sync error:', e);
+    return { success: false, error: e.message };
+  }
+}
+
 // ============================================
 // MESSAGE HANDLERS
 // ============================================
@@ -161,6 +191,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.type === 'MESSAGES_SYNC') {
     syncMessages(request.messages)
+      .then(sendResponse)
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+  
+  if (request.type === 'NOTIFICATIONS_SYNC') {
+    syncNotifications(request.notifications)
       .then(sendResponse)
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;

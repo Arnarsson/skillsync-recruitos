@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "RecruitOS LinkedIn Sync",
-  "version": "1.0.0",
-  "description": "Capture LinkedIn profiles and messages to your RecruitOS pipeline",
+  "version": "1.1.0",
+  "description": "Capture LinkedIn profiles, messages, and notifications to your RecruitOS pipeline",
   "permissions": [
     "storage",
     "activeTab"
@@ -11,7 +11,8 @@
     "https://www.linkedin.com/*",
     "https://*.recruitos.xyz/*",
     "https://*.vercel.app/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "http://localhost:8001/*"
   ],
   "background": {
     "service_worker": "background.js"

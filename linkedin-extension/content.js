@@ -60,6 +60,10 @@
     return window.location.pathname.includes('/search/results/');
   }
   
+  function isNotificationsPage() {
+    return window.location.pathname.startsWith('/notifications');
+  }
+  
   function extractProfileData() {
     const profile = {
       url: window.location.href,
@@ -446,6 +450,93 @@
   }
 
   // ============================================
+  // NOTIFICATION EXTRACTION
+  // ============================================
+  
+  function extractNotifications() {
+    const main = document.querySelector('main');
+    if (!main) return [];
+    
+    const allDivs = main.querySelectorAll('div');
+    const notifications = [];
+    const seen = new Set();
+    
+    allDivs.forEach((div) => {
+      const text = div.textContent || '';
+      
+      // Look for notification patterns
+      const hasMention = text.includes('mentioned you in a comment');
+      const hasReply = text.includes('replied to') && text.includes('comment');
+      const hasLike = text.includes('liked your comment');
+      const hasPostComment = text.includes('commented on your post');
+      const hasPostLike = text.includes('liked your post');
+      const hasShare = text.includes('shared your post');
+      
+      if (!hasMention && !hasReply && !hasLike && !hasPostComment && !hasPostLike && !hasShare) {
+        return;
+      }
+      
+      // Only take divs with substantial content (avoid header/footer fragments)
+      if (text.length < 50 || text.length > 1000) return;
+      
+      try {
+        let actor = 'Unknown';
+        let type = 'activity';
+        
+        if (hasMention) {
+          const match = text.match(/([A-Z][a-z]+(?: [A-Z][a-z.]+)*(?:, Ph\.D\.|, MBA)?)\s+mentioned you in a comment/);
+          actor = match ? match[1].trim() : 'Unknown';
+          type = 'mention';
+        } else if (hasReply) {
+          const match = text.match(/([A-Z][a-z]+(?: [A-Z][a-z.]+)*(?:, Ph\.D\.|, MBA)?)\s+replied to/);
+          actor = match ? match[1].trim() : 'Unknown';
+          type = 'comment_reply';
+        } else if (hasLike) {
+          const match = text.match(/([A-Z][a-z]+(?: [A-Z][a-z.]+)*(?:, Ph\.D\.|, MBA)?)\s+liked your comment/);
+          actor = match ? match[1].trim() : 'Unknown';
+          type = 'comment_like';
+        } else if (hasPostComment) {
+          const match = text.match(/([A-Z][a-z]+(?: [A-Z][a-z.]+)*(?:, Ph\.D\.|, MBA)?)\s+commented on your post/);
+          actor = match ? match[1].trim() : 'Unknown';
+          type = 'post_comment';
+        } else if (hasPostLike) {
+          const match = text.match(/([A-Z][a-z]+(?: [A-Z][a-z.]+)*(?:, Ph\.D\.|, MBA)?)\s+liked your post/);
+          actor = match ? match[1].trim() : 'Unknown';
+          type = 'post_like';
+        } else if (hasShare) {
+          const match = text.match(/([A-Z][a-z]+(?: [A-Z][a-z.]+)*(?:, Ph\.D\.|, MBA)?)\s+shared your post/);
+          actor = match ? match[1].trim() : 'Unknown';
+          type = 'post_share';
+        }
+        
+        const preview = text.trim().substring(0, 250).replace(/\s+/g, ' ');
+        const timeMatch = text.match(/\b(\d+h|\d+d|\d+w|\d+ hours? ago|\d+ days? ago)\b/);
+        const timestamp = timeMatch ? timeMatch[1] : 'recent';
+        
+        const dedupeKey = `${actor}:${type}:${preview.substring(0, 50)}`;
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        
+        notifications.push({
+          platform: 'linkedin',
+          type,
+          actor,
+          text: preview,
+          timestamp,
+          isUnread: true,
+          capturedAt: new Date().toISOString()
+        });
+        
+      } catch (err) {
+        console.error('[RecruitOS] Notification parse error:', err);
+      }
+    });
+    
+    console.log(`[RecruitOS] Extracted ${notifications.length} notifications`);
+    return notifications;
+  }
+
+  // ============================================
   // UI OVERLAY
   // ============================================
   
@@ -559,6 +650,17 @@
         chrome.runtime.sendMessage({
           type: 'MESSAGES_SYNC',
           messages: messages
+        });
+      }
+    }
+    
+    // Auto-capture notifications
+    if (isNotificationsPage()) {
+      const notifications = extractNotifications();
+      if (notifications.length > 0) {
+        chrome.runtime.sendMessage({
+          type: 'NOTIFICATIONS_SYNC',
+          notifications: notifications
         });
       }
     }

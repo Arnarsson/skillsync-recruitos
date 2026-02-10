@@ -7,6 +7,7 @@ Chrome extension that captures LinkedIn profiles and messages to your RecruitOS 
 ### Tier 1: Passive Capture (Safe)
 - **Profile capture**: Automatically captures profiles you view
 - **Message sync**: Syncs LinkedIn conversations to RecruitOS inbox
+- **Notification monitoring**: Captures mentions, tags, and comment replies
 - **"Add to Pipeline" button**: One-click add from any profile page
 - **Local storage**: Works offline, syncs when connected
 
@@ -70,6 +71,26 @@ The extension expects these endpoints:
   "syncedAt": "2026-02-06T10:00:00Z"
 }
 ```
+
+### POST `http://localhost:8001/api/linkedin/notifications` (Eureka)
+```json
+{
+  "source": "recruitos-extension",
+  "notifications": [
+    {
+      "platform": "linkedin",
+      "type": "mention",
+      "actor": "Christopher James Lüscher, Ph.D",
+      "text": "Christopher mentioned you in a comment. Great idea!",
+      "timestamp": "2h",
+      "isUnread": true
+    }
+  ],
+  "capturedAt": "2026-02-10T10:00:00Z"
+}
+```
+
+**Notification types**: `mention`, `comment_reply`, `comment_like`, `post_comment`, `post_like`, `post_share`
 
 ## Data Flow
 
