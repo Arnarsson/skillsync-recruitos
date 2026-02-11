@@ -27,6 +27,12 @@ import {
   CloudMoon,
 } from "lucide-react";
 import {
+  extractGitHubUsername,
+  isUuidLike,
+  readLocalCandidates,
+  type CandidateIdentitySource,
+} from "@/lib/candidate-identity";
+import {
   PieChart,
   Pie,
   Cell,
@@ -285,7 +291,20 @@ export default function WorkAnalysisPage({
 
     async function fetchAnalysis() {
       try {
-        const res = await fetch(`/api/candidates/${id}/work-analysis`);
+        let resolvedUsername: string | null = null;
+
+        if (isUuidLike(id)) {
+          const localCandidates = readLocalCandidates<CandidateIdentitySource>();
+          const localMatch = localCandidates.find((c) => c?.id === id);
+          if (localMatch) {
+            resolvedUsername = extractGitHubUsername(localMatch);
+          }
+        }
+
+        const endpoint = resolvedUsername
+          ? `/api/candidates/${id}/work-analysis?username=${encodeURIComponent(resolvedUsername)}`
+          : `/api/candidates/${id}/work-analysis`;
+        const res = await fetch(endpoint);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || `Request failed (${res.status})`);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { candidateService } from "@/services/candidateService";
@@ -91,6 +92,7 @@ export default function ProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = use(params);
+  const { data: session, status } = useSession();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +129,7 @@ export default function ProfilePage({
 
   // Recruiter's LinkedIn URL (for connection path)
   const [recruiterLinkedInUrl, setRecruiterLinkedInUrl] = useState<string | null>(null);
+  const [recruiterGitHubUsername, setRecruiterGitHubUsername] = useState<string | null>(null);
 
   // Pipeline state
   const [addingToPipeline, setAddingToPipeline] = useState(false);
@@ -138,7 +141,21 @@ export default function ProfilePage({
     if (storedUrl) {
       setRecruiterLinkedInUrl(storedUrl);
     }
+
+    const storedGitHubUsername = localStorage.getItem("recruitos_recruiter_github");
+    if (storedGitHubUsername) {
+      setRecruiterGitHubUsername(storedGitHubUsername);
+    }
   }, []);
+
+  useEffect(() => {
+    const sessionUser = session?.user as { login?: string; name?: string } | undefined;
+    const usernameFromSession = sessionUser?.login || null;
+    if (usernameFromSession) {
+      setRecruiterGitHubUsername(usernameFromSession);
+      localStorage.setItem("recruitos_recruiter_github", usernameFromSession);
+    }
+  }, [session]);
 
   // Check if already in pipeline on mount
   useEffect(() => {
@@ -235,6 +252,7 @@ export default function ProfilePage({
   // Load existing LinkedIn from pipeline via API
   useEffect(() => {
     async function loadLinkedInFromPipeline() {
+      if (status !== "authenticated") return;
       try {
         const candidate = await candidateService.getById(username);
         if (candidate?.linkedinUrl) {
@@ -242,11 +260,13 @@ export default function ProfilePage({
           setLinkedInUrl(candidate.linkedinUrl);
         }
       } catch (err) {
-        console.error("[Profile] Failed to load LinkedIn from pipeline:", err);
+        if (!(err instanceof Error) || err.message !== "Unauthorized") {
+          console.error("[Profile] Failed to load LinkedIn from pipeline:", err);
+        }
       }
     }
     loadLinkedInFromPipeline();
-  }, [username]);
+  }, [username, status]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -1177,11 +1197,12 @@ export default function ProfilePage({
               </div>
             )}
             <ConnectionPathCard
-              recruiterId="recruiter"
+              recruiterId={recruiterGitHubUsername || "recruiter"}
               candidateId={user.login}
               candidateName={user.name || user.login}
               recruiterLinkedInUrl={recruiterLinkedInUrl || undefined}
               candidateLinkedInUrl={linkedInProfile?.profileUrl}
+              recruiterGitHubUsername={recruiterGitHubUsername || undefined}
               candidateGitHubUsername={user.login}
             />
 

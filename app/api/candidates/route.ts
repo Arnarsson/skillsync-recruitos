@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { candidateCreateSchema } from "@/lib/validation/apiSchemas";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireAuth, requireOptionalAuth } from "@/lib/auth-guard";
 
 const VALID_ORDER_BY = ["createdAt", "alignmentScore", "name"] as const;
 const VALID_SOURCE_TYPES = ["GITHUB", "LINKEDIN", "MANUAL"] as const;
@@ -11,11 +11,9 @@ const DEFAULT_LIMIT = 50;
 
 // GET - List candidates with filtering, search, and pagination
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
   try {
-    const userId = auth.user.id!;
+    const auth = await requireOptionalAuth();
+    const userId = auth?.user.id;
 
     const searchParams = request.nextUrl.searchParams;
 
@@ -39,7 +37,10 @@ export async function GET(request: NextRequest) {
     const order = orderParam === "asc" ? "asc" : "desc";
 
     // Build where clause — always scope to authenticated user
-    const where: Prisma.CandidateWhereInput = { userId };
+    const where: Prisma.CandidateWhereInput = {};
+    if (userId) {
+      where.userId = userId;
+    }
 
     // Filter by sourceType
     const sourceType = searchParams.get("sourceType");

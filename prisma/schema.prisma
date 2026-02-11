@@ -33,6 +33,7 @@ model User {
   payments      Payment[]
   candidates    Candidate[]
   creditLedger  CreditLedger[]
+  criteriaSets  CriteriaSet[]
 }
 
 model ProfileView {
@@ -252,5 +253,41 @@ model StripeEvent {
   processed Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  @@index([createdAt])
+}
+
+model LinkedinMessage {
+  id               String   @id @default(cuid())
+  platform         String   @default("linkedin")
+  sender           String
+  content          String
+  timestamp        String?
+  conversationWith String?
+  threadUrl        String?
+  source           String   @default("linkedin_extension")
+  syncedAt         DateTime @default(now())
+  dedupeKey        String   @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([sender])
+  @@index([conversationWith])
+  @@index([threadUrl])
+  @@index([createdAt])
+}
+
+model CriteriaSet {
+  id          String   @id @default(cuid())
+  userId      String?
+  name        String
+  role        String?
+  description String?
+  criteria    Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@index([createdAt])
 }

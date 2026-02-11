@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-guard";
 import { searchDevelopers } from "@/lib/github";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("q");
   const page = parseInt(searchParams.get("page") || "1");
@@ -19,10 +15,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const accessToken = (auth.session as any)?.accessToken;
-
     // Search GitHub
-    const results = await searchDevelopers(query, accessToken, page, perPage);
+    const results = await searchDevelopers(query, undefined, page, perPage);
 
     return NextResponse.json(results);
   } catch (error) {

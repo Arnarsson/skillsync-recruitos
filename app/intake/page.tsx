@@ -359,17 +359,17 @@ export default function IntakePage() {
   ];
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
+    <div className="page-container">
       {/* Workflow Progress */}
-      <div className="max-w-4xl mx-auto mb-6">
+      <div className="page-content max-w-7xl mb-8">
         <WorkflowStepper currentStep={1} />
       </div>
 
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
+      <div className="page-content max-w-7xl">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 xl:gap-10 items-start">
           {/* Main Content */}
           <motion.div
-            className="flex-1 space-y-4 sm:space-y-6"
+            className="flex-1 w-full min-w-0 space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
@@ -398,7 +398,7 @@ export default function IntakePage() {
             </div>
 
             {/* Mode Toggle: Form vs AI Assistant */}
-            <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit">
+            <div className="flex items-center gap-2 p-1.5 bg-muted/80 rounded-lg w-fit">
               <button
                 onClick={() => setIntakeMode("form")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -433,7 +433,7 @@ export default function IntakePage() {
             <>
             {/* Social Context Card */}
             <Card className="transition-all hover:border-primary/30 hover:shadow-sm">
-              <CardHeader className="pb-4">
+              <CardHeader className="px-5 sm:px-6 pt-5 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                     <Users className="w-5 h-5 text-muted-foreground" />
@@ -444,7 +444,7 @@ export default function IntakePage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-5 sm:px-6 pb-5 space-y-4">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">
                     {t("intake.socialContext.companyLinkedIn")}
@@ -557,7 +557,7 @@ export default function IntakePage() {
             {/* Job Requirements Card (Form mode only) */}
             {!calibration && intakeMode === "form" ? (
               <Card className="transition-all hover:border-primary/30 hover:shadow-sm">
-                <CardHeader className="pb-4">
+                <CardHeader className="px-5 sm:px-6 pt-5 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                       <FileText className="w-5 h-5 text-muted-foreground" />
@@ -568,7 +568,7 @@ export default function IntakePage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-5 sm:px-6 pb-5">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className="grid w-full grid-cols-2 mb-6">
                       <TabsTrigger value="url" className="gap-2">
@@ -795,9 +795,9 @@ export default function IntakePage() {
           </motion.div>
 
           {/* Process Preview Sidebar */}
-          <div className="w-full lg:w-80 lg:sticky lg:top-24 lg:self-start">
+          <div className="w-full lg:w-[21rem] lg:sticky lg:top-28 lg:self-start">
             <Card className="transition-all hover:border-primary/30 hover:shadow-sm">
-              <CardHeader className="pb-4">
+              <CardHeader className="px-5 sm:px-6 pt-5 pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-medium text-muted-foreground">
                     {t("intake.processPreview.title")}
@@ -805,7 +805,7 @@ export default function IntakePage() {
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="px-5 sm:px-6 pb-5 space-y-6">
                 <div className="relative">
                   {/* Vertical Line */}
                   <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-border" />

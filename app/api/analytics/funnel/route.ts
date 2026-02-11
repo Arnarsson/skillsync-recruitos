@@ -12,14 +12,7 @@ import { getFunnelAnalytics } from '@/lib/analytics/metricsService';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -35,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     // Get analytics
     const analytics = await getFunnelAnalytics({
-      userId: allUsers ? undefined : session.user.id,
+      userId: allUsers ? undefined : session?.user?.id,
       startDate: start,
       endDate: end,
     });

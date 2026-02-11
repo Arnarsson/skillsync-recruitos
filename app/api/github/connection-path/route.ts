@@ -8,6 +8,29 @@ import {
   type DirectConnection,
 } from "@/services/githubConnectionService";
 
+async function resolveGitHubLoginFromToken(
+  accessToken?: string
+): Promise<string | null> {
+  if (!accessToken) return null;
+
+  try {
+    const res = await fetch("https://api.github.com/user", {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+    const data = (await res.json()) as { login?: string };
+    return data.login ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export interface ConnectionPathResponse {
   connectionPath: GitHubConnectionPath;
   recruiterUsername: string;
@@ -61,11 +84,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract recruiter's GitHub username from session
+    // Extract recruiter's GitHub username from session / token.
     const sessionUser = session.user as { name?: string; login?: string };
     const sessionWithToken = session as { accessToken?: string };
     recruiterUsername = sessionUser.name || sessionUser.login || null;
     accessToken = sessionWithToken.accessToken;
+
+    // Session name is often full name, not GitHub login. Resolve from token if available.
+    if (!sessionUser.login) {
+      const tokenLogin = await resolveGitHubLoginFromToken(accessToken);
+      if (tokenLogin) {
+        recruiterUsername = tokenLogin;
+      }
+    }
   }
 
   if (!recruiterUsername) {

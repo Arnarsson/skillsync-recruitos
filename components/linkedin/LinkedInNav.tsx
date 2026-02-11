@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
+import {
   Linkedin, 
   Users, 
   Kanban, 
@@ -12,37 +12,39 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 const navItems = [
   {
     href: "/linkedin-captures",
-    label: "Captures",
+    labelKey: "linkedin.nav.captures",
     icon: Users,
-    description: "View captured profiles",
+    descriptionKey: "linkedin.nav.capturesDesc",
   },
   {
     href: "/linkedin-pipeline",
-    label: "Pipeline",
+    labelKey: "linkedin.nav.pipeline",
     icon: Kanban,
-    description: "Manage candidates",
+    descriptionKey: "linkedin.nav.pipelineDesc",
   },
   {
     href: "/network-map",
-    label: "Network",
+    labelKey: "linkedin.nav.network",
     icon: Network,
-    description: "Relationship mapping",
+    descriptionKey: "linkedin.nav.networkDesc",
   },
 ];
 
 export function LinkedInNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-1 mb-6">
       <div className="flex items-center gap-1">
         <div className="flex items-center gap-2 px-3 py-2 text-slate-400">
           <Linkedin className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-slate-300">LinkedIn Tools</span>
+          <span className="text-sm font-medium text-slate-300">{t("linkedin.nav.tools")}</span>
         </div>
         <div className="w-px h-6 bg-slate-800 mx-2" />
         {navItems.map((item) => {
@@ -60,7 +62,7 @@ export function LinkedInNav() {
               )}
             >
               <item.icon className="w-4 h-4" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -74,50 +76,51 @@ export function LinkedInEmptyState({
 }: { 
   type: "captures" | "pipeline" | "network" 
 }) {
+  const { t } = useLanguage();
   const content = {
     captures: {
       icon: Users,
-      title: "No profiles captured yet",
-      description: "Install the Chrome extension and browse LinkedIn profiles. They'll appear here automatically.",
+      title: t("linkedin.empty.captures.title"),
+      description: t("linkedin.empty.captures.description"),
       action: {
-        label: "Get Chrome Extension",
+        label: t("linkedin.empty.captures.action"),
         href: "#",
         icon: Chrome,
       },
       tips: [
-        "Visit any LinkedIn profile",
-        "Click 'Add to RecruitOS' button",
-        "Profile appears here instantly",
+        t("linkedin.empty.captures.tip1"),
+        t("linkedin.empty.captures.tip2"),
+        t("linkedin.empty.captures.tip3"),
       ],
     },
     pipeline: {
       icon: Kanban,
-      title: "Your pipeline is empty",
-      description: "Capture profiles first, then drag them through your recruiting pipeline.",
+      title: t("linkedin.empty.pipeline.title"),
+      description: t("linkedin.empty.pipeline.description"),
       action: {
-        label: "Capture Profiles",
+        label: t("linkedin.empty.pipeline.action"),
         href: "/linkedin-captures",
         icon: ArrowRight,
       },
       tips: [
-        "Capture candidates from LinkedIn",
-        "Drag between stages",
-        "Track your hiring process",
+        t("linkedin.empty.pipeline.tip1"),
+        t("linkedin.empty.pipeline.tip2"),
+        t("linkedin.empty.pipeline.tip3"),
       ],
     },
     network: {
       icon: Network,
-      title: "No network data yet",
-      description: "Capture LinkedIn profiles to build your network map. The more profiles you capture, the richer your intelligence becomes.",
+      title: t("linkedin.empty.network.title"),
+      description: t("linkedin.empty.network.description"),
       action: {
-        label: "Start Capturing",
+        label: t("linkedin.empty.network.action"),
         href: "/linkedin-captures",
         icon: ArrowRight,
       },
       tips: [
-        "See company penetration",
-        "Find colleague connections",
-        "Map relationship paths",
+        t("linkedin.empty.network.tip1"),
+        t("linkedin.empty.network.tip2"),
+        t("linkedin.empty.network.tip3"),
       ],
     },
   };

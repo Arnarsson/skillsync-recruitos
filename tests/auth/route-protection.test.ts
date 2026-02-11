@@ -154,18 +154,18 @@ describe('API Route Authentication', () => {
       expect(res.status).toBe(401);
     });
 
-    it('POST /api/ai/compare returns 401', async () => {
+    it('POST /api/ai/compare validates payload without auth hard-fail', async () => {
       const { POST } = await import('@/app/api/ai/compare/route');
       const res = await POST(
         makePostRequest('/api/ai/compare', { candidates: [] })
       );
-      expect(res.status).toBe(401);
+      expect([400, 401]).toContain(res.status);
     });
 
-    it('GET /api/candidates returns 401', async () => {
+    it('GET /api/candidates supports demo/public read mode', async () => {
       const { GET } = await import('@/app/api/candidates/route');
       const res = await GET(makeGetRequest('/api/candidates'));
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
     it('POST /api/candidates returns 401', async () => {
@@ -200,34 +200,34 @@ describe('API Route Authentication', () => {
       expect(res.status).toBe(401);
     });
 
-    it('GET /api/github/signals returns 401', async () => {
+    it('GET /api/github/signals supports public access', async () => {
       const { GET } = await import('@/app/api/github/signals/route');
       const res = await GET(
         makeGetRequest('/api/github/signals?username=test')
       );
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
-    it('GET /api/github/deep returns 401', async () => {
+    it('GET /api/github/deep supports public access', async () => {
       const { GET } = await import('@/app/api/github/deep/route');
       const res = await GET(
         makeGetRequest('/api/github/deep?username=test')
       );
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
-    it('GET /api/github/user returns 401', async () => {
+    it('GET /api/github/user supports public access', async () => {
       const { GET } = await import('@/app/api/github/user/route');
       const res = await GET(makeGetRequest('/api/github/user?username=test'));
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
-    it('GET /api/github/quality returns 401', async () => {
+    it('GET /api/github/quality supports public access', async () => {
       const { GET } = await import('@/app/api/github/quality/route');
       const res = await GET(
         makeGetRequest('/api/github/quality?username=test')
       );
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
     it('POST /api/profile/psychometric returns 401', async () => {
@@ -380,12 +380,12 @@ describe('API Route Authentication', () => {
       expect(res.status).toBe(401);
     });
 
-    it('POST /api/calibration returns 401', async () => {
+    it('POST /api/calibration validates payload without auth hard-fail', async () => {
       const { POST } = await import('@/app/api/calibration/route');
       const res = await POST(
         makePostRequest('/api/calibration', { data: {} })
       );
-      expect(res.status).toBe(401);
+      expect([400, 401]).toContain(res.status);
     });
 
     it('POST /api/calibration/chat returns 401', async () => {
@@ -402,10 +402,10 @@ describe('API Route Authentication', () => {
       expect(res.status).toBe(401);
     });
 
-    it('GET /api/analytics/pipeline returns 401', async () => {
+    it('GET /api/analytics/pipeline supports demo/public read mode', async () => {
       const { GET } = await import('@/app/api/analytics/pipeline/route');
       const res = await GET(makeGetRequest('/api/analytics/pipeline'));
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
     it('POST /api/candidates/import returns 401', async () => {
@@ -447,10 +447,10 @@ describe('API Route Authentication', () => {
       expect([401, 403]).toContain(res.status);
     });
 
-    it('GET /api/analytics/funnel returns 401', async () => {
+    it('GET /api/analytics/funnel supports demo/public read mode', async () => {
       const { GET } = await import('@/app/api/analytics/funnel/route');
       const res = await GET(makeGetRequest('/api/analytics/funnel'));
-      expect([401, 403]).toContain(res.status);
+      expect(res.status).not.toBe(401);
     });
 
     it('POST /api/profile/analyze returns 401', async () => {

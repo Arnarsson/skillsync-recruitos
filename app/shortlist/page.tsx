@@ -25,6 +25,7 @@ import { PhaseIndicator } from "@/components/PhaseIndicator";
 import OutreachModal from "@/components/OutreachModal";
 import { PRICING, CREDITS_TO_EUR } from "@/types";
 import { candidateService } from "@/services/candidateService";
+import { useLanguage } from "@/lib/i18n";
 interface Candidate {
   id: string;
   name: string;
@@ -38,6 +39,7 @@ interface Candidate {
 }
 
 export default function ShortlistPage() {
+  const { t } = useLanguage();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobContext, setJobContext] = useState<{
@@ -131,14 +133,14 @@ export default function ShortlistPage() {
           <Card className="border-dashed mt-6">
             <CardContent className="py-16 text-center">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">No candidates in shortlist</h3>
+              <h3 className="text-lg font-medium mb-2">{t("shortlist.empty.title")}</h3>
               <p className="text-muted-foreground mb-4">
-                Select candidates from the pipeline to add them to your shortlist.
+                {t("shortlist.empty.description")}
               </p>
               <Link href="/pipeline">
                 <Button>
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Candidates
+                  {t("shortlist.backToCandidates")}
                 </Button>
               </Link>
             </CardContent>
@@ -158,11 +160,11 @@ export default function ShortlistPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <Badge className="mb-2 bg-green-500/20 text-green-400 text-xs">
-              Phase 3 — Profile
+              {t("shortlist.phaseLabel")}
             </Badge>
-            <h1 className="text-2xl sm:text-3xl font-bold">Shortlist</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("shortlist.title")}</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {candidates.length} candidate{candidates.length !== 1 ? "s" : ""} ready for deep profile
+              {candidates.length} {t("shortlist.candidatesReady")}
               {jobContext && ` for ${jobContext.title}`}
             </p>
           </div>
@@ -170,7 +172,7 @@ export default function ShortlistPage() {
             <Link href="/pipeline">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Back to Candidates</span>
+                <span className="hidden sm:inline">{t("shortlist.backToCandidates")}</span>
               </Button>
             </Link>
           </div>
@@ -185,15 +187,15 @@ export default function ShortlistPage() {
                   <Coins className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Outreach Pack for All</p>
+                  <p className="text-sm font-medium">{t("shortlist.outreachPackForAll")}</p>
                   <p className="text-xs text-muted-foreground">
-                    {candidates.length - completedOutreach.size} remaining
+                    {candidates.length - completedOutreach.size} {t("shortlist.remaining")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-lg font-semibold">{totalOutreachCost.toLocaleString()} credits</p>
+                  <p className="text-lg font-semibold">{totalOutreachCost.toLocaleString()} {t("shortlist.credits")}</p>
                   <p className="text-xs text-muted-foreground">~{totalOutreachEur} EUR</p>
                 </div>
                 <Button
@@ -209,7 +211,7 @@ export default function ShortlistPage() {
                   }}
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Generate All
+                  {t("shortlist.generateAll")}
                 </Button>
               </div>
             </div>
@@ -239,7 +241,7 @@ export default function ShortlistPage() {
                     <button
                       onClick={() => handleRemoveFromShortlist(candidate.id)}
                       className="absolute top-2 right-2 p-1 rounded-full bg-background/80 hover:bg-destructive hover:text-white transition-colors z-10"
-                      title="Remove from shortlist"
+                      title={t("shortlist.removeFromShortlist")}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -249,7 +251,7 @@ export default function ShortlistPage() {
                       <div className="absolute top-2 left-2 z-10">
                         <Badge className="bg-green-500 text-white gap-1">
                           <Check className="w-3 h-3" />
-                          Done
+                          {t("shortlist.done")}
                         </Badge>
                       </div>
                     )}
@@ -311,7 +313,7 @@ export default function ShortlistPage() {
                         >
                           <Button variant="outline" size="sm" className="w-full">
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            Deep Profile
+                            {t("shortlist.deepProfile")}
                           </Button>
                         </Link>
                         <Button
@@ -324,7 +326,7 @@ export default function ShortlistPage() {
                           }}
                         >
                           <Mail className="w-4 h-4 mr-2" />
-                          {isCompleted ? "Sent" : "Outreach"}
+                          {isCompleted ? t("shortlist.sent") : t("shortlist.outreach")}
                         </Button>
                       </div>
                     </CardContent>
@@ -343,11 +345,11 @@ export default function ShortlistPage() {
                 <div className="flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-500" />
                   <span className="font-medium">
-                    {completedOutreach.size} of {candidates.length} outreach packs generated
+                    {completedOutreach.size} {t("shortlist.of")} {candidates.length} {t("shortlist.outreachPacksGenerated")}
                   </span>
                 </div>
                 {completedOutreach.size === candidates.length && (
-                  <Badge className="bg-green-500 text-white">All Complete!</Badge>
+                  <Badge className="bg-green-500 text-white">{t("shortlist.allComplete")}</Badge>
                 )}
               </div>
             </CardContent>

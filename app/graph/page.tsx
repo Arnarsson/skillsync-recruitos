@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
@@ -22,6 +23,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  extractGitHubUsername,
+  readLocalCandidates,
+  type CandidateIdentitySource,
+} from "@/lib/candidate-identity";
+import {
   ArrowLeft,
   X,
   MapPin,
@@ -35,6 +41,7 @@ import {
   Zap,
   Code2,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 // ===== Types =====
 
@@ -113,6 +120,130 @@ const connectionTypeColors: Record<string, string> = {
   location: "#f59e0b",
   score: "#6b7280",
 };
+
+interface LocalCandidate {
+  id: string;
+  name?: string;
+  avatar?: string | null;
+  alignmentScore?: number | null;
+  skills?: string[] | null;
+  company?: string | null;
+  location?: string | null;
+  currentRole?: string | null;
+  pipelineStage?: string | null;
+  sourceType?: string | null;
+  sourceUrl?: string | null;
+  githubUsername?: string | null;
+}
+
+function safeSkillArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((s): s is string => typeof s === "string" && s.trim().length > 0);
+}
+
+function buildFallbackGraph(localCandidates: LocalCandidate[]): { nodes: Node<CandidateNodeData>[]; edges: Edge<EdgeData>[] } {
+  const candidates = localCandidates.filter((c) => c.id);
+  if (candidates.length === 0) return { nodes: [], edges: [] };
+
+  const radius = Math.max(300, candidates.length * 50);
+  const angleStep = (2 * Math.PI) / candidates.length;
+
+  const nodes: Node<CandidateNodeData>[] = candidates.map((c, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const x = Math.round(radius * Math.cos(angle));
+    const y = Math.round(radius * Math.sin(angle));
+    const githubUsername = extractGitHubUsername(c as CandidateIdentitySource);
+
+    return {
+      id: c.id,
+      type: "candidateNode",
+      position: { x, y },
+      data: {
+        candidateId: c.id,
+        name: c.name || c.id,
+        avatar: c.avatar || null,
+        score: typeof c.alignmentScore === "number" ? c.alignmentScore : null,
+        skills: safeSkillArray(c.skills),
+        company: c.company || null,
+        location: c.location || null,
+        currentRole: c.currentRole || null,
+        pipelineStage: c.pipelineStage || "sourced",
+        sourceType: c.sourceType || "GITHUB",
+        sourceUrl: c.sourceUrl || null,
+        githubUsername: githubUsername || null,
+      },
+    };
+  });
+
+  const edges: Edge<EdgeData>[] = [];
+  let edgeId = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i].data;
+      const b = nodes[j].data;
+
+      const aSkills = a.skills.map((s) => s.toLowerCase().trim());
+      const bSkills = new Set(b.skills.map((s) => s.toLowerCase().trim()));
+      const sharedSkills = aSkills.filter((s) => bSkills.has(s));
+      if (sharedSkills.length >= 2) {
+        edges.push({
+          id: `fallback-skill-${edgeId++}`,
+          source: nodes[i].id,
+          target: nodes[j].id,
+          type: "smoothstep",
+          animated: sharedSkills.length >= 4,
+          data: {
+            reason: `${sharedSkills.length} shared skills`,
+            weight: Math.min(1, sharedSkills.length / 8),
+            connectionType: "skills",
+          },
+        });
+      }
+
+      if (
+        a.company &&
+        b.company &&
+        a.company.toLowerCase().trim() !== "" &&
+        a.company.toLowerCase().trim() === b.company.toLowerCase().trim()
+      ) {
+        edges.push({
+          id: `fallback-company-${edgeId++}`,
+          source: nodes[i].id,
+          target: nodes[j].id,
+          type: "smoothstep",
+          animated: false,
+          data: {
+            reason: `Same company: ${a.company}`,
+            weight: 0.8,
+            connectionType: "company",
+          },
+        });
+      }
+
+      if (
+        a.location &&
+        b.location &&
+        a.location.toLowerCase().trim() !== "" &&
+        a.location.toLowerCase().trim() === b.location.toLowerCase().trim()
+      ) {
+        edges.push({
+          id: `fallback-location-${edgeId++}`,
+          source: nodes[i].id,
+          target: nodes[j].id,
+          type: "smoothstep",
+          animated: false,
+          data: {
+            reason: `Same location: ${a.location}`,
+            weight: 0.4,
+            connectionType: "location",
+          },
+        });
+      }
+    }
+  }
+
+  return { nodes, edges };
+}
 
 // ===== Custom Node Component =====
 
@@ -382,6 +513,8 @@ function CandidateDetailPanel({
 // ===== Main Page =====
 
 export default function TalentGraphPage() {
+  const { t } = useLanguage();
+  const searchParams = useSearchParams();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CandidateNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<EdgeData>>([]);
   const [loading, setLoading] = useState(true);
@@ -392,6 +525,25 @@ export default function TalentGraphPage() {
 
   // Node types must be defined outside of render or memoized
   const nodeTypes: NodeTypes = useMemo(() => ({ candidateNode: CandidateNode }), []);
+  const selectedIds = useMemo(() => {
+    const fromUrl = (searchParams.get("ids") || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (fromUrl.length > 0) return fromUrl;
+
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem("apex_graph_selected");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+    } catch {
+      return [];
+    }
+  }, [searchParams]);
 
   // Fetch graph data
   useEffect(() => {
@@ -402,22 +554,71 @@ export default function TalentGraphPage() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch("/api/candidates/graph");
+        const query = selectedIds.length > 0 ? `?ids=${encodeURIComponent(selectedIds.join(","))}` : "";
+        const res = await fetch(`/api/candidates/graph${query}`);
         if (!res.ok) {
-          throw new Error("Failed to load graph data");
+          let details = t("graph.error.loadData");
+          try {
+            const payload = await res.json();
+            if (payload?.error && typeof payload.error === "string") {
+              details = payload.error;
+            }
+          } catch {
+            // Keep default error message if JSON parsing fails
+          }
+          throw new Error(details);
         }
 
         const data = await res.json();
+        const apiNodes = data.nodes || [];
+        const apiEdges = data.edges || [];
 
-        if (!cancelled) {
-          setNodes(data.nodes || []);
-          setEdges(data.edges || []);
+        if (apiNodes.length > 0) {
+          if (!cancelled) {
+            setNodes(apiNodes);
+            setEdges(apiEdges);
+          }
+          return;
+        }
+
+        // Fallback for unauth/demo flows where candidates live in localStorage.
+        try {
+          const localCandidates = readLocalCandidates<LocalCandidate>();
+          const scopedCandidates =
+            selectedIds.length > 0
+              ? localCandidates.filter((candidate) => selectedIds.includes(candidate.id))
+              : localCandidates;
+          const fallbackGraph = buildFallbackGraph(scopedCandidates);
+          if (!cancelled) {
+            setNodes(fallbackGraph.nodes);
+            setEdges(fallbackGraph.edges);
+          }
+        } catch {
+          if (!cancelled) {
+            setNodes([]);
+            setEdges([]);
+          }
         }
       } catch (err) {
+        // Last-chance fallback before showing an error.
+        try {
+          const localCandidates = readLocalCandidates<LocalCandidate>();
+          const scopedCandidates =
+            selectedIds.length > 0
+              ? localCandidates.filter((candidate) => selectedIds.includes(candidate.id))
+              : localCandidates;
+          const fallbackGraph = buildFallbackGraph(scopedCandidates);
+          if (!cancelled && fallbackGraph.nodes.length > 0) {
+            setNodes(fallbackGraph.nodes);
+            setEdges(fallbackGraph.edges);
+            setError(null);
+            return;
+          }
+        } catch {
+          // Keep original error
+        }
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load graph"
-          );
+          setError(err instanceof Error ? err.message : t("graph.error.load"));
         }
       } finally {
         if (!cancelled) {
@@ -431,7 +632,7 @@ export default function TalentGraphPage() {
     return () => {
       cancelled = true;
     };
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, selectedIds]);
 
   // Filter edges by connection type
   const filteredEdges = useMemo(() => {
@@ -520,9 +721,9 @@ export default function TalentGraphPage() {
             <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
           </div>
           <div>
-            <p className="text-zinc-300 font-medium">Building Talent Graph</p>
+            <p className="text-zinc-300 font-medium">{t("graph.loading.title")}</p>
             <p className="text-sm text-zinc-500">
-              Analyzing candidate relationships...
+              {t("graph.loading.subtitle")}
             </p>
           </div>
           {/* Skeleton nodes */}
@@ -550,7 +751,7 @@ export default function TalentGraphPage() {
             </div>
             <div>
               <p className="text-zinc-200 font-medium">
-                Failed to load graph
+                {t("graph.error.load")}
               </p>
               <p className="text-sm text-zinc-500 mt-1">{error}</p>
             </div>
@@ -559,7 +760,7 @@ export default function TalentGraphPage() {
               onClick={() => window.location.reload()}
               className="border-zinc-700"
             >
-              Try Again
+              {t("graph.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -578,18 +779,17 @@ export default function TalentGraphPage() {
             </div>
             <div>
               <p className="text-zinc-200 font-medium text-lg">
-                No candidates yet
+                {t("graph.empty.title")}
               </p>
               <p className="text-sm text-zinc-500 mt-1">
-                Add candidates to your pipeline to visualize their relationships
-                as an interactive graph.
+                {t("graph.empty.description")}
               </p>
             </div>
             <div className="flex gap-2 justify-center">
               <Link href="/pipeline">
                 <Button variant="outline" className="border-zinc-700 gap-2">
                   <ArrowLeft className="w-4 h-4" />
-                  Go to Pipeline
+                  {t("graph.empty.goToPipeline")}
                 </Button>
               </Link>
             </div>
@@ -659,10 +859,10 @@ export default function TalentGraphPage() {
                 <Network className="w-5 h-5 text-violet-400" />
                 <div>
                   <h1 className="text-sm font-semibold text-zinc-100">
-                    Talent Graph
+                    {t("graph.title")}
                   </h1>
                   <p className="text-[10px] text-zinc-500">
-                    {nodes.length} candidates, {edges.length} connections
+                    {nodes.length} {t("graph.candidates")}, {edges.length} {t("graph.connections")}
                   </p>
                 </div>
               </div>
@@ -674,15 +874,15 @@ export default function TalentGraphPage() {
             <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-xl p-3 shadow-xl space-y-3 max-w-[220px]">
               {/* Stage Legend */}
               <div>
-                <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
-                  Pipeline Stage
+                  <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
+                  {t("graph.pipelineStage")}
                 </p>
                 <div className="space-y-1">
                   {[
-                    { stage: "sourced", label: "Sourced", color: "bg-zinc-500" },
-                    { stage: "screening", label: "Screening", color: "bg-blue-500" },
-                    { stage: "interview", label: "Interview", color: "bg-amber-500" },
-                    { stage: "offer", label: "Offer", color: "bg-green-500" },
+                    { stage: "sourced", label: t("graph.stages.sourced"), color: "bg-zinc-500" },
+                    { stage: "screening", label: t("graph.stages.screening"), color: "bg-blue-500" },
+                    { stage: "interview", label: t("graph.stages.interview"), color: "bg-amber-500" },
+                    { stage: "offer", label: t("graph.stages.offer"), color: "bg-green-500" },
                   ].map(({ label, color }) => (
                     <div key={label} className="flex items-center gap-2">
                       <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
@@ -696,7 +896,7 @@ export default function TalentGraphPage() {
               {Object.keys(edgeStats).length > 0 && (
                 <div>
                   <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
-                    Connection Type
+                    {t("graph.connectionType")}
                   </p>
                   <div className="space-y-1">
                     <button
@@ -708,7 +908,7 @@ export default function TalentGraphPage() {
                       }`}
                     >
                       <div className="w-2.5 h-2.5 rounded-full bg-zinc-500" />
-                      <span className="text-xs text-zinc-400 flex-1">All</span>
+                      <span className="text-xs text-zinc-400 flex-1">{t("graph.all")}</span>
                       <span className="text-[10px] text-zinc-600">
                         {edges.length}
                       </span>
@@ -716,10 +916,10 @@ export default function TalentGraphPage() {
                     {Object.entries(edgeStats).map(([type, count]) => {
                       const color = connectionTypeColors[type] || "#6b7280";
                       const labels: Record<string, string> = {
-                        skills: "Shared Skills",
-                        company: "Same Company",
-                        location: "Same Location",
-                        score: "Similar Score",
+                        skills: t("graph.connectionLabels.skills"),
+                        company: t("graph.connectionLabels.company"),
+                        location: t("graph.connectionLabels.location"),
+                        score: t("graph.connectionLabels.score"),
                       };
                       const icons: Record<string, React.ReactNode> = {
                         skills: <Code2 className="w-3 h-3" />,

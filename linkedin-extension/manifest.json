@@ -9,9 +9,11 @@
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
+    "https://recruitos.xyz/*",
     "https://*.recruitos.xyz/*",
     "https://*.vercel.app/*",
     "http://localhost:3000/*",
+    "http://localhost:3001/*",
     "http://localhost:8001/*"
   ],
   "background": {
@@ -37,5 +39,15 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "resources": [
+        "assets/*.js",
+        "assets/*.css",
+        "assets/*.map"
+      ]
+    }
+  ]
 }

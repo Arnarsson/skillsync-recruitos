@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createOctokit } from "@/lib/github";
-import { requireAuth } from "@/lib/auth-guard";
 
 export const maxDuration = 60;
 
@@ -306,11 +305,13 @@ Respond in JSON with this exact structure:
 // ---- GET handler ----
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
   try {
     const { id } = await params;
+    const fallbackUsernameParam = request.nextUrl.searchParams.get("username");
+    const isUuidLike = (value: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        value
+      );
 
     // Look up candidate by Prisma id first, then by githubUsername
     let candidate = await prisma.candidate.findFirst({
@@ -336,12 +337,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    if (!candidate) {
-      return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
+    // Build a synthetic candidate for public/demo flow when this is already a GitHub username.
+    let syntheticCandidateName: string | null = null;
+    let githubUsername = candidate?.githubUsername || id;
+    if (!candidate && fallbackUsernameParam && !isUuidLike(fallbackUsernameParam)) {
+      githubUsername = fallbackUsernameParam;
+      syntheticCandidateName = fallbackUsernameParam;
     }
-
-    // Use the id param as githubUsername if candidate doesn't have one set
-    const githubUsername = candidate.githubUsername || id;
+    if (!candidate && isUuidLike(id) && !githubUsername) {
+      return NextResponse.json(
+        { error: "Candidate not found. Missing GitHub username for work analysis." },
+        { status: 404 }
+      );
+    }
+    if (!candidate && !isUuidLike(id)) {
+      syntheticCandidateName = id;
+      githubUsername = id;
+    }
 
     if (!githubUsername) {
       return NextResponse.json(
@@ -351,7 +363,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check for cached analysis in buildprint
-    const existingBuildprint = candidate.buildprint as Record<string, unknown> | null;
+    const existingBuildprint = (candidate?.buildprint as Record<string, unknown> | null) || null;
     if (existingBuildprint?.workAnalysis) {
       return NextResponse.json({
         cached: true,
@@ -368,7 +380,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Build result
     const workAnalysis = {
       githubUsername,
-      candidateName: candidate.name,
+      candidateName: candidate?.name || syntheticCandidateName || githubUsername,
       analyzedAt: new Date().toISOString(),
       user: githubData.user,
       commitPatterns: githubData.commitPatterns,
@@ -387,10 +399,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       workAnalysis,
     }));
 
-    await prisma.candidate.update({
-      where: { id: candidate.id },
-      data: { buildprint: updatedBuildprint },
-    });
+    if (candidate?.id) {
+      await prisma.candidate.update({
+        where: { id: candidate.id },
+        data: { buildprint: updatedBuildprint },
+      });
+    }
 
     return NextResponse.json({ cached: false, ...workAnalysis });
   } catch (error) {

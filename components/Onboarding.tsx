@@ -13,11 +13,12 @@ import {
 import { useLanguage } from "@/lib/i18n";
 
 interface OnboardingProps {
-  onComplete: () => void;
+  onStartDemo: () => void;
+  onCustomSetup: () => void;
   onSkip: () => void;
 }
 
-export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
+export default function Onboarding({ onStartDemo, onCustomSetup, onSkip }: OnboardingProps) {
   const { t } = useLanguage();
 
   const steps = [
@@ -123,9 +124,12 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
 
           {/* CTA */}
           <div className="space-y-3">
-            <Button onClick={onComplete} className="w-full gap-2" size="lg">
-              {t("onboarding.getStarted")}
+            <Button onClick={onStartDemo} className="w-full gap-2" size="lg">
+              Try Demo Data
               <ArrowRight className="w-4 h-4" />
+            </Button>
+            <Button onClick={onCustomSetup} variant="outline" className="w-full">
+              Custom Setup
             </Button>
             <button
               onClick={onSkip}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useAdmin } from "@/lib/adminContext";
 import { getDemoCandidates } from "@/lib/demoData";
 import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
@@ -139,14 +140,130 @@ interface Candidate {
   rawProfileText?: string;
 }
 
+function normalizeText(value?: string | null): string {
+  return (value || "").toLowerCase().trim();
+}
+
+function hasSkillSignal(candidate: Candidate, skill: string): boolean {
+  const needle = normalizeText(skill);
+  if (!needle) return false;
+  const skillPool = (candidate.skills || []).map((s) => normalizeText(s));
+  const textPool = [
+    candidate.currentRole,
+    candidate.company,
+    candidate.rawProfileText,
+    ...(candidate.keyEvidence || []),
+  ]
+    .map((s) => normalizeText(s || ""))
+    .join(" ");
+
+  return (
+    skillPool.some((s) => s.includes(needle) || needle.includes(s)) ||
+    textPool.includes(needle)
+  );
+}
+
+function rerankCandidatesForContext(
+  input: Candidate[],
+  jobContext: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string } | null
+): Candidate[] {
+  if (!jobContext) return input;
+
+  let mustHave: string[] = [];
+  let niceToHave: string[] = [];
+
+  try {
+    const raw = localStorage.getItem("apex_skills_config");
+    if (raw) {
+      const parsed = JSON.parse(raw) as SkillsConfig;
+      mustHave = parsed.skills
+        .filter((s) => s.tier === "must-have")
+        .map((s) => s.name);
+      niceToHave = parsed.skills
+        .filter((s) => s.tier === "nice-to-have" || s.tier === "bonus")
+        .map((s) => s.name);
+    }
+  } catch {
+    // ignore malformed local draft; fall back to job context
+  }
+
+  if (mustHave.length === 0) {
+    mustHave = jobContext.requiredSkills || [];
+  }
+  if (niceToHave.length === 0) {
+    niceToHave = jobContext.preferredSkills || [];
+  }
+
+  const locationNeedle = normalizeText(jobContext.location);
+
+  const rescored = input.map((candidate) => {
+    const requiredMatched = mustHave.filter((skill) => hasSkillSignal(candidate, skill));
+    const requiredMissing = mustHave.filter((skill) => !requiredMatched.includes(skill));
+    const preferredMatched = niceToHave.filter((skill) => hasSkillSignal(candidate, skill));
+
+    const locationText = normalizeText(candidate.location);
+    const locationMatch: "exact" | "remote" | "none" =
+      locationNeedle && locationText && (locationText.includes(locationNeedle) || locationNeedle.includes(locationText))
+        ? "exact"
+        : locationText.includes("remote") || locationNeedle.includes("remote")
+          ? "remote"
+          : "none";
+
+    const baseScore = 30;
+    const mustScore = requiredMatched.length * 12 - requiredMissing.length * 8;
+    const preferredScore = preferredMatched.length * 4;
+    const locationScore = locationMatch === "exact" ? 10 : locationMatch === "remote" ? 4 : 0;
+    const finalScore = Math.max(0, Math.min(99, baseScore + mustScore + preferredScore + locationScore));
+
+    return {
+      ...candidate,
+      alignmentScore: finalScore,
+      scoreBreakdown: {
+        requiredMatched,
+        requiredMissing,
+        preferredMatched,
+        locationMatch,
+        baseScore,
+        skillsScore: mustScore,
+        preferredScore,
+        locationScore,
+      },
+    };
+  });
+
+  // If there are must-haves, push candidates with 0 matches to the bottom.
+  if (mustHave.length > 0) {
+    rescored.sort((a, b) => {
+      const aReq = a.scoreBreakdown?.requiredMatched?.length || 0;
+      const bReq = b.scoreBreakdown?.requiredMatched?.length || 0;
+      if (aReq === 0 && bReq > 0) return 1;
+      if (bReq === 0 && aReq > 0) return -1;
+      return b.alignmentScore - a.alignmentScore;
+    });
+
+    // In strict mode we should never surface obvious mismatches.
+    // Keep only candidates that match at least one must-have signal.
+    const qualified = rescored.filter(
+      (candidate) => (candidate.scoreBreakdown?.requiredMatched?.length || 0) > 0
+    );
+    return qualified;
+  } else {
+    rescored.sort((a, b) => b.alignmentScore - a.alignmentScore);
+  }
+
+  return rescored;
+}
+
 export default function PipelinePage() {
   const { t } = useLanguage();
   const { isAdmin, isDemoMode } = useAdmin();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const adminSuffix = ""; // No longer needed with context-based admin
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [jobContext, setJobContext] = useState<{
     title: string;
@@ -172,7 +289,7 @@ export default function PipelinePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Hard requirements filter - exclude candidates missing must-have skills
-  const [enforceHardRequirements, setEnforceHardRequirements] = useState(false);
+  const [enforceHardRequirements, setEnforceHardRequirements] = useState(true);
   const [mustHaveSkills, setMustHaveSkills] = useState<string[]>([]);
   const [hardRequirementsConfig, setHardRequirementsConfig] = useState<HardRequirementsConfig | undefined>(undefined);
 
@@ -187,6 +304,7 @@ export default function PipelinePage() {
           .map(s => s.name.toLowerCase());
         setMustHaveSkills(mustHaves);
         setHardRequirementsConfig(config.hardRequirements || undefined);
+        setEnforceHardRequirements(mustHaves.length > 0);
       } catch {}
     }
   }, []);
@@ -255,19 +373,33 @@ export default function PipelinePage() {
     let isActive = true;
 
     const initializePipeline = async () => {
+      setPipelineError(null);
       // DEMO MODE: Load real demo profiles with receipts
       if (isDemoMode) {
         console.log("[Pipeline] Demo mode - loading real demo profiles");
-        const demoCandidates = getDemoCandidates();
+        let demoJobContext = {
+          title: "Senior Full-Stack Engineer",
+          company: "FinTech Startup",
+          requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL"],
+          location: "Remote",
+        };
+        try {
+          const stored = localStorage.getItem("apex_job_context");
+          if (stored) {
+            demoJobContext = JSON.parse(stored);
+          }
+        } catch {
+          // ignore
+        }
+
+        const demoCandidates = rerankCandidatesForContext(
+          getDemoCandidates() as unknown as Candidate[],
+          demoJobContext
+        );
         if (isActive) {
           // Cast to local Candidate type (safe because we control the demo data structure)
           setCandidates(demoCandidates as unknown as Candidate[]);
-          setJobContext({
-            title: "Senior Full-Stack Engineer",
-            company: "FinTech Startup",
-            requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL"],
-            location: "Remote",
-          });
+          setJobContext(demoJobContext);
         }
         return; // Skip normal initialization in demo mode
       }
@@ -288,6 +420,20 @@ export default function PipelinePage() {
       const freshFromIntake = pendingAutoSearch === "true";
       console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
 
+      // Local fallback candidates (used for QA/demo/offline continuity)
+      let localCandidates: Candidate[] = [];
+      const storedCandidates = localStorage.getItem("apex_candidates");
+      if (storedCandidates) {
+        try {
+          const parsed = JSON.parse(storedCandidates);
+          if (Array.isArray(parsed)) {
+            localCandidates = parsed as Candidate[];
+          }
+        } catch {
+          // Ignore invalid local cache
+        }
+      }
+
       // Create a hash of job context to detect changes
       const jobContextHash = parsedJobContext
         ? JSON.stringify({
@@ -303,15 +449,37 @@ export default function PipelinePage() {
 
       let existingCandidates: Candidate[] = [];
 
-      // Load existing candidates from API ONLY if not fresh from intake and job hasn't changed
-      if (!jobContextChanged && !freshFromIntake) {
+      // Load existing candidates from API only in authenticated mode.
+      if (status === "authenticated" && !jobContextChanged && !freshFromIntake) {
         try {
           const { candidates: apiCandidates } = await candidateService.fetchAll({ sourceType: 'GITHUB' });
-          existingCandidates = apiCandidates as unknown as Candidate[];
+          existingCandidates = (apiCandidates as unknown as Candidate[]) || [];
+          if (existingCandidates.length === 0 && localCandidates.length > 0) {
+            existingCandidates = localCandidates;
+            console.log("[Pipeline] Using local fallback candidates:", existingCandidates.length);
+          }
+          existingCandidates = rerankCandidatesForContext(existingCandidates, parsedJobContext);
           if (isActive) setCandidates(existingCandidates);
           console.log("[Pipeline] Loaded", existingCandidates.length, "existing candidates from API");
         } catch {
-          // Ignore API errors on load
+          if (localCandidates.length > 0) {
+            existingCandidates = localCandidates;
+            existingCandidates = rerankCandidatesForContext(existingCandidates, parsedJobContext);
+            if (isActive) setCandidates(existingCandidates);
+            console.log("[Pipeline] API load failed, using local fallback candidates:", existingCandidates.length);
+            if (isActive) {
+              setPipelineError("Live pipeline data unavailable. Showing local fallback candidates.");
+            }
+          } else if (isActive) {
+            setPipelineError("Failed to load candidates from API. Try refreshing.");
+          }
+        }
+      } else if (status !== "authenticated" && !jobContextChanged && !freshFromIntake) {
+        if (localCandidates.length > 0) {
+          existingCandidates = localCandidates;
+          existingCandidates = rerankCandidatesForContext(existingCandidates, parsedJobContext);
+          if (isActive) setCandidates(existingCandidates);
+          console.log("[Pipeline] Unauthenticated mode, using local fallback candidates:", existingCandidates.length);
         }
       } else if (jobContextChanged || freshFromIntake) {
         // Start fresh when job context changes
@@ -434,6 +602,9 @@ export default function PipelinePage() {
             }
           } catch (error) {
             console.error("[Pipeline] Auto-search error:", error);
+            if (isActive) {
+              setPipelineError("Auto-search failed. Try running a manual search below.");
+            }
           } finally {
             if (isActive) setLoading(false);
           }
@@ -452,7 +623,7 @@ export default function PipelinePage() {
     return () => {
       isActive = false;
     };
-  }, [isDemoMode]); // Re-run if demo mode changes
+  }, [isDemoMode, status]); // Re-run if demo mode or auth status changes
 
   // Calculate alignment score based on job requirements and skills config
   const calculateAlignmentScore = (
@@ -588,6 +759,7 @@ export default function PipelinePage() {
   const autoSearchCandidates = async (query: string) => {
     if (!query.trim()) return;
     setLoading(true);
+    setPipelineError(null);
 
     try {
       // Fetch more candidates to have better selection
@@ -650,6 +822,7 @@ export default function PipelinePage() {
       }
     } catch (error) {
       console.error("Auto-search error:", error);
+      setPipelineError("Auto-search failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -658,6 +831,7 @@ export default function PipelinePage() {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setLoading(true);
+    setPipelineError(null);
 
     try {
       const response = await fetch(
@@ -725,6 +899,7 @@ export default function PipelinePage() {
       }
     } catch (error) {
       console.error("Search error:", error);
+      setPipelineError("Search failed. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -733,6 +908,7 @@ export default function PipelinePage() {
   const handleImport = async () => {
     if (!importText.trim()) return;
     setIsImporting(true);
+    setPipelineError(null);
 
     try {
       const response = await fetch("/api/profile/analyze", {
@@ -779,6 +955,7 @@ export default function PipelinePage() {
       }
     } catch (error) {
       console.error("Import error:", error);
+      setPipelineError("Import failed. Try again or use a different resume text.");
     } finally {
       setIsImporting(false);
     }
@@ -858,16 +1035,8 @@ export default function PipelinePage() {
     // Apply hard requirements filter - exclude candidates missing must-have skills
     if (enforceHardRequirements && mustHaveSkills.length > 0) {
       filtered = filtered.filter((c) => {
-        // Check if candidate has all must-have skills
-        const candidateSkillsLower = c.skills?.map(s => s.toLowerCase()) || [];
-        const candidateBioLower = (c.currentRole || "").toLowerCase();
-
-        return mustHaveSkills.every(mustHave => {
-          // Check if skill is in candidate's skills or bio
-          return candidateSkillsLower.some(skill =>
-            skill.includes(mustHave) || mustHave.includes(skill)
-          ) || candidateBioLower.includes(mustHave);
-        });
+        // Reuse the same signal matcher used by scoring to avoid UI contradictions.
+        return mustHaveSkills.every((mustHave) => hasSkillSignal(c, mustHave));
       });
     }
 
@@ -1012,13 +1181,17 @@ export default function PipelinePage() {
   };
 
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.id));
+  const hiddenByMustHaveCount =
+    enforceHardRequirements && mustHaveSkills.length > 0
+      ? Math.max(0, candidates.length - filteredCandidates.length)
+      : 0;
 
   // Top matches - first 5 candidates by score
   const topMatches = useMemo(() => {
-    return [...candidates]
+    return [...filteredCandidates]
       .sort((a, b) => b.alignmentScore - a.alignmentScore)
       .slice(0, 5);
-  }, [candidates]);
+  }, [filteredCandidates]);
 
   // Collapsible chart state
   const [showChart, setShowChart] = useState(false);
@@ -1040,12 +1213,41 @@ export default function PipelinePage() {
                 {jobContext?.title || t("pipeline.title")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {jobContext?.company || "Your Candidates"} • {candidates.length} candidates found
+                {jobContext?.company || "Your Candidates"} •{" "}
+                {enforceHardRequirements && mustHaveSkills.length > 0
+                  ? `${filteredCandidates.length} matching candidates`
+                  : `${candidates.length} candidates found`}
               </p>
+              {mustHaveSkills.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className={`mt-1 ${
+                    enforceHardRequirements
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                      : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                  }`}
+                >
+                  {enforceHardRequirements ? "Strict Match Mode" : "Broad Match Mode"}
+                </Badge>
+              )}
+              {hiddenByMustHaveCount > 0 && (
+                <p className="text-xs text-amber-400 mt-1">
+                  {hiddenByMustHaveCount} candidates hidden (missing one or more must-have skills)
+                </p>
+              )}
             </div>
           </div>
           <div className="flex gap-2">
-            <Link href="/graph">
+            <Link
+              href={selectedIds.length > 0 ? `/graph?ids=${selectedIds.join(",")}` : "/graph"}
+              onClick={() => {
+                if (selectedIds.length > 0) {
+                  localStorage.setItem("apex_graph_selected", JSON.stringify(selectedIds));
+                } else {
+                  localStorage.removeItem("apex_graph_selected");
+                }
+              }}
+            >
               <Button variant="outline" size="sm">
                 <Network className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Talent Graph</span>
@@ -1188,6 +1390,33 @@ export default function PipelinePage() {
               </p>
             )}
           </div>
+        )}
+
+        {pipelineError && (
+          <Card className="mb-4 border-destructive/50 bg-destructive/10">
+            <CardContent className="py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-sm text-destructive">{pipelineError}</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                    Refresh
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setPipelineError(null);
+                      if (searchQuery.trim()) {
+                        void handleSearch();
+                      }
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Quick Stats Bar - Always visible when candidates exist */}
@@ -1558,11 +1787,22 @@ export default function PipelinePage() {
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">{t("pipeline.empty.noResults.title")}</h3>
+              <h3 className="text-lg font-medium mb-2">
+                {enforceHardRequirements && mustHaveSkills.length > 0
+                  ? "No candidates match current must-have skills"
+                  : t("pipeline.empty.noResults.title")}
+              </h3>
               <p className="text-muted-foreground mb-4">
-                {t("pipeline.empty.noResults.description")}
+                {enforceHardRequirements && mustHaveSkills.length > 0
+                  ? "Strict Match Mode is active. Demote one or more must-have skills to see broader results."
+                  : t("pipeline.empty.noResults.description")}
               </p>
               <div className="flex gap-2 justify-center">
+                {enforceHardRequirements && mustHaveSkills.length > 0 && (
+                  <Button variant="outline" onClick={() => router.push("/skills-review")}>
+                    Review Skills
+                  </Button>
+                )}
                 <Button onClick={() => setShowImport(true)}>
                   <FileText className="w-4 h-4 mr-2" />
                   {t("pipeline.empty.noResults.importResume")}

@@ -45,7 +45,7 @@ export default function Home() {
           {/* Free Credits Banner */}
           <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/30">
             <Zap className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Start gratis med 5 dybdeprofil-kreditter</span>
+            <span className="text-sm font-medium">{t("home.freeCreditsBanner")}</span>
           </div>
 
           {/* Headline */}
@@ -78,18 +78,23 @@ export default function Home() {
             <div className="flex items-center justify-between mt-3">
               <p className="text-xs text-muted-foreground">
                 <span className="text-primary">{t("home.enter")}</span>{" "}
-                {t("home.lang") === "da" ? "for at søge" : "to search"},{" "}
+                {t("home.searchHintPart1")},{" "}
                 <span className="text-primary">{t("home.shiftEnter")}</span>{" "}
-                {t("home.lang") === "da" ? "for ny linje" : "for new line"}
+                {t("home.searchHintPart2")}
               </p>
               <Link
                 href="/login?demo=true"
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
                 <Sparkles className="w-3 h-3" />
-                {t("home.lang") === "da" ? "Prøv Demo" : "Try Demo"}
+                {t("home.tryDemo")}
               </Link>
             </div>
+            <p className="mt-3 text-xs text-muted-foreground text-center">
+              {t("home.noCreditCardRequired")}
+              <span className="mx-2">•</span>
+              {t("home.gdprCompliant")}
+            </p>
           </div>
 
           {/* Wizard CTA */}
@@ -99,11 +104,11 @@ export default function Home() {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-colors"
             >
               <Zap className="w-4 h-4" />
-              {t("home.lang") === "da" ? "Start guidet opsætning" : "Start Guided Setup"}
+              {t("home.startGuidedSetup")}
               <ArrowRight className="w-4 h-4" />
             </Link>
             <p className="text-xs text-muted-foreground mt-2">
-              {t("home.lang") === "da" ? "3-trins wizard til at finde din første shortlist" : "3-step wizard to find your first shortlist"}
+              {t("home.guidedSetupSubtitle")}
             </p>
           </div>
 

@@ -3,6 +3,7 @@
 import { CheckCircle, FileText, ListChecks, Users, Microscope, Mail, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/lib/i18n";
 
 interface WorkflowStepperProps {
   currentStep: 1 | 2 | 3 | 4 | 5;
@@ -19,8 +20,8 @@ interface WorkflowStepperProps {
 const PHASES = [
   {
     id: 1,
-    label: "Search & Define",
-    shortLabel: "Search",
+    labelKey: "workflow.phases.searchDefine.label",
+    shortLabelKey: "workflow.phases.searchDefine.short",
     color: "blue",
     bgClass: "bg-blue-500",
     bgLightClass: "bg-blue-500/10",
@@ -33,8 +34,8 @@ const PHASES = [
   },
   {
     id: 2,
-    label: "Select & Screen",
-    shortLabel: "Select",
+    labelKey: "workflow.phases.selectScreen.label",
+    shortLabelKey: "workflow.phases.selectScreen.short",
     color: "purple",
     bgClass: "bg-purple-500",
     bgLightClass: "bg-purple-500/10",
@@ -47,8 +48,8 @@ const PHASES = [
   },
   {
     id: 3,
-    label: "AI Analysis",
-    shortLabel: "Analyze",
+    labelKey: "workflow.phases.aiAnalysis.label",
+    shortLabelKey: "workflow.phases.aiAnalysis.short",
     color: "amber",
     bgClass: "bg-amber-500",
     bgLightClass: "bg-amber-500/10",
@@ -61,8 +62,8 @@ const PHASES = [
   },
   {
     id: 4,
-    label: "Contact & Hire",
-    shortLabel: "Contact",
+    labelKey: "workflow.phases.contactHire.label",
+    shortLabelKey: "workflow.phases.contactHire.short",
     color: "emerald",
     bgClass: "bg-emerald-500",
     bgLightClass: "bg-emerald-500/10",
@@ -76,11 +77,11 @@ const PHASES = [
 ] as const;
 
 const STEPS = [
-  { id: 1, label: "Job Intake", icon: FileText, path: "/intake", phaseId: 1 },
-  { id: 2, label: "Candidates", icon: Users, path: "/search", phaseId: 1 },
-  { id: 3, label: "Skills Review", icon: ListChecks, path: "/skills-review", phaseId: 2 },
-  { id: 4, label: "Deep Dive", icon: Microscope, path: "/shortlist", phaseId: 3 },
-  { id: 5, label: "Outreach", icon: Mail, path: "/pipeline", phaseId: 4 },
+  { id: 1, labelKey: "workflow.steps.jobIntake", icon: FileText, path: "/intake", phaseId: 1 },
+  { id: 2, labelKey: "workflow.steps.candidates", icon: Users, path: "/search", phaseId: 1 },
+  { id: 3, labelKey: "workflow.steps.skillsReview", icon: ListChecks, path: "/skills-review", phaseId: 2 },
+  { id: 4, labelKey: "workflow.steps.deepDive", icon: Microscope, path: "/shortlist", phaseId: 3 },
+  { id: 5, labelKey: "workflow.steps.outreach", icon: Mail, path: "/pipeline", phaseId: 4 },
 ] as const;
 
 function getPhaseForStep(stepId: number) {
@@ -101,6 +102,7 @@ function getPhaseProgress(phaseId: number, currentStep: number) {
 
 export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepperProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const currentPhase = getPhaseForStep(currentStep);
 
   const handleStepClick = (step: (typeof STEPS)[number]) => {
@@ -135,8 +137,8 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
                   )}
                 >
                   {isCompleted && <CheckCircle className="w-3 h-3" />}
-                  <span className="hidden sm:inline">{phase.label}</span>
-                  <span className="sm:hidden">{phase.shortLabel}</span>
+                  <span className="hidden sm:inline">{t(phase.labelKey)}</span>
+                  <span className="sm:hidden">{t(phase.shortLabelKey)}</span>
                   {isActive && (
                     <span className={cn("text-[10px] opacity-70")}>{progress}%</span>
                   )}
@@ -201,7 +203,11 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
                   isClickable && "cursor-pointer",
                   !isClickable && "cursor-default"
                 )}
-                title={isClickable ? `Go to ${step.label}` : step.label}
+                title={
+                  isClickable
+                    ? `${t("workflow.goTo")} ${t(step.labelKey)}`
+                    : t(step.labelKey)
+                }
               >
                 {/* Phase color indicator dot */}
                 {isCurrent && (
@@ -239,7 +245,7 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
                     isFuture && "text-muted-foreground"
                   )}
                 >
-                  {step.label}
+                  {t(step.labelKey)}
                 </span>
               </button>
 
@@ -287,7 +293,7 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
                   isPhaseCompleted && "bg-green-500",
                   !isPhaseActive && !isPhaseCompleted && "bg-muted-foreground"
                 )} />
-                {phase.shortLabel}
+                {t(phase.shortLabelKey)}
               </div>
 
               {phaseSteps.map((step, index) => {
@@ -341,10 +347,10 @@ export function WorkflowStepper({ currentStep, className = "" }: WorkflowStepper
                           isFuture && "text-muted-foreground"
                         )}
                       >
-                        {step.label}
+                        {t(step.labelKey)}
                       </span>
                       {isCurrent && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Current step</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("workflow.currentStep")}</p>
                       )}
                     </div>
                   </button>

@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 // ===== CONSTANTS =====
 
@@ -47,6 +48,9 @@ interface RecruiterProfile {
 // ===== COMPONENT =====
 
 export default function SettingsPage() {
+  const { lang } = useLanguage();
+  const isDa = lang === "da";
+
   // State
   const [recruiterLinkedInUrl, setRecruiterLinkedInUrl] = useState("");
   const [recruiterProfile, setRecruiterProfile] = useState<RecruiterProfile | null>(null);
@@ -133,7 +137,11 @@ export default function SettingsPage() {
   // Sync LinkedIn connections
   const handleSyncConnections = async () => {
     if (!recruiterLinkedInUrl) {
-      setSyncError("Please enter your LinkedIn URL first");
+      setSyncError(
+        isDa
+          ? "Indtast først din LinkedIn-URL"
+          : "Please enter your LinkedIn URL first"
+      );
       return;
     }
 
@@ -159,7 +167,9 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to sync profile");
+        throw new Error(
+          errorData.error || (isDa ? "Kunne ikke synkronisere profil" : "Failed to sync profile")
+        );
       }
 
       const data = await response.json();
@@ -188,7 +198,13 @@ export default function SettingsPage() {
       });
     } catch (error) {
       console.error("Sync error:", error);
-      setSyncError(error instanceof Error ? error.message : "Failed to sync connections");
+      setSyncError(
+        error instanceof Error
+          ? error.message
+          : isDa
+            ? "Kunne ikke synkronisere forbindelser"
+            : "Failed to sync connections"
+      );
     } finally {
       setIsSyncing(false);
     }
@@ -214,13 +230,15 @@ export default function SettingsPage() {
         <div className="container max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Settings</h1>
+              <h1 className="text-2xl font-bold">{isDa ? "Indstillinger" : "Settings"}</h1>
               <p className="text-muted-foreground mt-1">
-                Configure your RecruitOS integrations
+                {isDa
+                  ? "Konfigurer dine RecruitOS-integrationer"
+                  : "Configure your RecruitOS integrations"}
               </p>
             </div>
             <Link href="/">
-              <Button variant="outline">Back to Home</Button>
+              <Button variant="outline">{isDa ? "Tilbage til forsiden" : "Back to Home"}</Button>
             </Link>
           </div>
         </div>
@@ -238,22 +256,25 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Linkedin className="w-5 h-5 text-[#0A66C2]" />
-                LinkedIn Connection Path
+                {isDa ? "LinkedIn-forbindelsessti" : "LinkedIn Connection Path"}
               </CardTitle>
               <CardDescription>
-                Enter your LinkedIn profile URL to discover how you&apos;re connected to
-                candidates. This enables the connection path feature on candidate profiles.
+                {isDa
+                  ? "Indtast URL'en til din LinkedIn-profil for at se, hvordan du er forbundet til kandidater. Det aktiverer forbindelsessti-funktionen på kandidatprofiler."
+                  : "Enter your LinkedIn profile URL to discover how you're connected to candidates. This enables the connection path feature on candidate profiles."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* LinkedIn URL Input */}
               <div className="space-y-2">
-                <Label htmlFor="linkedin-url">Your LinkedIn Profile URL</Label>
+                <Label htmlFor="linkedin-url">
+                  {isDa ? "Din LinkedIn-profil URL" : "Your LinkedIn Profile URL"}
+                </Label>
                 <div className="flex gap-2 items-center">
                   <Input
                     id="linkedin-url"
                     type="url"
-                    placeholder="https://www.linkedin.com/in/yourprofile"
+                    placeholder="https://www.linkedin.com/in/your-profile"
                     value={recruiterLinkedInUrl}
                     onChange={(e) => setRecruiterLinkedInUrl(e.target.value)}
                     className="flex-1"
@@ -266,18 +287,18 @@ export default function SettingsPage() {
                     {linkedInSaveSuccess ? (
                       <>
                         <Check className="w-4 h-4 mr-2 text-green-500" />
-                        Gemt!
+                        {isDa ? "Gemt!" : "Saved!"}
                       </>
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Gem
+                        {isDa ? "Gem" : "Save"}
                       </>
                     )}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Example: https://www.linkedin.com/in/johndoe
+                  {isDa ? "Eksempel: https://www.linkedin.com/in/johndoe" : "Example: https://www.linkedin.com/in/johndoe"}
                 </p>
               </div>
 
@@ -287,12 +308,14 @@ export default function SettingsPage() {
               {recruiterProfile ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Synced Profile</span>
+                    <span className="text-sm font-medium">
+                      {isDa ? "Synkroniseret profil" : "Synced Profile"}
+                    </span>
                     <div className="flex items-center gap-2">
                       {isCacheExpired && (
                         <Badge variant="outline" className="text-yellow-600 border-yellow-500/30">
                           <AlertCircle className="w-3 h-3 mr-1" />
-                          Expired
+                          {isDa ? "Udløbet" : "Expired"}
                         </Badge>
                       )}
                       <Button
@@ -323,10 +346,12 @@ export default function SettingsPage() {
                         {recruiterProfile.headline}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        <span>{recruiterProfile.connections}+ connections</span>
+                        <span>
+                          {recruiterProfile.connections}+ {isDa ? "forbindelser" : "connections"}
+                        </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          Synced{" "}
+                          {isDa ? "Synkroniseret" : "Synced"}{" "}
                           {new Date(recruiterProfile.lastSynced).toLocaleDateString()}
                         </span>
                       </div>
@@ -347,7 +372,7 @@ export default function SettingsPage() {
               ) : (
                 <div className="text-center py-6 text-muted-foreground">
                   <User className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No profile synced yet</p>
+                  <p className="text-sm">{isDa ? "Ingen profil synkroniseret endnu" : "No profile synced yet"}</p>
                 </div>
               )}
 
@@ -360,12 +385,18 @@ export default function SettingsPage() {
                 {isSyncing ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Syncing Connections...
+                    {isDa ? "Synkroniserer forbindelser..." : "Syncing Connections..."}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 mr-2" />
-                    {recruiterProfile ? "Refresh Connections" : "Sync My Connections"}
+                    {recruiterProfile
+                      ? isDa
+                        ? "Opdater forbindelser"
+                        : "Refresh Connections"
+                      : isDa
+                        ? "Synkroniser mine forbindelser"
+                        : "Sync My Connections"}
                   </>
                 )}
               </Button>
@@ -382,8 +413,9 @@ export default function SettingsPage() {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
                 <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  Your LinkedIn profile data is stored locally in your browser and never
-                  sent to our servers. Connection paths are calculated client-side.
+                  {isDa
+                    ? "Dine LinkedIn-profildata gemmes lokalt i din browser og sendes aldrig til vores servere. Forbindelsesstier beregnes i klienten."
+                    : "Your LinkedIn profile data is stored locally in your browser and never sent to our servers. Connection paths are calculated client-side."}
                 </p>
               </div>
             </CardContent>
@@ -400,11 +432,12 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Key className="w-5 h-5" />
-                API Keys
+                {isDa ? "API-nøgler" : "API Keys"}
               </CardTitle>
               <CardDescription>
-                Configure your API keys for various integrations. Keys are stored
-                securely in your browser&apos;s local storage.
+                {isDa
+                  ? "Konfigurer dine API-nøgler til forskellige integrationer. Nøgler gemmes sikkert i browserens lokale lager."
+                  : "Configure your API keys for various integrations. Keys are stored securely in your browser's local storage."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -414,19 +447,21 @@ export default function SettingsPage() {
                 <Input
                   id="brightdata-key"
                   type="password"
-                  placeholder="Enter your BrightData API key"
+                  placeholder={isDa ? "Indtast din BrightData API-nøgle" : "Enter your BrightData API key"}
                   value={brightDataKey}
                   onChange={(e) => setBrightDataKey(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Required for LinkedIn profile scraping and connection paths.{" "}
+                  {isDa
+                    ? "Kræves til scraping af LinkedIn-profiler og forbindelsesstier."
+                    : "Required for LinkedIn profile scraping and connection paths."}{" "}
                   <a
                     href="https://brightdata.com/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    Get an API key
+                    {isDa ? "Få en API-nøgle" : "Get an API key"}
                   </a>
                 </p>
               </div>
@@ -437,19 +472,21 @@ export default function SettingsPage() {
                 <Input
                   id="firecrawl-key"
                   type="password"
-                  placeholder="Enter your Firecrawl API key"
+                  placeholder={isDa ? "Indtast din Firecrawl API-nøgle" : "Enter your Firecrawl API key"}
                   value={firecrawlKey}
                   onChange={(e) => setFirecrawlKey(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Required for job description and website scraping.{" "}
+                  {isDa
+                    ? "Kræves til jobbeskrivelses- og websidescraping."
+                    : "Required for job description and website scraping."}{" "}
                   <a
                     href="https://firecrawl.dev/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    Get an API key
+                    {isDa ? "Få en API-nøgle" : "Get an API key"}
                   </a>
                 </p>
               </div>
@@ -460,19 +497,21 @@ export default function SettingsPage() {
                 <Input
                   id="gemini-key"
                   type="password"
-                  placeholder="Enter your Gemini API key"
+                  placeholder={isDa ? "Indtast din Gemini API-nøgle" : "Enter your Gemini API key"}
                   value={geminiKey}
                   onChange={(e) => setGeminiKey(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Required for AI-powered candidate analysis.{" "}
+                  {isDa
+                    ? "Kræves til AI-drevet kandidatanalyse."
+                    : "Required for AI-powered candidate analysis."}{" "}
                   <a
                     href="https://makersuite.google.com/app/apikey"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    Get an API key
+                    {isDa ? "Få en API-nøgle" : "Get an API key"}
                   </a>
                 </p>
               </div>
@@ -481,7 +520,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3 pt-2">
                 <Button onClick={handleSaveApiKeys}>
                   <Save className="w-4 h-4 mr-2" />
-                  Save API Keys
+                  {isDa ? "Gem API-nøgler" : "Save API Keys"}
                 </Button>
                 {saveSuccess && (
                   <motion.span
@@ -490,7 +529,7 @@ export default function SettingsPage() {
                     className="flex items-center gap-1 text-sm text-green-600"
                   >
                     <Check className="w-4 h-4" />
-                    Saved!
+                    {isDa ? "Gemt!" : "Saved!"}
                   </motion.span>
                 )}
               </div>
@@ -499,9 +538,9 @@ export default function SettingsPage() {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
                 <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  API keys are stored only in your browser&apos;s local storage and are never
-                  transmitted to our servers. They are used directly in API calls from
-                  your browser.
+                  {isDa
+                    ? "API-nøgler gemmes kun i browserens lokale lager og sendes aldrig til vores servere. De bruges direkte i API-kald fra din browser."
+                    : "API keys are stored only in your browser's local storage and are never transmitted to our servers. They are used directly in API calls from your browser."}
                 </p>
               </div>
             </CardContent>
@@ -518,28 +557,30 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                Credits & Usage
+                {isDa ? "Credits og forbrug" : "Credits & Usage"}
               </CardTitle>
               <CardDescription>
-                Monitor your credit balance and API usage.
+                {isDa ? "Overvåg din creditsaldo og API-forbrug." : "Monitor your credit balance and API usage."}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">
-                    Current Balance
+                    {isDa ? "Nuværende saldo" : "Current Balance"}
                   </div>
                   <div className="text-3xl font-bold">
                     {typeof window !== "undefined"
                       ? localStorage.getItem("apex_credits") || "5000"
                       : "5000"}
                   </div>
-                  <div className="text-xs text-muted-foreground">credits</div>
+                  <div className="text-xs text-muted-foreground">
+                    {isDa ? "credits" : "credits"}
+                  </div>
                 </div>
                 <Link href="/pricing">
                   <Button variant="outline">
-                    Get More Credits
+                    {isDa ? "Køb flere credits" : "Get More Credits"}
                   </Button>
                 </Link>
               </div>

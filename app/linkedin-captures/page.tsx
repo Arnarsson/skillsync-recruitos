@@ -31,6 +31,7 @@ import {
   ChevronUp,
   Zap,
   Download,
+  Trash2,
   Building2,
   TrendingUp,
   Tag,
@@ -40,6 +41,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 interface LinkedInCapture {
   id: string;
@@ -77,6 +79,7 @@ interface Enrichment {
 }
 
 export default function LinkedInCapturesPage() {
+  const { t } = useLanguage();
   const [captures, setCaptures] = useState<LinkedInCapture[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,6 +91,8 @@ export default function LinkedInCapturesPage() {
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cleaningOld, setCleaningOld] = useState(false);
 
   const fetchCaptures = async () => {
     setLoading(true);
@@ -99,7 +104,7 @@ export default function LinkedInCapturesPage() {
       setTotal(data.total || 0);
     } catch (error) {
       console.error("Failed to fetch captures:", error);
-      setError("Failed to load captures. Please try again.");
+      setError(t("linkedinCaptures.errors.load"));
     } finally {
       setLoading(false);
     }
@@ -131,7 +136,7 @@ export default function LinkedInCapturesPage() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "just now";
+    if (diffMins < 1) return t("linkedinCaptures.time.justNow");
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -240,6 +245,56 @@ export default function LinkedInCapturesPage() {
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
+  const deleteCapture = async (capture: LinkedInCapture) => {
+    const targetName = capture.name || t("linkedinCaptures.thisProfile");
+    const confirmed = window.confirm(`${t("linkedinCaptures.confirmDeletePrefix")} ${targetName}?`);
+    if (!confirmed) return;
+
+    setDeletingId(capture.id);
+    try {
+      const res = await fetch(
+        `/api/linkedin/candidate?id=${encodeURIComponent(capture.id)}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Delete failed (${res.status})`);
+      }
+      setCaptures((prev) => prev.filter((c) => c.id !== capture.id));
+      setTotal((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("linkedinCaptures.errors.delete");
+      setError(msg);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const deleteOldCaptures = async (olderThanHours = 24) => {
+    const confirmed = window.confirm(
+      `Delete all captures older than ${olderThanHours} hours?`
+    );
+    if (!confirmed) return;
+
+    setCleaningOld(true);
+    try {
+      const res = await fetch(
+        `/api/linkedin/candidate?olderThanHours=${olderThanHours}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Cleanup failed (${res.status})`);
+      }
+      await fetchCaptures();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("linkedinCaptures.errors.cleanOld");
+      setError(msg);
+    } finally {
+      setCleaningOld(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pt-20 pb-8 px-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -249,11 +304,11 @@ export default function LinkedInCapturesPage() {
         {/* Header */}
         <PageHeader
           icon={Linkedin}
-          title="LinkedIn Captures"
-          subtitle="Profiles captured from the LinkedIn extension"
+          title={t("linkedinCaptures.title")}
+          subtitle={t("linkedinCaptures.subtitle")}
           badge={
             <Badge variant="secondary" className="badge-neutral">
-              {total} profiles
+              {total} {t("linkedinCaptures.profiles")}
             </Badge>
           }
           actions={
@@ -261,11 +316,25 @@ export default function LinkedInCapturesPage() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => deleteOldCaptures(24)}
+                disabled={captures.length === 0 || cleaningOld}
+                className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
+              >
+                {cleaningOld ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                {t("linkedinCaptures.actions.deleteOld")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShowCompanyInsights(!showCompanyInsights)}
                 className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
               >
                 <TrendingUp className="w-4 h-4 mr-2" />
-                Insights
+                {t("linkedinCaptures.actions.insights")}
               </Button>
               <Button
                 variant="outline"
@@ -275,7 +344,7 @@ export default function LinkedInCapturesPage() {
                 className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export CSV
+                {t("linkedinCaptures.actions.exportCsv")}
               </Button>
               <Button
                 variant="outline"
@@ -285,7 +354,7 @@ export default function LinkedInCapturesPage() {
                 className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring touch-target-sm"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                Refresh
+                {t("linkedinCaptures.actions.refresh")}
               </Button>
             </>
           }
@@ -298,7 +367,7 @@ export default function LinkedInCapturesPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <Input
-                  placeholder="Search by name, headline, company, location..."
+                  placeholder={t("linkedinCaptures.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
@@ -306,7 +375,7 @@ export default function LinkedInCapturesPage() {
               </div>
               <Button variant="outline" className="border-slate-700 text-slate-300 focus-ring touch-target-sm">
                 <Filter className="w-4 h-4 mr-2" />
-                Filters
+                {t("linkedinCaptures.filters")}
               </Button>
             </div>
           </CardContent>
@@ -322,7 +391,7 @@ export default function LinkedInCapturesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">{total}</p>
-                  <p className="caption">Total Captured</p>
+                  <p className="caption">{t("linkedinCaptures.stats.totalCaptured")}</p>
                 </div>
               </div>
             </CardContent>
@@ -340,7 +409,7 @@ export default function LinkedInCapturesPage() {
                       return new Date(c.capturedAt).getTime() > hourAgo;
                     }).length}
                   </p>
-                  <p className="caption">Last Hour</p>
+                  <p className="caption">{t("linkedinCaptures.stats.lastHour")}</p>
                 </div>
               </div>
             </CardContent>
@@ -355,7 +424,7 @@ export default function LinkedInCapturesPage() {
                   <p className="text-2xl font-bold text-white">
                     {new Set(captures.map((c) => c.currentCompany).filter(Boolean)).size}
                   </p>
-                  <p className="caption">Companies</p>
+                  <p className="caption">{t("linkedinCaptures.stats.companies")}</p>
                 </div>
               </div>
             </CardContent>
@@ -370,7 +439,7 @@ export default function LinkedInCapturesPage() {
                   <p className="text-2xl font-bold text-white">
                     {new Set(captures.map((c) => c.location).filter(Boolean)).size}
                   </p>
-                  <p className="caption">Locations</p>
+                  <p className="caption">{t("linkedinCaptures.stats.locations")}</p>
                 </div>
               </div>
             </CardContent>
@@ -385,7 +454,7 @@ export default function LinkedInCapturesPage() {
                   <p className="text-2xl font-bold text-white">
                     {captures.filter((c) => c.openToWork).length}
                   </p>
-                  <p className="caption">Open to Work</p>
+                  <p className="caption">{t("linkedinCaptures.stats.openToWork")}</p>
                 </div>
               </div>
             </CardContent>
@@ -407,7 +476,7 @@ export default function LinkedInCapturesPage() {
                   <CardHeader className="pb-2">
                     <CardTitle className="heading-md flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-amber-400" />
-                      Top Companies
+                      {t("linkedinCaptures.topCompanies")}
                       {companyFilter && (
                         <Button
                           variant="ghost"
@@ -415,14 +484,14 @@ export default function LinkedInCapturesPage() {
                           onClick={() => setCompanyFilter(null)}
                           className="ml-auto text-xs text-slate-400 hover:text-white h-6 px-2"
                         >
-                          Clear filter
+                          {t("linkedinCaptures.clearFilter")}
                         </Button>
                       )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
                     {topCompanies.length === 0 ? (
-                      <p className="body-sm">No company data yet</p>
+                      <p className="body-sm">{t("linkedinCaptures.noCompanyData")}</p>
                     ) : (
                       <div className="space-y-2">
                         {topCompanies.map(([company, count]) => (
@@ -451,12 +520,12 @@ export default function LinkedInCapturesPage() {
                   <CardHeader className="pb-2">
                     <CardTitle className="heading-md flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-indigo-400" />
-                      Top Skills Across Captures
+                      {t("linkedinCaptures.topSkills")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
                     {topSkills.length === 0 ? (
-                      <p className="body-sm">No skills data yet</p>
+                      <p className="body-sm">{t("linkedinCaptures.noSkillsData")}</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {topSkills.map(([skill, count]) => (
@@ -483,16 +552,16 @@ export default function LinkedInCapturesPage() {
           <div className="flex items-center gap-2 p-3 bg-amber-600/10 border border-amber-600/30 rounded-lg">
             <Building2 className="w-4 h-4 text-amber-400" />
             <span className="body-md">
-              Filtering by: <span className="font-medium text-white">{companyFilter}</span>
+              {t("linkedinCaptures.filteringBy")}: <span className="font-medium text-white">{companyFilter}</span>
             </span>
-            <span className="caption">({displayCaptures.length} profiles)</span>
+            <span className="caption">({displayCaptures.length} {t("linkedinCaptures.profiles")})</span>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCompanyFilter(null)}
               className="ml-auto text-xs text-slate-400 hover:text-white focus-ring touch-target-sm"
             >
-              Clear
+              {t("common.clear")}
             </Button>
           </div>
         )}
@@ -505,7 +574,7 @@ export default function LinkedInCapturesPage() {
           <CardHeader className="border-b border-slate-800">
             <CardTitle className="heading-md flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              Recent Captures
+              {t("linkedinCaptures.recentCaptures")}
               {loading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
             </CardTitle>
           </CardHeader>
@@ -517,8 +586,8 @@ export default function LinkedInCapturesPage() {
             ) : displayCaptures.length === 0 && searchQuery ? (
               <div className="p-8 text-center">
                 <Search className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                <p className="text-slate-400 text-lg mb-2">No candidates match your search</p>
-                <p className="text-slate-500 text-sm">Try adjusting your search terms or filters</p>
+                <p className="text-slate-400 text-lg mb-2">{t("linkedinCaptures.noMatchesTitle")}</p>
+                <p className="text-slate-500 text-sm">{t("linkedinCaptures.noMatchesDesc")}</p>
               </div>
             ) : displayCaptures.length === 0 ? (
               <LinkedInEmptyState type="captures" />
@@ -537,7 +606,7 @@ export default function LinkedInCapturesPage() {
                       transition={{ delay: index * 0.05 }}
                       className="p-4 card-interactive card-focusable"
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
                         {/* Avatar */}
                         <div className="flex-shrink-0 relative">
                           {capture.photoUrl ? (
@@ -566,13 +635,13 @@ export default function LinkedInCapturesPage() {
                             </h3>
                             {capture.openToWork && (
                               <Badge className="badge-success text-xs border-0">
-                                Open to Work
+                                {t("linkedinCaptures.stats.openToWork")}
                               </Badge>
                             )}
                             {capture.isPremium && (
                               <Badge className="badge-warning text-xs border-0">
                                 <Star className="w-3 h-3 mr-1" />
-                                Premium
+                                {t("linkedinCaptures.premium")}
                               </Badge>
                             )}
                             {capture.connectionDegree && (
@@ -639,7 +708,7 @@ export default function LinkedInCapturesPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap lg:flex-shrink-0 lg:justify-end">
                           <span className="caption">
                             {formatDate(capture.capturedAt)}
                           </span>
@@ -665,9 +734,22 @@ export default function LinkedInCapturesPage() {
                           </a>
                           <Button
                             size="sm"
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white focus-ring touch-target-sm px-4"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white focus-ring touch-target-sm px-3 whitespace-nowrap"
                           >
                             Add to Pipeline
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteCapture(capture)}
+                            disabled={deletingId === capture.id}
+                            className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 focus-ring touch-target-sm px-3 whitespace-nowrap"
+                          >
+                            {deletingId === capture.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       </div>

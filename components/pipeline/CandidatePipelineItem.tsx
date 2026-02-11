@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/expandable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AnalysisLoadingScramble } from "@/components/ui/loading-scramble";
 import ScoreBadge from "@/components/ScoreBadge";
 import { BuildprintStrip } from "@/components/pipeline/BuildprintStrip";
@@ -29,9 +28,7 @@ import {
   Target,
   Lightbulb,
   ChevronDown,
-  Loader2,
   User,
-  Briefcase,
   Github,
   Linkedin,
   ExternalLink,
@@ -41,6 +38,11 @@ import {
   Activity,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import {
+  extractGitHubUsername,
+  isUuidLike,
+  resolveProfileSlug,
+} from "@/lib/candidate-identity";
 
 interface ScoreBreakdown {
   requiredMatched: string[];
@@ -74,18 +76,22 @@ interface DeepAnalysis {
 
 interface Candidate {
   id: string;
+  githubUsername?: string;
+  username?: string;
   name: string;
   currentRole: string;
   company: string;
   location: string;
   alignmentScore: number;
   avatar: string;
+  shortlistSummary?: string;
   skills?: string[];
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
   scoreBreakdown?: ScoreBreakdown;
   source?: "github" | "linkedin" | "import";
+  sourceUrl?: string;
   persona?: {
     archetype?: string;
     riskAssessment?: {
@@ -123,16 +129,64 @@ export function CandidatePipelineItem({
   const [githubAnalysis, setGithubAnalysis] = useState<any>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
 
+  const githubUsername = useMemo(() => {
+    return extractGitHubUsername(candidate);
+  }, [candidate]);
+
+  const profileSlug = useMemo(() => resolveProfileSlug(candidate), [candidate]);
+  const behavioralUsername = githubUsername || "";
+
+  const normalizedScoreBreakdown = useMemo(() => {
+    const breakdown = candidate.scoreBreakdown as
+      | (ScoreBreakdown & {
+          skills?: { percentage?: number };
+          experience?: { percentage?: number };
+          industry?: { percentage?: number };
+          seniority?: { percentage?: number };
+          location?: { percentage?: number };
+        })
+      | undefined;
+
+    if (!breakdown) return null;
+
+    const hasLegacy = typeof breakdown.baseScore === "number";
+    if (hasLegacy) {
+      return {
+        base: breakdown.baseScore ?? 0,
+        skills: breakdown.skillsScore ?? 0,
+        preferred: breakdown.preferredScore ?? 0,
+        location: breakdown.locationScore ?? 0,
+      };
+    }
+
+    const skillsPct = breakdown.skills?.percentage ?? 0;
+    const experiencePct = breakdown.experience?.percentage ?? 0;
+    const industryPct = breakdown.industry?.percentage ?? 0;
+    const seniorityPct = breakdown.seniority?.percentage ?? 0;
+    const locationPct = breakdown.location?.percentage ?? 0;
+    const preferredComposite = Math.round((experiencePct + industryPct + seniorityPct) / 3);
+
+    return {
+      base: Math.round((candidate.alignmentScore || 0) * 0.4),
+      skills: skillsPct,
+      preferred: preferredComposite,
+      location: locationPct,
+    };
+  }, [candidate.scoreBreakdown, candidate.alignmentScore]);
+
   // Fetch deep analysis when card expands
   const handleExpandStart = useCallback(async () => {
     if (hasLoadedAnalysis || isLoadingAnalysis) return;
 
     setIsLoadingAnalysis(true);
     try {
+      const lookupId = githubUsername || candidate.id;
       // Fetch both developer profile and GitHub deep analysis in parallel
       const [profileRes, githubRes] = await Promise.all([
-        fetch(`/api/developers/${candidate.id}?deep=true`),
-        fetch(`/api/github/deep?username=${candidate.id}`),
+        fetch(`/api/developers/${lookupId}?deep=true`),
+        lookupId && !isUuidLike(lookupId)
+          ? fetch(`/api/github/deep?username=${lookupId}`)
+          : Promise.resolve(new Response(null, { status: 204 })),
       ]);
 
       if (profileRes.ok) {
@@ -150,9 +204,21 @@ export function CandidatePipelineItem({
         });
       }
 
-      if (githubRes.ok) {
-        const githubData = await githubRes.json();
-        setGithubAnalysis(githubData);
+      if (githubRes.ok && githubRes.status !== 204) {
+        const contentType = githubRes.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const githubData = await githubRes.json();
+          setGithubAnalysis(githubData);
+        } else {
+          const raw = await githubRes.text();
+          if (raw.trim()) {
+            try {
+              setGithubAnalysis(JSON.parse(raw));
+            } catch {
+              console.warn("GitHub deep analysis returned non-JSON payload");
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to fetch deep analysis:", error);
@@ -160,7 +226,15 @@ export function CandidatePipelineItem({
       setIsLoadingAnalysis(false);
       setHasLoadedAnalysis(true);
     }
-  }, [candidate.id, hasLoadedAnalysis, isLoadingAnalysis, candidate.persona?.archetype, candidate.keyEvidence, candidate.risks]);
+  }, [
+    candidate.id,
+    hasLoadedAnalysis,
+    isLoadingAnalysis,
+    candidate.persona?.archetype,
+    candidate.keyEvidence,
+    candidate.risks,
+    githubUsername,
+  ]);
 
   // In compact mode, render a simplified non-expandable version
   if (compact) {
@@ -315,7 +389,9 @@ export function CandidatePipelineItem({
                       )}
                     </div>
                   )}
-                  <BehavioralBadges username={candidate.id} compact className="mt-2" />
+                  {behavioralUsername ? (
+                    <BehavioralBadges username={behavioralUsername} compact className="mt-2" />
+                  ) : null}
                 </div>
 
                 {/* Score - Clickable for explainer */}
@@ -366,7 +442,7 @@ export function CandidatePipelineItem({
                 </div>
 
                 {/* Score Breakdown */}
-                {candidate.scoreBreakdown && (
+                {candidate.scoreBreakdown && normalizedScoreBreakdown && (
                   <div className="mb-6">
                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                       <Target className="w-4 h-4 text-primary" />
@@ -375,29 +451,29 @@ export function CandidatePipelineItem({
                     <div className="grid grid-cols-4 gap-2">
                       <div className="p-2 rounded-lg bg-muted/50 text-center">
                         <div className="text-lg font-bold text-muted-foreground">
-                          {candidate.scoreBreakdown.baseScore}
+                          {normalizedScoreBreakdown.base}
                         </div>
                         <div className="text-[10px] text-muted-foreground">{t("candidate.base")}</div>
                       </div>
                       <div className="p-2 rounded-lg bg-green-500/10 text-center">
                         <div className="text-lg font-bold text-green-500">
-                          +{candidate.scoreBreakdown.skillsScore}
+                          +{normalizedScoreBreakdown.skills}
                         </div>
                         <div className="text-[10px] text-muted-foreground">{t("score.skills")}</div>
                       </div>
                       <div className="p-2 rounded-lg bg-blue-500/10 text-center">
                         <div className="text-lg font-bold text-blue-500">
-                          +{candidate.scoreBreakdown.preferredScore}
+                          +{normalizedScoreBreakdown.preferred}
                         </div>
                         <div className="text-[10px] text-muted-foreground">{t("candidate.preferred")}</div>
                       </div>
                       <div className="p-2 rounded-lg bg-yellow-500/10 text-center relative group">
                         <div className="text-lg font-bold text-yellow-500">
-                          +{candidate.scoreBreakdown.locationScore}
+                          +{normalizedScoreBreakdown.location}
                         </div>
                         <div className="text-[10px] text-muted-foreground">{t("score.location")}</div>
                         {/* Location score tooltip for 0% */}
-                        {candidate.scoreBreakdown.locationScore === 0 && (
+                        {normalizedScoreBreakdown.location === 0 && (
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                             <div className="bg-popover text-popover-foreground text-xs p-2 rounded-lg shadow-lg border max-w-[200px] whitespace-normal">
                               <div className="flex items-center gap-1 mb-1">
@@ -483,6 +559,10 @@ export function CandidatePipelineItem({
                       <p className="text-sm text-muted-foreground line-clamp-4">
                         {deepAnalysis.psychometricText}
                       </p>
+                    ) : candidate.shortlistSummary ? (
+                      <p className="text-sm text-muted-foreground line-clamp-4">
+                        {candidate.shortlistSummary}
+                      </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
                         {t("candidate.clickDeepProfile")}
@@ -515,6 +595,15 @@ export function CandidatePipelineItem({
                           </li>
                         ))}
                       </ul>
+                    ) : candidate.keyEvidence && candidate.keyEvidence.length > 0 ? (
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        {candidate.keyEvidence.slice(0, 3).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-primary">•</span>
+                            <span className="line-clamp-1">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
                         {t("candidate.viewDeepProfileQuestions")}
@@ -524,15 +613,19 @@ export function CandidatePipelineItem({
                 </div>
 
                 {/* Strengths & Concerns - Clickable with Evidence */}
-                {(deepAnalysis?.strengths?.length || deepAnalysis?.concerns?.length) && (
+                {(deepAnalysis?.strengths?.length ||
+                  deepAnalysis?.concerns?.length ||
+                  candidate.keyEvidence?.length ||
+                  candidate.risks?.length) && (
                   <div className="grid grid-cols-2 gap-4 mb-4">
-                    {deepAnalysis.strengths && deepAnalysis.strengths.length > 0 && (
+                    {(deepAnalysis?.strengths && deepAnalysis.strengths.length > 0) ||
+                    (candidate.keyEvidence && candidate.keyEvidence.length > 0) ? (
                       <div>
                         <h4 className="text-xs uppercase text-muted-foreground mb-2">
                           {t("candidate.keyStrengths")}
                         </h4>
                         <div className="flex flex-wrap gap-1">
-                          {deepAnalysis.strengths.slice(0, 3).map((strength, i) => {
+                          {(deepAnalysis?.strengths || candidate.keyEvidence || []).slice(0, 3).map((strength, i) => {
                             const isEvidenceItem = typeof strength === 'object' && strength !== null;
                             const text = isEvidenceItem ? (strength as EvidenceItem).text : String(strength);
                             const hasEvidence = isEvidenceItem && (strength as EvidenceItem).sourceUrl;
@@ -553,14 +646,15 @@ export function CandidatePipelineItem({
                           })}
                         </div>
                       </div>
-                    )}
-                    {deepAnalysis.concerns && deepAnalysis.concerns.length > 0 && (
+                    ) : null}
+                    {(deepAnalysis?.concerns && deepAnalysis.concerns.length > 0) ||
+                    (candidate.risks && candidate.risks.length > 0) ? (
                       <div>
                         <h4 className="text-xs uppercase text-muted-foreground mb-2">
                           {t("candidate.areasToExplore")}
                         </h4>
                         <div className="flex flex-wrap gap-1">
-                          {deepAnalysis.concerns.slice(0, 3).map((concern, i) => {
+                          {(deepAnalysis?.concerns || candidate.risks || []).slice(0, 3).map((concern, i) => {
                             const isEvidenceItem = typeof concern === 'object' && concern !== null;
                             const text = isEvidenceItem ? (concern as EvidenceItem).text : String(concern);
                             const hasEvidence = isEvidenceItem && (concern as EvidenceItem).sourceUrl;
@@ -581,7 +675,7 @@ export function CandidatePipelineItem({
                           })}
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
 
@@ -638,14 +732,16 @@ export function CandidatePipelineItem({
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 pt-4 border-t">
-                  <Link href={`/profile/${candidate.id}/deep`} className="flex-1">
+                  <Link href={`/profile/${profileSlug}/deep?candidateId=${encodeURIComponent(candidate.id)}`} className="flex-1">
                     <Button className="w-full gap-2">
                       <Brain className="w-4 h-4" />
                       {t("candidate.fullDeepProfile")}
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
-                  <Link href={`/candidates/${candidate.id}/work-analysis`}>
+                  <Link
+                    href={`/candidates/${profileSlug}/work-analysis`}
+                  >
                     <Button variant="outline" className="gap-1.5" title="Deep Work Analysis">
                       <Activity className="w-4 h-4 text-emerald-500" />
                       <span className="hidden sm:inline text-xs">Work</span>

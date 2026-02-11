@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { LinkedInNav, LinkedInEmptyState } from "@/components/linkedin/LinkedInNav";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
+import { useLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
 import {
   Linkedin,
@@ -39,16 +40,17 @@ interface Candidate {
   stage: string;
 }
 
-const STAGES = [
-  { id: "captured", label: "Captured", color: "bg-slate-600" },
-  { id: "reviewing", label: "Reviewing", color: "bg-blue-600" },
-  { id: "contacting", label: "Contacting", color: "bg-yellow-600" },
-  { id: "interviewing", label: "Interviewing", color: "bg-indigo-600" },
-  { id: "offer", label: "Offer", color: "bg-emerald-600" },
-  { id: "rejected", label: "Rejected", color: "bg-red-600" },
-];
-
 export default function LinkedInPipelinePage() {
+  const { lang } = useLanguage();
+  const isDa = lang === "da";
+  const STAGES = [
+    { id: "captured", label: isDa ? "Opsamlet" : "Captured", color: "bg-slate-600" },
+    { id: "reviewing", label: isDa ? "Vurdering" : "Reviewing", color: "bg-blue-600" },
+    { id: "contacting", label: isDa ? "Kontaktes" : "Contacting", color: "bg-yellow-600" },
+    { id: "interviewing", label: isDa ? "Interview" : "Interviewing", color: "bg-indigo-600" },
+    { id: "offer", label: isDa ? "Tilbud" : "Offer", color: "bg-emerald-600" },
+    { id: "rejected", label: isDa ? "Afvist" : "Rejected", color: "bg-red-600" },
+  ];
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,10 +68,14 @@ export default function LinkedInPipelinePage() {
       }));
       setCandidates(withStages);
       setError(null);
-      toast.success("Pipeline refreshed");
+      toast.success(isDa ? "Pipeline opdateret" : "Pipeline refreshed");
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
-      setError("Failed to load candidates. Please try again.");
+      setError(
+        isDa
+          ? "Kunne ikke indlæse kandidater. Prøv igen."
+          : "Failed to load candidates. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -85,7 +91,11 @@ export default function LinkedInPipelinePage() {
         c.id === candidateId ? { ...c, stage: newStage } : c
       )
     );
-    toast.success(`Moved to ${STAGES.find(s => s.id === newStage)?.label}`);
+    toast.success(
+      isDa
+        ? `Flyttet til ${STAGES.find(s => s.id === newStage)?.label}`
+        : `Moved to ${STAGES.find(s => s.id === newStage)?.label}`
+    );
     // Persist stage change to API
     try {
       await candidateService.updateStage(candidateId, newStage);
@@ -130,8 +140,12 @@ export default function LinkedInPipelinePage() {
         {/* Header */}
         <PageHeader
           icon={Kanban}
-          title="Recruiting Pipeline"
-          subtitle={`Drag candidates between stages • ${candidates.length} total`}
+          title={isDa ? "Rekrutteringspipeline" : "Recruiting Pipeline"}
+          subtitle={
+            isDa
+              ? `Træk kandidater mellem faser • ${candidates.length} i alt`
+              : `Drag candidates between stages • ${candidates.length} total`
+          }
           actions={
             <Button
               variant="outline"
@@ -141,7 +155,7 @@ export default function LinkedInPipelinePage() {
               className="border-slate-700 text-slate-300 hover:bg-slate-800 focus-ring"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              {isDa ? "Opdater" : "Refresh"}
             </Button>
           }
         />
@@ -259,7 +273,11 @@ export default function LinkedInPipelinePage() {
                               rel="noopener noreferrer"
                               className="p-1 hover:bg-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               onClick={(e) => e.stopPropagation()}
-                              aria-label={`Open ${candidate.name}'s LinkedIn profile`}
+                              aria-label={
+                                isDa
+                                  ? `Åbn ${candidate.name}s LinkedIn-profil`
+                                  : `Open ${candidate.name}'s LinkedIn profile`
+                              }
                             >
                               <ExternalLink className="w-3 h-3 text-slate-500" />
                             </a>
@@ -281,7 +299,11 @@ export default function LinkedInPipelinePage() {
                                   }
                                 }}
                                 className={`caption px-2 py-2 min-h-9 rounded ${s.color}/20 text-slate-300 hover:${s.color}/40 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                                aria-label={`Move ${candidate.name} to ${s.label}`}
+                                aria-label={
+                                  isDa
+                                    ? `Flyt ${candidate.name} til ${s.label}`
+                                    : `Move ${candidate.name} to ${s.label}`
+                                }
                               >
                                 → {s.label}
                               </button>
@@ -293,7 +315,7 @@ export default function LinkedInPipelinePage() {
                     
                     {getCandidatesForStage(stage.id).length === 0 && (
                       <div className="text-center py-8 text-slate-600 body-sm">
-                        Drop candidates here
+                        {isDa ? "Slip kandidater her" : "Drop candidates here"}
                       </div>
                     )}
                   </CardContent>

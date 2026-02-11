@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDeepGitHubAnalysis } from "@/lib/github";
-import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
   const searchParams = request.nextUrl.searchParams;
   const username = searchParams.get("username");
 

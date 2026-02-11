@@ -11,7 +11,6 @@ import {
   X,
   Plus,
   ArrowRight,
-  ArrowLeft,
   RotateCcw,
   Target,
   Star,
@@ -21,9 +20,9 @@ import {
   RefreshCw,
   Lightbulb,
   Users,
+  GripVertical,
   ChevronLeft,
   ChevronRight,
-  GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PhaseIndicator } from "@/components/PhaseIndicator";
@@ -62,36 +61,46 @@ interface SkillInsight {
 
 interface PreviewResponse {
   totalCandidates: number;
+  estimateMin?: number;
+  estimateMax?: number;
   perSkill: Record<string, SkillInsight>;
   suggestions: { skill: string; currentTier: SkillTier; suggestedTier: SkillTier; impact: string }[];
   cached: boolean;
+  estimateMode?: "strict" | "broad";
+  confidence?: "high" | "medium" | "low";
+  note?: string;
 }
 
-const TIER_CONFIG: Record<SkillTier, { weight: number; label: string; icon: React.ReactNode; color: string; bgColor: string }> = {
+const TIER_CONFIG: Record<SkillTier, { weight: number; label: string; icon: React.ReactNode; tone: string; chip: string }> = {
   "must-have": {
     weight: 1.0,
     label: "Must-have",
     icon: <Target className="w-4 h-4" />,
-    color: "text-red-400",
-    bgColor: "bg-red-500/10 border-red-500/30",
+    tone: "text-rose-400",
+    chip: "border-rose-500/30 bg-rose-500/10 text-rose-300",
   },
   "nice-to-have": {
     weight: 0.6,
     label: "Nice-to-have",
     icon: <Star className="w-4 h-4" />,
-    color: "text-amber-400",
-    bgColor: "bg-amber-500/10 border-amber-500/30",
+    tone: "text-amber-300",
+    chip: "border-amber-500/30 bg-amber-500/10 text-amber-200",
   },
   bonus: {
     weight: 0.3,
     label: "Bonus",
     icon: <Sparkles className="w-4 h-4" />,
-    color: "text-green-400",
-    bgColor: "bg-green-500/10 border-green-500/30",
+    tone: "text-emerald-300",
+    chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
   },
 };
 
 const TIER_ORDER: SkillTier[] = ["must-have", "nice-to-have", "bonus"];
+const TIER_GUIDANCE: Record<SkillTier, string> = {
+  "must-have": "Only add skills that are true deal-breakers.",
+  "nice-to-have": "Strong signals that help ranking, but not blockers.",
+  bonus: "Optional plus points. Keep this list short.",
+};
 
 // Helper function to determine confidence based on skill context
 function inferConfidence(name: string, index: number, isRequired: boolean): 'high' | 'medium' | 'low' {
@@ -229,6 +238,8 @@ function SkillChip({
   isLoading,
   onMove,
   onRemove,
+  onDragStart,
+  onDragEnd,
   canMoveLeft,
   canMoveRight,
 }: {
@@ -237,6 +248,8 @@ function SkillChip({
   isLoading: boolean;
   onMove: (direction: "left" | "right") => void;
   onRemove: () => void;
+  onDragStart: (skillId: string) => void;
+  onDragEnd: () => void;
   canMoveLeft: boolean;
   canMoveRight: boolean;
 }) {
@@ -246,7 +259,18 @@ function SkillChip({
     <div className={cn(
       "group flex items-center gap-1 p-2 rounded-lg border bg-card transition-all",
       isLimiting && "border-amber-500/50 bg-amber-500/5"
-    )}>
+    )}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/skill-id", skill.id);
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart(skill.id);
+      }}
+      onDragEnd={onDragEnd}
+    >
+      <div className="text-muted-foreground/70 px-1 cursor-grab active:cursor-grabbing" title="Drag to another column">
+        <GripVertical className="w-3 h-3" />
+      </div>
       {/* Move left */}
       <button
         onClick={() => onMove("left")}
@@ -323,16 +347,24 @@ function TierColumn({
   preview,
   isLoading,
   onMoveSkill,
+  onDropSkill,
   onRemoveSkill,
   onAddSkill,
+  onDragStartSkill,
+  onDragEndSkill,
+  draggedSkillId,
 }: {
   tier: SkillTier;
   skills: Skill[];
   preview: PreviewResponse | null;
   isLoading: boolean;
   onMoveSkill: (skillId: string, direction: "left" | "right") => void;
+  onDropSkill: (skillId: string, targetTier: SkillTier) => void;
   onRemoveSkill: (skillId: string) => void;
   onAddSkill: (tier: SkillTier, name: string) => void;
+  onDragStartSkill: (skillId: string) => void;
+  onDragEndSkill: () => void;
+  draggedSkillId: string | null;
 }) {
   const config = TIER_CONFIG[tier];
   const [newSkill, setNewSkill] = useState("");
@@ -346,20 +378,34 @@ function TierColumn({
   };
 
   return (
-    <div className={cn("rounded-xl border p-3 sm:p-4 flex flex-col", config.bgColor)}>
+    <div className="rounded-xl border border-border bg-card p-3 sm:p-4 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <span className={config.color}>{config.icon}</span>
-        <h3 className={cn("font-semibold text-sm sm:text-base", config.color)}>
+        <span className={config.tone}>{config.icon}</span>
+        <h3 className="font-semibold text-sm sm:text-base text-foreground">
           {config.label}
         </h3>
-        <Badge variant="secondary" className="ml-auto text-xs">
+        <Badge variant="outline" className={cn("ml-auto text-xs", config.chip)}>
           {skills.length}
         </Badge>
       </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        {TIER_GUIDANCE[tier]}
+      </p>
 
       {/* Skills list */}
-      <div className="flex-1 space-y-2 min-h-[100px]">
+      <div
+        className={cn(
+          "flex-1 space-y-2 min-h-[100px] rounded-md transition-colors",
+          draggedSkillId && "border border-dashed border-primary/40 bg-primary/5 p-1"
+        )}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const skillId = e.dataTransfer.getData("text/skill-id");
+          if (skillId) onDropSkill(skillId, tier);
+        }}
+      >
         {skills.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground text-sm">
             No skills
@@ -373,6 +419,10 @@ function TierColumn({
               isLoading={isLoading && !preview}
               onMove={(dir) => onMoveSkill(skill.id, dir)}
               onRemove={() => onRemoveSkill(skill.id)}
+              onDragStart={(skillId) => {
+                onDragStartSkill(skillId);
+              }}
+              onDragEnd={onDragEndSkill}
               canMoveLeft={tierIndex > 0}
               canMoveRight={tierIndex < TIER_ORDER.length - 1}
             />
@@ -412,6 +462,7 @@ export default function SkillsReviewPage() {
   const [originalSkills] = useState<Skill[]>(() => loadSkillsFromStorage().skills);
   const [location] = useState<string | undefined>(() => loadSkillsFromStorage().location);
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [draggedSkillId, setDraggedSkillId] = useState<string | null>(null);
 
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -497,12 +548,12 @@ export default function SkillsReviewPage() {
     }
   }, [skills, location, hardRequirements, lastFetchTime]);
 
-  // Initial fetch
+  // Fetch preview whenever skills/filters change and preview is invalidated
   useEffect(() => {
     if (skills.length > 0 && !preview) {
       fetchPreview(true);
     }
-  }, [skills.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [skills, hardRequirements, preview, fetchPreview]);
 
   // Auto-save skills to localStorage when they change (for back button support)
   useEffect(() => {
@@ -555,6 +606,14 @@ export default function SkillsReviewPage() {
     setPreview(null);
   }, []);
 
+  const handleDropSkill = useCallback((skillId: string, targetTier: SkillTier) => {
+    setSkills((prev) =>
+      prev.map((s) => (s.id === skillId ? { ...s, tier: targetTier } : s))
+    );
+    setDraggedSkillId(null);
+    setPreview(null);
+  }, []);
+
   const handleAddSkill = useCallback((tier: SkillTier, name: string) => {
     if (skills.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
       toast.error("Skill already exists");
@@ -583,6 +642,22 @@ export default function SkillsReviewPage() {
     toast.success("Reset to AI suggestions");
   }, [originalSkills]);
 
+  const handleQuickDemoteLimiting = useCallback(() => {
+    if (!preview) return;
+    const limitingMustHave = skills.find(
+      (skill) => skill.tier === "must-have" && preview.perSkill[skill.name]?.isLimiting
+    );
+    if (!limitingMustHave) return;
+
+    setSkills((prev) =>
+      prev.map((skill) =>
+        skill.id === limitingMustHave.id ? { ...skill, tier: "nice-to-have" } : skill
+      )
+    );
+    setPreview(null);
+    toast.success(`Moved ${limitingMustHave.name} to nice-to-have`);
+  }, [preview, skills]);
+
   const handleContinue = useCallback(() => {
     const skillsConfig: SkillsConfig = {
       skills: skills.map((s, i) => ({
@@ -596,6 +671,10 @@ export default function SkillsReviewPage() {
     };
 
     localStorage.setItem("apex_skills_config", JSON.stringify(skillsConfig));
+    // Force pipeline to refresh candidates against the updated criteria.
+    localStorage.setItem("apex_pending_auto_search", "true");
+    localStorage.removeItem("apex_job_context_hash");
+    localStorage.removeItem("apex_candidates");
     // Clear draft as we've officially saved
     localStorage.removeItem("apex_skills_draft");
     toast.success("Skills saved");
@@ -606,6 +685,13 @@ export default function SkillsReviewPage() {
   const limitingCount = preview ? Object.entries(preview.perSkill).filter(([name, s]) =>
     s.isLimiting && skills.find(sk => sk.name === name)?.tier === "must-have"
   ).length : 0;
+  const candidateEstimateLabel = preview
+    ? preview.confidence === "low" &&
+      typeof preview.estimateMin === "number" &&
+      typeof preview.estimateMax === "number"
+      ? `${preview.estimateMin.toLocaleString()}-${preview.estimateMax.toLocaleString()}`
+      : preview.totalCandidates.toLocaleString()
+    : "—";
 
   // Empty state
   if (skills.length === 0) {
@@ -627,7 +713,7 @@ export default function SkillsReviewPage() {
   }
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-24 pb-32 px-3 sm:px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-32 px-3 sm:px-4 bg-background">
       <div className="max-w-6xl mx-auto">
         {/* Phase Indicator */}
         <PhaseIndicator currentPhase={2} className="mb-6" />
@@ -653,38 +739,89 @@ export default function SkillsReviewPage() {
         </div>
 
         {/* Candidate Pool Indicator */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-border">
           <CardContent className="py-4">
             <div className="flex items-center gap-4">
               <Users className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">Candidate Pool</span>
-                  <span className="text-lg font-bold">
+                  <span className="font-medium text-foreground">Estimated Reachable Candidates</span>
+                  <span className="text-lg font-semibold text-foreground">
                     {isLoadingPreview ? (
                       <Loader2 className="w-4 h-4 animate-spin inline" />
                     ) : preview ? (
-                      preview.totalCandidates.toLocaleString()
+                      candidateEstimateLabel
                     ) : (
                       "—"
                     )}
                   </span>
                 </div>
                 {preview && (
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted/60 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      className="h-full bg-primary/80 rounded-full transition-all duration-500"
                       style={{ width: `${Math.min(100, (preview.totalCandidates / 5000) * 100)}%` }}
                     />
                   </div>
                 )}
               </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {preview?.note || "Estimate based on your current skill tiers and filters."}
+            </p>
             {limitingCount > 0 && (
               <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-amber-500/10 text-amber-500 text-sm">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                 <span>{limitingCount} must-have skill{limitingCount !== 1 && "s"} limiting your pool. Consider demoting.</span>
               </div>
+            )}
+            {preview && preview.totalCandidates === 0 && (
+              <div className="mt-3 p-3 rounded-lg border border-destructive/40 bg-destructive/10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">0 strict matches</p>
+                    <p className="text-muted-foreground mt-1">
+                      Your current must-have set is too restrictive for this search scope.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleQuickDemoteLimiting}
+                      disabled={!skills.some((s) => s.tier === "must-have" && preview.perSkill[s.name]?.isLimiting)}
+                    >
+                      Demote Limiting Skill
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => fetchPreview(true)} disabled={isLoadingPreview}>
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Decision Guide */}
+        <Card className="mb-6 border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-primary" />
+              What To Do Now
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {limitingCount > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Move 1-2 borderline skills from <span className="text-rose-400 font-medium">Must-have</span> to{" "}
+                <span className="text-amber-300 font-medium">Nice-to-have</span>, then press{" "}
+                <span className="text-foreground font-medium">Refresh</span> to widen the candidate pool.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Your tiers look balanced. Add any missing role-specific skills, then continue to candidate ranking.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -713,8 +850,12 @@ export default function SkillsReviewPage() {
               preview={preview}
               isLoading={isLoadingPreview}
               onMoveSkill={handleMoveSkill}
+              onDropSkill={handleDropSkill}
               onRemoveSkill={handleRemoveSkill}
               onAddSkill={handleAddSkill}
+              onDragStartSkill={(skillId) => setDraggedSkillId(skillId)}
+              onDragEndSkill={() => setDraggedSkillId(null)}
+              draggedSkillId={draggedSkillId}
             />
           ))}
         </div>
@@ -726,29 +867,41 @@ export default function SkillsReviewPage() {
       </div>
 
       {/* Fixed Continue Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/98 backdrop-blur-lg border-t-2 border-border shadow-lg z-50">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/96 backdrop-blur border-t border-border z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="hidden sm:flex items-center gap-4">
-            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-red-500/30 bg-red-500/10">
-              <Target className="w-4 h-4 mr-2 text-red-400" />
-              <span className="text-red-400">{skillsByTier["must-have"].length}</span>
+            <Badge variant="outline" className="px-3 py-2 text-sm border-border bg-card">
+              <Target className="w-4 h-4 mr-2 text-rose-400" />
+              <span className="text-foreground">{skillsByTier["must-have"].length}</span>
               <span className="text-muted-foreground ml-1.5">{t('skillsReview.mustHave')}</span>
             </Badge>
-            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-amber-500/30 bg-amber-500/10">
-              <Star className="w-4 h-4 mr-2 text-amber-400" />
-              <span className="text-amber-400">{skillsByTier["nice-to-have"].length}</span>
+            <Badge variant="outline" className="px-3 py-2 text-sm border-border bg-card">
+              <Star className="w-4 h-4 mr-2 text-amber-300" />
+              <span className="text-foreground">{skillsByTier["nice-to-have"].length}</span>
               <span className="text-muted-foreground ml-1.5">{t('skillsReview.niceToHave')}</span>
             </Badge>
-            <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-green-500/30 bg-green-500/10">
-              <Sparkles className="w-4 h-4 mr-2 text-green-400" />
-              <span className="text-green-400">{skillsByTier["bonus"].length}</span>
+            <Badge variant="outline" className="px-3 py-2 text-sm border-border bg-card">
+              <Sparkles className="w-4 h-4 mr-2 text-emerald-300" />
+              <span className="text-foreground">{skillsByTier["bonus"].length}</span>
               <span className="text-muted-foreground ml-1.5">{t('skillsReview.bonus')}</span>
             </Badge>
             {preview && (
-              <Badge variant="outline" className="px-3 py-2 text-base font-bold border-2 border-primary/30 bg-primary/10">
+              <Badge variant="outline" className="px-3 py-2 text-sm border-primary/30 bg-primary/10">
                 <Users className="w-4 h-4 mr-2 text-primary" />
-                <span className="text-foreground font-bold">{preview.totalCandidates.toLocaleString()}</span>
+                <span className="text-foreground">{candidateEstimateLabel}</span>
                 <span className="text-muted-foreground ml-1.5">{t('skillsReview.candidates')}</span>
+              </Badge>
+            )}
+            {preview && (
+              <Badge
+                variant="outline"
+                className={`px-3 py-2 text-sm ${
+                  preview.confidence === "low"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                }`}
+              >
+                {preview.estimateMode === "strict" ? "Strict Match Mode" : "Broad Match Mode"}
               </Badge>
             )}
           </div>

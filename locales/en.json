@@ -24,7 +24,19 @@
     "company": "Company"
   },
   "header": {
-    "logo": "recruitos"
+    "logo": "recruitos",
+    "demoBadgeTooltip": "You are exploring RecruitOS with sample data",
+    "adminBadgeTooltip": "Admin mode uses owner API credits",
+    "demoLabel": "Demo",
+    "adminLabel": "Admin",
+    "linkedin": "LinkedIn",
+    "captures": "Captures",
+    "pipeline": "Pipeline",
+    "network": "Network",
+    "exitDemo": "EXIT DEMO",
+    "language": "Language",
+    "linkedinTools": "LinkedIn Tools",
+    "settings": "SETTINGS"
   },
   "footer": {
     "resources": "resources",
@@ -41,10 +53,18 @@
   "home": {
     "headline": "Every bad hire costs you 6-12 months and your team's momentum",
     "subheadline": "Stop guessing on skills. See what candidates actually built — before investing in interviews that lead nowhere.",
+    "freeCreditsBanner": "Start free with 5 deep-profile credits",
     "searchPlaceholder": "Senior React developer, ML engineer, Go backend...",
     "searchHint": "{enter} to search, {shiftEnter} for new line",
+    "searchHintPart1": "to search",
+    "searchHintPart2": "for new line",
     "enter": "enter",
     "shiftEnter": "shift + enter",
+    "tryDemo": "Try Demo",
+    "noCreditCardRequired": "No credit card required",
+    "gdprCompliant": "GDPR compliant",
+    "startGuidedSetup": "Start Guided Setup",
+    "guidedSetupSubtitle": "3-step wizard to find your first shortlist",
     "quickSearches": [
       "Senior fullstack developer React",
       "Data scientist Python ML",
@@ -498,6 +518,454 @@
           "Premium analysis on demand"
         ]
       }
+    }
+  },
+  "breadcrumbs": {
+    "intake": "Job Intake",
+    "skillsReview": "Skills Review",
+    "pipeline": "Pipeline",
+    "deepDive": "Deep Dive",
+    "compare": "Compare",
+    "talentGraph": "Talent Graph",
+    "search": "Search",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "criteria": "Criteria",
+    "linkedinCaptures": "LinkedIn Captures",
+    "linkedinPipeline": "LinkedIn Pipeline",
+    "linkedinNetwork": "LinkedIn Network",
+    "analytics": "Analytics",
+    "detail": "Detail"
+  },
+  "phaseIndicator": {
+    "search": "SEARCH",
+    "searchDesc": "Define skills + requirements",
+    "list": "LIST",
+    "listDesc": "See results and select candidates",
+    "analyze": "ANALYZE",
+    "analyzeDesc": "Deep dive on selections",
+    "outreach": "OUTREACH",
+    "outreachDesc": "Generate messages",
+    "completePrevious": "Complete previous stages first",
+    "phase": "Phase",
+    "of": "of"
+  },
+  "workflow": {
+    "goTo": "Go to",
+    "currentStep": "Current step",
+    "phases": {
+      "searchDefine": { "label": "Search & Define", "short": "Search" },
+      "selectScreen": { "label": "Select & Screen", "short": "Select" },
+      "aiAnalysis": { "label": "AI Analysis", "short": "Analyze" },
+      "contactHire": { "label": "Contact & Hire", "short": "Contact" }
+    },
+    "steps": {
+      "jobIntake": "Job Intake",
+      "candidates": "Candidates",
+      "skillsReview": "Skills Review",
+      "deepDive": "Deep Dive",
+      "outreach": "Outreach"
+    }
+  },
+  "login": {
+    "welcomeBack": "Welcome back",
+    "subtitle": "Sign in to continue finding elite engineers",
+    "tryDemo": "Try Demo",
+    "or": "Or",
+    "continueWithGithub": "Continue with GitHub",
+    "noAccount": "Don’t have an account?",
+    "signUp": "Sign up",
+    "bySigningIn": "By signing in, you agree to our",
+    "termsOfService": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy"
+  },
+  "dashboard": {
+    "title": "Recruiting Analytics",
+    "subtitle": "Track your hiring funnel and ROI",
+    "annual": "Annual",
+    "creditPackage": "Credit Package",
+    "unlimitedSearches": "Unlimited searches",
+    "searchesRemainingThisMonth": "searches remaining this month",
+    "usage": "Usage",
+    "weeklyActivity": "Weekly Activity",
+    "conversionFunnel": "Conversion Funnel",
+    "costAnalytics": "Cost Analytics",
+    "costAnalyticsDescription": "Track your cost efficiency across the hiring funnel",
+    "costPerSearch": "Cost per Search",
+    "costPerContact": "Cost per Contact",
+    "costPerInterview": "Cost per Interview",
+    "costPerHire": "Cost per Hire",
+    "conversionRates": "Conversion Rates",
+    "searchToContact": "Search → Contact",
+    "contactToInterview": "Contact → Interview",
+    "interviewToHire": "Interview → Hire",
+    "totalSpent": "Total Spent",
+    "successfulHires": "successful hires",
+    "noHiresYet": "No hires yet",
+    "days": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "stats": {
+      "searches": "Searches",
+      "contacted": "Contacted",
+      "interviews": "Interviews",
+      "hires": "Hires"
+    },
+    "actions": {
+      "criteriaBuilder": "Criteria Builder",
+      "newSearch": "New Search",
+      "upgrade": "Upgrade"
+    },
+    "empty": {
+      "title": "No recruiting activity yet",
+      "description": "Start with a search or import candidates to populate analytics and conversion metrics.",
+      "runFirstSearch": "Run First Search",
+      "openPipeline": "Open Pipeline"
+    },
+    "quickActions": {
+      "viewCandidates": "View Candidates",
+      "manageCandidates": "Manage your candidates",
+      "newSearch": "New Search",
+      "findCandidates": "Find more candidates",
+      "updateJobContext": "Update Job Context",
+      "refineCriteria": "Refine your search criteria"
+    }
+  },
+  "linkedin": {
+    "nav": {
+      "tools": "LinkedIn Tools",
+      "captures": "Captures",
+      "capturesDesc": "View captured profiles",
+      "pipeline": "Pipeline",
+      "pipelineDesc": "Manage candidates",
+      "network": "Network",
+      "networkDesc": "Relationship mapping"
+    },
+    "empty": {
+      "captures": {
+        "title": "No profiles captured yet",
+        "description": "Install the Chrome extension and browse LinkedIn profiles. They'll appear here automatically.",
+        "action": "Get Chrome Extension",
+        "tip1": "Visit any LinkedIn profile",
+        "tip2": "Click 'Add to RecruitOS' button",
+        "tip3": "Profile appears here instantly"
+      },
+      "pipeline": {
+        "title": "Your pipeline is empty",
+        "description": "Capture profiles first, then drag them through your recruiting pipeline.",
+        "action": "Capture Profiles",
+        "tip1": "Capture candidates from LinkedIn",
+        "tip2": "Drag between stages",
+        "tip3": "Track your hiring process"
+      },
+      "network": {
+        "title": "No network data yet",
+        "description": "Capture LinkedIn profiles to build your network map. The more profiles you capture, the richer your intelligence becomes.",
+        "action": "Start Capturing",
+        "tip1": "See company penetration",
+        "tip2": "Find colleague connections",
+        "tip3": "Map relationship paths"
+      }
+    }
+  },
+  "graph": {
+    "title": "Talent Graph",
+    "loading": {
+      "title": "Building Talent Graph",
+      "subtitle": "Analyzing candidate relationships..."
+    },
+    "error": {
+      "loadData": "Failed to load graph data",
+      "load": "Failed to load graph"
+    },
+    "retry": "Try Again",
+    "empty": {
+      "title": "No candidates yet",
+      "description": "Add candidates to your pipeline to visualize their relationships as an interactive graph.",
+      "goToPipeline": "Go to Pipeline"
+    },
+    "candidates": "candidates",
+    "connections": "connections",
+    "pipelineStage": "Pipeline Stage",
+    "connectionType": "Connection Type",
+    "all": "All",
+    "stages": {
+      "sourced": "Sourced",
+      "screening": "Screening",
+      "interview": "Interview",
+      "offer": "Offer"
+    },
+    "connectionLabels": {
+      "skills": "Shared Skills",
+      "company": "Same Company",
+      "location": "Same Location",
+      "score": "Similar Score"
+    }
+  },
+  "analytics": {
+    "title": "Pipeline Analytics",
+    "subtitle": "Recruitment funnel metrics and candidate insights",
+    "updated": "Updated",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "candidates": "candidates",
+    "manual": "Manual",
+    "sourceMix": "Source Mix",
+    "sourceMixNoData": "No source data yet",
+    "scoreDistribution": "Score Distribution",
+    "scoreNoData": "No score data yet",
+    "timelineTitle": "Candidates Over Time",
+    "timelineNoData": "No timeline data yet",
+    "weekOf": "Week of",
+    "added": "added",
+    "topSkills": "Top Skills",
+    "skillsNoData": "No skills data yet",
+    "topLocations": "Top Locations",
+    "locationsNoData": "No location data yet",
+    "funnel": {
+      "title": "Pipeline Funnel",
+      "fromPrev": "from prev",
+      "noData": "No funnel data yet"
+    },
+    "cards": {
+      "totalCandidates": "Total Candidates",
+      "acrossSources": "Across all sources",
+      "avgScore": "Avg. Score",
+      "highest": "Highest",
+      "activePipeline": "Active Pipeline",
+      "excludingRejected": "Excluding rejected",
+      "addedThisWeek": "Added This Week",
+      "last7Days": "Last 7 days"
+    },
+    "empty": {
+      "title": "No candidates yet",
+      "description": "Start by searching for developers to populate your pipeline. Analytics will appear here once you have candidates.",
+      "cta": "Search for Developers"
+    },
+    "error": {
+      "fetchFailed": "Failed to fetch analytics",
+      "unknown": "Unknown error"
+    }
+  },
+  "linkedinCaptures": {
+    "title": "LinkedIn Captures",
+    "subtitle": "Profiles captured from the LinkedIn extension",
+    "profiles": "profiles",
+    "thisProfile": "this profile",
+    "confirmDeletePrefix": "Delete capture for",
+    "searchPlaceholder": "Search by name, headline, company, location...",
+    "filters": "Filters",
+    "topCompanies": "Top Companies",
+    "topSkills": "Top Skills Across Captures",
+    "clearFilter": "Clear filter",
+    "noCompanyData": "No company data yet",
+    "noSkillsData": "No skills data yet",
+    "filteringBy": "Filtering by",
+    "recentCaptures": "Recent Captures",
+    "noMatchesTitle": "No candidates match your search",
+    "noMatchesDesc": "Try adjusting your search terms or filters",
+    "premium": "Premium",
+    "time": {
+      "justNow": "just now"
+    },
+    "actions": {
+      "deleteOld": "Delete Old",
+      "insights": "Insights",
+      "exportCsv": "Export CSV",
+      "refresh": "Refresh"
+    },
+    "stats": {
+      "totalCaptured": "Total Captured",
+      "lastHour": "Last Hour",
+      "companies": "Companies",
+      "locations": "Locations",
+      "openToWork": "Open to Work"
+    },
+    "errors": {
+      "load": "Failed to load captures. Please try again.",
+      "delete": "Failed to delete capture",
+      "cleanOld": "Failed to clean old captures"
+    }
+  },
+  "compare": {
+    "title": "Battle Cards",
+    "comparing": "Comparing",
+    "candidatesSideBySide": "candidates side-by-side",
+    "strictMatchContext": "Strict Match Context",
+    "mustHave": "must-have",
+    "analyzing": "Analyzing...",
+    "regenerateVerdict": "Re-generate Verdict",
+    "generateVerdict": "Generate AI Verdict",
+    "recommended": "RECOMMENDED",
+    "independent": "Independent",
+    "remote": "Remote",
+    "experienceNotSpecified": "Experience not specified",
+    "profile": "Profile",
+    "dimension": "Dimension",
+    "overall": "Overall",
+    "aiVerdictFailed": "AI Verdict Failed",
+    "aiVerdict": "AI Verdict",
+    "bestMatch": "Best Match",
+    "tradeoffs": "Trade-offs:",
+    "readyForAi": "Ready for AI Analysis?",
+    "readyDesc": "Click \"Generate AI Verdict\" to get a detailed comparison with scores, notes, and a recommendation across all dimensions.",
+    "analyzingCandidates": "Analyzing candidates...",
+    "analyzingDescPrefix": "AI is comparing",
+    "analyzingDescSuffix": "candidates across 5 dimensions. This may take a few seconds.",
+    "errorTitle": "Comparison Error",
+    "tryAgain": "Try Again",
+    "tryDemoData": "Try Demo Data",
+    "backToPipeline": "Back to Pipeline",
+    "loading": {
+      "title": "Loading candidates...",
+      "subtitle": "Fetching data for comparison"
+    },
+    "errors": {
+      "noIds": "No candidate IDs provided. Navigate from the pipeline page.",
+      "needTwo": "At least 2 candidates are required for comparison.",
+      "notEnough": "Could not load enough candidates for comparison.",
+      "fetchFailed": "Failed to fetch candidates",
+      "aiFailed": "AI comparison failed"
+    }
+  },
+  "shortlist": {
+    "title": "Shortlist",
+    "phaseLabel": "Phase 3 — Profile",
+    "backToCandidates": "Back to Candidates",
+    "candidatesReady": "candidates ready for deep profile",
+    "outreachPackForAll": "Outreach Pack for All",
+    "remaining": "remaining",
+    "credits": "credits",
+    "generateAll": "Generate All",
+    "removeFromShortlist": "Remove from shortlist",
+    "done": "Done",
+    "deepProfile": "Deep Profile",
+    "sent": "Sent",
+    "outreach": "Outreach",
+    "of": "of",
+    "outreachPacksGenerated": "outreach packs generated",
+    "allComplete": "All Complete!",
+    "empty": {
+      "title": "No candidates in shortlist",
+      "description": "Select candidates from the pipeline to add them to your shortlist."
+    }
+  },
+  "signup": {
+    "title": "Create your account",
+    "subtitle": "Start finding elite engineers in minutes",
+    "githubCta": "Sign up with GitHub",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "bySigningUp": "By signing up, you agree to our",
+    "termsOfService": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy",
+    "benefits": {
+      "free": "Start free - 3 AI profile analyses included",
+      "noCard": "No credit card required",
+      "cancelAnytime": "Cancel anytime"
+    }
+  },
+  "contact": {
+    "back": "Back",
+    "title": "Contact RecruitOS",
+    "subtitle": "For product, support, or enterprise questions:"
+  },
+  "creditsPage": {
+    "badge": "Credits",
+    "title": "Buy Credits for Deep Profile Reports",
+    "subtitle": "Purchase credits to unlock detailed candidate profiles with AI-powered insights. Pay as you go, no subscriptions required.",
+    "balance": "Your Credit Balance",
+    "credits": "credits",
+    "eachCredit": "Each credit = 1 deep profile report",
+    "neverExpire": "Credits never expire",
+    "mostPopular": "Most Popular",
+    "deepProfileReports": "deep profile reports",
+    "perCredit": "per credit",
+    "save": "Save",
+    "deepProfileAnalyses": "deep profile analyses",
+    "aiInsights": "AI-powered insights",
+    "instantActivation": "Instant activation",
+    "processing": "Processing...",
+    "buyNow": "Buy Now",
+    "trust": {
+      "securePayments": "Secure Payments",
+      "securePaymentsDesc": "Powered by Stripe. Your payment info is encrypted and secure.",
+      "instantActivation": "Instant Activation",
+      "instantActivationDesc": "Credits are added to your account immediately after purchase.",
+      "neverExpire": "Never Expire",
+      "neverExpireDesc": "Your credits remain in your account until you use them."
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": "What can I do with credits?",
+      "a1": "Each credit lets you generate one comprehensive deep profile report for a candidate, including AI-powered behavioral insights, skills analysis, and hiring recommendations.",
+      "q2": "Do credits expire?",
+      "a2": "No! Your credits remain in your account indefinitely and can be used whenever you need them.",
+      "q3": "Can I get a refund?",
+      "a3": "Unused credits can be refunded within 30 days of purchase. Contact support for assistance.",
+      "q4": "Is there a subscription option?",
+      "a4Prefix": "Yes! Check out our",
+      "pricingPage": "pricing page",
+      "a4Suffix": "for subscription plans with unlimited credits and additional features."
+    },
+    "toast": {
+      "purchaseSuccess": "Successfully purchased",
+      "purchaseSuccessDesc": "Your credits have been added to your account.",
+      "purchaseCancelled": "Purchase cancelled",
+      "purchaseCancelledDesc": "No charges were made to your account.",
+      "loadFailed": "Failed to load credit packages",
+      "purchaseFailed": "Purchase failed",
+      "somethingWrong": "Something went wrong",
+      "checkoutFailed": "Failed to initiate checkout"
+    }
+  },
+  "pricingPage": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Choose the right solution for your hiring needs. From behavioral evidence insights to full recruiting support.",
+    "mostPopular": "Most Popular",
+    "credits": "credits",
+    "unlimitedCredits": "unlimited credits",
+    "unlimitedCreditsPerYear": "unlimited credits per year",
+    "getStarted": "Get Started",
+    "buyCredits": "Buy Credits",
+    "contactSales": "Contact Sales",
+    "subscribe": "Subscribe",
+    "candidateAnalyses": "candidate analyses",
+    "perCredit": "per credit",
+    "successBasedTitle": "Success-Based Pricing",
+    "successBasedDesc": "With Full Recruiting, you only pay 5,000 DKK when you successfully make a hire. No upfront fees, no monthly subscriptions.",
+    "comparePlans": "Compare Plans",
+    "feature": "Feature",
+    "custom": "Custom",
+    "unlimited": "Unlimited",
+    "trustedTitle": "Trusted by Recruiters Worldwide",
+    "trust": {
+      "hiresMade": "500+ hires made",
+      "satisfaction": "4.9/5 satisfaction",
+      "companies": "100+ companies"
+    },
+    "features": {
+      "personalityAnalysis": "Personality Analysis",
+      "behavioralInsights": "Behavioral Insights",
+      "workStyleAssessment": "Work Style Assessment",
+      "candidateSourcing": "Candidate Sourcing",
+      "interviewCoordination": "Interview Coordination",
+      "referenceChecking": "Reference Checking",
+      "successBasedPricing": "Success-Based Pricing",
+      "teamSeats": "Team Seats",
+      "sharedPipelines": "Shared Pipelines",
+      "apiAccess": "API Access",
+      "atsIntegration": "ATS Integration",
+      "prioritySupport": "Priority Support",
+      "dedicatedAccountManager": "Dedicated Account Manager"
     }
   },
   "skillsReview": {

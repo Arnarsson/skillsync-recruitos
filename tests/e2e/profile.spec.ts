@@ -31,9 +31,9 @@ test.describe('Profile Flow', () => {
     // Verify developer name is displayed
     await expect(profilePage.developerName).toBeVisible();
 
-    // Verify stats cards are displayed
-    const statsCards = page.locator('.grid.grid-cols-2 .p-4, .grid.md\\:grid-cols-5 .p-4');
-    await expect(statsCards.first()).toBeVisible({ timeout: 5000 });
+    // Verify stats labels are displayed
+    await expect(page.getByText('Repos').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Stars').first()).toBeVisible({ timeout: 5000 });
 
     // Verify skills section is displayed (on overview tab)
     const skillsSection = page.locator('text=Skills & Technologies');
@@ -70,7 +70,7 @@ test.describe('Profile Flow', () => {
     await expect(reposSection).toBeVisible({ timeout: 5000 });
 
     // Verify at least one repo card is shown
-    const repoCards = profilePage.repoCards;
+    const repoCards = page.locator('a[aria-label*="repository on GitHub"]');
     const repoCount = await repoCards.count();
     expect(repoCount).toBeGreaterThan(0);
   });

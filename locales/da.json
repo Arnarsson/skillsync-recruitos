@@ -24,7 +24,19 @@
     "company": "Virksomhed"
   },
   "header": {
-    "logo": "recruitos"
+    "logo": "recruitos",
+    "demoBadgeTooltip": "Du udforsker RecruitOS med eksempeldata",
+    "adminBadgeTooltip": "Admin-tilstand bruger ejerens API-kreditter",
+    "demoLabel": "Demo",
+    "adminLabel": "Admin",
+    "linkedin": "LinkedIn",
+    "captures": "Indfangninger",
+    "pipeline": "Kandidatflow",
+    "network": "Netværk",
+    "exitDemo": "AFSLUT DEMO",
+    "language": "Sprog",
+    "linkedinTools": "LinkedIn Værktøjer",
+    "settings": "Indstillinger"
   },
   "footer": {
     "resources": "ressourcer",
@@ -41,10 +53,18 @@
   "home": {
     "headline": "Hver fejlansættelse koster dig 6-12 måneders tid og dit teams momentum",
     "subheadline": "Stop med at gætte på kompetencer. Se hvad kandidaten faktisk har bygget — før du investerer i samtaler der fører ingen vegne.",
+    "freeCreditsBanner": "Start gratis med 5 dybdeprofil-kreditter",
     "searchPlaceholder": "Senior React udvikler, ML ingeniør, Go backend...",
     "searchHint": "{enter} for at søge, {shiftEnter} for ny linje",
+    "searchHintPart1": "for at søge",
+    "searchHintPart2": "for ny linje",
     "enter": "enter",
     "shiftEnter": "shift + enter",
+    "tryDemo": "Prøv Demo",
+    "noCreditCardRequired": "Intet kreditkort påkrævet",
+    "gdprCompliant": "GDPR-kompatibel",
+    "startGuidedSetup": "Start guidet opsætning",
+    "guidedSetupSubtitle": "3-trins wizard til at finde din første shortlist",
     "quickSearches": [
       "Senior fullstack udvikler React",
       "Data scientist Python ML",
@@ -515,6 +535,454 @@
           "Premium analyse on demand"
         ]
       }
+    }
+  },
+  "breadcrumbs": {
+    "intake": "Jobindtag",
+    "skillsReview": "Kompetencegennemgang",
+    "pipeline": "Kandidatflow",
+    "deepDive": "Dybdeprofil",
+    "compare": "Sammenlign",
+    "talentGraph": "Talentgraf",
+    "search": "Søg",
+    "dashboard": "Dashboard",
+    "settings": "Indstillinger",
+    "criteria": "Vurderingskriterier",
+    "linkedinCaptures": "LinkedIn Indfangninger",
+    "linkedinPipeline": "LinkedIn Kandidatflow",
+    "linkedinNetwork": "LinkedIn Netværk",
+    "analytics": "Analyse",
+    "detail": "Detalje"
+  },
+  "phaseIndicator": {
+    "search": "SØGNING",
+    "searchDesc": "Definér kompetencer + krav",
+    "list": "LISTE",
+    "listDesc": "Se resultater og vælg kandidater",
+    "analyze": "ANALYSE",
+    "analyzeDesc": "Dybdegående vurdering",
+    "outreach": "HANDLING",
+    "outreachDesc": "Generér beskeder",
+    "completePrevious": "Fuldfør tidligere trin først",
+    "phase": "Fase",
+    "of": "af"
+  },
+  "workflow": {
+    "goTo": "Gå til",
+    "currentStep": "Nuværende trin",
+    "phases": {
+      "searchDefine": { "label": "Søg & Definér", "short": "Søg" },
+      "selectScreen": { "label": "Vælg & Screen", "short": "Vælg" },
+      "aiAnalysis": { "label": "AI Analyse", "short": "Analyse" },
+      "contactHire": { "label": "Kontakt & Ansæt", "short": "Kontakt" }
+    },
+    "steps": {
+      "jobIntake": "Jobindtag",
+      "candidates": "Kandidater",
+      "skillsReview": "Kompetencegennemgang",
+      "deepDive": "Dybdeprofil",
+      "outreach": "Outreach"
+    }
+  },
+  "login": {
+    "welcomeBack": "Velkommen tilbage",
+    "subtitle": "Log ind for at fortsætte med at finde topudviklere",
+    "tryDemo": "Prøv Demo",
+    "or": "Eller",
+    "continueWithGithub": "Fortsæt med GitHub",
+    "noAccount": "Har du ikke en konto?",
+    "signUp": "Opret konto",
+    "bySigningIn": "Ved at logge ind accepterer du vores",
+    "termsOfService": "Servicevilkår",
+    "and": "og",
+    "privacyPolicy": "Privatlivspolitik"
+  },
+  "dashboard": {
+    "title": "Rekrutteringsanalyse",
+    "subtitle": "Følg din ansættelses-tragt og ROI",
+    "annual": "Årlig",
+    "creditPackage": "Kreditpakke",
+    "unlimitedSearches": "Ubegrænsede søgninger",
+    "searchesRemainingThisMonth": "søgninger tilbage denne måned",
+    "usage": "Forbrug",
+    "weeklyActivity": "Ugentlig aktivitet",
+    "conversionFunnel": "Konverteringstragt",
+    "costAnalytics": "Omkostningsanalyse",
+    "costAnalyticsDescription": "Spor omkostningseffektivitet gennem hele ansættelsestragten",
+    "costPerSearch": "Pris pr. søgning",
+    "costPerContact": "Pris pr. kontakt",
+    "costPerInterview": "Pris pr. interview",
+    "costPerHire": "Pris pr. ansættelse",
+    "conversionRates": "Konverteringsrater",
+    "searchToContact": "Søgning → Kontakt",
+    "contactToInterview": "Kontakt → Interview",
+    "interviewToHire": "Interview → Ansættelse",
+    "totalSpent": "Samlet forbrug",
+    "successfulHires": "succesfulde ansættelser",
+    "noHiresYet": "Ingen ansættelser endnu",
+    "days": {
+      "mon": "Man",
+      "tue": "Tir",
+      "wed": "Ons",
+      "thu": "Tor",
+      "fri": "Fre",
+      "sat": "Lør",
+      "sun": "Søn"
+    },
+    "stats": {
+      "searches": "Søgninger",
+      "contacted": "Kontaktet",
+      "interviews": "Interviews",
+      "hires": "Ansættelser"
+    },
+    "actions": {
+      "criteriaBuilder": "Kriteriebygger",
+      "newSearch": "Ny søgning",
+      "upgrade": "Opgradér"
+    },
+    "empty": {
+      "title": "Ingen rekrutteringsaktivitet endnu",
+      "description": "Start med en søgning eller importér kandidater for at se analytics og konverteringer.",
+      "runFirstSearch": "Kør første søgning",
+      "openPipeline": "Åbn Pipeline"
+    },
+    "quickActions": {
+      "viewCandidates": "Se kandidater",
+      "manageCandidates": "Administrér dine kandidater",
+      "newSearch": "Ny søgning",
+      "findCandidates": "Find flere kandidater",
+      "updateJobContext": "Opdatér jobkontekst",
+      "refineCriteria": "Finjustér dine søgekriterier"
+    }
+  },
+  "linkedin": {
+    "nav": {
+      "tools": "LinkedIn Værktøjer",
+      "captures": "Indfangninger",
+      "capturesDesc": "Se indfangede profiler",
+      "pipeline": "Kandidatflow",
+      "pipelineDesc": "Administrér kandidater",
+      "network": "Netværk",
+      "networkDesc": "Relationskortlægning"
+    },
+    "empty": {
+      "captures": {
+        "title": "Ingen profiler indfanget endnu",
+        "description": "Installer Chrome extensionen og besøg LinkedIn-profiler. De vises her automatisk.",
+        "action": "Hent Chrome Extension",
+        "tip1": "Besøg en LinkedIn-profil",
+        "tip2": "Klik 'Tilføj til RecruitOS'",
+        "tip3": "Profilen vises her med det samme"
+      },
+      "pipeline": {
+        "title": "Din pipeline er tom",
+        "description": "Indfang profiler først, og træk dem derefter gennem din rekrutteringspipeline.",
+        "action": "Indfang profiler",
+        "tip1": "Indfang kandidater fra LinkedIn",
+        "tip2": "Træk mellem faser",
+        "tip3": "Følg din ansættelsesproces"
+      },
+      "network": {
+        "title": "Ingen netværksdata endnu",
+        "description": "Indfang LinkedIn-profiler for at bygge dit netværkskort. Jo flere profiler du indfanger, desto stærkere bliver indsigt.",
+        "action": "Start indfangning",
+        "tip1": "Se virksomheds-penetration",
+        "tip2": "Find kollega-forbindelser",
+        "tip3": "Kortlæg relationsveje"
+      }
+    }
+  },
+  "graph": {
+    "title": "Talentgraf",
+    "loading": {
+      "title": "Bygger talentgraf",
+      "subtitle": "Analyserer kandidatrelationer..."
+    },
+    "error": {
+      "loadData": "Kunne ikke indlæse grafdata",
+      "load": "Kunne ikke indlæse graf"
+    },
+    "retry": "Prøv igen",
+    "empty": {
+      "title": "Ingen kandidater endnu",
+      "description": "Tilføj kandidater til din pipeline for at visualisere relationer i en interaktiv graf.",
+      "goToPipeline": "Gå til Pipeline"
+    },
+    "candidates": "kandidater",
+    "connections": "forbindelser",
+    "pipelineStage": "Pipeline-fase",
+    "connectionType": "Forbindelsestype",
+    "all": "Alle",
+    "stages": {
+      "sourced": "Fundet",
+      "screening": "Screening",
+      "interview": "Interview",
+      "offer": "Tilbud"
+    },
+    "connectionLabels": {
+      "skills": "Fælles kompetencer",
+      "company": "Samme virksomhed",
+      "location": "Samme lokation",
+      "score": "Lignende score"
+    }
+  },
+  "analytics": {
+    "title": "Pipeline-analyse",
+    "subtitle": "Målinger for rekrutteringstragt og kandidatindsigt",
+    "updated": "Opdateret",
+    "refresh": "Opdatér",
+    "retry": "Prøv igen",
+    "candidates": "kandidater",
+    "manual": "Manuel",
+    "sourceMix": "Kildemix",
+    "sourceMixNoData": "Ingen kildedata endnu",
+    "scoreDistribution": "Scorefordeling",
+    "scoreNoData": "Ingen scoredata endnu",
+    "timelineTitle": "Kandidater over tid",
+    "timelineNoData": "Ingen tidslinjedata endnu",
+    "weekOf": "Uge af",
+    "added": "tilføjet",
+    "topSkills": "Topkompetencer",
+    "skillsNoData": "Ingen kompetencedata endnu",
+    "topLocations": "Toplokationer",
+    "locationsNoData": "Ingen lokationsdata endnu",
+    "funnel": {
+      "title": "Pipeline-tragt",
+      "fromPrev": "fra forrige",
+      "noData": "Ingen tragtdata endnu"
+    },
+    "cards": {
+      "totalCandidates": "Kandidater i alt",
+      "acrossSources": "På tværs af alle kilder",
+      "avgScore": "Gns. score",
+      "highest": "Højeste",
+      "activePipeline": "Aktiv pipeline",
+      "excludingRejected": "Ekskl. afviste",
+      "addedThisWeek": "Tilføjet denne uge",
+      "last7Days": "Sidste 7 dage"
+    },
+    "empty": {
+      "title": "Ingen kandidater endnu",
+      "description": "Start med at søge efter udviklere for at fylde din pipeline. Analyse vises her, når du har kandidater.",
+      "cta": "Søg efter udviklere"
+    },
+    "error": {
+      "fetchFailed": "Kunne ikke hente analyse",
+      "unknown": "Ukendt fejl"
+    }
+  },
+  "linkedinCaptures": {
+    "title": "LinkedIn Indfangninger",
+    "subtitle": "Profiler indfanget fra LinkedIn-extensionen",
+    "profiles": "profiler",
+    "thisProfile": "denne profil",
+    "confirmDeletePrefix": "Slet indfangning for",
+    "searchPlaceholder": "Søg efter navn, titel, virksomhed, lokation...",
+    "filters": "Filtre",
+    "topCompanies": "Topvirksomheder",
+    "topSkills": "Topkompetencer på tværs af indfangninger",
+    "clearFilter": "Ryd filter",
+    "noCompanyData": "Ingen virksomhedsdata endnu",
+    "noSkillsData": "Ingen kompetencedata endnu",
+    "filteringBy": "Filtrerer efter",
+    "recentCaptures": "Seneste indfangninger",
+    "noMatchesTitle": "Ingen kandidater matcher din søgning",
+    "noMatchesDesc": "Prøv at justere dine søgeord eller filtre",
+    "premium": "Premium",
+    "time": {
+      "justNow": "lige nu"
+    },
+    "actions": {
+      "deleteOld": "Slet gamle",
+      "insights": "Indsigt",
+      "exportCsv": "Eksportér CSV",
+      "refresh": "Opdatér"
+    },
+    "stats": {
+      "totalCaptured": "Indfanget i alt",
+      "lastHour": "Sidste time",
+      "companies": "Virksomheder",
+      "locations": "Lokationer",
+      "openToWork": "Åben for job"
+    },
+    "errors": {
+      "load": "Kunne ikke indlæse indfangninger. Prøv igen.",
+      "delete": "Kunne ikke slette indfangning",
+      "cleanOld": "Kunne ikke rydde gamle indfangninger"
+    }
+  },
+  "compare": {
+    "title": "Sammenligningskort",
+    "comparing": "Sammenligner",
+    "candidatesSideBySide": "kandidater side om side",
+    "strictMatchContext": "Strikt match-kontekst",
+    "mustHave": "must-have",
+    "analyzing": "Analyserer...",
+    "regenerateVerdict": "Generér vurdering igen",
+    "generateVerdict": "Generér AI-vurdering",
+    "recommended": "ANBEFALET",
+    "independent": "Selvstændig",
+    "remote": "Remote",
+    "experienceNotSpecified": "Erfaring ikke angivet",
+    "profile": "Profil",
+    "dimension": "Dimension",
+    "overall": "Samlet",
+    "aiVerdictFailed": "AI-vurdering mislykkedes",
+    "aiVerdict": "AI-vurdering",
+    "bestMatch": "Bedste match",
+    "tradeoffs": "Trade-offs:",
+    "readyForAi": "Klar til AI-analyse?",
+    "readyDesc": "Klik \"Generér AI-vurdering\" for at få en detaljeret sammenligning med scorer, noter og anbefaling på tværs af alle dimensioner.",
+    "analyzingCandidates": "Analyserer kandidater...",
+    "analyzingDescPrefix": "AI sammenligner",
+    "analyzingDescSuffix": "kandidater på tværs af 5 dimensioner. Det kan tage et par sekunder.",
+    "errorTitle": "Sammenligningsfejl",
+    "tryAgain": "Prøv igen",
+    "tryDemoData": "Prøv demodata",
+    "backToPipeline": "Tilbage til Pipeline",
+    "loading": {
+      "title": "Indlæser kandidater...",
+      "subtitle": "Henter data til sammenligning"
+    },
+    "errors": {
+      "noIds": "Ingen kandidat-ID'er angivet. Gå til siden fra pipeline.",
+      "needTwo": "Mindst 2 kandidater kræves til sammenligning.",
+      "notEnough": "Kunne ikke indlæse nok kandidater til sammenligning.",
+      "fetchFailed": "Kunne ikke hente kandidater",
+      "aiFailed": "AI-sammenligning mislykkedes"
+    }
+  },
+  "shortlist": {
+    "title": "Shortliste",
+    "phaseLabel": "Fase 3 — Profil",
+    "backToCandidates": "Tilbage til kandidater",
+    "candidatesReady": "kandidater klar til dybdeprofil",
+    "outreachPackForAll": "Outreach-pakke til alle",
+    "remaining": "tilbage",
+    "credits": "credits",
+    "generateAll": "Generér alle",
+    "removeFromShortlist": "Fjern fra shortliste",
+    "done": "Færdig",
+    "deepProfile": "Dybdeprofil",
+    "sent": "Sendt",
+    "outreach": "Outreach",
+    "of": "af",
+    "outreachPacksGenerated": "outreach-pakker genereret",
+    "allComplete": "Alt færdigt!",
+    "empty": {
+      "title": "Ingen kandidater i shortliste",
+      "description": "Vælg kandidater fra pipeline for at tilføje dem til din shortliste."
+    }
+  },
+  "signup": {
+    "title": "Opret din konto",
+    "subtitle": "Begynd at finde topudviklere på få minutter",
+    "githubCta": "Opret med GitHub",
+    "haveAccount": "Har du allerede en konto?",
+    "signIn": "Log ind",
+    "bySigningUp": "Ved oprettelse accepterer du vores",
+    "termsOfService": "Servicevilkår",
+    "and": "og",
+    "privacyPolicy": "Privatlivspolitik",
+    "benefits": {
+      "free": "Start gratis - 3 AI-profilanalyser inkluderet",
+      "noCard": "Intet kreditkort påkrævet",
+      "cancelAnytime": "Opsig når som helst"
+    }
+  },
+  "contact": {
+    "back": "Tilbage",
+    "title": "Kontakt RecruitOS",
+    "subtitle": "For spørgsmål om produkt, support eller enterprise:"
+  },
+  "creditsPage": {
+    "badge": "Credits",
+    "title": "Køb credits til dybdeprofiler",
+    "subtitle": "Køb credits for at låse detaljerede kandidatprofiler op med AI-indsigter. Betal efter forbrug uden abonnement.",
+    "balance": "Din creditsaldo",
+    "credits": "credits",
+    "eachCredit": "Hver credit = 1 dybdeprofil",
+    "neverExpire": "Credits udløber aldrig",
+    "mostPopular": "Mest populær",
+    "deepProfileReports": "dybdeprofiler",
+    "perCredit": "pr. credit",
+    "save": "Spar",
+    "deepProfileAnalyses": "dybdeanalyser",
+    "aiInsights": "AI-drevne indsigter",
+    "instantActivation": "Øjeblikkelig aktivering",
+    "processing": "Behandler...",
+    "buyNow": "Køb nu",
+    "trust": {
+      "securePayments": "Sikre betalinger",
+      "securePaymentsDesc": "Drevet af Stripe. Dine betalingsoplysninger er krypteret og sikre.",
+      "instantActivation": "Øjeblikkelig aktivering",
+      "instantActivationDesc": "Credits tilføjes din konto med det samme efter køb.",
+      "neverExpire": "Udløber aldrig",
+      "neverExpireDesc": "Dine credits forbliver på din konto, indtil du bruger dem."
+    },
+    "faq": {
+      "title": "Ofte stillede spørgsmål",
+      "q1": "Hvad kan jeg bruge credits til?",
+      "a1": "Hver credit lader dig generere en dybdeprofil for en kandidat, inkl. AI-baserede adfærdsindsigter, kompetenceanalyse og anbefalinger.",
+      "q2": "Udløber credits?",
+      "a2": "Nej. Dine credits forbliver på kontoen, indtil du bruger dem.",
+      "q3": "Kan jeg få refundering?",
+      "a3": "Ubrugte credits kan refunderes inden for 30 dage efter køb. Kontakt support.",
+      "q4": "Findes der abonnement?",
+      "a4Prefix": "Ja! Se vores",
+      "pricingPage": "prisside",
+      "a4Suffix": "for abonnementer med ubegrænsede credits og ekstra funktioner."
+    },
+    "toast": {
+      "purchaseSuccess": "Køb gennemført:",
+      "purchaseSuccessDesc": "Dine credits er tilføjet din konto.",
+      "purchaseCancelled": "Køb annulleret",
+      "purchaseCancelledDesc": "Der er ikke trukket betaling.",
+      "loadFailed": "Kunne ikke indlæse credit-pakker",
+      "purchaseFailed": "Køb mislykkedes",
+      "somethingWrong": "Noget gik galt",
+      "checkoutFailed": "Kunne ikke starte checkout"
+    }
+  },
+  "pricingPage": {
+    "title": "Enkel og gennemsigtig prissætning",
+    "subtitle": "Vælg den rigtige løsning til dine ansættelsesbehov. Fra adfærdsindsigter til fuld rekrutteringssupport.",
+    "mostPopular": "Mest populær",
+    "credits": "credits",
+    "unlimitedCredits": "ubegrænsede credits",
+    "unlimitedCreditsPerYear": "ubegrænsede credits pr. år",
+    "getStarted": "Kom i gang",
+    "buyCredits": "Køb credits",
+    "contactSales": "Kontakt salg",
+    "subscribe": "Abonnér",
+    "candidateAnalyses": "kandidatanalyser",
+    "perCredit": "pr. credit",
+    "successBasedTitle": "Resultatbaseret prissætning",
+    "successBasedDesc": "Med Full Recruiting betaler du kun 5.000 DKK ved succesfuld ansættelse. Ingen opstartsgebyrer og ingen månedlige abonnementer.",
+    "comparePlans": "Sammenlign planer",
+    "feature": "Funktion",
+    "custom": "Tilpasset",
+    "unlimited": "Ubegrænset",
+    "trustedTitle": "Betroet af rekrutterere verden over",
+    "trust": {
+      "hiresMade": "500+ ansættelser gennemført",
+      "satisfaction": "4.9/5 tilfredshed",
+      "companies": "100+ virksomheder"
+    },
+    "features": {
+      "personalityAnalysis": "Personlighedsanalyse",
+      "behavioralInsights": "Adfærdsindsigter",
+      "workStyleAssessment": "Arbejdsstilsvurdering",
+      "candidateSourcing": "Kandidatsøgning",
+      "interviewCoordination": "Interviewkoordination",
+      "referenceChecking": "Referencetjek",
+      "successBasedPricing": "Resultatbaseret prissætning",
+      "teamSeats": "Teamsæder",
+      "sharedPipelines": "Delte pipelines",
+      "apiAccess": "API-adgang",
+      "atsIntegration": "ATS-integration",
+      "prioritySupport": "Prioriteret support",
+      "dedicatedAccountManager": "Dedikeret account manager"
     }
   },
   "skillsReview": {

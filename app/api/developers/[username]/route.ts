@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getUserProfile } from "@/lib/github";
+import { prisma } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
@@ -62,7 +63,44 @@ export async function GET(
       deep: false,
     });
   } catch (error) {
-    console.error("Profile error:", error);
+    console.warn("[Developers API] GitHub profile fetch failed, trying fallback", error);
+
+    // Fallback to latest captured candidate data when GitHub is unavailable/rate-limited.
+    const fallbackCandidate = await prisma.candidate.findFirst({
+      where: { githubUsername: username },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (fallbackCandidate) {
+      const parsedSkills = Array.isArray(fallbackCandidate.skills)
+        ? (fallbackCandidate.skills as string[])
+        : [];
+
+      const fallbackPayload = {
+        user: {
+          login: fallbackCandidate.githubUsername || username,
+          name: fallbackCandidate.name || username,
+          avatar_url:
+            fallbackCandidate.avatar ||
+            `https://avatars.githubusercontent.com/${fallbackCandidate.githubUsername || username}`,
+          bio: fallbackCandidate.headline || null,
+          location: fallbackCandidate.location || null,
+          company: fallbackCandidate.company || null,
+          public_repos: 0,
+          followers: 0,
+          following: 0,
+          created_at: fallbackCandidate.createdAt.toISOString(),
+        },
+        repos: [],
+        totalStars: 0,
+        skills: parsedSkills,
+        contributions: 0,
+        deep: false,
+      };
+
+      return NextResponse.json(fallbackPayload);
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch profile" },
       { status: 500 }

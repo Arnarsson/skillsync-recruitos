@@ -7,6 +7,21 @@ import { z } from 'zod';
 const nonEmptyString = z.string().min(1).trim();
 const optionalString = z.string().optional();
 const sourceTypeEnum = z.enum(['GITHUB', 'LINKEDIN', 'MANUAL']);
+const criterionSchema = z.object({
+  id: z.string().min(1),
+  label: nonEmptyString,
+  weight: z.number().min(0).max(1),
+  description: z.string().optional(),
+  rubric: z
+    .array(
+      z.object({
+        score: z.number().int().min(1).max(5),
+        description: nonEmptyString,
+      })
+    )
+    .min(1)
+    .optional(),
+});
 
 // ============================================================
 // Candidate schemas
@@ -81,6 +96,45 @@ export const candidateNoteCreateSchema = z.object({
 });
 
 // ============================================================
+// Criteria / scorecard schemas
+// ============================================================
+
+export const criteriaSetCreateSchema = z.object({
+  name: nonEmptyString,
+  role: z.string().optional(),
+  description: z.string().optional(),
+  criteria: z.array(criterionSchema).min(1),
+});
+
+export const criteriaSetUpdateSchema = criteriaSetCreateSchema.partial();
+
+export const criteriaScoreRequestSchema = z.object({
+  criteria: z.array(criterionSchema).min(1),
+  evidenceText: z.string().optional(),
+  evidence: z
+    .array(
+      z.object({
+        text: z.string().min(1),
+        source: z.string().optional(),
+      })
+    )
+    .optional(),
+});
+
+export const criteriaInterviewRequestSchema = z.object({
+  criteria: z.array(criterionSchema).min(1),
+  candidateName: z.string().optional(),
+  evidence: z
+    .array(
+      z.object({
+        text: z.string().min(1),
+        source: z.string().optional(),
+      })
+    )
+    .optional(),
+});
+
+// ============================================================
 // LinkedIn schemas
 // ============================================================
 
@@ -105,8 +159,8 @@ export const linkedinCandidateSchema = z.object({
     mutualConnections: z.string().optional(),
     openToWork: z.boolean().optional(),
     isPremium: z.boolean().optional(),
-    connectionCount: z.number().optional(),
-    followers: z.number().optional(),
+    connectionCount: z.union([z.number(), z.string()]).optional(),
+    followers: z.union([z.number(), z.string()]).optional(),
     isCreator: z.boolean().optional(),
   }),
 });

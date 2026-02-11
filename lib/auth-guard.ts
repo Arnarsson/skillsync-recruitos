@@ -23,6 +23,16 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
   return { session, user: session.user };
 }
 
+/**
+ * Best-effort auth lookup for read-only/demo endpoints.
+ * Returns null when there is no session instead of a 401 response.
+ */
+export async function requireOptionalAuth(): Promise<AuthResult | null> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
+  return { session, user: session.user };
+}
+
 type AuthenticatedHandler = (
   request: NextRequest,
   context: any,

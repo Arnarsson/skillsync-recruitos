@@ -29,6 +29,9 @@ export default function Header() {
   const pathname = usePathname();
 
   const isLinkedInActive = pathname?.startsWith('/linkedin') || pathname?.startsWith('/network-map');
+  const isLinkedInCapturesActive = pathname?.startsWith('/linkedin-captures');
+  const isLinkedInPipelineActive = pathname?.startsWith('/linkedin-pipeline');
+  const isLinkedInNetworkActive = pathname?.startsWith('/network-map');
   const isSearchActive = pathname === '/search';
   const isPipelineActive = pathname === '/pipeline';
 
@@ -46,11 +49,11 @@ export default function Header() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Badge className="bg-primary/20 text-primary border-primary/30">
-                      Demo
+                      {t("header.demoLabel")}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>You&apos;re exploring RecruitOS with sample data</p>
+                    <p>{t("header.demoBadgeTooltip")}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -60,11 +63,11 @@ export default function Header() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
-                      <Shield className="w-3 h-3 mr-1" /> Admin
+                      <Shield className="w-3 h-3 mr-1" /> {t("header.adminLabel")}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Admin mode uses owner API credits</p>
+                    <p>{t("header.adminBadgeTooltip")}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -122,6 +125,42 @@ export default function Header() {
                   {t("common.pipeline")}
                 </Link>
                 <span className="text-muted-foreground">/</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className={`flex items-center gap-1 ${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider text-sm outline-none`}>
+                    {t("header.linkedin")}
+                    <ChevronDown className="w-3 h-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/linkedin-captures"
+                        className={`flex items-center gap-2 cursor-pointer ${isLinkedInCapturesActive ? "text-primary" : ""}`}
+                        aria-current={isLinkedInCapturesActive ? "page" : undefined}
+                      >
+                        <Users className="w-4 h-4" /> {t("header.captures")}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/linkedin-pipeline"
+                        className={`flex items-center gap-2 cursor-pointer ${isLinkedInPipelineActive ? "text-primary" : ""}`}
+                        aria-current={isLinkedInPipelineActive ? "page" : undefined}
+                      >
+                        <Kanban className="w-4 h-4" /> {t("header.pipeline")}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/network-map"
+                        className={`flex items-center gap-2 cursor-pointer ${isLinkedInNetworkActive ? "text-primary" : ""}`}
+                        aria-current={isLinkedInNetworkActive ? "page" : undefined}
+                      >
+                        <Network className="w-4 h-4" /> {t("header.network")}
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="text-muted-foreground">/</span>
                 <button
                   onClick={() => {
                     localStorage.removeItem("recruitos_demo_mode");
@@ -130,7 +169,7 @@ export default function Header() {
                   }}
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                 >
-                  EXIT DEMO
+                  {t("header.exitDemo")}
                 </button>
               </>
             ) : status === "loading" ? (
@@ -140,6 +179,7 @@ export default function Header() {
                 <Link
                   href="/pipeline"
                   className={`${isPipelineActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider`}
+                  aria-current={isPipelineActive ? "page" : undefined}
                 >
                   {t("common.pipeline")}
                 </Link>
@@ -147,30 +187,43 @@ export default function Header() {
                 <Link
                   href="/search"
                   className={`${isSearchActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider flex items-center gap-1`}
+                  aria-current={isSearchActive ? "page" : undefined}
                 >
                   <Search className="w-4 h-4" />
-                  SEARCH
+                  {t("common.search")}
                 </Link>
                 <span className="text-muted-foreground">/</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger className={`flex items-center gap-1 ${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider text-sm outline-none`}>
-                    LinkedIn
+                    {t("header.linkedin")}
                     <ChevronDown className="w-3 h-3" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-48">
                     <DropdownMenuItem asChild>
-                      <Link href="/linkedin-captures" className="flex items-center gap-2 cursor-pointer">
-                        <Users className="w-4 h-4" /> Captures
+                      <Link
+                        href="/linkedin-captures"
+                        className={`flex items-center gap-2 cursor-pointer ${isLinkedInCapturesActive ? "text-primary" : ""}`}
+                        aria-current={isLinkedInCapturesActive ? "page" : undefined}
+                      >
+                        <Users className="w-4 h-4" /> {t("header.captures")}
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/linkedin-pipeline" className="flex items-center gap-2 cursor-pointer">
-                        <Kanban className="w-4 h-4" /> Pipeline
+                      <Link
+                        href="/linkedin-pipeline"
+                        className={`flex items-center gap-2 cursor-pointer ${isLinkedInPipelineActive ? "text-primary" : ""}`}
+                        aria-current={isLinkedInPipelineActive ? "page" : undefined}
+                      >
+                        <Kanban className="w-4 h-4" /> {t("header.pipeline")}
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/network-map" className="flex items-center gap-2 cursor-pointer">
-                        <Network className="w-4 h-4" /> Network
+                      <Link
+                        href="/network-map"
+                        className={`flex items-center gap-2 cursor-pointer ${isLinkedInNetworkActive ? "text-primary" : ""}`}
+                        aria-current={isLinkedInNetworkActive ? "page" : undefined}
+                      >
+                        <Network className="w-4 h-4" /> {t("header.network")}
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -179,7 +232,7 @@ export default function Header() {
                 <Link
                   href="/settings"
                   className="text-muted-foreground hover:text-foreground transition-colors"
-                  title="Settings"
+                  title={t("header.settings")}
                 >
                   <Settings className="w-4 h-4" />
                 </Link>
@@ -193,6 +246,14 @@ export default function Header() {
               </>
             ) : (
               <>
+                <Link
+                  href="/linkedin-captures"
+                  className={`${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider`}
+                  aria-current={isLinkedInActive ? "page" : undefined}
+                >
+                  {t("header.linkedin")}
+                </Link>
+                <span className="text-muted-foreground">/</span>
                 <Link
                   href="/login"
                   className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
@@ -229,7 +290,7 @@ export default function Header() {
             <div className="flex flex-col gap-4 text-sm">
               {/* Mobile Language Toggle */}
               <div className="flex items-center gap-2 text-xs pb-2 border-b border-border">
-                <span className="text-muted-foreground">Language:</span>
+                <span className="text-muted-foreground">{t("header.language")}:</span>
                 <button
                   onClick={() => setLang("en")}
                   className={`px-2 py-1 rounded transition-colors ${
@@ -276,6 +337,37 @@ export default function Header() {
                   >
                     {t("common.pipeline")}
                   </Link>
+                  <div className="border-t border-border pt-2 mt-1">
+                    <span className={`text-xs uppercase tracking-wider ${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} mb-2 block`}>
+                      {t("header.linkedinTools")}
+                    </span>
+                    <div className="flex flex-col gap-2 pl-2">
+                      <Link
+                        href="/linkedin-captures"
+                        className={`${isLinkedInCapturesActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors flex items-center gap-2`}
+                        aria-current={isLinkedInCapturesActive ? "page" : undefined}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Users className="w-4 h-4" /> {t("header.captures")}
+                      </Link>
+                      <Link
+                        href="/linkedin-pipeline"
+                        className={`${isLinkedInPipelineActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors flex items-center gap-2`}
+                        aria-current={isLinkedInPipelineActive ? "page" : undefined}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Kanban className="w-4 h-4" /> {t("header.pipeline")}
+                      </Link>
+                      <Link
+                        href="/network-map"
+                        className={`${isLinkedInNetworkActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors flex items-center gap-2`}
+                        aria-current={isLinkedInNetworkActive ? "page" : undefined}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Network className="w-4 h-4" /> {t("header.network")}
+                      </Link>
+                    </div>
+                  </div>
                   <button
                     onClick={() => {
                       localStorage.removeItem("recruitos_demo_mode");
@@ -285,7 +377,7 @@ export default function Header() {
                     }}
                     className="text-left text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
                   >
-                    EXIT DEMO
+                    {t("header.exitDemo")}
                   </button>
                 </>
               ) : session?.user ? (
@@ -293,6 +385,7 @@ export default function Header() {
                   <Link
                     href="/pipeline"
                     className={`${isPipelineActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider`}
+                    aria-current={isPipelineActive ? "page" : undefined}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t("common.pipeline")}
@@ -300,37 +393,41 @@ export default function Header() {
                   <Link
                     href="/search"
                     className={`${isSearchActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider flex items-center gap-2`}
+                    aria-current={isSearchActive ? "page" : undefined}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Search className="w-4 h-4" />
-                    SEARCH
+                    {t("common.search")}
                   </Link>
                   {/* LinkedIn Tools Section */}
                   <div className="border-t border-border pt-2 mt-1">
                     <span className={`text-xs uppercase tracking-wider ${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} mb-2 block`}>
-                      LinkedIn Tools
+                      {t("header.linkedinTools")}
                     </span>
                     <div className="flex flex-col gap-2 pl-2">
                       <Link
                         href="/linkedin-captures"
-                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        className={`${isLinkedInCapturesActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors flex items-center gap-2`}
+                        aria-current={isLinkedInCapturesActive ? "page" : undefined}
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <Users className="w-4 h-4" /> Captures
+                        <Users className="w-4 h-4" /> {t("header.captures")}
                       </Link>
                       <Link
                         href="/linkedin-pipeline"
-                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        className={`${isLinkedInPipelineActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors flex items-center gap-2`}
+                        aria-current={isLinkedInPipelineActive ? "page" : undefined}
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <Kanban className="w-4 h-4" /> Pipeline
+                        <Kanban className="w-4 h-4" /> {t("header.pipeline")}
                       </Link>
                       <Link
                         href="/network-map"
-                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        className={`${isLinkedInNetworkActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors flex items-center gap-2`}
+                        aria-current={isLinkedInNetworkActive ? "page" : undefined}
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <Network className="w-4 h-4" /> Network
+                        <Network className="w-4 h-4" /> {t("header.network")}
                       </Link>
                     </div>
                   </div>
@@ -340,7 +437,7 @@ export default function Header() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Settings className="w-4 h-4" />
-                    SETTINGS
+                    {t("header.settings")}
                   </Link>
                   <button
                     onClick={() => {
@@ -354,6 +451,14 @@ export default function Header() {
                 </>
               ) : (
                 <>
+                  <Link
+                    href="/linkedin-captures"
+                    className={`${isLinkedInActive ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors uppercase tracking-wider`}
+                    aria-current={isLinkedInActive ? "page" : undefined}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t("header.linkedin")}
+                  </Link>
                   <Link
                     href="/login"
                     className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"

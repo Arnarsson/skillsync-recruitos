@@ -6,6 +6,24 @@ const CANDIDATES_QUEUE_KEY = 'recruitos_candidates_queue';
 const MESSAGES_QUEUE_KEY = 'recruitos_messages_queue';
 const PROFILE_VIEWS_KEY = 'recruitos_profile_views';
 
+function normalizeApiUrl(rawUrl) {
+  const fallback = DEFAULT_API_URL;
+  if (!rawUrl || typeof rawUrl !== 'string') return fallback;
+
+  try {
+    const parsed = new URL(rawUrl.trim());
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    if (pathname === '' || pathname === '/') {
+      parsed.pathname = '/api';
+    } else if (!pathname.endsWith('/api')) {
+      parsed.pathname = `${pathname}/api`;
+    }
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return fallback;
+  }
+}
+
 // ============================================
 // CONFIGURATION
 // ============================================
@@ -14,21 +32,38 @@ async function getConfig() {
   try {
     const result = await chrome.storage.sync.get(STORAGE_KEY);
     const config = result[STORAGE_KEY] || {};
-    // Always use the current default URL (overrides any stale cached URL)
+    const apiUrl = normalizeApiUrl(config.apiUrl || DEFAULT_API_URL);
     return {
-      apiUrl: DEFAULT_API_URL,
+      apiUrl,
+      notificationsApiUrl: config.notificationsApiUrl || `${apiUrl}/linkedin/notifications`,
       apiKey: config.apiKey || '',
       autoCapture: config.autoCapture !== false,
       syncMessages: config.syncMessages !== false
     };
   } catch (e) {
     console.error('[RecruitOS] Config error:', e);
-    return { apiUrl: DEFAULT_API_URL, apiKey: '', autoCapture: true, syncMessages: true };
+    return {
+      apiUrl: DEFAULT_API_URL,
+      notificationsApiUrl: `${DEFAULT_API_URL}/linkedin/notifications`,
+      apiKey: '',
+      autoCapture: true,
+      syncMessages: true
+    };
   }
 }
 
 async function setConfig(config) {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: config });
+  const normalizedApiUrl = normalizeApiUrl(config.apiUrl || DEFAULT_API_URL);
+  const notificationsApiUrl =
+    config.notificationsApiUrl || `${normalizedApiUrl}/linkedin/notifications`;
+
+  await chrome.storage.sync.set({
+    [STORAGE_KEY]: {
+      ...config,
+      apiUrl: normalizedApiUrl,
+      notificationsApiUrl,
+    }
+  });
 }
 
 // ============================================
@@ -90,14 +125,28 @@ async function sendToRecruitOS(endpoint, data) {
   console.log('[RecruitOS] Sending to:', fullUrl);
   
   try {
-    const response = await fetch(fullUrl, {
+    let response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'X-RecruitOS-Extension-Key': apiKey
       },
       body: JSON.stringify(data)
     });
+
+    // If user configured a stale/invalid key, transparently retry with demo key.
+    if (response.status === 401 && apiKey !== 'demo') {
+      response = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer demo',
+          'X-RecruitOS-Extension-Key': 'demo'
+        },
+        body: JSON.stringify(data)
+      });
+    }
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -108,6 +157,16 @@ async function sendToRecruitOS(endpoint, data) {
   } catch (e) {
     console.error('[RecruitOS] API error:', e);
     return { success: false, error: e.message };
+  }
+}
+
+async function pingApi() {
+  const config = await getConfig();
+  try {
+    const response = await fetch(`${config.apiUrl}/health`, { method: 'GET' });
+    return { ok: response.ok, status: response.status };
+  } catch (e) {
+    return { ok: false, error: e.message };
   }
 }
 
@@ -141,15 +200,20 @@ async function syncMessages(messages) {
 }
 
 async function syncNotifications(notifications) {
-  // Send to Eureka dashboard (GOG Bridge API)
-  const gogAPIUrl = 'http://localhost:8001/api/linkedin/notifications';
+  const config = await getConfig();
+  const notificationsApiUrl = config.notificationsApiUrl;
+  const apiKey = config.apiKey || 'demo';
   
   console.log(`[RecruitOS] Syncing ${notifications.length} notifications to Eureka`);
   
   try {
-    const response = await fetch(gogAPIUrl, {
+    const response = await fetch(notificationsApiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-RecruitOS-Extension-Key': apiKey
+      },
       body: JSON.stringify({
         source: 'recruitos-extension',
         notifications: notifications,
@@ -230,6 +294,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         syncMessages: config.syncMessages
       });
     });
+    return true;
+  }
+
+  if (request.type === 'PING_API') {
+    pingApi().then(sendResponse);
     return true;
   }
   

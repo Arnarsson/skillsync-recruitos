@@ -10,6 +10,7 @@
     "lint:fix": "eslint --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "type-check": "tsc --noEmit",
+    "i18n:audit": "node scripts/i18n-audit.cjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",

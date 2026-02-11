@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 interface CreditPackage {
   id: string;
@@ -34,6 +36,7 @@ interface CreditPackage {
 }
 
 export default function CreditsPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [packages, setPackages] = useState<CreditPackage[]>([]);
@@ -50,15 +53,15 @@ export default function CreditsPage() {
     const credits = searchParams.get("credits");
     
     if (purchase === "success" && credits) {
-      toast.success(`Successfully purchased ${credits} credits!`, {
-        description: "Your credits have been added to your account.",
+      toast.success(`${t("creditsPage.toast.purchaseSuccess")} ${credits} ${t("creditsPage.credits")}!`, {
+        description: t("creditsPage.toast.purchaseSuccessDesc"),
         icon: <Coins className="w-4 h-4" />,
       });
       // Clean up URL
       router.replace("/credits");
     } else if (purchase === "cancelled") {
-      toast.info("Purchase cancelled", {
-        description: "No charges were made to your account.",
+      toast.info(t("creditsPage.toast.purchaseCancelled"), {
+        description: t("creditsPage.toast.purchaseCancelledDesc"),
       });
       router.replace("/credits");
     }
@@ -73,7 +76,7 @@ export default function CreditsPage() {
       }
     } catch (error) {
       console.error("Failed to fetch packages:", error);
-      toast.error("Failed to load credit packages");
+      toast.error(t("creditsPage.toast.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -109,13 +112,13 @@ export default function CreditsPage() {
         }
       } else {
         const error = await response.json();
-        toast.error("Purchase failed", {
-          description: error.error || "Something went wrong",
+        toast.error(t("creditsPage.toast.purchaseFailed"), {
+          description: error.error || t("creditsPage.toast.somethingWrong"),
         });
       }
     } catch (error) {
       console.error("Purchase error:", error);
-      toast.error("Failed to initiate checkout");
+      toast.error(t("creditsPage.toast.checkoutFailed"));
     } finally {
       setPurchasing(null);
     }
@@ -132,14 +135,13 @@ export default function CreditsPage() {
         <div className="text-center mb-12">
           <Badge className="mb-4 bg-amber-500/20 text-amber-600">
             <Coins className="w-3 h-3 mr-1" />
-            Credits
+            {t("creditsPage.badge")}
           </Badge>
           <h1 className="text-4xl font-bold mb-4">
-            Buy Credits for Deep Profile Reports
+            {t("creditsPage.title")}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Purchase credits to unlock detailed candidate profiles with AI-powered insights.
-            Pay as you go, no subscriptions required.
+            {t("creditsPage.subtitle")}
           </p>
         </div>
 
@@ -152,13 +154,13 @@ export default function CreditsPage() {
                   <Coins className="w-7 h-7 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Your Credit Balance</p>
-                  <h2 className="text-3xl font-bold">{currentBalance.toLocaleString()} credits</h2>
+                  <p className="text-sm text-muted-foreground">{t("creditsPage.balance")}</p>
+                  <h2 className="text-3xl font-bold">{currentBalance.toLocaleString()} {t("creditsPage.credits")}</h2>
                 </div>
               </div>
               <div className="text-right text-sm text-muted-foreground">
-                <p>Each credit = 1 deep profile report</p>
-                <p className="text-xs mt-1">Credits never expire</p>
+                <p>{t("creditsPage.eachCredit")}</p>
+                <p className="text-xs mt-1">{t("creditsPage.neverExpire")}</p>
               </div>
             </div>
           </CardContent>
@@ -189,7 +191,7 @@ export default function CreditsPage() {
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <Badge className="bg-primary">
                         <Sparkles className="w-3 h-3 mr-1" />
-                        Most Popular
+                        {t("creditsPage.mostPopular")}
                       </Badge>
                     </div>
                   )}
@@ -203,7 +205,7 @@ export default function CreditsPage() {
                     </div>
                     <CardTitle className="text-xl mb-1">{pkg.name}</CardTitle>
                     <CardDescription>
-                      {pkg.credits} deep profile reports
+                      {pkg.credits} {t("creditsPage.deepProfileReports")}
                     </CardDescription>
                   </CardHeader>
 
@@ -214,11 +216,11 @@ export default function CreditsPage() {
                         {formatDKK(pkg.priceInDKK)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDKK(Math.round(pkg.priceInDKK / pkg.credits))} per credit
+                        {formatDKK(Math.round(pkg.priceInDKK / pkg.credits))} {t("creditsPage.perCredit")}
                       </p>
                       {pkg.discount && (
                         <Badge variant="secondary" className="mt-2 bg-green-500/20 text-green-600">
-                          Save {pkg.discount}%
+                          {t("creditsPage.save")} {pkg.discount}%
                         </Badge>
                       )}
                     </div>
@@ -229,19 +231,19 @@ export default function CreditsPage() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-green-500 shrink-0" />
-                        <span>{pkg.credits} deep profile analyses</span>
+                        <span>{pkg.credits} {t("creditsPage.deepProfileAnalyses")}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-green-500 shrink-0" />
-                        <span>AI-powered insights</span>
+                        <span>{t("creditsPage.aiInsights")}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-green-500 shrink-0" />
-                        <span>Never expires</span>
+                        <span>{t("creditsPage.neverExpire")}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-green-500 shrink-0" />
-                        <span>Instant activation</span>
+                        <span>{t("creditsPage.instantActivation")}</span>
                       </div>
                     </div>
 
@@ -255,11 +257,11 @@ export default function CreditsPage() {
                       {purchasing === pkg.id ? (
                         <>
                           <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                          Processing...
+                          {t("creditsPage.processing")}
                         </>
                       ) : (
                         <>
-                          Buy Now
+                          {t("creditsPage.buyNow")}
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </>
                       )}
@@ -276,9 +278,9 @@ export default function CreditsPage() {
           <Card className="border-border/50">
             <CardContent className="py-6 text-center">
               <Shield className="w-8 h-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-1">Secure Payments</h3>
+              <h3 className="font-semibold mb-1">{t("creditsPage.trust.securePayments")}</h3>
               <p className="text-sm text-muted-foreground">
-                Powered by Stripe. Your payment info is encrypted and secure.
+                {t("creditsPage.trust.securePaymentsDesc")}
               </p>
             </CardContent>
           </Card>
@@ -286,9 +288,9 @@ export default function CreditsPage() {
           <Card className="border-border/50">
             <CardContent className="py-6 text-center">
               <Clock className="w-8 h-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-1">Instant Activation</h3>
+              <h3 className="font-semibold mb-1">{t("creditsPage.trust.instantActivation")}</h3>
               <p className="text-sm text-muted-foreground">
-                Credits are added to your account immediately after purchase.
+                {t("creditsPage.trust.instantActivationDesc")}
               </p>
             </CardContent>
           </Card>
@@ -296,9 +298,9 @@ export default function CreditsPage() {
           <Card className="border-border/50">
             <CardContent className="py-6 text-center">
               <Coins className="w-8 h-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-1">Never Expire</h3>
+              <h3 className="font-semibold mb-1">{t("creditsPage.trust.neverExpire")}</h3>
               <p className="text-sm text-muted-foreground">
-                Your credits remain in your account until you use them.
+                {t("creditsPage.trust.neverExpireDesc")}
               </p>
             </CardContent>
           </Card>
@@ -307,36 +309,34 @@ export default function CreditsPage() {
         {/* FAQ Section */}
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle>Frequently Asked Questions</CardTitle>
+            <CardTitle>{t("creditsPage.faq.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-1">What can I do with credits?</h4>
+              <h4 className="font-semibold mb-1">{t("creditsPage.faq.q1")}</h4>
               <p className="text-sm text-muted-foreground">
-                Each credit lets you generate one comprehensive deep profile report for a candidate,
-                including AI-powered behavioral insights, skills analysis, and hiring recommendations.
+                {t("creditsPage.faq.a1")}
               </p>
             </div>
             <Separator />
             <div>
-              <h4 className="font-semibold mb-1">Do credits expire?</h4>
+              <h4 className="font-semibold mb-1">{t("creditsPage.faq.q2")}</h4>
               <p className="text-sm text-muted-foreground">
-                No! Your credits remain in your account indefinitely and can be used whenever you need them.
+                {t("creditsPage.faq.a2")}
               </p>
             </div>
             <Separator />
             <div>
-              <h4 className="font-semibold mb-1">Can I get a refund?</h4>
+              <h4 className="font-semibold mb-1">{t("creditsPage.faq.q3")}</h4>
               <p className="text-sm text-muted-foreground">
-                Unused credits can be refunded within 30 days of purchase. Contact support for assistance.
+                {t("creditsPage.faq.a3")}
               </p>
             </div>
             <Separator />
             <div>
-              <h4 className="font-semibold mb-1">Is there a subscription option?</h4>
+              <h4 className="font-semibold mb-1">{t("creditsPage.faq.q4")}</h4>
               <p className="text-sm text-muted-foreground">
-                Yes! Check out our <a href="/pricing" className="text-primary hover:underline">pricing page</a> for
-                subscription plans with unlimited credits and additional features.
+                {t("creditsPage.faq.a4Prefix")} <Link href="/pricing" className="text-primary hover:underline">{t("creditsPage.faq.pricingPage")}</Link> {t("creditsPage.faq.a4Suffix")}
               </p>
             </div>
           </CardContent>

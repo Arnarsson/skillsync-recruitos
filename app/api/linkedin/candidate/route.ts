@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireUserOrExtension } from "@/lib/extension-auth";
 import { linkedinCandidateSchema } from "@/lib/validation/apiSchemas";
 
 /**
@@ -9,7 +9,7 @@ import { linkedinCandidateSchema } from "@/lib/validation/apiSchemas";
  * Receives candidate profile data from the LinkedIn extension
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth();
+  const auth = await requireUserOrExtension(request);
   if (auth instanceof NextResponse) return auth;
 
   try {
@@ -181,8 +181,8 @@ export async function POST(request: NextRequest) {
  * List all captures or check if a candidate exists
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  const auth = await requireUserOrExtension(request);
+  const hasAccess = !(auth instanceof NextResponse);
 
   try {
     const { searchParams } = new URL(request.url);
@@ -193,7 +193,9 @@ export async function GET(request: NextRequest) {
     // If looking for specific candidate
     if (linkedinId) {
       const candidate = await prisma.candidate.findFirst({
-        where: { linkedinId, sourceType: "LINKEDIN" },
+        where: hasAccess
+          ? { linkedinId, sourceType: "LINKEDIN" }
+          : { linkedinId, sourceType: "LINKEDIN", userId: null },
       });
       return NextResponse.json({
         exists: !!candidate,
@@ -204,13 +206,17 @@ export async function GET(request: NextRequest) {
     // Get all LinkedIn candidates with pagination
     const [candidates, total] = await Promise.all([
       prisma.candidate.findMany({
-        where: { sourceType: "LINKEDIN" },
+        where: hasAccess
+          ? { sourceType: "LINKEDIN" }
+          : { sourceType: "LINKEDIN", userId: null },
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
       prisma.candidate.count({
-        where: { sourceType: "LINKEDIN" },
+        where: hasAccess
+          ? { sourceType: "LINKEDIN" }
+          : { sourceType: "LINKEDIN", userId: null },
       }),
     ]);
 
@@ -226,6 +232,98 @@ export async function GET(request: NextRequest) {
     console.error("[LinkedIn Extension] Candidate lookup error:", error);
     return NextResponse.json(
       { error: "Failed to lookup candidate" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/linkedin/candidate?id=<candidateId>
+ * DELETE /api/linkedin/candidate?linkedinId=<linkedinId>
+ * DELETE /api/linkedin/candidate?olderThanHours=<n>
+ *
+ * In authenticated/extension mode: can delete any LinkedIn captures.
+ * In demo mode without auth: restricted to public demo captures (userId = null).
+ */
+export async function DELETE(request: NextRequest) {
+  const auth = await requireUserOrExtension(request);
+  const hasAccess = !(auth instanceof NextResponse);
+  const isDemoMode = request.cookies.get("recruitos_demo")?.value === "true";
+
+  if (!hasAccess && !isDemoMode) {
+    return auth;
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const linkedinId = searchParams.get("linkedinId");
+    const olderThanHoursRaw = searchParams.get("olderThanHours");
+
+    // Bulk cleanup mode
+    if (olderThanHoursRaw) {
+      const hours = Number.parseInt(olderThanHoursRaw, 10);
+      if (Number.isNaN(hours) || hours < 1) {
+        return NextResponse.json(
+          { error: "olderThanHours must be a positive integer" },
+          { status: 400 }
+        );
+      }
+
+      const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const result = await prisma.candidate.deleteMany({
+        where: hasAccess
+          ? {
+              sourceType: "LINKEDIN",
+              createdAt: { lt: cutoff },
+            }
+          : {
+              sourceType: "LINKEDIN",
+              userId: null,
+              createdAt: { lt: cutoff },
+            },
+      });
+
+      return NextResponse.json({
+        success: true,
+        deleted: result.count,
+      });
+    }
+
+    if (!id && !linkedinId) {
+      return NextResponse.json(
+        { error: "Provide either id or linkedinId" },
+        { status: 400 }
+      );
+    }
+
+    const result = await prisma.candidate.deleteMany({
+      where: hasAccess
+        ? {
+            sourceType: "LINKEDIN",
+            ...(id ? { id } : { linkedinId: linkedinId! }),
+          }
+        : {
+            sourceType: "LINKEDIN",
+            userId: null,
+            ...(id ? { id } : { linkedinId: linkedinId! }),
+          },
+    });
+
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Capture not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      deleted: result.count,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[LinkedIn Extension] Candidate delete error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete capture", details: message },
       { status: 500 }
     );
   }

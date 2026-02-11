@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import Onboarding from "./Onboarding";
 
@@ -13,7 +13,13 @@ interface OnboardingWrapperProps {
 
 export default function OnboardingWrapper({ children }: OnboardingWrapperProps) {
   const pathname = usePathname();
-  const isHomePage = pathname === "/";
+  const router = useRouter();
+  const canShowOnboarding = pathname === "/";
+  const isHiddenRoute =
+    pathname?.startsWith("/report/") ||
+    pathname?.startsWith("/embed/profile/") ||
+    pathname === "/login" ||
+    pathname === "/signup";
   const [mounted, setMounted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -22,7 +28,7 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
   }, []);
 
   useEffect(() => {
-    if (!isHomePage) return;
+    if (!canShowOnboarding || isHiddenRoute) return;
 
     // Check if user has dismissed onboarding - show if not dismissed
     const hasDismissed = localStorage.getItem(ONBOARDING_KEY);
@@ -30,12 +36,26 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
     if (!hasDismissed) {
       setShowOnboarding(true);
     }
-  }, [isHomePage]);
+  }, [canShowOnboarding, isHiddenRoute]);
 
   const handleDismiss = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setShowOnboarding(false);
-  }, [isHomePage]);
+  }, []);
+
+  const handleStartDemo = useCallback(() => {
+    localStorage.setItem("recruitos_demo_mode", "true");
+    localStorage.setItem("recruitos_admin_mode", "true");
+    handleDismiss();
+    router.push("/intake?demo=true");
+  }, [handleDismiss, router]);
+
+  const handleCustomSetup = useCallback(() => {
+    handleDismiss();
+    if (pathname !== "/intake") {
+      router.push("/intake");
+    }
+  }, [handleDismiss, pathname, router]);
 
   // Escape key dismisses onboarding
   useEffect(() => {
@@ -53,7 +73,7 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
 
   // Ctrl/Cmd + Shift + O to reset onboarding (for testing)
   useEffect(() => {
-    if (!isHomePage) return;
+    if (!canShowOnboarding || isHiddenRoute) return;
 
     const handleReset = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "O") {
@@ -64,10 +84,10 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
 
     window.addEventListener("keydown", handleReset);
     return () => window.removeEventListener("keydown", handleReset);
-  }, []);
+  }, [canShowOnboarding, isHiddenRoute]);
 
   // Don't render onboarding until mounted (SSR safety)
-  if (!mounted || !isHomePage) {
+  if (!mounted || !canShowOnboarding || isHiddenRoute) {
     return <>{children}</>;
   }
 
@@ -76,7 +96,11 @@ export default function OnboardingWrapper({ children }: OnboardingWrapperProps) 
       {children}
       <AnimatePresence>
         {showOnboarding && (
-          <Onboarding onComplete={handleDismiss} onSkip={handleDismiss} />
+          <Onboarding
+            onStartDemo={handleStartDemo}
+            onCustomSetup={handleCustomSetup}
+            onSkip={handleDismiss}
+          />
         )}
       </AnimatePresence>
     </>

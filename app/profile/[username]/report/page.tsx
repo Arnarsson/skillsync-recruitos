@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { candidateService } from "@/services/candidateService";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -119,29 +120,78 @@ interface Candidate {
     seniority?: { percentage: number };
     location?: { percentage: number };
   };
+  explanation?: {
+    conclusion: string;
+    confidence: "low" | "medium" | "high";
+    topFactors: Array<{
+      label: string;
+      direction: "positive" | "negative" | "neutral";
+      impact: number;
+    }>;
+    evidence: Array<{
+      criterion: string;
+      observation: string;
+      source: string;
+      confidence: number;
+    }>;
+    gaps: string[];
+    interviewChecks: string[];
+    disclaimer: string;
+  };
+  criteriaScorecard?: {
+    totalScore: number;
+    confidence: number;
+    missingDataPenalty: number;
+    criterionScores: Array<{
+      criterionId: string;
+      label: string;
+      score: number;
+      weightedScore: number;
+      confidence: number;
+      matchedEvidence: string[];
+    }>;
+  };
 }
 
 export default function ReportPage() {
   const params = useParams();
   const username = params.username as string;
+  const { status } = useSession();
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const isUuid = (value: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        value
+      );
+    const isLikelyGitHubUsername = (value: string) => {
+      if (!/^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(value)) return false;
+      if (isUuid(value)) return false;
+      if ((value.match(/-/g) || []).length > 1) return false;
+      return true;
+    };
+
     async function loadCandidate() {
       // 1. Try API (candidateService)
-      try {
-        const found = await candidateService.getById(username);
-        if (found) {
-          setCandidate(found as unknown as Candidate);
-          setLoading(false);
-          return;
+      if (status === "authenticated") {
+        try {
+          const found = await candidateService.getById(username);
+          if (found) {
+            setCandidate(found as unknown as Candidate);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Candidate not found in API, fall through
         }
-      } catch {
-        // Candidate not found in API, fall through
       }
 
       // 2. Fallback to GitHub API (if direct link)
+      if (!isLikelyGitHubUsername(username)) {
+        setLoading(false);
+        return;
+      }
       try {
         const response = await fetch(`https://api.github.com/users/${username}`);
         if (response.ok) {
@@ -165,7 +215,7 @@ export default function ReportPage() {
     }
 
     loadCandidate();
-  }, [username]);
+  }, [username, status]);
 
   const handlePrint = () => {
     // Block export while analyzing
@@ -393,6 +443,67 @@ export default function ReportPage() {
         </header>
 
         {/* Executive Summary Grid */}
+        {(candidate.explanation || candidate.criteriaScorecard) && (
+          <section className="mb-8 p-5 border border-gray-200 rounded-xl bg-gray-50/50">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">
+              Evidence-Based Decision Support
+            </h3>
+            {candidate.explanation && (
+              <div className="space-y-3 mb-4">
+                <p className="text-sm font-medium">{candidate.explanation.conclusion}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">Confidence: {candidate.explanation.confidence}</Badge>
+                  {candidate.criteriaScorecard && (
+                    <Badge variant="outline">
+                      Criteria Score: {candidate.criteriaScorecard.totalScore}/100
+                    </Badge>
+                  )}
+                </div>
+                {candidate.explanation.topFactors?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Top factors</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      {candidate.explanation.topFactors.slice(0, 4).map((factor, idx) => (
+                        <li key={idx}>
+                          {factor.direction === "positive" ? "+" : factor.direction === "negative" ? "-" : "="}{" "}
+                          {factor.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {candidate.explanation.interviewChecks?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Interview checks</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      {candidate.explanation.interviewChecks.slice(0, 3).map((check, idx) => (
+                        <li key={idx}>• {check}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 italic">{candidate.explanation.disclaimer}</p>
+              </div>
+            )}
+
+            {candidate.criteriaScorecard?.criterionScores?.length ? (
+              <div className="pt-3 border-t border-gray-200">
+                <p className="text-xs font-semibold text-gray-500 mb-2">Criteria score breakdown</p>
+                <div className="grid md:grid-cols-2 gap-2">
+                  {candidate.criteriaScorecard.criterionScores.slice(0, 6).map((item) => (
+                    <div key={item.criterionId} className="text-sm border border-gray-200 rounded-md p-2 bg-white">
+                      <div className="flex justify-between">
+                        <span>{item.label}</span>
+                        <span className="font-semibold">{item.score}/5</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        )}
+
         <div className="grid grid-cols-3 gap-8 mb-8">
           
           {/* Column 1: Archetype & Stats */}

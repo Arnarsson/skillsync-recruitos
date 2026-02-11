@@ -82,7 +82,7 @@ export class ProfilePage {
 
     // Header
     this.profileHeader = page.locator('.flex.flex-col.md\\:flex-row.items-start');
-    this.developerName = page.locator('h1.text-3xl');
+    this.developerName = page.locator('h1').first();
     this.developerUsername = page.locator('p.text-muted-foreground').filter({ hasText: '@' });
     this.developerBio = page.locator('p.text-foreground\\/80');
     this.developerLocation = page.locator('.flex.items-center.gap-1').filter({ has: page.locator('svg.lucide-map-pin') });
@@ -255,7 +255,13 @@ export class ProfilePage {
    * Wait for profile to load.
    */
   async waitForProfile() {
-    await this.developerName.waitFor({ state: 'visible', timeout: 10000 });
+    await Promise.race([
+      this.developerName.waitFor({ state: 'visible', timeout: 15000 }),
+      this.errorMessage.waitFor({ state: 'visible', timeout: 15000 }).then(async () => {
+        const errorText = await this.errorMessage.first().textContent();
+        throw new Error(`Profile failed to load: ${errorText || 'unknown error'}`);
+      }),
+    ]);
   }
 
   /**

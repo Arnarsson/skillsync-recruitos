@@ -3,6 +3,7 @@
 import { Search, List, Microscope, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface PhaseIndicatorProps {
   currentPhase: 1 | 2 | 3 | 4;
@@ -12,9 +13,8 @@ interface PhaseIndicatorProps {
 const PHASES = [
   { 
     id: 1, 
-    label: "SØGNING", 
-    labelEn: "SEARCH",
-    description: "Define skills + requirements", 
+    labelKey: "phaseIndicator.search",
+    descriptionKey: "phaseIndicator.searchDesc",
     icon: Search, 
     path: "/search",
     color: "teal",
@@ -22,9 +22,8 @@ const PHASES = [
   },
   { 
     id: 2, 
-    label: "LISTE", 
-    labelEn: "LIST",
-    description: "See results → Select candidates", 
+    labelKey: "phaseIndicator.list",
+    descriptionKey: "phaseIndicator.listDesc",
     icon: List, 
     path: "/pipeline",
     color: "teal",
@@ -32,9 +31,8 @@ const PHASES = [
   },
   { 
     id: 3, 
-    label: "ANALYSE", 
-    labelEn: "ANALYZE",
-    description: "Deep dive on selections", 
+    labelKey: "phaseIndicator.analyze",
+    descriptionKey: "phaseIndicator.analyzeDesc",
     icon: Microscope, 
     path: "/analyse",
     color: "teal",
@@ -42,9 +40,8 @@ const PHASES = [
   },
   { 
     id: 4, 
-    label: "HANDLING", 
-    labelEn: "OUTREACH",
-    description: "Generate messages", 
+    labelKey: "phaseIndicator.outreach",
+    descriptionKey: "phaseIndicator.outreachDesc",
     icon: MessageSquare, 
     path: "/shortlist",
     color: "teal",
@@ -62,6 +59,7 @@ const PHASE_COLORS = {
 };
 
 export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorProps) {
+  const { t } = useLanguage();
   // Gated progression: can only access completed phases or current phase
   const canAccessPhase = (phaseId: number) => {
     return phaseId <= currentPhase;
@@ -89,15 +87,15 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
                   isFuture && "bg-muted/30 opacity-40 cursor-not-allowed text-muted-foreground",
                   isClickable && !isFuture && "cursor-pointer hover:scale-105"
                 )}
-                title={isFuture ? "Complete previous stages first" : ""}
+                title={isFuture ? t("phaseIndicator.completePrevious") : ""}
               >
                 <PhaseIcon className="w-5 h-5" />
                 <div className="flex flex-col">
                   <span className="text-xs font-bold uppercase tracking-wider">
-                    {phase.labelEn}
+                    {t(phase.labelKey)}
                   </span>
                   <span className="text-[10px] opacity-90">
-                    {phase.description}
+                    {t(phase.descriptionKey)}
                   </span>
                 </div>
                 {/* Completed checkmark */}
@@ -148,10 +146,10 @@ export function PhaseIndicator({ currentPhase, className = "" }: PhaseIndicatorP
                     </div>
                     <div>
                       <div className="text-sm font-bold uppercase tracking-wider">
-                        {PHASES[currentPhase - 1].label}
+                        {t(PHASES[currentPhase - 1].labelKey)}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Phase {currentPhase} of 4
+                        {t("phaseIndicator.phase")} {currentPhase} {t("phaseIndicator.of")} 4
                       </div>
                     </div>
                   </>

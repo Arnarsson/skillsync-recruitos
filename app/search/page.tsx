@@ -468,8 +468,8 @@ function SearchResults() {
   };
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="page-container">
+      <div className="page-content max-w-6xl">
         {/* Phase Indicator */}
         <PhaseIndicator currentPhase={1} />
         
@@ -631,7 +631,22 @@ function SearchResults() {
             >
               <Card className="mb-8 border-destructive/50 bg-destructive/10">
                 <CardContent className="py-4">
-                  <p className="text-destructive">{error}</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p className="text-destructive">{error}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSearch}
+                        disabled={loading || (!searchQuery.trim() && selectedSkills.length === 0)}
+                      >
+                        Try Again
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setError(null)}>
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -1198,7 +1213,7 @@ function SearchResults() {
 function SearchPageFallback() {
   const { t } = useLanguage();
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4 flex items-center justify-center">
+    <div className="page-container flex items-center justify-center">
       <div className="text-center">
         <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
         <p className="text-muted-foreground">{t("search.loadingSearch")}</p>

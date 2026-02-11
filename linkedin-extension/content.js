@@ -44,6 +44,16 @@
     captureCount++;
   }
 
+  async function safeSendMessage(payload) {
+    try {
+      return await chrome.runtime.sendMessage(payload);
+    } catch (error) {
+      // Extension reloads or disabled background worker can cause transient failures.
+      console.warn('[RecruitOS] Background unavailable:', error?.message || error);
+      return { success: false, error: 'Background unavailable' };
+    }
+  }
+
   // ============================================
   // PROFILE DETECTION & EXTRACTION
   // ============================================
@@ -593,7 +603,7 @@
     
     try {
       console.log('[RecruitOS] Sending to background script...');
-      const response = await chrome.runtime.sendMessage({
+      const response = await safeSendMessage({
         type: 'ADD_CANDIDATE',
         profile: profile
       });
@@ -633,7 +643,7 @@
       if (canCapture()) {
         const profile = extractProfileData();
         if (profile.name) {
-          chrome.runtime.sendMessage({
+          safeSendMessage({
             type: 'PROFILE_VIEW',
             profile: profile
           });
@@ -647,7 +657,7 @@
     if (isMessagingPage()) {
       const messages = extractMessages();
       if (messages.length > 0) {
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: 'MESSAGES_SYNC',
           messages: messages
         });
@@ -658,7 +668,7 @@
     if (isNotificationsPage()) {
       const notifications = extractNotifications();
       if (notifications.length > 0) {
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: 'NOTIFICATIONS_SYNC',
           notifications: notifications
         });

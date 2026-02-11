@@ -37,10 +37,15 @@ const SCORE_BUCKETS = [
 
 export async function GET() {
   const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
 
   try {
+    const where: { userId?: string } = {};
+    if (!(auth instanceof NextResponse) && auth.user.id) {
+      where.userId = auth.user.id;
+    }
+
     const candidates = await prisma.candidate.findMany({
+      where,
       select: {
         id: true,
         pipelineStage: true,

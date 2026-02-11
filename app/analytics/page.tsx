@@ -28,6 +28,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 // ---- Types ----
 
@@ -173,6 +174,7 @@ function getScoreColor(score: number): string {
 // ---- Main component ----
 
 export default function AnalyticsPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,16 +184,16 @@ export default function AnalyticsPage() {
     try {
       setError(null);
       const res = await fetch("/api/analytics/pipeline");
-      if (!res.ok) throw new Error("Failed to fetch analytics");
+      if (!res.ok) throw new Error(t("analytics.error.fetchFailed"));
       const json = await res.json();
       setData(json);
       setLastRefresh(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : t("analytics.error.unknown"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();
@@ -210,15 +212,14 @@ export default function AnalyticsPage() {
             <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-6">
               <Users className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-bold mb-3">No candidates yet</h2>
+            <h2 className="text-2xl font-bold mb-3">{t("analytics.empty.title")}</h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Start by searching for developers to populate your pipeline.
-              Analytics will appear here once you have candidates.
+              {t("analytics.empty.description")}
             </p>
             <Link href="/search">
               <Button size="lg" className="gap-2">
                 <Search className="w-5 h-5" />
-                Search for Developers
+                {t("analytics.empty.cta")}
               </Button>
             </Link>
           </div>
@@ -234,7 +235,7 @@ export default function AnalyticsPage() {
         <div className="max-w-5xl mx-auto text-center py-24">
           <p className="text-red-400 mb-4">{error}</p>
           <Button onClick={fetchData} variant="outline">
-            Retry
+            {t("analytics.retry")}
           </Button>
         </div>
       </div>
@@ -250,15 +251,15 @@ export default function AnalyticsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">
-              Pipeline Analytics
+              {t("analytics.title")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Recruitment funnel metrics and candidate insights
+              {t("analytics.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">
-              Updated {lastRefresh.toLocaleTimeString()}
+              {t("analytics.updated")} {lastRefresh.toLocaleTimeString()}
             </span>
             <Button
               variant="outline"
@@ -270,7 +271,7 @@ export default function AnalyticsPage() {
               <RefreshCw
                 className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
               />
-              Refresh
+              {t("analytics.refresh")}
             </Button>
           </div>
         </div>
@@ -291,12 +292,12 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Users className="w-4 h-4" />
                   <span className="text-xs font-medium uppercase tracking-wider">
-                    Total Candidates
+                    {t("analytics.cards.totalCandidates")}
                   </span>
                 </div>
                 <p className="text-4xl font-bold">{summary?.total ?? 0}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Across all sources
+                  {t("analytics.cards.acrossSources")}
                 </p>
               </CardContent>
             </Card>
@@ -307,7 +308,7 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Target className="w-4 h-4" />
                   <span className="text-xs font-medium uppercase tracking-wider">
-                    Avg. Score
+                    {t("analytics.cards.avgScore")}
                   </span>
                 </div>
                 <p
@@ -318,7 +319,7 @@ export default function AnalyticsPage() {
                   {summary?.averageScore ?? 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Highest: {summary?.highestScore ?? 0}
+                  {t("analytics.cards.highest")}: {summary?.highestScore ?? 0}
                 </p>
               </CardContent>
             </Card>
@@ -329,14 +330,14 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <TrendingUp className="w-4 h-4" />
                   <span className="text-xs font-medium uppercase tracking-wider">
-                    Active Pipeline
+                    {t("analytics.cards.activePipeline")}
                   </span>
                 </div>
                 <p className="text-4xl font-bold">
                   {summary?.activePipeline ?? 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Excluding rejected
+                  {t("analytics.cards.excludingRejected")}
                 </p>
               </CardContent>
             </Card>
@@ -347,14 +348,14 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <CalendarPlus className="w-4 h-4" />
                   <span className="text-xs font-medium uppercase tracking-wider">
-                    Added This Week
+                    {t("analytics.cards.addedThisWeek")}
                   </span>
                 </div>
                 <p className="text-4xl font-bold">
                   {summary?.addedThisWeek ?? 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Last 7 days
+                  {t("analytics.cards.last7Days")}
                 </p>
               </CardContent>
             </Card>
@@ -373,7 +374,7 @@ export default function AnalyticsPage() {
             <Card className="lg:col-span-2 border-zinc-800 bg-zinc-900/50">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">
-                  Pipeline Funnel
+                  {t("analytics.funnel.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -405,7 +406,7 @@ export default function AnalyticsPage() {
                             {stage.conversionRate !== null && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <ArrowRight className="w-3 h-3" />
-                                <span>{stage.conversionRate}% from prev</span>
+                                <span>{stage.conversionRate}% {t("analytics.funnel.fromPrev")}</span>
                               </div>
                             )}
                           </div>
@@ -431,7 +432,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    No funnel data yet
+                    {t("analytics.funnel.noData")}
                   </div>
                 )}
               </CardContent>
@@ -441,7 +442,7 @@ export default function AnalyticsPage() {
             <Card className="border-zinc-800 bg-zinc-900/50">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">
-                  Source Mix
+                  {t("analytics.sourceMix")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -482,7 +483,7 @@ export default function AnalyticsPage() {
                                     {item.name}
                                   </p>
                                   <p className="text-sm text-zinc-400">
-                                    {item.value} candidates
+                                    {item.value} {t("analytics.candidates")}
                                   </p>
                                 </div>
                               );
@@ -507,7 +508,7 @@ export default function AnalyticsPage() {
                               }}
                             />
                             <span className="text-sm">
-                              {SOURCE_LABELS[s.source] || s.source}
+                              {s.source === "MANUAL" ? t("analytics.manual") : SOURCE_LABELS[s.source] || s.source}
                             </span>
                           </div>
                           <span className="text-sm text-muted-foreground">
@@ -520,7 +521,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-                    No source data yet
+                    {t("analytics.sourceMixNoData")}
                   </div>
                 )}
               </CardContent>
@@ -540,7 +541,7 @@ export default function AnalyticsPage() {
             <Card className="border-zinc-800 bg-zinc-900/50">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">
-                  Score Distribution
+                  {t("analytics.scoreDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -580,7 +581,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    No score data yet
+                    {t("analytics.scoreNoData")}
                   </div>
                 )}
               </CardContent>
@@ -590,7 +591,7 @@ export default function AnalyticsPage() {
             <Card className="border-zinc-800 bg-zinc-900/50">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">
-                  Candidates Over Time
+                  {t("analytics.timelineTitle")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -645,10 +646,10 @@ export default function AnalyticsPage() {
                             return (
                               <div className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 shadow-xl">
                                 <p className="text-sm font-medium text-zinc-200">
-                                  Week of {label}
+                                  {t("analytics.weekOf")} {label}
                                 </p>
                                 <p className="text-sm text-zinc-400">
-                                  {payload[0].value} added
+                                  {payload[0].value} {t("analytics.added")}
                                 </p>
                               </div>
                             );
@@ -666,7 +667,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    No timeline data yet
+                    {t("analytics.timelineNoData")}
                   </div>
                 )}
               </CardContent>
@@ -686,7 +687,7 @@ export default function AnalyticsPage() {
             <Card className="border-zinc-800 bg-zinc-900/50">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">
-                  Top Skills
+                  {t("analytics.topSkills")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -727,7 +728,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    No skills data yet
+                    {t("analytics.skillsNoData")}
                   </div>
                 )}
               </CardContent>
@@ -737,7 +738,7 @@ export default function AnalyticsPage() {
             <Card className="border-zinc-800 bg-zinc-900/50">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">
-                  Top Locations
+                  {t("analytics.topLocations")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -781,7 +782,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    No location data yet
+                    {t("analytics.locationsNoData")}
                   </div>
                 )}
               </CardContent>

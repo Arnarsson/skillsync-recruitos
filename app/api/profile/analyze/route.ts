@@ -9,6 +9,9 @@ import {
   generateNetworkDossier,
   EnrichmentData,
 } from "@/lib/services/gemini";
+import { buildCandidateExplanation } from "@/lib/explainability";
+import { evaluateCriteria, type CriterionInput } from "@/lib/criteria";
+import { buildInterviewGuide } from "@/lib/interview-engine";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +36,7 @@ export async function POST(request: NextRequest) {
       isShortlisted,  // Stage 3 flag - triggers network dossier generation
       enrichmentData, // Optional enrichment data from deep-enrichment API
       useComparativeAnalysis = true, // EU AI Act compliant mode (default: true)
+      criteria, // Optional predefined criteria set for scorecard evaluation
     } = body;
 
     // Check if demo mode (skip credits)
@@ -195,6 +199,46 @@ export async function POST(request: NextRequest) {
       response.alignmentScore = candidateAnalysis.alignmentScore;
       response.euAiActCompliant = false;
       response.warning = 'Using deprecated scoring mode. Switch to comparative analysis for EU AI Act compliance.';
+    }
+
+    response.explanation = buildCandidateExplanation({
+      candidateName,
+      keyEvidence: response.keyEvidence || [],
+      risks: response.risks || [],
+      alignmentScore: response.alignmentScore,
+      analysisMode: response.analysisMode,
+    });
+
+    if (Array.isArray(criteria) && criteria.length > 0) {
+      const normalizedCriteria = criteria
+        .filter(
+          (c): c is CriterionInput =>
+            !!c &&
+            typeof c.id === "string" &&
+            typeof c.label === "string" &&
+            typeof c.weight === "number"
+        )
+        .map((c) => ({
+          id: c.id,
+          label: c.label,
+          weight: c.weight,
+          description: c.description,
+          rubric: c.rubric,
+        }));
+
+      if (normalizedCriteria.length > 0) {
+        const evidenceTexts = [
+          profileText,
+          ...(response.keyEvidence || []),
+          ...(response.risks || []),
+          response.deepProfile?.summary || "",
+        ].filter(Boolean);
+        response.criteriaScorecard = evaluateCriteria(normalizedCriteria, evidenceTexts);
+        response.criteriaInterviewGuide = buildInterviewGuide(
+          normalizedCriteria,
+          candidateName
+        );
+      }
     }
     
     return NextResponse.json(response);

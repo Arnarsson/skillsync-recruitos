@@ -6,6 +6,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/i18n";
+import {
+  extractGitHubUsername,
+  findCandidateInLocalCache,
+  readLocalCandidates,
+  resolveProfileSlug,
+} from "@/lib/candidate-identity";
 import {
   Loader2,
   ArrowLeft,
@@ -92,6 +99,7 @@ function getScorePercentage(breakdown: ScoreBreakdown | undefined, key: Dimensio
 // ===== Component =====
 
 export default function ComparePage() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -108,18 +116,43 @@ export default function ComparePage() {
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [comparingAI, setComparingAI] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [mustHaveCount, setMustHaveCount] = useState(0);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("apex_skills_config");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        skills?: Array<{ tier?: string }>;
+      };
+      const count = (parsed.skills || []).filter((skill) => skill.tier === "must-have").length;
+      setMustHaveCount(count);
+    } catch {
+      // Ignore malformed storage
+    }
+  }, []);
+
+  const handleTryDemoComparison = () => {
+    const localCandidates = readLocalCandidates<Candidate>();
+    if (localCandidates.length >= 2) {
+      const ids = localCandidates.slice(0, 2).map((candidate) => candidate.id);
+      router.push(`/compare?ids=${ids.join(",")}`);
+      return;
+    }
+    router.push("/pipeline?demo=true");
+  };
 
   // Fetch candidates on mount
   useEffect(() => {
     if (candidateIds.length === 0) {
       setLoading(false);
-      setError("No candidate IDs provided. Navigate from the pipeline page.");
+      setError(t("compare.errors.noIds"));
       return;
     }
 
     if (candidateIds.length < 2) {
       setLoading(false);
-      setError("At least 2 candidates are required for comparison.");
+      setError(t("compare.errors.needTwo"));
       return;
     }
 
@@ -128,20 +161,46 @@ export default function ComparePage() {
       setError(null);
 
       try {
-        const results = await Promise.all(
-          candidateIds.map(async (id) => {
+        const localCandidates = readLocalCandidates<Candidate>();
+        const resolvedCandidates: Candidate[] = [];
+        const unresolvedIds: string[] = [];
+
+        for (const id of candidateIds) {
+          const localCandidate = findCandidateInLocalCache(localCandidates, id);
+          if (localCandidate) {
+            resolvedCandidates.push(localCandidate);
+            continue;
+          }
+
+          try {
             const res = await fetch(`/api/candidates/${encodeURIComponent(id)}`);
             if (!res.ok) {
-              throw new Error(`Candidate "${id}" not found (${res.status})`);
+              unresolvedIds.push(`${id} (${res.status})`);
+              continue;
             }
             const data = await res.json();
-            return data.candidate as Candidate;
-          })
-        );
+            if (data?.candidate) {
+              resolvedCandidates.push(data.candidate as Candidate);
+            } else {
+              unresolvedIds.push(`${id} (invalid payload)`);
+            }
+          } catch {
+            unresolvedIds.push(`${id} (request failed)`);
+          }
+        }
 
-        setCandidates(results);
+        if (resolvedCandidates.length < 2) {
+          if (unresolvedIds.length > 0) {
+            throw new Error(
+              `Could not load enough candidates for comparison. Missing: ${unresolvedIds.join(", ")}`
+            );
+          }
+          throw new Error(t("compare.errors.notEnough"));
+        }
+
+        setCandidates(resolvedCandidates);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to fetch candidates";
+        const msg = err instanceof Error ? err.message : t("compare.errors.fetchFailed");
         setError(msg);
       } finally {
         setLoading(false);
@@ -185,7 +244,7 @@ export default function ComparePage() {
       const result: ComparisonResult = await res.json();
       setComparison(result);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "AI comparison failed";
+      const msg = err instanceof Error ? err.message : t("compare.errors.aiFailed");
       setAiError(msg);
     } finally {
       setComparingAI(false);
@@ -203,8 +262,8 @@ export default function ComparePage() {
               <Loader2 className="w-5 h-5 text-primary animate-spin" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Loading candidates...</h1>
-              <p className="text-sm text-muted-foreground">Fetching data for comparison</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("compare.loading.title")}</h1>
+              <p className="text-sm text-muted-foreground">{t("compare.loading.subtitle")}</p>
             </div>
           </div>
           {/* Skeleton cards */}
@@ -242,13 +301,19 @@ export default function ComparePage() {
           <Card className="border-destructive/50">
             <CardContent className="py-16 text-center">
               <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-              <h2 className="text-lg font-semibold mb-2">Comparison Error</h2>
+              <h2 className="text-lg font-semibold mb-2">{t("compare.errorTitle")}</h2>
               <p className="text-muted-foreground mb-6">{error}</p>
               <div className="flex gap-3 justify-center">
+                <Button variant="ghost" onClick={() => window.location.reload()}>
+                  {t("compare.tryAgain")}
+                </Button>
+                <Button onClick={handleTryDemoComparison}>
+                  {t("compare.tryDemoData")}
+                </Button>
                 <Link href="/pipeline">
                   <Button variant="outline">
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Pipeline
+                    {t("compare.backToPipeline")}
                   </Button>
                 </Link>
               </div>
@@ -283,10 +348,18 @@ export default function ComparePage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Battle Cards</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("compare.title")}</h1>
               <p className="text-sm text-muted-foreground">
-                Comparing {candidates.length} candidates side-by-side
+                {t("compare.comparing")} {candidates.length} {t("compare.candidatesSideBySide")}
               </p>
+              {mustHaveCount > 0 && (
+                <Badge
+                  variant="outline"
+                  className="mt-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                >
+                  {t("compare.strictMatchContext")} ({mustHaveCount} {t("compare.mustHave")})
+                </Badge>
+              )}
             </div>
           </div>
           <Button
@@ -299,7 +372,7 @@ export default function ComparePage() {
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            {comparingAI ? "Analyzing..." : comparison ? "Re-generate Verdict" : "Generate AI Verdict"}
+            {comparingAI ? t("compare.analyzing") : comparison ? t("compare.regenerateVerdict") : t("compare.generateVerdict")}
           </Button>
         </div>
 
@@ -307,6 +380,7 @@ export default function ComparePage() {
         <div className={`grid ${colClass} gap-4 mb-6`}>
           {candidates.map((c) => {
             const isWinner = winnerId === c.id;
+            const profileSlug = resolveProfileSlug(c as Candidate);
             return (
               <Card
                 key={c.id}
@@ -317,7 +391,7 @@ export default function ComparePage() {
                 {isWinner && (
                   <div className="absolute top-0 right-0 bg-yellow-500 text-yellow-950 text-[10px] font-bold px-2 py-0.5 rounded-bl flex items-center gap-1">
                     <Trophy className="w-3 h-3" />
-                    RECOMMENDED
+                    {t("compare.recommended")}
                   </div>
                 )}
                 <CardContent className="p-4">
@@ -344,18 +418,18 @@ export default function ComparePage() {
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Building2 className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{c.company || "Independent"}</span>
+                      <span className="truncate">{c.company || t("compare.independent")}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{c.location || "Remote"}</span>
+                      <span className="truncate">{c.location || t("compare.remote")}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Briefcase className="w-3 h-3 shrink-0" />
                       <span>
                         {c.yearsExperience
                           ? `${c.yearsExperience} years`
-                          : "Experience not specified"}
+                          : t("compare.experienceNotSpecified")}
                       </span>
                     </div>
                   </div>
@@ -376,9 +450,9 @@ export default function ComparePage() {
                   )}
                   {/* Actions */}
                   <div className="flex gap-2 mt-3">
-                    <Link href={`/profile/${c.id}`} className="flex-1">
+                    <Link href={`/profile/${profileSlug}`} className="flex-1">
                       <Button size="sm" variant="outline" className="w-full text-xs gap-1">
-                        Profile
+                        {t("compare.profile")}
                         <ChevronRight className="w-3 h-3" />
                       </Button>
                     </Link>
@@ -396,7 +470,7 @@ export default function ComparePage() {
               <thead>
                 <tr className="border-b bg-muted/30">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground w-36">
-                    Dimension
+                    {t("compare.dimension")}
                   </th>
                   {candidates.map((c) => (
                     <th key={c.id} className="text-center py-3 px-4 text-sm font-medium min-w-[160px]">
@@ -466,7 +540,7 @@ export default function ComparePage() {
 
                 {/* Overall Score Row */}
                 <tr className="bg-muted/30 font-medium">
-                  <td className="py-3 px-4 text-sm font-semibold">Overall</td>
+                  <td className="py-3 px-4 text-sm font-semibold">{t("compare.overall")}</td>
                   {candidates.map((c) => (
                     <td key={c.id} className="py-3 px-4 text-center">
                       <div
@@ -491,7 +565,7 @@ export default function ComparePage() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-destructive">AI Verdict Failed</p>
+                  <p className="text-sm font-medium text-destructive">{t("compare.aiVerdictFailed")}</p>
                   <p className="text-sm text-muted-foreground">{aiError}</p>
                   <Button
                     variant="outline"
@@ -499,7 +573,7 @@ export default function ComparePage() {
                     onClick={handleGenerateVerdict}
                     className="mt-2"
                   >
-                    Try Again
+                    {t("compare.tryAgain")}
                   </Button>
                 </div>
               </div>
@@ -515,7 +589,7 @@ export default function ComparePage() {
                   <Trophy className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg mb-1">AI Verdict</h3>
+                  <h3 className="font-semibold text-lg mb-1">{t("compare.aiVerdict")}</h3>
                   {(() => {
                     const recommended = candidates.find(
                       (c) => c.id === comparison.verdict.recommended
@@ -533,7 +607,7 @@ export default function ComparePage() {
                           />
                           <span className="font-medium">{recommended.name}</span>
                           <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-xs">
-                            Best Match
+                            {t("compare.bestMatch")}
                           </Badge>
                         </div>
                       </div>
@@ -544,7 +618,7 @@ export default function ComparePage() {
                   </p>
                   {comparison.verdict.tradeoffs && (
                     <div className="text-sm text-muted-foreground border-t border-border/50 pt-3 mt-3">
-                      <span className="font-medium text-foreground/70">Trade-offs: </span>
+                      <span className="font-medium text-foreground/70">{t("compare.tradeoffs")} </span>
                       {comparison.verdict.tradeoffs}
                     </div>
                   )}
@@ -559,17 +633,16 @@ export default function ComparePage() {
           <Card className="mb-6 border-dashed">
             <CardContent className="py-8 text-center">
               <Sparkles className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-              <h3 className="font-medium mb-1">Ready for AI Analysis?</h3>
+              <h3 className="font-medium mb-1">{t("compare.readyForAi")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Click &quot;Generate AI Verdict&quot; to get a detailed comparison with scores, notes,
-                and a recommendation across all dimensions.
+                {t("compare.readyDesc")}
               </p>
               <Button
                 onClick={handleGenerateVerdict}
                 className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
               >
                 <Sparkles className="w-4 h-4" />
-                Generate AI Verdict
+                {t("compare.generateVerdict")}
               </Button>
             </CardContent>
           </Card>
@@ -580,10 +653,9 @@ export default function ComparePage() {
           <Card className="mb-6 border-primary/20">
             <CardContent className="py-8 text-center">
               <Loader2 className="w-8 h-8 mx-auto mb-3 text-primary animate-spin" />
-              <h3 className="font-medium mb-1">Analyzing candidates...</h3>
+              <h3 className="font-medium mb-1">{t("compare.analyzingCandidates")}</h3>
               <p className="text-sm text-muted-foreground">
-                AI is comparing {candidates.length} candidates across 5 dimensions.
-                This may take a few seconds.
+                {t("compare.analyzingDescPrefix")} {candidates.length} {t("compare.analyzingDescSuffix")}
               </p>
             </CardContent>
           </Card>

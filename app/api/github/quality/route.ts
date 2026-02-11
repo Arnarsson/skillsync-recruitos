@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOctokit } from "@/lib/github";
-import { requireAuth } from "@/lib/auth-guard";
 import {
   calculateQualitySignals,
   type QualitySignals,
@@ -25,9 +24,6 @@ export interface QualityAssessmentResponse {
  * - Overall quality score
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
   const searchParams = request.nextUrl.searchParams;
   const username = searchParams.get("username");
 

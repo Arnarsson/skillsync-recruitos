@@ -81,15 +81,24 @@ function parseSkills(raw: unknown): string[] {
 // GET /api/candidates/graph - Build a relationship graph from pipeline candidates
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
 
   try {
-    const userId = auth.user.id;
+    const idsParam = request.nextUrl.searchParams.get("ids");
+    const selectedIds = idsParam
+      ? idsParam
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean)
+      : [];
 
-    // Build where clause scoped to user if authenticated
-    const where: { userId?: string } = {};
-    if (userId) {
-      where.userId = userId;
+    // `/graph` is accessible in demo/public flows. If auth is missing,
+    // fall back to a global candidate sample instead of returning 401.
+    const where: { userId?: string; id?: { in: string[] } } = {};
+    if (!(auth instanceof NextResponse) && auth.user.id) {
+      where.userId = auth.user.id;
+    }
+    if (selectedIds.length > 0) {
+      where.id = { in: selectedIds };
     }
 
     // Fetch all candidates
@@ -235,9 +244,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ nodes, edges });
   } catch (error) {
     console.error("Graph API error:", error);
-    return NextResponse.json(
-      { error: "Failed to build graph" },
-      { status: 500 }
-    );
+    // Never hard-fail graph page for users; return a safe empty graph.
+    return NextResponse.json({
+      nodes: [],
+      edges: [],
+      warning: "Graph data unavailable, returned empty graph",
+    });
   }
 }

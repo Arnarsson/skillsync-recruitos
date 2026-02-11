@@ -27,15 +27,43 @@ interface SkillSuggestion {
 
 interface PreviewResponse {
   totalCandidates: number;
+  estimateMin?: number;
+  estimateMax?: number;
   perSkill: Record<string, SkillInsight>;
   suggestions: SkillSuggestion[];
   cached: boolean;
+  estimateMode?: "strict" | "broad";
+  confidence?: "high" | "medium" | "low";
+  note?: string;
 }
 
 // Cache for GitHub search results (skill -> count)
 // Simple in-memory cache with TTL
-const searchCache = new Map<string, { count: number; timestamp: number }>();
+const searchCache = new Map<string, { count: number; timestamp: number; fallback: boolean }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const fallbackWarningCache = new Set<string>();
+
+function getFallbackSkillCount(skill: string): number {
+  const normalized = normalizeSkill(skill) || skill.toLowerCase();
+  const heuristicCounts: Record<string, number> = {
+    javascript: 250000,
+    typescript: 180000,
+    python: 320000,
+    java: 280000,
+    react: 90000,
+    "node.js": 120000,
+    nodejs: 120000,
+    "c#": 110000,
+    go: 85000,
+    rust: 45000,
+    aws: 70000,
+    kubernetes: 60000,
+    postgresql: 80000,
+    redis: 75000,
+  };
+
+  return heuristicCounts[normalized] ?? 30000;
+}
 
 /**
  * Search GitHub for candidates with a specific skill
@@ -45,12 +73,12 @@ async function getSkillCandidateCount(
   skill: string,
   octokit: ReturnType<typeof createOctokit>,
   location?: string
-): Promise<number> {
+): Promise<{ count: number; fallback: boolean }> {
   // Check cache first
   const cacheKey = `${skill}:${location || "global"}`;
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.count;
+    return { count: cached.count, fallback: cached.fallback };
   }
 
   try {
@@ -89,12 +117,31 @@ async function getSkillCandidateCount(
     const count = data.total_count;
 
     // Cache the result
-    searchCache.set(cacheKey, { count, timestamp: Date.now() });
-
-    return count;
+    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: false });
+    return { count, fallback: false };
   } catch (error) {
-    console.error(`Error searching for skill "${skill}":`, error);
-    return 0;
+    const status =
+      (error as { status?: number })?.status ??
+      (error as { response?: { status?: number } })?.response?.status;
+
+    // Graceful degradation: avoid breaking the UI when GitHub search is throttled.
+    if (status === 403 || status === 429) {
+      const fallback = getFallbackSkillCount(skill);
+      searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true });
+
+      if (!fallbackWarningCache.has(cacheKey)) {
+        fallbackWarningCache.add(cacheKey);
+        console.warn(
+          `[SkillsPreview] GitHub rate limit hit for "${skill}", using fallback estimate`
+        );
+      }
+      return { count: fallback, fallback: true };
+    }
+
+    console.warn(`Error searching for skill "${skill}"`, error);
+    const fallback = getFallbackSkillCount(skill);
+    searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true });
+    return { count: fallback, fallback: true };
   }
 }
 
@@ -142,10 +189,11 @@ export async function POST(request: NextRequest) {
     // Fetch candidate counts for each skill in parallel
     const skillCounts = await Promise.all(
       skills.map(async (skill) => {
-        const count = await getSkillCandidateCount(skill.name, octokit, location);
-        return { name: skill.name, tier: skill.tier, count };
+        const result = await getSkillCandidateCount(skill.name, octokit, location);
+        return { name: skill.name, tier: skill.tier, count: result.count, usedFallback: result.fallback };
       })
     );
+    const usedFallback = skillCounts.some((s) => s.usedFallback);
 
     // Determine which skills are limiting (< 20 candidates for must-haves)
     const LIMITING_THRESHOLD = 20;
@@ -156,15 +204,22 @@ export async function POST(request: NextRequest) {
     const mustHaveSkills = skillCounts.filter((s) => s.tier === "must-have");
     const mustHaveCounts = mustHaveSkills.map((s) => s.count).filter((c) => c > 0);
 
-    // Total candidates = the PRIMARY skill's count (first must-have with results)
-    // This represents "candidates we'll search from" - the actual search will
-    // find these candidates and RANK them by how many skills they match.
-    // We don't try to estimate intersection (impossible with GitHub API).
+    // Total candidates should reflect strict must-have matching as a conservative estimate.
+    // We use minimum must-have pool and apply overlap decay as must-have count increases.
     let totalCandidates: number;
+    let estimateMode: "strict" | "broad" = "broad";
+    let confidence: "high" | "medium" | "low" = "high";
+    let note = "Estimate based on live GitHub query volumes.";
     if (mustHaveCounts.length > 0) {
-      // Use the largest must-have pool - this is who we're searching from
-      // The ranking algorithm will prioritize those matching more skills
-      totalCandidates = Math.max(...mustHaveCounts);
+      estimateMode = "strict";
+      const minMustHavePool = Math.min(...mustHaveCounts);
+      const mustHaveCount = mustHaveSkills.length;
+      if (mustHaveCount <= 1) {
+        totalCandidates = minMustHavePool;
+      } else {
+        const overlapDecay = Math.pow(0.45, mustHaveCount - 1);
+        totalCandidates = Math.floor(minMustHavePool * overlapDecay);
+      }
     } else {
       // No must-haves, use max of all skills
       totalCandidates = skillCounts.reduce((max, s) => Math.max(max, s.count), 0);
@@ -204,6 +259,21 @@ export async function POST(request: NextRequest) {
 
       // Ensure we don't go below 0
       totalCandidates = Math.max(0, totalCandidates);
+    }
+
+    let estimateMin: number | undefined;
+    let estimateMax: number | undefined;
+
+    if (usedFallback) {
+      // When rate-limited and heuristics are used, keep estimate conservative.
+      totalCandidates = Math.min(totalCandidates, 5000);
+      confidence = "low";
+      note = "Approximate estimate (GitHub rate-limited). Pipeline results are the source of truth.";
+      estimateMin = Math.max(0, Math.floor(totalCandidates * 0.25));
+      estimateMax = totalCandidates;
+    } else if (estimateMode === "strict") {
+      confidence = "medium";
+      note = "Conservative estimate for candidates matching all must-have skills.";
     }
 
     // Process each skill
@@ -253,9 +323,14 @@ export async function POST(request: NextRequest) {
 
     const response: PreviewResponse = {
       totalCandidates,
+      estimateMin,
+      estimateMax,
       perSkill,
       suggestions,
       cached: allCached,
+      estimateMode,
+      confidence,
+      note,
     };
 
     return NextResponse.json(response);

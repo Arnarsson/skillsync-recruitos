@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load current config
   const config = await chrome.runtime.sendMessage({ type: 'GET_CONFIG' });
   
+  document.getElementById('apiUrl').value = config.apiUrl || '';
+  document.getElementById('notificationsApiUrl').value = config.notificationsApiUrl || '';
   document.getElementById('apiKey').value = config.apiKey || '';
   document.getElementById('autoCapture').checked = config.autoCapture !== false;
   document.getElementById('syncMessages').checked = config.syncMessages !== false;
@@ -22,14 +24,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadStats() {
   const stats = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+  const health = await chrome.runtime.sendMessage({ type: 'PING_API' });
   
   document.getElementById('profileCount').textContent = stats.profileViewsCount || 0;
   document.getElementById('queuedCount').textContent = stats.queuedCount || 0;
   
   const statusIcon = document.getElementById('statusIcon');
-  if (stats.configured) {
+  if (stats.configured && health?.ok) {
     statusIcon.textContent = '🟢';
     statusIcon.title = 'Connected';
+  } else if (stats.configured && !health?.ok) {
+    statusIcon.textContent = '🟠';
+    statusIcon.title = 'Configured, API unreachable';
   } else {
     statusIcon.textContent = '🟡';
     statusIcon.title = 'Not configured';
@@ -66,8 +72,15 @@ async function saveConfig() {
   
   const config = await chrome.runtime.sendMessage({ type: 'GET_CONFIG' });
   
+  const normalizedApiUrl = normalizeApiUrl(document.getElementById('apiUrl').value.trim());
+  const notificationsFieldValue = document.getElementById('notificationsApiUrl').value.trim();
+  const normalizedNotificationsApiUrl =
+    notificationsFieldValue || `${normalizedApiUrl}/linkedin/notifications`;
+
   const newConfig = {
     ...config,
+    apiUrl: normalizedApiUrl,
+    notificationsApiUrl: normalizedNotificationsApiUrl,
     apiKey: document.getElementById('apiKey').value.trim()
   };
   
@@ -125,4 +138,22 @@ function formatTime(isoString) {
   if (diffDays < 7) return `${diffDays}d`;
   
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function normalizeApiUrl(rawUrl) {
+  const fallback = 'https://recruitos.xyz/api';
+  if (!rawUrl) return fallback;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    if (!pathname || pathname === '/') {
+      parsed.pathname = '/api';
+    } else if (!pathname.endsWith('/api')) {
+      parsed.pathname = `${pathname}/api`;
+    }
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return fallback;
+  }
 }

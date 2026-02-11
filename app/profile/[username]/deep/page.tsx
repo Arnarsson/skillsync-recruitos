@@ -2,9 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useAdmin } from "@/lib/adminContext";
 import { candidateService } from "@/services/candidateService";
 import type { Candidate as GlobalCandidate } from "@/types";
+import {
+  extractGitHubUsername,
+  findCandidateInLocalCache,
+  isUuidLike,
+  type CandidateIdentitySource,
+} from "@/lib/candidate-identity";
 import Link from "next/link";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -287,6 +294,7 @@ interface Candidate {
 export default function DeepProfilePage() {
   const params = useParams();
   const { isAdmin } = useAdmin();
+  const { status } = useSession();
   const username = params.username as string;
 
   const [candidate, setCandidate] = useState<Candidate | null>(null);
@@ -339,6 +347,13 @@ export default function DeepProfilePage() {
   }>({ loading: false, sources: { github: null, linkedin: null, website: null, talks: null }, duration: null });
 
   useEffect(() => {
+    const isLikelyGitHubUsername = (value: string) => {
+      if (!/^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(value)) return false;
+      if (isUuidLike(value)) return false;
+      if ((value.match(/-/g) || []).length > 1) return false;
+      return true;
+    };
+
     async function loadCandidate() {
       // Load job context from localStorage (not candidate data)
       const storedJob = localStorage.getItem("apex_job_context");
@@ -350,19 +365,45 @@ export default function DeepProfilePage() {
         }
       }
 
-      // First try to load candidate from API
-      try {
-        const found = await candidateService.getById(username);
-        if (found) {
-          setCandidate(found as unknown as Candidate);
-          setLoading(false);
-          return;
+      // Try API only for authenticated sessions to avoid noisy 401 requests.
+      if (status === "authenticated") {
+        try {
+          const found = await candidateService.getById(username);
+          if (found) {
+            setCandidate(found as unknown as Candidate);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Candidate not found in API, fall through
         }
-      } catch {
-        // Candidate not found in API, fall through
       }
 
-      // If not in pipeline, fetch from GitHub API
+      // Local fallback: load from cached pipeline candidates (demo/unauth flows).
+      try {
+        const cachedCandidates = localStorage.getItem("apex_candidates");
+        if (cachedCandidates) {
+          const parsed = JSON.parse(cachedCandidates) as Candidate[];
+          const localMatch = findCandidateInLocalCache(
+            parsed as unknown as CandidateIdentitySource[],
+            username
+          ) as unknown as Candidate | null;
+          if (localMatch) {
+            setCandidate(localMatch);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Ignore local cache parse errors
+      }
+
+      // If not in pipeline, fetch from GitHub only for valid GitHub-like usernames.
+      if (!isLikelyGitHubUsername(username)) {
+        setLoading(false);
+        return;
+      }
+
       console.log("Candidate not in pipeline, attempting GitHub fallback for:", username);
       try {
         const response = await fetch(`https://api.github.com/users/${username}`);
@@ -384,15 +425,17 @@ export default function DeepProfilePage() {
 
           setCandidate(githubCandidate);
 
-          // Also persist to API for next time
-          try {
-            await candidateService.create({
-              ...(githubCandidate as unknown as Partial<GlobalCandidate>),
-              name: githubCandidate.name,
-              sourceType: 'GITHUB',
-            });
-          } catch {
-            // Best-effort — candidate may already exist
+          // Also persist to API for next time (auth-only).
+          if (status === "authenticated") {
+            try {
+              await candidateService.create({
+                ...(githubCandidate as unknown as Partial<GlobalCandidate>),
+                name: githubCandidate.name,
+                sourceType: 'GITHUB',
+              });
+            } catch {
+              // Best-effort — candidate may already exist
+            }
           }
         }
       } catch (error) {
@@ -403,7 +446,7 @@ export default function DeepProfilePage() {
     }
 
     loadCandidate();
-  }, [username]);
+  }, [username, status]);
 
   const runDeepAnalysis = useCallback(async () => {
     if (!candidate) return;
@@ -497,7 +540,14 @@ export default function DeepProfilePage() {
   useEffect(() => {
     if (activeTab === "github" && !githubAnalysis && !loadingGithub && candidate) {
       setLoadingGithub(true);
-      fetch(`/api/github/deep?username=${candidate.id}`)
+      const lookupUsername = extractGitHubUsername(
+        candidate as unknown as CandidateIdentitySource
+      );
+      if (!lookupUsername) {
+        setLoadingGithub(false);
+        return;
+      }
+      fetch(`/api/github/deep?username=${lookupUsername}`)
         .then((res) => res.json())
         .then((data) => {
           if (!data.error) {
@@ -515,15 +565,18 @@ export default function DeepProfilePage() {
 
     const fetchEnrichment = async () => {
       setEnrichmentStatus((prev) => ({ ...prev, loading: true }));
+      const lookupUsername =
+        extractGitHubUsername(candidate as unknown as CandidateIdentitySource) ||
+        candidate.id;
 
       try {
         const response = await fetch("/api/deep-enrichment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: candidate.id,
+            username: lookupUsername,
             githubProfile: {
-              login: candidate.id,
+              login: lookupUsername,
               name: candidate.name,
               bio: null, // Will be fetched by enrichment
               location: candidate.location,

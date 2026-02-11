@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -76,6 +77,7 @@ function getCachedBehavioralInsights(username: string): BehavioralInsights | nul
 }
 
 export function BehavioralBadges({ username, compact = false, className = "" }: BehavioralBadgesProps) {
+  const { status } = useSession();
   // Use lazy initializer to check cache synchronously on first render
   const [insights, setInsights] = useState<BehavioralInsights | null>(() =>
     getCachedBehavioralInsights(username)
@@ -87,6 +89,31 @@ export function BehavioralBadges({ username, compact = false, className = "" }: 
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    const isUuid = (value: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        value
+      );
+
+    const isLikelyGitHubUsername = (value: string) => {
+      if (!/^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(value)) return false;
+      if (isUuid(value)) return false;
+      // Multiple hyphens are valid on GitHub, but UUID-like IDs create noisy false positives.
+      if ((value.match(/-/g) || []).length > 1) return false;
+      return true;
+    };
+
+    // Skip fetching in unauthenticated/demo sessions to avoid 401 noise.
+    if (status !== "authenticated") {
+      setLoading(false);
+      return;
+    }
+
+    // Skip non-GitHub identifiers (e.g., UUID pipeline IDs).
+    if (!isLikelyGitHubUsername(username)) {
+      setLoading(false);
+      return;
+    }
+
     // If we already have cached data, skip fetch
     if (insights) return;
 
@@ -110,7 +137,7 @@ export function BehavioralBadges({ username, compact = false, className = "" }: 
       }
     };
     fetchData();
-  }, [username, insights]);
+  }, [username, insights, status]);
 
   if (loading || error || !insights) {
     return null;

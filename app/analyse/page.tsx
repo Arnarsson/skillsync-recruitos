@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { candidateService } from "@/services/candidateService";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ interface Candidate {
 export default function AnalysePage() {
   const { t } = useLanguage();
   const router = useRouter();
+  const { status } = useSession();
   const [selectedCandidates, setSelectedCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobContext, setJobContext] = useState<{
@@ -61,9 +63,33 @@ export default function AnalysePage() {
       if (shortlistIds) {
         try {
           const ids: string[] = JSON.parse(shortlistIds);
-          const { candidates: all } = await candidateService.fetchAll();
-          const selected = (all as unknown as Candidate[]).filter((c) => ids.includes(c.id));
-          setSelectedCandidates(selected);
+          if (status === "authenticated") {
+            try {
+              const { candidates: all } = await candidateService.fetchAll();
+              const selected = (all as unknown as Candidate[]).filter((c) => ids.includes(c.id));
+              setSelectedCandidates(selected);
+            } catch (error) {
+              // In demo/unauthenticated flows, /api/candidates returns 401.
+              // Fall back to local cached candidates to avoid hard UI failures.
+              if (error instanceof Error && error.message === "Unauthorized") {
+                const cachedCandidates = localStorage.getItem("apex_candidates");
+                if (cachedCandidates) {
+                  const parsed = JSON.parse(cachedCandidates) as Candidate[];
+                  const selected = parsed.filter((c) => ids.includes(c.id));
+                  setSelectedCandidates(selected);
+                }
+              } else {
+                throw error;
+              }
+            }
+          } else {
+            const cachedCandidates = localStorage.getItem("apex_candidates");
+            if (cachedCandidates) {
+              const parsed = JSON.parse(cachedCandidates) as Candidate[];
+              const selected = parsed.filter((c) => ids.includes(c.id));
+              setSelectedCandidates(selected);
+            }
+          }
         } catch (e) {
           console.error("Failed to load selections:", e);
         }
@@ -73,7 +99,7 @@ export default function AnalysePage() {
     }
 
     loadData();
-  }, []);
+  }, [status]);
 
   const handleContinueToOutreach = () => {
     // Navigate to Stage 4 (Outreach)
@@ -82,7 +108,7 @@ export default function AnalysePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4 flex items-center justify-center">
+      <div className="page-container flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -91,8 +117,8 @@ export default function AnalysePage() {
   // No selections from Stage 2 - redirect back
   if (selectedCandidates.length === 0) {
     return (
-      <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="page-container">
+        <div className="page-content max-w-4xl">
           <PhaseIndicator currentPhase={3} />
           
           <Card className="border-dashed border-orange-500/50 bg-orange-500/5">
@@ -116,8 +142,8 @@ export default function AnalysePage() {
   }
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-24 pb-24 sm:pb-16 px-3 sm:px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="page-container">
+      <div className="page-content max-w-7xl">
         {/* Phase Indicator */}
         <PhaseIndicator currentPhase={3} />
 

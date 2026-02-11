@@ -31,6 +31,7 @@ import {
   Trash2,
   ChevronDown,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 // Types
 type TeamRole = "admin" | "recruiter" | "hiring_manager" | "viewer";
@@ -60,31 +61,23 @@ interface PendingInvite {
   expiresAt: string;
 }
 
-// Role configuration
-const ROLE_CONFIG: Record<TeamRole, { label: string; icon: React.ReactNode; color: string; description: string }> = {
+// Role style configuration
+const ROLE_STYLES: Record<TeamRole, { icon: React.ReactNode; color: string }> = {
   admin: {
-    label: "Admin",
     icon: <Crown className="w-4 h-4" />,
     color: "bg-amber-500/10 text-amber-600 border-amber-500/30",
-    description: "Full access to all team settings and members",
   },
   recruiter: {
-    label: "Recruiter",
     icon: <Search className="w-4 h-4" />,
     color: "bg-blue-500/10 text-blue-600 border-blue-500/30",
-    description: "Can search, contact, and manage candidates",
   },
   hiring_manager: {
-    label: "Hiring Manager",
     icon: <Briefcase className="w-4 h-4" />,
     color: "bg-purple-500/10 text-purple-600 border-purple-500/30",
-    description: "Can review candidates and make hiring decisions",
   },
   viewer: {
-    label: "Viewer",
     icon: <Eye className="w-4 h-4" />,
     color: "bg-gray-500/10 text-gray-600 border-gray-500/30",
-    description: "Can view candidates and pipeline only",
   },
 };
 
@@ -125,6 +118,41 @@ function getDefaultTeam(): Team {
 }
 
 export default function TeamPage() {
+  const { lang } = useLanguage();
+  const isDa = lang === "da";
+  const ROLE_CONFIG: Record<
+    TeamRole,
+    { label: string; icon: React.ReactNode; color: string; description: string }
+  > = {
+    admin: {
+      ...ROLE_STYLES.admin,
+      label: isDa ? "Admin" : "Admin",
+      description: isDa
+        ? "Fuld adgang til alle teamindstillinger og medlemmer"
+        : "Full access to all team settings and members",
+    },
+    recruiter: {
+      ...ROLE_STYLES.recruiter,
+      label: isDa ? "Rekrutterer" : "Recruiter",
+      description: isDa
+        ? "Kan søge, kontakte og håndtere kandidater"
+        : "Can search, contact, and manage candidates",
+    },
+    hiring_manager: {
+      ...ROLE_STYLES.hiring_manager,
+      label: isDa ? "Ansættelsesansvarlig" : "Hiring Manager",
+      description: isDa
+        ? "Kan vurdere kandidater og træffe ansættelsesbeslutninger"
+        : "Can review candidates and make hiring decisions",
+    },
+    viewer: {
+      ...ROLE_STYLES.viewer,
+      label: isDa ? "Læser" : "Viewer",
+      description: isDa
+        ? "Kan kun se kandidater og pipeline"
+        : "Can view candidates and pipeline only",
+    },
+  };
   const [team, setTeam] = useState<Team | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -201,7 +229,11 @@ export default function TeamPage() {
     );
 
     if (isExistingMember || isAlreadyInvited) {
-      alert("This email is already a team member or has a pending invite.");
+      alert(
+        isDa
+          ? "Denne email er allerede teammedlem eller har en afventende invitation."
+          : "This email is already a team member or has a pending invite."
+      );
       return;
     }
 
@@ -236,7 +268,11 @@ export default function TeamPage() {
       const adminCount = team.members.filter((m) => m.role === "admin").length;
       const member = team.members.find((m) => m.id === memberId);
       if (member?.role === "admin" && newRole !== "admin" && adminCount <= 1) {
-        alert("Cannot change role. Team must have at least one admin.");
+        alert(
+          isDa
+            ? "Kan ikke ændre rolle. Teamet skal have mindst én admin."
+            : "Cannot change role. Team must have at least one admin."
+        );
         return;
       }
 
@@ -245,7 +281,7 @@ export default function TeamPage() {
       );
       saveTeam({ ...team, members: updatedMembers });
     },
-    [team, saveTeam]
+    [isDa, team, saveTeam]
   );
 
   // Remove member
@@ -259,16 +295,27 @@ export default function TeamPage() {
       // Prevent removing the last admin
       const adminCount = team.members.filter((m) => m.role === "admin").length;
       if (member.role === "admin" && adminCount <= 1) {
-        alert("Cannot remove the last admin from the team.");
+        alert(
+          isDa
+            ? "Kan ikke fjerne den sidste admin fra teamet."
+            : "Cannot remove the last admin from the team."
+        );
         return;
       }
 
-      if (!confirm(`Remove ${member.name} from the team?`)) return;
+      if (
+        !confirm(
+          isDa
+            ? `Fjern ${member.name} fra teamet?`
+            : `Remove ${member.name} from the team?`
+        )
+      )
+        return;
 
       const updatedMembers = team.members.filter((m) => m.id !== memberId);
       saveTeam({ ...team, members: updatedMembers });
     },
-    [team, saveTeam]
+    [isDa, team, saveTeam]
   );
 
   // Filter members by search query
@@ -331,9 +378,13 @@ export default function TeamPage() {
           <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
             <Users className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h2 className="text-2xl font-semibold mb-2">No Team Found</h2>
+          <h2 className="text-2xl font-semibold mb-2">
+            {isDa ? "Intet team fundet" : "No Team Found"}
+          </h2>
           <p className="text-muted-foreground mb-6">
-            Create a team to start collaborating with your colleagues.
+            {isDa
+              ? "Opret et team for at begynde at samarbejde med dine kolleger."
+              : "Create a team to start collaborating with your colleagues."}
           </p>
           <Button
             onClick={() => {
@@ -342,7 +393,7 @@ export default function TeamPage() {
             }}
           >
             <Users className="w-4 h-4 mr-2" />
-            Create Team
+            {isDa ? "Opret team" : "Create Team"}
           </Button>
         </div>
       </div>
@@ -355,16 +406,20 @@ export default function TeamPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Badge className="mb-2 bg-primary/20 text-primary">Team</Badge>
-            <h1 className="text-3xl font-bold">Team Management</h1>
+            <Badge className="mb-2 bg-primary/20 text-primary">{isDa ? "Team" : "Team"}</Badge>
+            <h1 className="text-3xl font-bold">
+              {isDa ? "Teamadministration" : "Team Management"}
+            </h1>
             <p className="text-muted-foreground mt-1">
-              Manage your team members and their permissions
+              {isDa
+                ? "Administrér teammedlemmer og deres rettigheder"
+                : "Manage your team members and their permissions"}
             </p>
           </div>
           {isAdmin && (
             <Button onClick={() => setShowInviteModal(true)}>
               <UserPlus className="w-4 h-4 mr-2" />
-              Invite Member
+              {isDa ? "Invitér medlem" : "Invite Member"}
             </Button>
           )}
         </div>
@@ -397,7 +452,12 @@ export default function TeamPage() {
                   <h2 className="text-xl font-semibold">{team.name}</h2>
                 )}
                 <p className="text-muted-foreground">
-                  {team.members.length} member{team.members.length !== 1 ? "s" : ""}
+                  {team.members.length}{" "}
+                  {isDa
+                    ? team.members.length !== 1
+                      ? "medlemmer"
+                      : "medlem"
+                    : `member${team.members.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -416,7 +476,7 @@ export default function TeamPage() {
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                Pending Invites ({pendingInvites.length})
+                {isDa ? "Afventende invitationer" : "Pending Invites"} ({pendingInvites.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -436,7 +496,7 @@ export default function TeamPage() {
                       <div>
                         <p className="text-sm font-medium">{invite.email}</p>
                         <p className="text-xs text-muted-foreground">
-                          Invited as {ROLE_CONFIG[invite.role].label}
+                          {isDa ? "Inviteret som" : "Invited as"} {ROLE_CONFIG[invite.role].label}
                         </p>
                       </div>
                     </div>
@@ -462,12 +522,12 @@ export default function TeamPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Team Members
+                {isDa ? "Teammedlemmer" : "Team Members"}
               </CardTitle>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search members..."
+                  placeholder={isDa ? "Søg medlemmer..." : "Search members..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 w-64"
@@ -475,7 +535,12 @@ export default function TeamPage() {
               </div>
             </div>
             <CardDescription>
-              {team.members.length} total member{team.members.length !== 1 ? "s" : ""}
+              {team.members.length}{" "}
+              {isDa
+                ? team.members.length !== 1
+                  ? "medlemmer i alt"
+                  : "medlem i alt"
+                : `total member${team.members.length !== 1 ? "s" : ""}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -509,7 +574,9 @@ export default function TeamPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                          <DropdownMenuLabel>
+                            {isDa ? "Skift rolle" : "Change Role"}
+                          </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {(Object.keys(ROLE_CONFIG) as TeamRole[]).map((role) => (
                             <DropdownMenuItem
@@ -521,7 +588,7 @@ export default function TeamPage() {
                               {ROLE_CONFIG[role].label}
                               {member.role === role && (
                                 <span className="ml-auto text-xs text-muted-foreground">
-                                  Current
+                                  {isDa ? "Aktuel" : "Current"}
                                 </span>
                               )}
                             </DropdownMenuItem>
@@ -532,7 +599,7 @@ export default function TeamPage() {
                             onClick={() => handleRemoveMember(member.id)}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Remove from team
+                            {isDa ? "Fjern fra team" : "Remove from team"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -545,7 +612,11 @@ export default function TeamPage() {
                 <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
                   <Search className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground">No members found matching your search.</p>
+                <p className="text-muted-foreground">
+                  {isDa
+                    ? "Ingen medlemmer matcher din søgning."
+                    : "No members found matching your search."}
+                </p>
               </div>
             )}
           </CardContent>
@@ -556,7 +627,7 @@ export default function TeamPage() {
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Shield className="w-4 h-4" />
-              Role Permissions
+              {isDa ? "Rolle-rettigheder" : "Role Permissions"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -608,7 +679,7 @@ export default function TeamPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <UserPlus className="w-5 h-5" />
-                      Invite Team Member
+                      {isDa ? "Invitér teammedlem" : "Invite Team Member"}
                     </CardTitle>
                     <Button
                       variant="ghost"
@@ -619,14 +690,16 @@ export default function TeamPage() {
                     </Button>
                   </div>
                   <CardDescription>
-                    Send an invitation to join your team
+                    {isDa
+                      ? "Send en invitation til at blive en del af dit team"
+                      : "Send an invitation to join your team"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">
-                        Email Address
+                        {isDa ? "Emailadresse" : "Email Address"}
                       </label>
                       <Input
                         type="email"
@@ -639,7 +712,9 @@ export default function TeamPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Role</label>
+                      <label className="text-sm font-medium mb-2 block">
+                        {isDa ? "Rolle" : "Role"}
+                      </label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="w-full justify-between">
@@ -672,7 +747,7 @@ export default function TeamPage() {
                         className="flex-1"
                         onClick={() => setShowInviteModal(false)}
                       >
-                        Cancel
+                        {isDa ? "Annuller" : "Cancel"}
                       </Button>
                       <Button
                         className="flex-1"
@@ -680,7 +755,7 @@ export default function TeamPage() {
                         disabled={!inviteEmail.trim()}
                       >
                         <Mail className="w-4 h-4 mr-2" />
-                        Send Invite
+                        {isDa ? "Send invitation" : "Send Invite"}
                       </Button>
                     </div>
                   </div>

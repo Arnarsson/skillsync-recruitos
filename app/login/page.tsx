@@ -5,9 +5,11 @@ import { Github, Play } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleGitHubLogin = () => {
     signIn("github", { callbackUrl: "/intake" });
@@ -34,9 +36,9 @@ export default function LoginPage() {
               <span className="text-[#141517] font-bold text-xl">S</span>
             </div>
           </Link>
-          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+          <h1 className="text-3xl font-bold mb-2">{t("login.welcomeBack")}</h1>
           <p className="text-gray-400">
-            Sign in to continue finding elite engineers
+            {t("login.subtitle")}
           </p>
         </div>
 
@@ -48,7 +50,7 @@ export default function LoginPage() {
             className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
           >
             <Play className="w-5 h-5" />
-            Prøv Demo / Try Demo
+            {t("login.tryDemo")}
           </Button>
 
           <div className="relative">
@@ -56,7 +58,7 @@ export default function LoginPage() {
               <span className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#1a1b1e] px-2 text-gray-500">Or</span>
+              <span className="bg-[#1a1b1e] px-2 text-gray-500">{t("login.or")}</span>
             </div>
           </div>
 
@@ -67,22 +69,22 @@ export default function LoginPage() {
             className="w-full bg-white dark:bg-white text-[#141517] hover:bg-gray-200 dark:hover:bg-gray-200 border-transparent"
           >
             <Github className="w-5 h-5" />
-            Continue with GitHub
+            {t("login.continueWithGithub")}
           </Button>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            Don&apos;t have an account?{" "}
+            {t("login.noAccount")}{" "}
             <Link href="/signup" className="text-white hover:underline">
-              Sign up
+              {t("login.signUp")}
             </Link>
           </p>
         </div>
 
         <p className="text-center text-xs text-gray-600 mt-6">
-          By signing in, you agree to our{" "}
-          <a href="#" className="text-gray-400 hover:underline">Terms of Service</a>
-          {" "}and{" "}
-          <a href="#" className="text-gray-400 hover:underline">Privacy Policy</a>
+          {t("login.bySigningIn")}{" "}
+          <Link href="/terms" className="text-gray-400 hover:underline">{t("login.termsOfService")}</Link>
+          {" "}{t("login.and")}{" "}
+          <Link href="/privacy" className="text-gray-400 hover:underline">{t("login.privacyPolicy")}</Link>
         </p>
       </div>
     </div>

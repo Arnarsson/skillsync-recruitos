@@ -232,7 +232,7 @@ describe('POST /api/skills/preview', () => {
     expect(data.perSkill).toHaveProperty('Express');
     expect(data.perSkill).toHaveProperty('MongoDB');
 
-    // Total candidates should be based on the largest must-have pool
+    // Total candidates now uses conservative strict estimation for combined must-haves
     const mustHaveCounts = [
       data.perSkill['Node.js'].count,
       data.perSkill['Express'].count,
@@ -240,7 +240,9 @@ describe('POST /api/skills/preview', () => {
     ].filter((c: number) => c > 0);
 
     if (mustHaveCounts.length > 0) {
-      expect(data.totalCandidates).toBe(Math.max(...mustHaveCounts));
+      expect(data.estimateMode).toBe('strict');
+      expect(data.totalCandidates).toBeLessThanOrEqual(Math.min(...mustHaveCounts));
+      expect(data.totalCandidates).toBeGreaterThanOrEqual(0);
     }
   });
 

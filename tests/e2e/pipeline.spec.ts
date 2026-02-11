@@ -121,15 +121,11 @@ test.describe('Pipeline Flow', () => {
     // Wait for candidates to load
     await pipelinePage.waitForCandidates();
 
-    // Get candidate cards
-    const cards = pipelinePage.candidateCards;
-    const cardCount = await cards.count();
-    expect(cardCount).toBeGreaterThanOrEqual(2);
-
-    // Find all checkbox buttons on the page in candidate cards
-    const checkboxButtons = cards.locator('button').filter({
+    // Find selection checkboxes across list/split/kanban layouts
+    const checkboxButtons = page.locator('button').filter({
       has: page.locator('svg[class*="lucide-square"], svg[class*="lucide-check"]'),
     });
+    await expect(checkboxButtons.first()).toBeVisible({ timeout: 5000 });
 
     // Click on first candidate's checkbox
     await checkboxButtons.first().click();
@@ -139,9 +135,8 @@ test.describe('Pipeline Flow', () => {
     await checkboxButtons.nth(1).click();
     await page.waitForTimeout(300);
 
-    // Verify shortlist panel shows up (has "selected" text or avatars)
-    const shortlistArea = page.locator('text=/\\d+ of \\d+|selected/i');
-    await expect(shortlistArea.first()).toBeVisible({ timeout: 5000 });
+    // Verify comparison action becomes available after selecting candidates
+    await expect(page.getByRole('button', { name: /compare/i }).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('opens candidate profile inline', async ({ page }) => {

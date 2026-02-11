@@ -149,6 +149,18 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 35%, transparent);
+  }
 }
 
 /* =========================================

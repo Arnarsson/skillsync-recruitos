@@ -21,8 +21,10 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { PRICING_PLANS, HIRE_GUARANTEE, formatPrice, type PricingPlan } from "@/lib/pricing";
+import { useLanguage } from "@/lib/i18n";
 
 export default function PricingPage() {
+  const { t } = useLanguage();
   const router = useRouter();
 
   const handleSelectPlan = async (planId: string) => {
@@ -32,7 +34,7 @@ export default function PricingPage() {
       return;
     }
 
-    // For personality profile or recruiting, redirect to checkout
+    // For behavioral profile or recruiting, redirect to checkout
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -51,7 +53,7 @@ export default function PricingPage() {
           return;
         }
         
-        // For personality profile (Stripe checkout), redirect to payment
+        // For behavioral profile (Stripe checkout), redirect to payment
         if (data.url) {
           window.location.assign(data.url);
           return;
@@ -74,10 +76,10 @@ export default function PricingPage() {
         <div className="text-center mb-12">
           <Badge className="mb-4 bg-primary/20 text-primary">Pricing</Badge>
           <h1 className="text-4xl font-bold mb-4">
-            Simple, Transparent Pricing
+            {t("pricingPage.title")}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the right solution for your hiring needs. From personality insights to full recruiting support.
+            {t("pricingPage.subtitle")}
           </p>
         </div>
 
@@ -102,7 +104,7 @@ export default function PricingPage() {
                 >
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary">Most Popular</Badge>
+                      <Badge className="bg-primary">{t("pricingPage.mostPopular")}</Badge>
                     </div>
                   )}
 
@@ -125,11 +127,11 @@ export default function PricingPage() {
                       </div>
                       {plan.period === 'one-time' && (
                         <p className="text-sm text-muted-foreground">
-                          {plan.credits === 'unlimited' ? 'unlimited credits' : `${plan.credits} credits`}
+                          {plan.credits === 'unlimited' ? t("pricingPage.unlimitedCredits") : `${plan.credits} ${t("pricingPage.credits")}`}
                         </p>
                       )}
                       {plan.period === 'annual' && (
-                        <p className="text-sm text-muted-foreground">unlimited credits per year</p>
+                        <p className="text-sm text-muted-foreground">{t("pricingPage.unlimitedCreditsPerYear")}</p>
                       )}
                     </div>
 
@@ -139,10 +141,10 @@ export default function PricingPage() {
                       variant={plan.popular ? 'default' : 'outline'}
                       onClick={() => handleSelectPlan(plan.id)}
                     >
-                      {plan.id === 'starter' && 'Get Started'}
-                      {plan.id === 'pro' && 'Buy Credits'}
-                      {plan.id === 'enterprise' && 'Contact Sales'}
-                      {plan.id === 'annual' && 'Subscribe'}
+                      {plan.id === 'starter' && t("pricingPage.getStarted")}
+                      {plan.id === 'pro' && t("pricingPage.buyCredits")}
+                      {plan.id === 'enterprise' && t("pricingPage.contactSales")}
+                      {plan.id === 'annual' && t("pricingPage.subscribe")}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
 
@@ -163,13 +165,13 @@ export default function PricingPage() {
                         <span>
                           {plan.credits === 'unlimited'
                             ? 'Unlimited analyses'
-                            : `${plan.credits} candidate analyses`}
+                            : `${plan.credits} ${t("pricingPage.candidateAnalyses")}`}
                         </span>
                       </div>
                       {plan.pricePerCredit !== null && (
                         <div className="flex items-center gap-2">
                           <Lock className="w-4 h-4" />
-                          <span>{plan.pricePerCredit} kr per credit</span>
+                          <span>{plan.pricePerCredit} kr {t("pricingPage.perCredit")}</span>
                         </div>
                       )}
                     </div>
@@ -188,9 +190,9 @@ export default function PricingPage() {
                 <Sparkles className="w-6 h-6 text-green-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Success-Based Pricing</h3>
+                <h3 className="font-semibold text-lg">{t("pricingPage.successBasedTitle")}</h3>
                 <p className="text-muted-foreground">
-                  With Full Recruiting, you only pay 5,000 DKK when you successfully make a hire. No upfront fees, no monthly subscriptions.
+                  {t("pricingPage.successBasedDesc")}
                 </p>
               </div>
             </div>
@@ -199,14 +201,14 @@ export default function PricingPage() {
 
         {/* Feature Comparison */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-center mb-8">Compare Plans</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">{t("pricingPage.comparePlans")}</h2>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4 font-medium">Feature</th>
+                      <th className="text-left p-4 font-medium">{t("pricingPage.feature")}</th>
                       {PRICING_PLANS.map(plan => (
                         <th key={plan.id} className="text-center p-4 font-medium">
                           {plan.name}
@@ -216,55 +218,55 @@ export default function PricingPage() {
                   </thead>
                   <tbody>
                     <ComparisonRow
-                      feature="Personality Analysis"
+                      feature={t("pricingPage.features.personalityAnalysis")}
                       values={['1 per purchase', 'Unlimited', 'Unlimited']}
                     />
                     <ComparisonRow
-                      feature="Behavioral Insights"
+                      feature={t("pricingPage.features.behavioralInsights")}
                       values={[true, true, true]}
                     />
                     <ComparisonRow
-                      feature="Work Style Assessment"
+                      feature={t("pricingPage.features.workStyleAssessment")}
                       values={[true, true, true]}
                     />
                     <ComparisonRow
-                      feature="Candidate Sourcing"
+                      feature={t("pricingPage.features.candidateSourcing")}
                       values={[false, true, true]}
                     />
                     <ComparisonRow
-                      feature="Interview Coordination"
+                      feature={t("pricingPage.features.interviewCoordination")}
                       values={[false, true, true]}
                     />
                     <ComparisonRow
-                      feature="Reference Checking"
+                      feature={t("pricingPage.features.referenceChecking")}
                       values={[false, true, true]}
                     />
                     <ComparisonRow
-                      feature="Success-Based Pricing"
-                      values={[false, true, 'Custom']}
+                      feature={t("pricingPage.features.successBasedPricing")}
+                      values={[false, true, t("pricingPage.custom")]}
                     />
                     <ComparisonRow
-                      feature="Team Seats"
-                      values={['1', '3', 'Unlimited']}
+                      feature={t("pricingPage.features.teamSeats")}
+                      values={['1', '3', t("pricingPage.unlimited")]}
                     />
                     <ComparisonRow
-                      feature="Shared Pipelines"
+                      feature={t("pricingPage.features.sharedPipelines")}
                       values={[false, false, true]}
                     />
                     <ComparisonRow
-                      feature="API Access"
+                      feature={t("pricingPage.features.apiAccess")}
                       values={[false, false, true]}
                     />
                     <ComparisonRow
-                      feature="ATS Integration"
+                      feature={t("pricingPage.features.atsIntegration")}
                       values={[false, false, true]}
                     />
                     <ComparisonRow
-                      feature="Priority Support"
+                      feature={t("pricingPage.features.prioritySupport")}
                       values={[false, true, true]}
                     />
                     <ComparisonRow
-                      feature="Dedicated Account Manager"
+                      feature={t("pricingPage.features.dedicatedAccountManager")}
                       values={[false, false, true]}
                     />
                   </tbody>
@@ -276,19 +278,19 @@ export default function PricingPage() {
 
         {/* FAQ or Trust Signals */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Trusted by Recruiters Worldwide</h2>
+          <h2 className="text-2xl font-bold mb-4">{t("pricingPage.trustedTitle")}</h2>
           <div className="flex items-center justify-center gap-8 text-muted-foreground">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
-              <span>500+ hires made</span>
+              <span>{t("pricingPage.trust.hiresMade")}</span>
             </div>
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
-              <span>4.9/5 satisfaction</span>
+              <span>{t("pricingPage.trust.satisfaction")}</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              <span>100+ companies</span>
+              <span>{t("pricingPage.trust.companies")}</span>
             </div>
           </div>
         </div>

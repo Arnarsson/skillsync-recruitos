@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { isUuidLike } from "@/lib/candidate-identity";
 
 const VALID_SOURCE_TYPES = ["GITHUB", "LINKEDIN", "MANUAL"] as const;
 
@@ -13,15 +14,12 @@ interface RouteParams {
 // GET - Get single candidate with notes
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   try {
-    const userId = session.user.id;
+    const userId = session?.user?.id;
     const { id } = await params;
 
-    const where: Prisma.CandidateWhereInput = { id, userId };
+    const where: Prisma.CandidateWhereInput = userId ? { id, userId } : { id };
 
     const candidate = await prisma.candidate.findFirst({
       where,
@@ -32,14 +30,40 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    if (!candidate) {
-      return NextResponse.json(
-        { error: "Candidate not found" },
-        { status: 404 }
-      );
+    if (candidate) {
+      return NextResponse.json({ candidate });
     }
 
-    return NextResponse.json({ candidate });
+    // Fallback for profile slugs/usernames in demo/public flows.
+    if (!isUuidLike(id)) {
+      const usernameCandidate = await prisma.candidate.findFirst({
+        where: userId
+          ? {
+              userId,
+              OR: [
+                { githubUsername: id },
+                { sourceUrl: { contains: `github.com/${id}` } },
+              ],
+            }
+          : {
+              OR: [
+                { githubUsername: id },
+                { sourceUrl: { contains: `github.com/${id}` } },
+              ],
+            },
+        include: {
+          notes: {
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      });
+
+      if (usernameCandidate) {
+        return NextResponse.json({ candidate: usernameCandidate });
+      }
+    }
+
+    return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
   } catch (error) {
     console.error("Candidate fetch error:", error);
     return NextResponse.json(
