@@ -780,7 +780,7 @@ export default function ProfilePage({
                     <Linkedin className="w-6 h-6 text-indigo-400" />
                     <div className="flex-1 min-w-[200px]">
                       <p className="heading-sm normal-case">Enrich with LinkedIn</p>
-                      <p className="caption">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
+                      <p className="caption">Add LinkedIn URL for network mapping & enhanced behavioral analysis</p>
                     </div>
                     {brightDataService.isConfigured() ? (
                       <div className="flex gap-2 items-center flex-wrap">
@@ -967,7 +967,7 @@ export default function ProfilePage({
             </TabsTrigger>
             <TabsTrigger value="psychometric" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               <Brain className="w-4 h-4" aria-hidden="true" />
-              <span>Psychometric</span>
+              <span>Behavioral</span>
             </TabsTrigger>
             <TabsTrigger value="interview" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               <Calendar className="w-4 h-4" aria-hidden="true" />
@@ -1091,7 +1091,7 @@ export default function ProfilePage({
             )}
           </TabsContent>
 
-          {/* Psychometric Tab */}
+          {/* Behavioral Profile Tab */}
           <TabsContent value="psychometric">
             {psychProfile ? (
               <div className="space-y-6">
@@ -1106,7 +1106,7 @@ export default function ProfilePage({
               <div className="card-base">
                 <div className="py-12 text-center">
                   <Brain className="w-12 h-12 mx-auto mb-4 text-slate-500" />
-                  <p className="body-sm">Generating psychometric profile...</p>
+                  <p className="body-sm">Generating behavioral profile...</p>
                 </div>
               </div>
             )}

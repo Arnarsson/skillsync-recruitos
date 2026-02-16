@@ -1,5 +1,5 @@
-// Psychometric Profiling Engine
-// Analyzes GitHub + LinkedIn data to build personality profiles
+// Behavioral Profiling Engine
+// Analyzes GitHub + LinkedIn data to build behavioral profiles
 
 import { LinkedInProfile } from "./brightdata";
 
@@ -135,7 +135,7 @@ export function analyzeGitHubSignals(
   };
 }
 
-// Generate psychometric profile from combined data
+// Generate behavioral profile from combined data
 export function generatePsychometricProfile(
   github: GitHubSignals,
   linkedin?: LinkedInProfile | null
@@ -552,7 +552,7 @@ function calculateConfidence(
 }
 
 /**
- * Generate AI-powered psychometric profile with personalized insights
+ * Generate AI-powered behavioral profile with personalized insights
  * Falls back to rule-based generation if AI fails
  */
 export async function generateAIPsychometricProfile(

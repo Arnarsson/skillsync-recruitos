@@ -589,9 +589,9 @@ export default function ReportPage() {
               </div>
             </section>
 
-            {/* Psychometric Profile */}
+            {/* Behavioral Profile */}
             <section>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">Psychometric Profile</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">Behavioral Profile</h3>
               <div className="space-y-4">
                 {/* Communication */}
                 <div>

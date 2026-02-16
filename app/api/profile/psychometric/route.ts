@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Psychometric API] Generating profile for: ${username}`);
+    console.log(`[Behavioral Profile API] Generating profile for: ${username}`);
 
     // Fetch GitHub user data
     const userResponse = await fetch(`https://api.github.com/users/${username}`, {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     // Analyze GitHub signals
     const githubSignals = analyzeGitHubSignals(repos, githubUser);
 
-    // Generate AI-powered psychometric profile
+    // Generate AI-powered behavioral profile
     const profile = await generateAIPsychometricProfile(
       githubSignals,
       {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    console.log(`[Psychometric API] Successfully generated profile for: ${username}`);
+    console.log(`[Behavioral Profile API] Successfully generated profile for: ${username}`);
 
     return NextResponse.json({
       success: true,
@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[Psychometric API] Error:", errorMessage);
+    console.error("[Behavioral Profile API] Error:", errorMessage);
     return NextResponse.json(
-      { error: "Failed to generate psychometric profile", details: errorMessage },
+      { error: "Failed to generate behavioral profile", details: errorMessage },
       { status: 500 }
     );
   }

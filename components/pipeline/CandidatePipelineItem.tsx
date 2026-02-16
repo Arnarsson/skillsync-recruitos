@@ -545,7 +545,7 @@ export function CandidatePipelineItem({
 
                 {/* Deep Analysis Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {/* Psychometric Profile */}
+                  {/* Behavioral Profile */}
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <h4 className="text-xs uppercase text-muted-foreground mb-2 flex items-center gap-2">
                       <Brain className="w-4 h-4" />

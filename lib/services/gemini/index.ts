@@ -816,8 +816,8 @@ export async function generatePsychometricInsights(
     contributionCount: number;
   }
 ): Promise<PsychometricInsights> {
-  const systemPrompt = `You are a psychometric analyst specializing in developer profiles.
-Analyze GitHub signals to build accurate personality and work style profiles.
+  const systemPrompt = `You are a behavioral analyst specializing in developer profiles.
+Analyze GitHub signals to build accurate work style and behavioral profiles.
 Return ONLY valid JSON, no markdown or explanations.
 
 ARCHETYPE OPTIONS (pick the BEST match):
@@ -831,7 +831,7 @@ ARCHETYPE OPTIONS (pick the BEST match):
 - "The Specialist" - Deep expertise in narrow domain`;
 
   const prompt = `
-Analyze this developer's GitHub profile and generate a personalized psychometric profile.
+Analyze this developer's GitHub profile and generate a personalized behavioral profile.
 
 DEVELOPER DATA:
 - Username: ${githubData.username}
