@@ -49,6 +49,7 @@ import { calculateBestTimeToReach, BestTimeToReach as BestTimeData } from "@/lib
 import { analyzeRisingStar, RisingStarAnalysis } from "@/lib/risingStars";
 import { generateInterviewPrep, InterviewPrepKit } from "@/lib/interviewPrep";
 import { SalaryEstimatorPanel } from "@/components/profile/SalaryEstimatorPanel";
+import { DataSourceBanner } from "@/components/DataSourceBanner";
 
 interface Repo {
   name: string;
@@ -695,6 +696,9 @@ export default function ProfilePage({
             </div>
           </div>
         </div>
+
+        {/* Data Source Transparency Banner */}
+        <DataSourceBanner hasLinkedIn={!!linkedInProfile} className="mb-6" />
 
         {/* LinkedIn Enrich Bar */}
         {!linkedInProfile && (

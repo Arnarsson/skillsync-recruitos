@@ -43,6 +43,7 @@ import {
   isUuidLike,
   resolveProfileSlug,
 } from "@/lib/candidate-identity";
+import { DataSourceBanner } from "@/components/DataSourceBanner";
 
 interface ScoreBreakdown {
   requiredMatched: string[];
@@ -422,6 +423,13 @@ export function CandidatePipelineItem({
 
               {/* Expanded Content */}
               <ExpandableContent preset="blur-md" className="px-4 pb-4">
+                {/* Data Source Transparency */}
+                <DataSourceBanner
+                  hasLinkedIn={candidate.source === "linkedin"}
+                  className="pt-2 mb-3"
+                  compact
+                />
+
                 {/* Buildprint Strip */}
                 {githubAnalysis && (
                   <div className="pt-2 pb-3 border-t mb-3">

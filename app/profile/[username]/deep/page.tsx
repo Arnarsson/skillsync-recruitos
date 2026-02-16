@@ -72,6 +72,7 @@ import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
+import { DataSourceBanner } from "@/components/DataSourceBanner";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -948,6 +949,13 @@ export default function DeepProfilePage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Data Source Transparency Banner */}
+        <DataSourceBanner
+          hasLinkedIn={!!enrichmentData?.linkedin?.bestMatch || !!candidate.linkedinUrl}
+          className="mb-6"
+          compact
+        />
 
         {/* Profile Hero */}
         <Card className="mb-8">
