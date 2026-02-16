@@ -646,92 +646,99 @@ const extractProfileFromHtmlWithAi = async (html: string, url: string): Promise<
  */
 const scrapeSingleLinkedInUrl = async (url: string, brightDataKey: string): Promise<BrightDataProfile | null> => {
   const proxyBase = '/api/brightdata';
+  const skipSlowTiers = !!brightDataKey && process.env.NEXT_PUBLIC_SKIP_SLOW_TIERS !== 'false' && process.env.NODE_ENV !== 'test';
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('[Scraper] Starting 4-Tier Strategy for:', url);
+    console.log('[Scraper] Starting Strategy for:', url, skipSlowTiers ? '(skipping to Tier 4)' : '(4-Tier)');
   }
 
-  // ===== TIER 1: Simple WebFetch (built-in proxy or direct) =====
-  try {
-    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 1: Simple WebFetch...');
-    // Use body for URL as preferred by backend to avoid 999/414 query length errors
-    const t1Response = await fetch(`${proxyBase}?action=scrape`, {
-      method: 'POST',
-      headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, tier: '1' })
-    });
-
-    if (t1Response.ok) {
-      const { content } = await t1Response.json();
-      if (content && content.length > 2500) {
-        const profile = await extractProfileFromHtmlWithAi(content, url);
-        if (profile && profile.full_name) {
-          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 1 Success!');
-          return profile;
-        }
-      }
-    }
-  } catch (e) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Scraper] Info: Tier 1 direct fetch skipped (expected for protected pages)');
-    }
+  // Skip Tiers 1-3 when BrightData key exists — they fail ~85% of the time
+  // and waste 5-10 seconds on authwall attempts before falling through to Tier 4
+  if (skipSlowTiers) {
+    console.log('[Scraper] Skipping Tiers 1-3 (slow tier skip enabled)');
   }
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // ===== TIERS 1-3: Skip when BrightData key exists (slow, ~85% failure rate) =====
+  if (!skipSlowTiers) {
+    // ===== TIER 1: Simple WebFetch (built-in proxy or direct) =====
+    try {
+      if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 1: Simple WebFetch...');
+      const t1Response = await fetch(`${proxyBase}?action=scrape`, {
+        method: 'POST',
+        headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, tier: '1' })
+      });
 
-  // ===== TIER 2: Customized Request (Browser Headers) =====
-  try {
-    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 2: Customized Request...');
-    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 2: Customized Request...');
-    const t2Response = await fetch(`${proxyBase}?action=scrape`, {
-      method: 'POST',
-      headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, tier: '2' })
-    });
-
-    if (t2Response.ok) {
-      const { content } = await t2Response.json();
-      if (content && content.length > 2500) {
-        const profile = await extractProfileFromHtmlWithAi(content, url);
-        if (profile && profile.full_name) {
-          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 2 Success!');
-          return profile;
+      if (t1Response.ok) {
+        const { content } = await t1Response.json();
+        if (content && content.length > 2500) {
+          const profile = await extractProfileFromHtmlWithAi(content, url);
+          if (profile && profile.full_name) {
+            if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 1 Success!');
+            return profile;
+          }
         }
       }
+    } catch (e) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Scraper] Info: Tier 1 direct fetch skipped (expected for protected pages)');
+      }
     }
-  } catch (e) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Scraper] Info: Tier 2 browser simulation skipped (likely authwall)');
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // ===== TIER 2: Customized Request (Browser Headers) =====
+    try {
+      if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 2: Customized Request...');
+      const t2Response = await fetch(`${proxyBase}?action=scrape`, {
+        method: 'POST',
+        headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, tier: '2' })
+      });
+
+      if (t2Response.ok) {
+        const { content } = await t2Response.json();
+        if (content && content.length > 2500) {
+          const profile = await extractProfileFromHtmlWithAi(content, url);
+          if (profile && profile.full_name) {
+            if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 2 Success!');
+            return profile;
+          }
+        }
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Scraper] Info: Tier 2 browser simulation skipped (likely authwall)');
+      }
     }
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // ===== TIER 3: Bright Data Web Unlocker (Scrape API) =====
+    try {
+      if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 3: Bright Data Web Unlocker...');
+      const t3Response = await fetch(`${proxyBase}?action=scrape`, {
+        method: 'POST',
+        headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, tier: '3' })
+      });
+
+      if (t3Response.ok) {
+        const { content } = await t3Response.json();
+        if (content && content.length > 500) {
+          const profile = await extractProfileFromHtmlWithAi(content, url);
+          if (profile && profile.full_name) {
+            if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 3 Success!');
+            return profile;
+          }
+        }
+      } else if (t3Response.status === 401) {
+        if (process.env.NODE_ENV === 'development') console.warn('[Scraper] Tier 3 Skipped: Invalid BrightData API Key');
+      }
+    } catch (e) { console.warn('[Scraper] Tier 3 request failed'); }
   }
 
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // ===== TIER 3: Bright Data Web Unlocker (Scrape API) =====
-  try {
-    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 3: Bright Data Web Unlocker...');
-    if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 3: Bright Data Web Unlocker...');
-    const t3Response = await fetch(`${proxyBase}?action=scrape`, {
-      method: 'POST',
-      headers: { 'X-BrightData-Key': brightDataKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, tier: '3' })
-    });
-
-    if (t3Response.ok) {
-      const { content } = await t3Response.json();
-      if (content && content.length > 500) {
-        const profile = await extractProfileFromHtmlWithAi(content, url);
-        if (profile && profile.full_name) {
-          if (process.env.NODE_ENV === 'development') console.log('[Scraper] ✅ Tier 3 Success!');
-          return profile;
-        }
-      }
-    } else if (t3Response.status === 401) {
-      if (process.env.NODE_ENV === 'development') console.warn('[Scraper] Tier 3 Skipped: Invalid BrightData API Key');
-    }
-  } catch (e) { console.warn('[Scraper] Tier 3 request failed'); }
-
-  // ===== TIER 4: Bright Data Dataset API (Legacy/Highest Reliability) =====
+  // ===== TIER 4: Bright Data Dataset API (Highest Reliability) =====
   try {
     if (process.env.NODE_ENV === 'development') console.log('[Scraper] Tier 4: Bright Data Dataset API...');
     // Fix: pass url as query param for trigger action
