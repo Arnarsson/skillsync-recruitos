@@ -1,280 +1,322 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-01-24
+**Analysis Date:** 2026-02-16
 
 ## Tech Debt
 
-**Disabled Testing Infrastructure:**
-- Issue: Vitest configuration backed up as `vitest.config.ts.bak` - test infrastructure not active
-- Files: `vitest.config.ts.bak`, `package.json` (no test scripts)
-- Tests exist in `tests/` directory but cannot run
-- Impact: No automated test safety net; regressions go undetected; 170+ console.log statements in services make debugging difficult
-- Fix approach: Restore vitest config, add test scripts to package.json, implement CI test runs in GitHub Actions
+**Large Page Components:**
+- Issue: Monolithic component files without decomposition causing bundle bloat and maintenance burden
+- Files:
+  - `app/profile/[username]/deep/page.tsx` (2348 lines)
+  - `app/pipeline/page.tsx` (2175 lines)
+  - `app/profile/[username]/page.tsx` (1284 lines)
+  - `app/search/page.tsx` (1231 lines)
+- Impact: Slow initial page load, poor mobile performance, increased Time to Interactive (TTI), difficult to test individual features
+- Fix approach: Extract components using React.lazy() and dynamic imports, split into smaller feature-specific modules
 
-**Excessive Console Logging:**
-- Issue: 170+ `console.log()` calls across services for debugging; no structured logging framework
-- Files: `services/geminiService.ts`, `services/scrapingService.ts`, `services/enrichmentServiceV2.ts`, etc.
-- Impact: Production logs polluted with debug output; difficult to identify real issues; security risk (sensitive data may leak in logs)
-- Fix approach: Implement structured logging service (`logger.ts` exists but minimal), replace console.log with logger calls, remove dev-only logs
+**Incomplete Analytics Implementation:**
+- Issue: EventTracker and MetricsService have TODO comments indicating Prisma schema models are missing
+- Files:
+  - `lib/analytics/eventTracker.ts` (lines 50, 63, 79)
+  - `lib/analytics/metricsService.ts` (lines 5, 34, 78, 106, 133)
+- Impact: Event tracking logs to console only, no persistence, funnel analytics unavailable
+- Fix approach: Add FunnelEvent and CandidateStatus models to Prisma schema and run migrations
 
-**Large Component Files:**
-- Issue: Pages exceed acceptable size for maintainability
-- Files: `app/profile/[username]/deep/page.tsx` (93KB), `app/pipeline/page.tsx` (49KB)
-- Impact: Components difficult to test, reason about, and modify; high cognitive load
-- Fix approach: Break into smaller composed components (separate search form, results grid, detail panels)
+**Excessive `any` Type Usage:**
+- Issue: 98+ instances of `: any` type annotations bypass TypeScript safety
+- Files:
+  - `lib/brightdata.ts` (9 instances)
+  - `app/profile/[username]/deep/page.tsx` (3 instances)
+  - `lib/github.ts`, API routes, services (multiple)
+- Impact: Runtime errors from undefined properties, poor IDE autocomplete, difficult refactoring
+- Fix approach: Define proper interfaces for external API responses (BrightData, GitHub), use `unknown` for error handling instead of `any`
 
-**Unmodeled API Key Handling:**
-- Issue: API keys loaded from localStorage in client-side services; duplicated across multiple services
-- Files: `services/geminiService.ts`, `services/behavioralSignalsService.ts`, `services/enrichmentServiceLegacy.ts`, `services/networkAnalysisService.ts`
-- Each service implements identical: `localStorage.getItem('KEY_NAME') || process.env.KEY_NAME`
-- Impact: Code duplication; security vulnerability (XSS can steal keys from localStorage); keys exposed in client bundles
-- Fix approach: Create centralized `services/config.ts` for all API key retrieval; migrate to server-side proxies for sensitive operations
+**Unused Imports and Variables:**
+- Issue: 55+ unused imports/variables left in code
+- Files: Multiple across codebase
+- Impact: Code bloat, potential for accidental use
+- Fix approach: Run `eslint --fix` to auto-remove (can be automated)
+
+**API Keys in localStorage - XSS Risk:**
+- Issue: API keys retrieved from localStorage as fallback, confirmed XSS exposure vector
+- Files: Multiple AI service client initialization patterns
+- Impact: If XSS occurs, attacker gains full access to Gemini API, OpenRouter, and other services
+- Fix approach: Move all API keys to server-side only (Phase 0.2 priority), never store in client-side storage
 
 ## Known Bugs
 
-**Incomplete Team Features:**
-- Issue: Email invitations not implemented
-- Files: `app/api/team/[teamId]/members/route.ts` (line 320)
-- Symptoms: Team member invitations silently fail; no email sent to invited users
-- Trigger: User invites team member via API
-- Workaround: None - feature incomplete
-- Fix approach: Implement email sending (via SendGrid/Resend), store invitation tokens, create /api/team/invite/[token] endpoint
+**React useState in useEffect (9 instances):**
+- Symptoms: Cascading renders, potential state reset issues, performance degradation
+- Files:
+  - `app/dashboard/page.tsx:67`
+  - `app/profile/[username]/page.tsx:72,278`
+  - `components/OnboardingWrapper.tsx:18`
+  - `components/pipeline/CandidatePipelineItem.tsx:118`
+  - `lib/adminContext.tsx:21`
+  - `lib/i18n/LanguageContext.tsx:58`
+- Trigger: Components mount with effects calling setState
+- Workaround: Use lazy initializer pattern with localStorage reads instead of effect-based initialization
+- Status: Documented in Phase 2 research, awaiting fix
 
-**Unhandled JSON Parsing Errors:**
-- Issue: 154 instances of `JSON.parse()` without try-catch in critical paths
-- Files: `services/citedEvidenceService.ts`, `services/enrichmentServiceLegacy.ts`, `services/ai/profiling.ts`, `candidateService.ts`
-- Symptoms: Silent failures when API returns malformed JSON; app state corruption
-- Trigger: API returns invalid JSON (truncated response, API error as HTML)
-- Workaround: Manual browser refresh
-- Fix approach: Wrap all JSON.parse in try-catch; validate response schemas before parsing using Zod
+**Components Created During Render (4 instances):**
+- Symptoms: State loss on re-render, infinite re-render loops possible, poor performance
+- Files:
+  - `components/search/SearchFilters.tsx:162,538,571` (FilterContent component defined inside render)
+- Trigger: Parent component re-renders
+- Workaround: Move component definition outside parent
+- Status: Documented in Phase 2 research
 
-**Missing Input Validation on Page Parameters:**
-- Issue: Dynamic route parameters not validated
-- Files: `app/profile/[username]/page.tsx`, `app/profile/[username]/deep/page.tsx`
-- Symptoms: Invalid usernames accepted; 404 pages with confusing error states
-- Trigger: Direct URL with special characters (e.g., `/profile/<script>`)
-- Workaround: None
-- Fix approach: Add Zod validation in route handlers; sanitize username parameter before API calls
+**Immutability Violations (3 instances):**
+- Symptoms: ESLint errors, poor practice patterns
+- Files: `app/pricing/page.tsx:37,43,63` (window.location.href assignments)
+- Trigger: Navigation from component
+- Workaround: Use Next.js useRouter instead of direct window.location assignment
+- Status: Partially fixed in Phase 2
 
-**Integer Parsing Without Validation:**
-- Issue: `parseInt()` without validation or bounds checking
-- Files: `app/api/search/route.ts` (lines 9-10), `app/api/team/[teamId]/pipelines/route.ts` (lines 47-48)
-- Symptoms: Invalid page/limit values accepted (NaN, negative); potential DoS via large `perPage` values
-- Trigger: Malicious query params: `?page=abc` or `?limit=999999999`
-- Workaround: None
-- Fix approach: Use Zod schema validation: `z.string().pipe(z.coerce.number().int().positive().max(1000))`
+**Ref Access During Render:**
+- Symptoms: Potential issues with React concurrent features and strict mode
+- Files: `hooks/usePersistedState.ts:8`
+- Trigger: Reading ref.current in useState initializer
+- Status: Documented in Phase 2 research
 
 ## Security Considerations
 
-**API Key Exposure via localStorage:**
-- Risk: localStorage keys vulnerable to XSS; client-side code can steal user API keys
-- Files: `services/geminiService.ts` (line 23), `services/scrapingService.ts`, multiple service files
-- Current mitigation: .env.example notes the risk
+**Exposed Credentials in Version Control:**
+- Risk: Database compromise, service impersonation, financial loss
+- Files: `.env` (if previously committed to git history)
+- Current mitigation: `.gitignore` correctly excludes `.env*`
 - Recommendations:
-  1. Move API calls to server-side endpoints only
-  2. Use Stripe-style proxy: client → backend → external API
-  3. Implement CSRF tokens for state-changing operations
-  4. Add Content-Security-Policy headers to block inline scripts
+  1. Verify no secrets in git history: `git log --all -- .env`
+  2. Rotate all exposed credentials (POSTGRES_PASSWORD, SUPABASE_JWT_SECRET, SUPABASE_SERVICE_ROLE_KEY, OPENROUTER_API_KEY)
+  3. Move secrets to Vercel Environment Variables only
+  4. Implement env validation at runtime using `@t3-oss/env-nextjs`
 
-**GitHub OAuth Token Handling:**
-- Risk: `session.accessToken` cast as `any` without verification
-- Files: `app/api/search/route.ts` (line 22), `app/api/team/[teamId]/members/route.ts` (line 65)
-- Current mitigation: None
-- Recommendations:
-  1. Type-safe session extraction: `session satisfies { accessToken: string }`
-  2. Validate token exists before use
-  3. Implement token refresh mechanism for expired tokens
-  4. Store tokens in httpOnly cookies, never in localStorage
+**Authentication Bypass in Demo Mode:**
+- Risk: Unauthenticated access to `/pipeline`, `/settings`, `/team` routes
+- Files: `middleware.ts:133-142`
+- Current mitigation: Only enabled for demo period
+- Recommendations: Re-enable authentication checks immediately after demo, use feature flags instead of comments, implement time-based expiration
 
-**Unauthenticated API Endpoints:**
-- Risk: Some endpoints missing authentication checks
-- Files: `app/api/developers/[username]/route.ts` (public profile access), `app/api/search/route.ts` (no auth required)
-- Current mitigation: Partial - `/search` checks for higher rate limits with auth, but allows unauthenticated access
+**XSS via dangerouslySetInnerHTML:**
+- Risk: If user-generated content (candidate notes, LinkedIn text) is rendered with dangerouslySetInnerHTML, XSS becomes possible
+- Files: `app/layout.tsx:75`, `app/guides/technical-recruiting/page.tsx:49` (currently safe with JSON-LD schema)
+- Current mitigation: Currently used only for JSON-LD (safe data)
 - Recommendations:
-  1. Implement rate limiting middleware for unauthenticated routes
-  2. Add opt-in rate limiting per endpoint
-  3. Return 429 when limits exceeded, with Retry-After header
+  1. Install DOMPurify: `npm install dompurify isomorphic-dompurify`
+  2. Create sanitization utility and ban raw dangerouslySetInnerHTML in ESLint
+  3. Audit all instances of `rawProfileText`, `content` fields from database
 
-**Supabase Row-Level Security Disabled:**
-- Risk: Mock data returned when Supabase unavailable; no RLS validation
-- Files: `app/api/team/[teamId]/members/route.ts` (lines 6-34)
-- Current mitigation: Limited - checks team membership but returns mock data
-- Recommendations:
-  1. Enforce RLS policies in Supabase
-  2. Return 503 instead of mock data when DB unavailable
-  3. Implement request signing to verify Supabase access
+**Weak Session Secret:**
+- Risk: Compromised JWT session tokens
+- Files: `lib/auth.ts:95`
+- Current mitigation: Uses environment variable
+- Recommendations: Validate NEXTAUTH_SECRET is 32+ characters at startup, throw error if invalid
+
+**Rate Limiting Only In-Memory:**
+- Risk: Ineffective under distributed load on Vercel (each invocation isolated)
+- Files: `lib/rate-limit.ts:12-25`
+- Current mitigation: In-memory Map (works for single-instance dev)
+- Recommendations: Use Upstash Redis for distributed rate limiting
+
+**Missing CSRF Protection:**
+- Risk: State-changing API routes lack explicit CSRF token validation
+- Files: All POST/PATCH/DELETE routes in `app/api/`
+- Current mitigation: SameSite cookies configured via middleware
+- Recommendations: Add explicit CSRF token validation for critical operations
+
+**GitHub Token Stored in Plain Text:**
+- Risk: Database breach exposes OAuth tokens
+- Files: `prisma/schema.prisma:14` (User.githubToken)
+- Current mitigation: Encrypted at rest by database provider
+- Recommendations: Implement application-level encryption for defense in depth
 
 ## Performance Bottlenecks
 
-**Unoptimized GitHub API Calls:**
-- Problem: Multiple sequential GitHub API calls in connection path analysis
-- Files: `services/githubConnectionService.ts` (lines 81-300+)
-- Cause: Pagination loops (lines 84-99) and multiple user/repo fetches without batch querying
+**Large Bundle Size (2.3GB total):**
+- Problem: `.next/` directory 1.1GB, `node_modules/` 1.2GB. Pages bundle all UI logic without code splitting
+- Files:
+  - `app/profile/[username]/deep/page.tsx` (2348 lines)
+  - `app/pipeline/page.tsx` (2175 lines)
+  - `app/search/page.tsx` (1231 lines)
+- Cause: Monolithic page components, no lazy loading of charts/visualizations
 - Improvement path:
-  1. Use GitHub GraphQL for batch queries instead of REST pagination
-  2. Cache follower lists (invalidate weekly)
-  3. Implement early termination when connection found (currently exhausts all data)
+  1. Use React.lazy() for components: `const PipelineKanban = React.lazy(() => import('@/components/pipeline/PipelineKanban'))`
+  2. Dynamic imports for recharts: `dynamic(() => import('recharts').then(m => m.BarChart), { ssr: false })`
+  3. Analyze bundle with `@next/bundle-analyzer`
 
-**Blocking Promise.all() Without Error Isolation:**
-- Problem: Promise.all fails entirely if one promise rejects
-- Files: `app/api/profile/analyze/route.ts` (line 38), `app/api/outreach/route.ts` (line 197)
-- Cause: Network failures in parallel requests fail entire operation
+**Inefficient React Hook Dependencies:**
+- Problem: Complex dependency arrays cause unnecessary re-renders and API calls
+- Files: `app/search/page.tsx:142-178`, `app/pipeline/page.tsx:150-300`
+- Cause: 309 React hooks across codebase, many with overly broad dependencies
 - Improvement path:
-  1. Use Promise.allSettled instead
-  2. Implement partial success handling
-  3. Return 202 with status tracking for async operations
+  1. Use useMemo for expensive computed values
+  2. Implement debouncing on search inputs
+  3. Consider React Query for API state management (eliminates manual useEffect)
 
-**Large localStorage Serialization:**
-- Problem: Entire candidate list serialized to JSON on every update
-- Files: `services/candidateService.ts` (lines 21-28)
-- Cause: `JSON.stringify()` on full array without pagination
-- Impact: localStorage quota exceeded at 1000+ candidates; synchronous operation blocks UI
+**No API Response Caching:**
+- Problem: Every request hits database or external APIs without caching
+- Files: All routes in `app/api/`
+- Cause: No cache headers or Vercel KV caching implemented
 - Improvement path:
-  1. Use IndexedDB for local storage instead of localStorage
-  2. Implement incremental sync (only dirty records)
-  3. Lazy-load candidate details on demand
+  1. Add cache headers to GET routes: `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`
+  2. Implement Vercel KV caching for frequently accessed data (candidates, GitHub profiles)
 
-**No Query Result Pagination:**
-- Problem: Search results unbounded; all results fetched at once
-- Files: `app/api/search/route.ts` returns full GitHub search result set
-- Impact: Large result sets timeout; UI renders thousands of candidates
+**Missing Query Optimizations (N+1 Risk):**
+- Problem: Some Prisma queries don't include relationships, may trigger N+1 when accessed in loops
+- Files: `app/api/candidates/[id]/route.ts`, `app/api/candidates/route.ts`
+- Cause: Missing eager loading with `include` for related data
 - Improvement path:
-  1. Default limit to 50, add explicit pagination
-  2. Implement cursor-based pagination for GitHub API
-  3. Add virtual scrolling to UI for large lists
+  1. Add pagination to notes: `take: 50, skip: offset`
+  2. Implement result caching for frequently accessed candidates
+  3. Verify all queries use proper `include` statements
 
 ## Fragile Areas
 
-**Deep Profile Generation (Stage 3):**
-- Files: `app/api/profile/analyze/route.ts`, `app/profile/[username]/deep/page.tsx`
-- Why fragile: Complex multi-step analysis (persona → candidate analysis → deep profile → network dossier); any step failure crashes entire profile view
-- Symptoms: Missing interview guides, incomplete evidence tracking, no fallback UI
-- Safe modification: Implement circuit breaker pattern; return partial results on non-critical failures; add error boundaries in UI
-- Test coverage: Gaps - no tests for dossier generation failure scenarios
-
-**GitHub Connection Path Analysis:**
-- Files: `services/githubConnectionService.ts`, `app/api/github/connection-path/route.ts`
-- Why fragile: Pagination loops with hardcoded `maxPages=5`; rate limit handling insufficient
-- Symptoms: Incomplete connections found (if user has >500 followers); rate limit 429 crashes request
-- Safe modification: Use exponential backoff with jitter; implement queue-based rate limiting; return best-effort partial results
-- Test coverage: No tests for rate limit scenarios or pagination edge cases
+**LinkedIn Extension Integration:**
+- Files:
+  - `linkedin-extension/content.js` (562 lines)
+  - `linkedin-extension/popup.js` (123 lines)
+  - `app/api/linkedin/candidate/route.ts`
+  - `services/socialMatrixService.ts` (758 lines)
+- Why fragile:
+  1. CSS selectors in content.js may break if LinkedIn redesigns UI
+  2. DOM parsing depends on specific LinkedIn HTML structure
+  3. No robust error handling for LinkedIn page load variations
+  4. innerHTML manipulation prone to breaking changes
+- Safe modification: Version extension separately, add feature detection for CSS selectors, implement fallback parsing strategies
+- Test coverage: No E2E tests for LinkedIn integration, manual testing only
 
 **Behavioral Signals Service:**
-- Files: `services/behavioralSignalsService.ts`
-- Why fragile: Async polling for BrightData with no timeout mechanism
-- Symptoms: Requests hang indefinitely; no maximum wait time
-- Test coverage: TODOs in tests (lines 98, 102) - polling mocks not implemented
-- Safe modification: Add 30s timeout; implement exponential backoff; graceful degradation if BrightData unavailable
+- Files: `services/behavioralSignalsService.ts` (745 lines)
+- Why fragile:
+  1. Detects "open to work" via bio keywords - easily spoofed
+  2. Activity pattern detection depends on GitHub API consistency
+  3. Async polling mechanism (noted with TODO comment in tests) may have race conditions
+- Safe modification: Add comprehensive test coverage for edge cases, add timeout protection for polling
+- Test coverage: 98-102 lines are TODOs for async polling mocks
 
-**Team Collaboration Feature:**
-- Files: `app/api/team/*`, `services/teamService.ts`
-- Why fragile: Returns mock data when Supabase unavailable; no fallback state management
-- Symptoms: Users unaware if data is real or mocked; team changes lost after refresh
-- Safe modification: Distinguish mock state clearly; disable team features if DB unavailable; implement conflict-free replicated data type (CRDT) for offline support
-- Test coverage: Gaps - no Supabase integration tests
+**GitHub Connection Path Analysis:**
+- Files:
+  - `lib/linkedin-parser/network-intelligence.ts` (907 lines)
+  - `services/networkAnalysisService.ts` (900 lines)
+  - `services/citedEvidenceService.ts`
+- Why fragile:
+  1. Regex pattern matching for connection detection (line 522 in network-intelligence.ts)
+  2. Assumes specific GitHub profile structure
+  3. No validation of pattern match results before use
+- Safe modification: Add input validation before regex, use defensive parsing
+- Test coverage: Tests exist but may not cover all LinkedIn profile variations
+
+**Gemini AI Service with Fallover Chain:**
+- Files:
+  - `lib/services/gemini/index.ts` (928 lines)
+  - `services/geminiService.ts` (921 lines)
+  - `services/ai/client.ts`, `services/ai/scoring.ts`, `services/ai/profiling.ts`
+- Why fragile:
+  1. Failover chain: Gemini direct → OpenRouter → retry (potential cascading failures)
+  2. Structured JSON responses require exact schema matching
+  3. Rate limiting on external APIs may cause unpredictable failures
+  4. No timeout protection documented
+- Safe modification:
+  1. Add explicit timeout constants for each service
+  2. Implement circuit breaker pattern for Gemini API failures
+  3. Add detailed logging for schema mismatch errors
+  4. Implement exponential backoff for retries
+- Test coverage: Tests exist but mocking may not cover all error paths
 
 ## Scaling Limits
 
-**Gemini API Quota:**
-- Current capacity: Default free tier ~15 requests/day
-- Limit: Hits after 15 concurrent profile analyses
-- Scaling path: Implement queue-based request batching; use OpenRouter fallback; add per-user rate limits
+**Credit System Scale:**
+- Current capacity: Designed for per-user credit consumption
+- Limit: As user base grows, credit ledger table (`CreditLedger` in Prisma) may become very large
+- Scaling path:
+  1. Implement ledger archival/partitioning strategy
+  2. Add database indexes on userId, createdAt for query performance
+  3. Consider time-series database for historical analytics
 
-**localStorage Size Quota:**
-- Current capacity: ~5-10MB browser limit
-- Limit: Exceeded at ~1000 candidates with full analysis data
-- Scaling path: Migrate to IndexedDB (quota 50MB+); implement lazy-loading of candidate details
+**Candidate Database:**
+- Current capacity: SQLite in dev, PostgreSQL in production, no sharding
+- Limit: Millions of candidates may require query optimization or read replicas
+- Scaling path:
+  1. Implement read replicas for candidate search queries
+  2. Add caching layer (Redis) for frequently accessed profiles
+  3. Consider separate search index (Elasticsearch) if full-text search becomes bottleneck
 
-**GitHub API Rate Limits:**
-- Current capacity: 60 req/hour unauthenticated, 5000 req/hour authenticated
-- Limit: Exceeded during connection path analysis for >200 follower users
-- Scaling path: Implement request caching; use GraphQL batching; queue bulk requests with exponential backoff
+**LinkedIn Extension Polling:**
+- Current capacity: Single-instance processing
+- Limit: If many users run extension simultaneously, polling queue may back up
+- Scaling path:
+  1. Implement message queue (Bull.js or AWS SQS) for async processing
+  2. Add rate limiting per user to prevent abuse
 
-**Firecrawl Concurrency:**
-- Current capacity: Default tier ~30 requests/hour
-- Limit: Job description scraping blocks on rate limit (no queue)
-- Scaling path: Implement job queue (Bull/RabbitMQ); add per-user daily limits; cache job descriptions by URL
+**API Rate Limits:**
+- Current capacity: In-memory rate limiting works for single instance
+- Limit: Distributed/serverless deployments bypass in-memory limits
+- Scaling path: Implement Upstash Redis for distributed rate limiting
 
 ## Dependencies at Risk
 
-**@google/genai Package:**
-- Risk: Versioned at `^1.36.0`; Gemini API evolving rapidly; breaking changes expected
-- Impact: Response schemas may change; structured output format may break
-- Migration plan: Pin version to `1.36.0` in production; implement response schema validation layer; fallback to OpenRouter if Gemini unavailable
+**Vercel KV - Deprecated Pattern:**
+- Risk: Project uses `@vercel/kv` (v3.0.0) which is the old Redis integration
+- Impact: May be deprecated in favor of other solutions
+- Migration plan: Monitor Vercel announcements, migrate to Upstash if needed
 
-**next-auth v4:**
-- Risk: v5 released; v4 enters maintenance mode; GitHub OAuth may need updates
-- Impact: Security patches backported only to v5; OAuth token refresh may break
-- Migration plan: Plan upgrade to next-auth v5 (breaking changes to session types); add feature flags for gradual rollout
+**Prisma SQLite (dev) vs PostgreSQL (production):**
+- Risk: Differences in SQL dialects may cause development/production parity issues
+  - SQLite doesn't support `String[]`, `Int[]` → uses `Json`
+  - SQLite doesn't support `mode: "insensitive"` → LIKE already case-insensitive
+  - Prisma can't upsert on compound unique with null
+- Impact: Tests pass locally but fail in production
+- Migration plan: Run all tests against PostgreSQL before deploying, avoid dev/prod database divergence
 
-**@octokit/rest:**
-- Risk: REST API deprecated in favor of GraphQL; endpoints may be removed
-- Impact: GitHub API calls may fail with 404
-- Migration plan: Implement GraphQL client alongside REST; batch queries for follower/repo data
+**Google Gemini API Changes:**
+- Risk: API versioning, model availability changes
+- Impact: Failover to OpenRouter may not work if Gemini becomes unavailable
+- Migration plan: Monitor Google announcements, test failover regularly
 
-**recharts:**
-- Risk: SVG rendering performance degrades with >1000 data points
-- Impact: Dashboard charts freeze on large result sets
-- Migration plan: Use canvas-based chart library (nivo/visx); implement data sampling for large datasets
-
-## Missing Critical Features
-
-**Audit Logging (EU AI Act Compliance):**
-- Problem: No immutable audit log for profiling decisions; required by EU AI Act
-- Blocks: Cannot demonstrate decision justification; compliance violations
-- Impact: Legal liability; cannot defend algorithmic bias claims
-- Fix approach: Implement immutable event store (`schema: audit_events`); log all profile analyses with evidence
-
-**Transparent Data Handling:**
-- Problem: No data retention policy; unclear how long candidate data stored
-- Blocks: GDPR compliance; users cannot request data deletion
-- Impact: Data protection violations; user trust erosion
-- Fix approach: Add GDPR-compliant data export/deletion endpoints; implement 90-day retention policy
-
-**Error Recovery (Retry Logic):**
-- Problem: Failed API calls not retried; user must manually re-trigger
-- Blocks: Large-scale usage; poor UX on flaky networks
-- Impact: High failure rate for bulk operations
-- Fix approach: Implement exponential backoff in critical paths; add retry UI prompts; use job queue for async operations
-
-**Rate Limit Headers:**
-- Problem: No X-RateLimit-Remaining/Reset headers returned to client
-- Blocks: Client cannot proactively delay requests; users hit limits unexpectedly
-- Impact: User frustration; poor API experience
-- Fix approach: Proxy rate limit headers from GitHub/Gemini to client; implement client-side rate limit awareness
+**LinkedIn API/Scraping Changes:**
+- Risk: LinkedIn actively blocks scrapers, API changes frequently
+- Impact: Extension may break, LinkedIn finder routes may stop working
+- Migration plan: Maintain multiple parsing strategies, implement graceful degradation
 
 ## Test Coverage Gaps
 
-**Profile Analysis Pipeline:**
-- What's not tested: Error scenarios when Gemini returns invalid JSON; partial failures in multi-step analysis; timeout handling
-- Files: `app/api/profile/analyze/route.ts`, no corresponding test file
-- Risk: Silent failures cascade through system; users see empty profiles without error indication
-- Priority: High - critical user-facing feature
+**API Route Unit Tests:**
+- What's not tested: All `app/api/` route handlers lack unit tests
+- Files: 40+ API routes have no corresponding test files
+- Risk: Refactoring API routes is risky without tests, regression detection difficult
+- Priority: HIGH - Critical paths need test coverage
 
-**GitHub Connection Path Service:**
-- What's not tested: Rate limit 429 responses; pagination edge cases (users with exactly 500 followers); circular following relationships
-- Files: `services/githubConnectionService.ts`, test file exists but TODOs indicate incomplete mocks
-- Risk: Incomplete connection data serves silently; bridge connections missed
-- Priority: High - feature presented as reliable connection mapping
+**Error Path Testing:**
+- What's not tested: API error states, timeouts, malformed requests
+- Files: Playwright E2E tests mock all APIs successfully
+- Risk: Real failure scenarios not validated before production
+- Priority: HIGH - Error handling is critical in recruitment context
+
+**LinkedIn Integration Testing:**
+- What's not tested: Extension behavior with different LinkedIn page structures, LinkedIn profile variations
+- Files: No E2E tests for LinkedIn flows
+- Risk: Extension may break with LinkedIn redesigns
+- Priority: MEDIUM - Behavioral signals depend on this working
 
 **Behavioral Signals Service:**
-- What's not tested: Async polling timeout; BrightData API errors; LinkedIn profile parsing edge cases
-- Files: `services/behavioralSignalsService.ts` (test file has TODO comments on lines 98, 102)
-- Risk: Async operations hang; signals marked present when data unavailable
-- Priority: Medium - affects signal quality but not critical
+- What's not tested: Async polling behavior, race conditions, timeout scenarios
+- Files: `tests/services/behavioralSignalsService.test.ts:98-102` has TODO comments
+- Risk: Polling may hang or return stale data
+- Priority: MEDIUM - Affects candidate insights quality
 
-**Input Validation:**
-- What's not tested: SQL injection patterns in dynamic query building; XSS in user-provided content; integer overflow in pagination
-- Files: `app/api/search/route.ts`, `app/api/team/[teamId]/pipelines/route.ts`
-- Risk: Security vulnerabilities; unexpected app behavior with adversarial input
-- Priority: High - public-facing API endpoints
+**Anti-Gaming Filters:**
+- What's not tested: Some edge cases, tutorial repo detection variations
+- Files: `tests/anti-gaming-filters.test.ts` has 3 pre-existing test failures
+- Risk: Fake/tutorial profiles may be incorrectly scored
+- Priority: MEDIUM - Affects alignment scoring accuracy
 
-**Team Feature:**
-- What's not tested: Permission checks; row-level security bypasses; concurrent updates to shared pipelines
-- Files: `app/api/team/*`, mock data returned when DB unavailable
-- Risk: Unauthorized access to team data; data corruption during concurrent edits
-- Priority: Medium - feature incomplete (missing email invitations)
+**Credit System Edge Cases:**
+- What's not tested: Credit exhaustion, concurrent consumption, insufficient balance
+- Files: No explicit tests for edge cases in credit consumption
+- Risk: Users may get into negative credit balance states
+- Priority: MEDIUM - Financial correctness important
 
 ---
 
-*Concerns audit: 2026-01-24*
+*Concerns audit: 2026-02-16*

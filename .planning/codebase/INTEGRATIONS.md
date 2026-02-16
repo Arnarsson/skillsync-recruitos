@@ -1,287 +1,246 @@
 # External Integrations
 
-**Analysis Date:** 2026-01-24
+**Analysis Date:** 2026-02-16
 
 ## APIs & External Services
 
-**AI/ML - Google Gemini:**
-- Service: Google Gemini API
-- What it's used for: Candidate alignment scoring (0-100), psychometric profiling, deep profile generation, personalized outreach message generation
-- SDK/Client: `@google/genai` v1.36.0
-- Auth: `GEMINI_API_KEY` environment variable
-- Get key: https://aistudio.google.com/apikey
-- Implementation: `services/geminiService.ts`, `lib/services/gemini/index.ts`
-- Fallback: OpenRouter API wrapper for reliability
+**AI & Large Language Models:**
+- Google Gemini API (v1) - Primary AI model for candidate analysis, scoring, persona generation
+  - SDK: `@google/genai`
+  - Auth: `GEMINI_API_KEY`
+  - Service: `services/geminiService.ts`
+  - Capabilities: alignment scoring (0-100), psychometric profiles, evidence extraction
 
-**AI/ML - OpenRouter (Fallback):**
-- Service: OpenRouter API
-- What it's used for: Alternative inference for Gemini models with fallback retry logic
-- SDK/Client: HTTP fetch wrapper with OpenAI-compatible format
-- Auth: `OPENROUTER_API_KEY` environment variable (optional)
-- Get key: https://openrouter.ai
-- Implementation: `services/geminiService.ts` - `callOpenRouter()` function
-- Models: Primary: `google/gemini-3-flash-preview`, Secondary: `google/gemini-2.5-flash`
+- OpenRouter - Fallback AI inference (Google Gemini via OpenRouter)
+  - SDK: HTTP client (OpenAI-compatible format)
+  - Auth: `OPENROUTER_API_KEY`
+  - Fallback models: `google/gemini-3-flash-preview` (primary), `google/gemini-2.5-flash` (secondary)
+  - Used by: `services/deepResearchService.ts`, `services/enrichmentServiceV2.ts`
+  - Retry logic: 3 attempts with exponential backoff
 
-**Web Scraping - Firecrawl:**
-- Service: Firecrawl API
-- What it's used for: Scraping and extracting structured data from job descriptions and websites
-- SDK/Client: HTTP fetch wrapper
-- Auth: `FIRECRAWL_API_KEY` environment variable (required)
-- Get key: https://firecrawl.dev
-- Implementation: `services/scrapingService.ts` - `FirecrawlResponse` interface
-- Response format: Markdown and metadata extraction
+**Web Scraping & Data Extraction:**
+- Firecrawl - Job description and website content scraping
+  - Auth: `FIRECRAWL_API_KEY`
+  - Service: `services/scrapingService.ts`
+  - Purpose: Extract job details, requirements, responsibilities from URLs
 
-**Web Scraping - BrightData:**
-- Service: BrightData Web Scraper API
-- What it's used for: LinkedIn profile extraction and network analysis
-- SDK/Client: Custom wrapper in `lib/brightdata.ts`
-- Auth: `BRIGHTDATA_API_KEY` environment variable (optional)
-- Get key: https://brightdata.com
-- Implementation: `lib/brightdata.ts` - `BrightDataService` class
-- Proxy endpoint: `/api/brightdata/trigger`, `/api/brightdata/progress`, `/api/brightdata/snapshot`
-- Features:
-  - `triggerLinkedInScrape()` - Initiate LinkedIn profile scrape
-  - `checkProgress()` - Poll scrape status (max 180 seconds)
-  - `getSnapshot()` - Retrieve completed scrape data
-  - `scrapeLinkedInProfile()` - Full flow with polling
-  - Network graph building for relationship mapping
+- BrightData - LinkedIn profile extraction (premium feature)
+  - Auth: `BRIGHTDATA_API_KEY`
+  - Service: `services/scrapingService.ts`
+  - Purpose: Profile enrichment, experience/education parsing from LinkedIn
+  - Feature flag: Optional in `.env.example`
 
-**Developer Search - GitHub API:**
-- Service: GitHub REST API via Octokit
-- What it's used for: Developer/engineer search, profile data retrieval, repository analysis
-- SDK/Client: `@octokit/rest` v22.0.1
-- Auth: `GITHUB_TOKEN` or OAuth session access token
-- Implementation: `lib/github.ts` with integrated search intelligence
-- Features:
-  - Multi-language search parsing (Danish, Swedish, German, Norwegian, English)
-  - Location normalization (København → copenhagen)
-  - Experience level extraction (5 år erfaring → 5-year minimum)
-  - Skill mapping (c++ → cpp for GitHub API)
-  - Stop word filtering across languages
-
-**GitHub OAuth (Authentication):**
-- Service: GitHub OAuth 2.0
-- What it's used for: User login and authorization
-- Auth provider: NextAuth with GitHub provider
-- SDK/Client: NextAuth GitHub provider
-- Configuration: `lib/auth.ts` - GitHub OAuth with read:user and user:email scopes
-- Credentials:
-  - `GITHUB_CLIENT_ID` - OAuth app client ID
-  - `GITHUB_CLIENT_SECRET` - OAuth app secret
-- Pages: `/login` (sign in), `/` (sign out)
-- Session strategy: JWT (stateless)
+**Developer Search & Profiles:**
+- GitHub API (Octokit REST) - Developer search and profile data
+  - SDK: `@octokit/rest`
+  - Auth: OAuth token from NextAuth session
+  - Service: `lib/github.ts`
+  - Capabilities: Search by language/location/experience, fetch profiles, public repos
+  - Search intelligence: Multi-language parsing in `lib/search/`
 
 ## Data Storage
 
-**Databases:**
+**Primary Database:**
+- PostgreSQL 12+ via Prisma ORM
+  - Connection: `DATABASE_URL` (pooled via PgBouncer or similar)
+  - Migrations: `DIRECT_DATABASE_URL` (direct connection)
+  - Client: `@prisma/client`
+  - Schema: `prisma/schema.prisma`
+  - Singleton: `lib/db.ts`
+  - Tables: users, candidates, payments, credit ledger, shared profiles, LinkedIn messages, criteria sets
 
-**Primary - PostgreSQL:**
-- Type: Relational database
-- Provider: PostgreSQL (self-managed or Supabase)
-- Client: Prisma ORM v7.2.0
-- Schema file: `prisma/schema.prisma`
-- Models:
-  - `User` - Account with GitHub ID, credits, plan, Stripe subscription
-  - `ProfileView` - Track candidate profile views and credit usage
-  - `Search` - Log search queries
-  - `Payment` - Payment transaction history
-- Configured via: `DATABASE_URL` environment variable (Prisma datasource)
+**Optional Legacy Storage:**
+- Supabase PostgreSQL - Team collaboration features (optional)
+  - Connection: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
+  - Client: `@supabase/supabase-js`
+  - Deprecated in favor of Prisma for new features
 
-**Secondary - Supabase (Optional):**
-- Type: PostgreSQL-based backend-as-a-service
-- Provider: Supabase
-- Client: `@supabase/supabase-js` v2.90.1
-- Configuration:
-  - Client-side: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - Server-side: `SUPABASE_SERVICE_KEY`
-- Implementation: `lib/supabase/client.ts`, `lib/supabase/server.ts`
-- Usage: Optional persistent storage for candidates, profiles, teams
-- Graceful degradation: App functions with localStorage if Supabase unavailable
-
-**Client-side State:**
-- LocalStorage key prefix: `apex_` and `recruitos_`
-- Persisted state:
-  - `apex_credits` - Credit balance
-  - `apex_logs` - Audit event history
-  - `apex_job_context` - Job description text
-  - `recruitos_search_count` - Free search tracking
-  - `recruitos_admin_mode` - Admin mode toggle
-  - API keys (localStorage fallback for client-side keys)
+**Legacy In-Memory Storage (Deprecated):**
+- Vercel KV - Cached in `@vercel/kv` (no longer primary)
+  - Status: Replaced by Prisma (v0.2+)
 
 **File Storage:**
-- Local filesystem only (no cloud storage integration)
-- Image delivery: GitHub avatars via `avatars.githubusercontent.com` (configured in Next.js)
+- GitHub Avatars - Remote image hosting
+  - Domain: `avatars.githubusercontent.com` (configured in `next.config.ts`)
+  - Purpose: User and candidate profile pictures
 
 **Caching:**
-- Client-side: localStorage for state and API keys
-- No server-side caching layer configured
+- No explicit caching layer (relies on database query performance)
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Provider: NextAuth with GitHub OAuth
-- Implementation: `lib/auth.ts` - `authOptions` configuration
-- Strategy: JWT (stateless sessions)
-- Scopes: `read:user user:email` (basic profile access)
-- Session callbacks: Attach GitHub access token and user ID to session
+- NextAuth.js v4 with GitHub OAuth
+  - Config: `lib/auth.ts`
+  - Provider: GitHub OAuth via `next-auth/providers/github`
+  - Scope: `read:user user:email`
+  - Credentials backup: Email/password auth with bcrypt hashing
 
-**User Account:**
-- GitHub username/ID as primary identifier
-- NextAuth session stores:
-  - User name, email, avatar
-  - GitHub access token
-  - User ID (GitHub)
+**Session Management:**
+- NextAuth JWT strategy
+  - Token stored in secure, httpOnly cookie
+  - Payload includes: user ID, GitHub access token, email
+  - Secret: `NEXTAUTH_SECRET` (required)
 
-## Payments & Subscriptions
+**Callback URL:**
+- Standard: `/api/auth/callback/github`
+- Configured in `NEXTAUTH_URL`
 
-**Payment Processor - Stripe:**
-- Service: Stripe
-- What it's used for: Credit purchases, subscription management
-- SDK: `stripe` v20.1.2 (server), `@stripe/stripe-js` v8.6.1 (client)
-- Configuration: `lib/stripe.ts`
-- Credentials:
-  - `STRIPE_SECRET_KEY` (server-side only)
-  - `STRIPE_PRO_MONTHLY_PRICE_ID`
-  - `STRIPE_PRO_YEARLY_PRICE_ID`
-- Subscription plans:
-  - PRO_MONTHLY: $499/month → 50 credits
-  - PRO_YEARLY: $4790/year → 600 credits
-- Credit packs: 10, 25, 50, 100 credits at $99, $199, $349, $599
-- Webhooks: `/api/webhooks/stripe` for subscription events
-- Customer tracking: `User.stripeCustomerId`, `User.stripeSubscriptionId`
+## Payment Processing
+
+**Stripe Integration:**
+- Card payments and subscriptions
+  - SDK: `stripe` (server-side), `@stripe/stripe-js` (client-side)
+  - Auth: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+  - Webhook: `STRIPE_WEBHOOK_SECRET`
+  - Service: `lib/stripe.ts`
+
+**Payment Operations:**
+- One-time credit packages (10, 25, 50, 100+ credits)
+- Annual subscription (unlimited credits)
+- Currency: Danish Krone (DKK)
+- Checkout: `createCreditPackageCheckout()`, `createSubscriptionCheckout()`
+- Billing portal: `createPortalSession()`
+
+**Webhook Handling:**
+- Endpoint: `app/api/stripe/webhook` (listener for checkout.session.completed, etc.)
+- Idempotency: Event deduplication via `StripeEvent` table
+- Persistence: Updates user credits and subscription in Prisma
+
+**Credit System:**
+- Cost tracking via `CreditLedger` table
+- Operations: DEEP_PROFILE (278), OUTREACH (463), FULL_ANALYSIS (741) credits
+- EUR conversion: 0.54 per credit (historical)
 
 ## Monitoring & Observability
 
-**Error Tracking:**
-- Custom implementation: `services/logger.ts`
-- Audit logging: Immutable logs in localStorage (`apex_logs`) for EU AI Act compliance
-- Console logging for development
+**Error Tracking & Performance:**
+- Sentry (Next.js integration via `@sentry/nextjs`)
+  - DSN: `SENTRY_DSN` (server), `NEXT_PUBLIC_SENTRY_DSN` (client)
+  - Config files:
+    - `sentry.client.config.ts` - Client-side tracking
+    - `sentry.server.config.ts` - Server-side tracking
+    - `sentry.edge.config.ts` - Edge runtime tracking
+  - Features: Performance monitoring (100% trace rate), session replay (10% normal, 100% on error)
+  - Enabled: Production only
+  - Auth token: `SENTRY_AUTH_TOKEN` for source map uploads during build
 
-**Logs:**
-- localStorage-based event logging
-- AuditEventType enum tracks: DEEP_PROFILE, OUTREACH, etc.
-- Candidate-level audit trail
+**Logging:**
+- Console-based (allowed: warn, error, info)
+- Service: `services/logger.ts` for structured logging
+- Audit logs: `apex_logs` persisted in Prisma
+
+**Analytics:**
+- None configured (placeholder: `app/api/analytics`)
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Vercel (recommended for Next.js)
-- Alternative: Docker via standalone mode (`output: "standalone"` in next.config.ts)
+- Vercel (native Next.js platform - recommended)
+- Self-hosted Node.js (Docker, traditional servers)
 
-**CI Pipeline:**
-- GitHub Actions (`.github/workflows/ci.yml`)
-- Checks: ESLint, TypeScript type checking, build verification, security scan (npm audit, TruffleHog)
+**Build Pipeline:**
+- `npm run build` - Runs `prisma generate` then `next build`
+- Type checking: `npm run type-check`
+- Linting: `npm run lint`
+- Testing: `npm run test:run` (Vitest)
 
-**Deployment:**
-- Next.js standalone mode (no Node.js required on server)
-- Environment variables injected at runtime
+**Pre-commit Hooks:**
+- Husky integration (`prepare: husky` in package.json)
+- Pre-commit hook runs Vitest
 
-## Environment Configuration
+**Source Map Uploads:**
+- Sentry auth token required for build-time upload
+- Configuration in `next.config.ts` with Sentry wrapping
 
-**Required environment variables:**
-- `GEMINI_API_KEY` - Google Gemini API (required for AI)
-- `FIRECRAWL_API_KEY` - Firecrawl API (required for job scraping)
-- `NEXTAUTH_SECRET` - NextAuth JWT signing secret
-- `GITHUB_CLIENT_ID` - GitHub OAuth client ID
-- `GITHUB_CLIENT_SECRET` - GitHub OAuth client secret
-- `STRIPE_SECRET_KEY` - Stripe secret key (for payments)
+## Email Service
 
-**Optional environment variables:**
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase URL (for persistent storage)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
-- `SUPABASE_SERVICE_KEY` - Supabase service role key
-- `BRIGHTDATA_API_KEY` - BrightData API (for LinkedIn extraction)
-- `OPENROUTER_API_KEY` - OpenRouter fallback API
-- `STRIPE_PRO_MONTHLY_PRICE_ID` - Stripe monthly price ID
-- `STRIPE_PRO_YEARLY_PRICE_ID` - Stripe yearly price ID
-- `DATABASE_URL` - Prisma database connection string
+**Resend - Email Sending:**
+- SDK: `resend`
+- Auth: `RESEND_API_KEY`
+- From address: `RESEND_FROM_EMAIL` (must be verified domain or use `onboarding@resend.dev`)
+- Service: `lib/resend.ts`
+- Function: `sendOutreachEmail()` for outreach messaging
+- Pricing: 3,000 free emails/month (no credit card required)
+- API: `https://api.resend.com`
 
-**Secrets location:**
-- `.env` file (local development, not committed)
-- Vercel Secrets (production)
-- Environment variable injection at build/runtime
+## ATS Integration
 
-**Client-accessible secrets:**
-- Prefixed with `NEXT_PUBLIC_` for client-side consumption
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+**Team Tailor (Danish Market):**
+- Purpose: Export RecruitOS candidates to Team Tailor ATS
+- API: Team Tailor REST API v1
+- Auth: `TEAMTAILOR_API_TOKEN` (API token from Team Tailor settings)
+- Base URL: `https://api.teamtailor.com` (configurable via env)
+- Service: `services/teamTailorService.ts`
+- Candidate export: Convert Candidate model → Team Tailor candidate format
+- Features:
+  - First name / last name mapping
+  - Email and phone fields
+  - LinkedIn URL export
+  - Resume text / pitch export
+  - Tags and custom fields
+  - Job relationship linking
+  - Retry logic: 3 attempts with exponential backoff
+- Market: Critical for Danish recruitment workflow
 
 ## Webhooks & Callbacks
 
 **Incoming Webhooks:**
-- `/api/webhooks/stripe` - Stripe subscription/payment events
-  - Triggers: subscription creation, update, deletion, payment success
+- Stripe: `app/api/stripe/webhook` (payment events)
+  - Types: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.deleted`
+  - Idempotency: Stripe event ID deduplication
+
+- LinkedIn Extension: `app/api/linkedin/*` (extension ingestion)
+  - Message sync: `app/api/linkedin/message`
+  - Candidate import: `app/api/linkedin/candidate`
+  - Auth: `RECRUITOS_EXTENSION_API_KEY` header validation
 
 **Outgoing Webhooks:**
 - None configured
 
-**OAuth Callbacks:**
-- `/api/auth/[...nextauth]` - NextAuth OAuth flow
-- Redirect URIs: Configured in GitHub OAuth app settings
+## External Configuration
 
-## API Routes
+**Required Environment Variables (Summary):**
 
-**Authentication:**
-- `GET/POST /api/auth/[...nextauth]` - NextAuth OAuth handler
+*Tier: Critical (app non-functional without)*
+```
+GEMINI_API_KEY=
+FIRECRAWL_API_KEY=
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+GITHUB_ID= (or GITHUB_CLIENT_ID)
+GITHUB_SECRET= (or GITHUB_CLIENT_SECRET)
+DATABASE_URL=postgresql://...
+DIRECT_DATABASE_URL=postgresql://...
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+```
 
-**Search & Discovery:**
-- `GET /api/search` - Developer search endpoint
-- `POST /api/developers/[username]` - Public candidate profile endpoint
+*Tier: Important (specific features unavailable without)*
+```
+OPENROUTER_API_KEY=         # Fallback AI
+BRIGHTDATA_API_KEY=         # LinkedIn extraction
+RESEND_API_KEY=             # Email outreach
+TEAMTAILOR_API_TOKEN=       # ATS export
+RECRUITOS_EXTENSION_API_KEY= # Extension sync
+```
 
-**Candidate Management:**
-- `GET /api/profile/analyze` - AI analysis endpoint
-- `POST /api/deepresearch` - Deep research/enrichment
+*Tier: Optional (monitoring & debugging)*
+```
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
+SENTRY_AUTH_TOKEN=
+NEXT_PUBLIC_SUPABASE_URL=    # Legacy features
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
+```
 
-**Credits & Payments:**
-- `GET /api/credits` - Credit balance and usage
-- `POST /api/checkout` - Create Stripe checkout session
-- `POST /api/webhooks/stripe` - Stripe webhook handler
-
-**Outreach:**
-- `POST /api/outreach` - Generate personalized message
-
-**Third-party Integrations:**
-- `POST /api/brightdata/trigger` - Trigger LinkedIn scrape
-- `POST /api/brightdata/progress` - Check scrape progress
-- `POST /api/brightdata/snapshot` - Retrieve scrape result
-- `POST /api/linkedin-connection` - LinkedIn connection analysis
-- `GET /api/github/signals` - Behavioral signals (open to work detection)
-
-**Team Collaboration:**
-- `GET/POST /api/team` - Create/list teams
-- `GET/PUT/DELETE /api/team/[teamId]` - Team CRUD
-- `POST/DELETE /api/team/[teamId]/members` - Team member management
-- `GET/POST /api/team/[teamId]/pipelines` - Shared pipelines
-
-**Deep Research:**
-- `POST /api/deep-research` - Extended research and enrichment
-
-## Data Flow
-
-**Candidate Search:**
-1. User enters natural language query → GitHub search intelligence normalizes it
-2. Query sent to `lib/github.ts` which uses Octokit to search GitHub
-3. Results enriched with location, experience, skills
-4. User can analyze individual profile
-
-**Profile Analysis:**
-1. User selects candidate → Firecrawl scrapes job description context
-2. GitHub profile data + job context sent to Gemini AI
-3. AI returns: alignment score (0-100), skill breakdown, psychometric profile
-4. Results stored in localStorage, optional Supabase sync
-5. Credits deducted from user account
-
-**LinkedIn Enrichment (Optional):**
-1. User provides LinkedIn URL → BrightData scrapes profile
-2. Progress polled every 3 seconds (max 180 seconds)
-3. Network graph built from connections
-4. Data integrated with GitHub analysis
-
-**Payments:**
-1. User purchases credits → Stripe checkout session created
-2. Payment processed → Webhook triggers `/api/webhooks/stripe`
-3. Credits added to user account
+**Secrets Location:**
+- Development: `.env` (git-ignored)
+- Production: Platform environment variables (Vercel, Docker secrets, etc.)
+- Never commit secrets to version control
 
 ---
 
-*Integration audit: 2026-01-24*
+*Integration audit: 2026-02-16*
