@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       isPremium: (profile.isPremium as boolean) || false,
       ...(hasAdvancedProfile ? { advancedProfile: advancedProfile as unknown as Prisma.InputJsonValue } : {}),
       capturedAt: capturedAt ? new Date(capturedAt as string) : new Date(),
+      linkedinFetchedAt: new Date(),
     };
 
     // Check for existing candidate

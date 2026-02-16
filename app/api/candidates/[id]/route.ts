@@ -188,6 +188,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.rawProfileText !== undefined)
       data.rawProfileText = body.rawProfileText;
 
+    // Data freshness timestamps
+    if (body.githubFetchedAt !== undefined)
+      data.githubFetchedAt = new Date(body.githubFetchedAt);
+    if (body.linkedinFetchedAt !== undefined)
+      data.linkedinFetchedAt = new Date(body.linkedinFetchedAt);
+
     // Verify ownership before updating (userId is guaranteed by auth check above)
     const existing = await prisma.candidate.findFirst({
       where: { id, userId },

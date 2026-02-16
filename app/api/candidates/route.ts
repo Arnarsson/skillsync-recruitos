@@ -188,6 +188,8 @@ export async function POST(request: NextRequest) {
 
         // Timestamps
         capturedAt: body.capturedAt ? new Date(body.capturedAt) : new Date(),
+        githubFetchedAt: body.sourceType === "GITHUB" ? new Date() : null,
+        linkedinFetchedAt: body.sourceType === "LINKEDIN" ? new Date() : null,
       },
     });
 

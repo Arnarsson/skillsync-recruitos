@@ -187,6 +187,10 @@ model Candidate {
   isPremium          Boolean?
   rawProfileText     String?
 
+  // Data freshness tracking
+  githubFetchedAt   DateTime?
+  linkedinFetchedAt DateTime?
+
   // Metadata
   capturedAt      DateTime  @default(now())
   createdAt       DateTime  @default(now())
