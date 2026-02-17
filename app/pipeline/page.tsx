@@ -304,7 +304,7 @@ export default function PipelinePage() {
           .map(s => s.name.toLowerCase());
         setMustHaveSkills(mustHaves);
         setHardRequirementsConfig(config.hardRequirements || undefined);
-        setEnforceHardRequirements(mustHaves.length > 0);
+        setEnforceHardRequirements(false); // Always default to broad match
       } catch {}
     }
   }, []);
