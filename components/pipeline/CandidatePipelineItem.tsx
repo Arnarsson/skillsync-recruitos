@@ -533,11 +533,23 @@ export function CandidatePipelineItem({
                       Why {candidate.alignmentScore}%?
                     </h4>
                     <div className="space-y-2">
-                      {/* Base fit */}
-                      <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-muted/30">
-                        <span className="text-muted-foreground">Profile baseline</span>
-                        <span className="font-semibold">{normalizedScoreBreakdown.base}%</span>
-                      </div>
+                      {/* Base fit - expandable */}
+                      <details className="group">
+                        <summary className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-muted/30 cursor-pointer hover:bg-muted/40 transition-colors list-none">
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform group-open:rotate-180" />
+                            <span className="text-muted-foreground">Profile baseline</span>
+                          </div>
+                          <span className="font-semibold">{normalizedScoreBreakdown.base}%</span>
+                        </summary>
+                        <div className="mt-2 px-3 py-2 text-xs text-muted-foreground bg-muted/10 rounded border border-muted/20">
+                          <p className="leading-relaxed">
+                            We analyze their GitHub profile (languages used, project types, activity patterns, experience level)
+                            and compare it against your job requirements to establish a baseline compatibility score.
+                            This score increases when they match specific required skills or location preferences.
+                          </p>
+                        </div>
+                      </details>
                       {/* Skills match */}
                       {normalizedScoreBreakdown.skills > 0 && (
                         <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-green-500/5 border border-green-500/10">
