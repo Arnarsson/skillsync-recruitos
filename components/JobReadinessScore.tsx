@@ -346,12 +346,12 @@ export function OutreachTiming({ candidateId, readinessInput, compact = false, c
   // ===== COMPACT: Thermometer + one-line reason (pipeline card) =====
   if (compact) {
     return (
-      <div className={cn("rounded-lg border p-3", config.borderColor, config.bgColor, className)}>
+      <div className={cn("rounded-lg border p-2.5 sm:p-3", config.borderColor, config.bgColor, className)}>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Outreach Timing
           </span>
-          <span className={cn("text-xs font-semibold", config.textColor)}>
+          <span className={cn("text-[10px] sm:text-xs font-semibold", config.textColor)}>
             {config.label}
           </span>
         </div>
@@ -368,7 +368,7 @@ export function OutreachTiming({ candidateId, readinessInput, compact = false, c
         </div>
 
         {/* One-line reason */}
-        <p className="text-xs text-muted-foreground leading-snug">
+        <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug">
           {summary}
         </p>
       </div>

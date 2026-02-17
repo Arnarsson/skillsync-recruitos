@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   Expandable,
@@ -36,6 +37,8 @@ import {
   Lock,
   Eye,
   Activity,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -482,13 +485,34 @@ export function CandidatePipelineItem({
                   className="mb-2"
                 />
 
-                {/* Buildprint Strip */}
+                {/* GitHub Activity Highlights */}
                 {githubAnalysis && (
-                  <div className="pt-2 pb-3 border-t mb-3">
-                    <BuildprintStrip
-                      githubAnalysis={githubAnalysis}
-                      userProfile={{ totalStars: candidate.skills?.length || 0 }}
-                    />
+                  <div className="pt-3 pb-3 border-t mb-3">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                      GitHub Activity
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 text-xs">
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.impact?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Impact</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.collaboration?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Teamwork</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.consistency?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Activity</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.complexity?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Depth</div>
+                      </div>
+                      <div className="text-center col-span-3 sm:col-span-1">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.ownership?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Leadership</div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -501,70 +525,67 @@ export function CandidatePipelineItem({
                   ))}
                 </div>
 
-                {/* Score Breakdown */}
+                {/* Match Score Factors */}
                 {candidate.scoreBreakdown && normalizedScoreBreakdown && (
                   <div className="mb-6">
-                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                      <Target className="w-4 h-4 text-primary" />
-                      {t("candidate.scoreBreakdown")}
+                    <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <Target className="w-4 h-4" />
+                      Why {candidate.alignmentScore}%?
                     </h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="p-2 rounded-lg bg-muted/50 text-center">
-                        <div className="text-lg font-bold text-muted-foreground">
-                          {normalizedScoreBreakdown.base}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{t("candidate.base")}</div>
+                    <div className="space-y-2">
+                      {/* Base fit */}
+                      <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-muted/30">
+                        <span className="text-muted-foreground">Profile baseline</span>
+                        <span className="font-semibold">{normalizedScoreBreakdown.base}%</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-green-500/10 text-center">
-                        <div className="text-lg font-bold text-green-500">
-                          +{normalizedScoreBreakdown.skills}
+                      {/* Skills match */}
+                      {normalizedScoreBreakdown.skills > 0 && (
+                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-green-500/5 border border-green-500/10">
+                          <span className="text-green-600">Has required skills</span>
+                          <span className="font-semibold text-green-600">+{normalizedScoreBreakdown.skills}%</span>
                         </div>
-                        <div className="text-[10px] text-muted-foreground">{t("score.skills")}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-blue-500/10 text-center">
-                        <div className="text-lg font-bold text-blue-500">
-                          +{normalizedScoreBreakdown.preferred}
+                      )}
+                      {/* Preferred bonus */}
+                      {normalizedScoreBreakdown.preferred > 0 && (
+                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-blue-500/5 border border-blue-500/10">
+                          <span className="text-blue-600">Nice-to-have skills</span>
+                          <span className="font-semibold text-blue-600">+{normalizedScoreBreakdown.preferred}%</span>
                         </div>
-                        <div className="text-[10px] text-muted-foreground">{t("candidate.preferred")}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-yellow-500/10 text-center relative group">
-                        <div className="text-lg font-bold text-yellow-500">
-                          +{normalizedScoreBreakdown.location}
+                      )}
+                      {/* Location */}
+                      {normalizedScoreBreakdown.location > 0 ? (
+                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-yellow-500/5 border border-yellow-500/10">
+                          <span className="text-yellow-600">Location match</span>
+                          <span className="font-semibold text-yellow-600">+{normalizedScoreBreakdown.location}%</span>
                         </div>
-                        <div className="text-[10px] text-muted-foreground">{t("score.location")}</div>
-                        {/* Location score tooltip for 0% */}
-                        {normalizedScoreBreakdown.location === 0 && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
-                            <div className="bg-popover text-popover-foreground text-xs p-2 rounded-lg shadow-lg border max-w-[200px] whitespace-normal">
-                              <div className="flex items-center gap-1 mb-1">
-                                <Info className="w-3 h-3" />
-                                {t("score.remoteEligible")}
-                              </div>
-                              <p className="text-muted-foreground">
-                                {lang === "da"
-                                  ? "Kandidatens lokation matcher ikke direkte, men kan være remote-kompatibel."
-                                  : "Location doesn't match directly, but may be remote-compatible."}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-muted/10 group relative">
+                          <span className="text-muted-foreground/60">Different location (remote OK?)</span>
+                          <span className="font-semibold text-muted-foreground/60">+0%</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Skills Match */}
+                    {/* Skills Match Summary */}
                     {((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
                       (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
-                      <div className="mt-3">
-                        <div className="text-xs font-medium text-muted-foreground mb-2">
-                          {t("candidate.requiredSkills")} ({candidate.scoreBreakdown.requiredMatched?.length || 0}/
-                          {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
-                            (candidate.scoreBreakdown.requiredMissing?.length || 0)})
+                      <div className="mt-4 pt-3 border-t">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t("candidate.requiredSkills")}
+                          </span>
+                          <span className="text-xs font-semibold text-foreground">
+                            {candidate.scoreBreakdown.requiredMatched?.length || 0} of{" "}
+                            {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                              (candidate.scoreBreakdown.requiredMissing?.length || 0)}{" "}
+                            matched
+                          </span>
                         </div>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                           {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
                             <Badge
                               key={skill}
-                              className="bg-green-500/20 text-green-600 border-green-500/30 text-xs gap-1"
+                              className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal"
                             >
                               <Check className="w-3 h-3" />
                               {skill}
@@ -574,7 +595,7 @@ export function CandidatePipelineItem({
                             <Badge
                               key={skill}
                               variant="outline"
-                              className="text-muted-foreground text-xs gap-1 opacity-60"
+                              className="text-muted-foreground/50 text-xs gap-1 opacity-50 font-normal"
                             >
                               <AlertTriangle className="w-3 h-3" />
                               {skill}
@@ -672,20 +693,21 @@ export function CandidatePipelineItem({
                   </div>
                 </div>
 
-                {/* Strengths & Concerns - Clickable with Evidence */}
+                {/* Strengths & Concerns - More spacious layout */}
                 {(deepAnalysis?.strengths?.length ||
                   deepAnalysis?.concerns?.length ||
                   candidate.keyEvidence?.length ||
                   candidate.risks?.length) && (
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     {(deepAnalysis?.strengths && deepAnalysis.strengths.length > 0) ||
                     (candidate.keyEvidence && candidate.keyEvidence.length > 0) ? (
                       <div>
-                        <h4 className="text-xs uppercase text-muted-foreground mb-2">
+                        <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 text-green-500" />
                           {t("candidate.keyStrengths")}
                         </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {(deepAnalysis?.strengths || candidate.keyEvidence || []).slice(0, 3).map((strength, i) => {
+                        <div className="flex flex-wrap gap-2">
+                          {(deepAnalysis?.strengths || candidate.keyEvidence || []).slice(0, 4).map((strength, i) => {
                             const isEvidenceItem = typeof strength === 'object' && strength !== null;
                             const text = isEvidenceItem ? (strength as EvidenceItem).text : String(strength);
                             const hasEvidence = isEvidenceItem && (strength as EvidenceItem).sourceUrl;
@@ -694,13 +716,14 @@ export function CandidatePipelineItem({
                               <Badge
                                 key={i}
                                 variant="outline"
-                                className={`text-xs text-green-600 border-green-500/30 ${
-                                  hasEvidence ? 'cursor-pointer hover:bg-green-500/10' : ''
-                                }`}
+                                className={cn(
+                                  "text-xs text-green-700 bg-green-500/5 border-green-500/20 px-2.5 py-1",
+                                  hasEvidence && 'cursor-pointer hover:bg-green-500/10 hover:border-green-500/30'
+                                )}
                                 onClick={hasEvidence ? () => setSelectedEvidence(strength as EvidenceItem) : undefined}
                               >
                                 {text}
-                                {hasEvidence && <Eye className="w-2.5 h-2.5 ml-1" />}
+                                {hasEvidence && <Eye className="w-3 h-3 ml-1 opacity-50" />}
                               </Badge>
                             );
                           })}
@@ -710,11 +733,12 @@ export function CandidatePipelineItem({
                     {(deepAnalysis?.concerns && deepAnalysis.concerns.length > 0) ||
                     (candidate.risks && candidate.risks.length > 0) ? (
                       <div>
-                        <h4 className="text-xs uppercase text-muted-foreground mb-2">
+                        <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-yellow-500" />
                           {t("candidate.areasToExplore")}
                         </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {(deepAnalysis?.concerns || candidate.risks || []).slice(0, 3).map((concern, i) => {
+                        <div className="flex flex-wrap gap-2">
+                          {(deepAnalysis?.concerns || candidate.risks || []).slice(0, 4).map((concern, i) => {
                             const isEvidenceItem = typeof concern === 'object' && concern !== null;
                             const text = isEvidenceItem ? (concern as EvidenceItem).text : String(concern);
                             const hasEvidence = isEvidenceItem && (concern as EvidenceItem).sourceUrl;
@@ -723,13 +747,14 @@ export function CandidatePipelineItem({
                               <Badge
                                 key={i}
                                 variant="outline"
-                                className={`text-xs text-yellow-600 border-yellow-500/30 ${
-                                  hasEvidence ? 'cursor-pointer hover:bg-yellow-500/10' : ''
-                                }`}
+                                className={cn(
+                                  "text-xs text-yellow-700 bg-yellow-500/5 border-yellow-500/20 px-2.5 py-1",
+                                  hasEvidence && 'cursor-pointer hover:bg-yellow-500/10 hover:border-yellow-500/30'
+                                )}
                                 onClick={hasEvidence ? () => setSelectedEvidence(concern as EvidenceItem) : undefined}
                               >
                                 {text}
-                                {hasEvidence && <Eye className="w-2.5 h-2.5 ml-1" />}
+                                {hasEvidence && <Eye className="w-3 h-3 ml-1 opacity-50" />}
                               </Badge>
                             );
                           })}
