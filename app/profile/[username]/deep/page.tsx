@@ -1557,13 +1557,13 @@ export default function DeepProfilePage() {
                   </Card>
                 )}
 
-                {/* Behavioral Profile */}
+                {/* Candidate Insights */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('psychometric')}>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
-                          Behavioral Profile
+                          Candidate Insights
                         </CardTitle>
                         {expandedSections.psychometric ? (
                           <ChevronUp className="w-4 h-4 text-muted-foreground" />
