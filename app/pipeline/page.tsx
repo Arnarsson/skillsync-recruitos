@@ -289,7 +289,7 @@ export default function PipelinePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Hard requirements filter - exclude candidates missing must-have skills
-  const [enforceHardRequirements, setEnforceHardRequirements] = useState(true);
+  const [enforceHardRequirements, setEnforceHardRequirements] = useState(false);
   const [mustHaveSkills, setMustHaveSkills] = useState<string[]>([]);
   const [hardRequirementsConfig, setHardRequirementsConfig] = useState<HardRequirementsConfig | undefined>(undefined);
 
