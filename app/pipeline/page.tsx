@@ -378,10 +378,11 @@ export default function PipelinePage() {
       if (isDemoMode) {
         console.log("[Pipeline] Demo mode - loading real demo profiles");
         let demoJobContext = {
-          title: "Senior Full-Stack Engineer",
-          company: "FinTech Startup",
-          requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL"],
-          location: "Remote",
+          title: "Staff Frontend Infrastructure Engineer",
+          company: "Acme Corp",
+          requiredSkills: ["JavaScript", "TypeScript", "Node.js", "Open Source"],
+          preferredSkills: ["React", "testing", "performance optimization"],
+          location: "Remote (Global)",
         };
         try {
           const stored = localStorage.getItem("apex_job_context");
