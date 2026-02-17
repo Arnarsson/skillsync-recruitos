@@ -962,6 +962,14 @@ export default function DeepProfilePage() {
         {candidate.id && (
           <JobReadinessScore
             candidateId={candidate.id}
+            readinessInput={{
+              candidateId: candidate.id,
+              githubUsername: username,
+              currentCompany: candidate.company || undefined,
+              currentRole: candidate.currentRole || undefined,
+              skills: candidate.skills,
+              location: candidate.location || undefined,
+            }}
             className="mb-6"
           />
         )}

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { ReadinessScore, PillarName } from "@/services/jobReadiness/types";
+import type { ReadinessScore, PillarName, ReadinessInput } from "@/services/jobReadiness/types";
 import { PILLAR_WEIGHTS } from "@/services/jobReadiness/types";
+import { computeReadinessScore } from "@/services/jobReadiness/engine";
 
 const LEVEL_CONFIG = {
   hot: { color: "bg-red-500", textColor: "text-red-700", bgLight: "bg-red-50", border: "border-red-200", label: "Hot" },
@@ -24,11 +25,13 @@ const PILLAR_LABELS: Record<PillarName, string> = {
 
 interface JobReadinessScoreProps {
   candidateId: string;
+  /** Optional readiness input for client-side computation (when candidate not in DB) */
+  readinessInput?: ReadinessInput;
   compact?: boolean;
   className?: string;
 }
 
-export function JobReadinessScore({ candidateId, compact = false, className }: JobReadinessScoreProps) {
+export function JobReadinessScore({ candidateId, readinessInput, compact = false, className }: JobReadinessScoreProps) {
   const [readiness, setReadiness] = useState<ReadinessScore | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -37,18 +40,29 @@ export function JobReadinessScore({ candidateId, compact = false, className }: J
   useEffect(() => {
     async function fetchReadiness() {
       try {
+        // Try API first (works for DB-backed candidates)
         const res = await fetch(`/api/candidates/${candidateId}/readiness`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setReadiness(data);
       } catch {
-        setError("Could not compute readiness");
+        // Fall back to client-side computation if we have input data
+        if (readinessInput) {
+          try {
+            const result = await computeReadinessScore(readinessInput);
+            setReadiness(result);
+          } catch {
+            setError("Could not compute readiness");
+          }
+        } else {
+          setError("Could not compute readiness");
+        }
       } finally {
         setLoading(false);
       }
     }
     fetchReadiness();
-  }, [candidateId]);
+  }, [candidateId, readinessInput]);
 
   if (loading) {
     return (

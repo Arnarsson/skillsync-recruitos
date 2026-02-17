@@ -45,6 +45,49 @@ import {
 } from "@/lib/candidate-identity";
 import { DataSourceBanner } from "@/components/DataSourceBanner";
 import { JobReadinessScore } from "@/components/JobReadinessScore";
+import type { ReadinessInput } from "@/services/jobReadiness/types";
+
+/** Build ReadinessInput from candidate data (works for both DB and demo candidates) */
+function buildReadinessInput(candidate: Candidate): ReadinessInput {
+  const input: ReadinessInput = {
+    candidateId: candidate.id,
+    githubUsername: candidate.githubUsername || candidate.username,
+    currentCompany: candidate.company || undefined,
+    currentRole: candidate.currentRole || undefined,
+    skills: candidate.skills,
+    location: candidate.location || undefined,
+  };
+
+  // Map demo profile fields to GitHub profile format
+  const c = candidate as any;
+  if (c.followers != null || c.publicRepos != null) {
+    input.githubProfile = {
+      login: candidate.githubUsername || candidate.username || candidate.name,
+      public_repos: c.publicRepos ?? 0,
+      followers: c.followers ?? 0,
+      following: c.following ?? 0,
+      created_at: c.createdAt || '2020-01-01T00:00:00Z',
+      bio: c.bio ?? null,
+      company: candidate.company || null,
+    };
+  }
+
+  // Map topRepos to engine format
+  if (c.topRepos?.length) {
+    input.githubRepos = c.topRepos.map((r: any) => ({
+      name: r.name || r.fullName?.split('/')?.pop() || '',
+      language: r.language || null,
+      stargazers_count: r.stars ?? r.stargazers_count ?? 0,
+      forks_count: r.forks ?? r.forks_count ?? 0,
+      pushed_at: r.updatedAt || r.pushed_at || new Date().toISOString(),
+      created_at: r.createdAt || r.created_at || '2023-01-01T00:00:00Z',
+      topics: r.topics || [],
+      fork: r.fork ?? false,
+    }));
+  }
+
+  return input;
+}
 
 interface ScoreBreakdown {
   requiredMatched: string[];
@@ -434,6 +477,7 @@ export function CandidatePipelineItem({
                 {/* Job Readiness Score */}
                 <JobReadinessScore
                   candidateId={candidate.id}
+                  readinessInput={buildReadinessInput(candidate)}
                   compact
                   className="mb-2"
                 />
