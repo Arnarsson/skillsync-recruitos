@@ -380,8 +380,13 @@ export function OutreachTiming({ candidateId, readinessInput, compact = false, c
     <div className={cn("rounded-lg border", config.borderColor, config.bgColor, className)}>
       {/* Header */}
       <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between p-4 text-left"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}
+        className="flex w-full items-center justify-between p-4 text-left cursor-pointer hover:bg-muted/20 transition-colors rounded-t-lg"
+        type="button"
       >
         <div>
           <div className="flex items-center gap-2 mb-1">
