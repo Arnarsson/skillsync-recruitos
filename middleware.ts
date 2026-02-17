@@ -48,7 +48,7 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
 function getSecurityHeaders(): Record<string, string> {
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://sourcetrace.vercel.app https://www.sourcetrace.xyz",
+    "script-src 'self' 'unsafe-inline' https://sourcetrace.vercel.app https://www.sourcetrace.xyz https://vercel.live",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
     "img-src 'self' data: https://avatars.githubusercontent.com https://api.dicebear.com https://ui-avatars.com https://static.licdn.com https://media.licdn.com",
