@@ -67,7 +67,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error("Candidate fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch candidate" },
+      {
+        error: "Failed to fetch candidate",
+        details: error instanceof Error ? error.message : String(error),
+        code: (error as any)?.code,
+      },
       { status: 500 }
     );
   }
