@@ -66,7 +66,8 @@ export default function RootLayout({
         {process.env.NODE_ENV === "production" && (
           <Script
             src="https://www.sourcetrace.xyz/t.js"
-            data-site="0ec61172-ff11-4d5a-a00b-41050b0b5dd4|st_b0bc9f0109ab46a3ba5ef5e7272be047"
+            data-site="0ec61172-ff11-4d5a-a00b-41050b0b5dd4"
+            data-key="st_b0bc9f0109ab46a3ba5ef5e7272be047"
             strategy="afterInteractive"
           />
         )}
