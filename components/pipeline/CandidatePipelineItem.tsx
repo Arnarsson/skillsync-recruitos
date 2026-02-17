@@ -44,6 +44,7 @@ import {
   resolveProfileSlug,
 } from "@/lib/candidate-identity";
 import { DataSourceBanner } from "@/components/DataSourceBanner";
+import { JobReadinessScore } from "@/components/JobReadinessScore";
 
 interface ScoreBreakdown {
   requiredMatched: string[];
@@ -428,6 +429,13 @@ export function CandidatePipelineItem({
                   hasLinkedIn={candidate.source === "linkedin"}
                   className="pt-2 mb-3"
                   compact
+                />
+
+                {/* Job Readiness Score */}
+                <JobReadinessScore
+                  candidateId={candidate.id}
+                  compact
+                  className="mb-2"
                 />
 
                 {/* Buildprint Strip */}

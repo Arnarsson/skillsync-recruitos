@@ -73,6 +73,7 @@ import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
 import { DataSourceBanner } from "@/components/DataSourceBanner";
+import { JobReadinessScore } from "@/components/JobReadinessScore";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -956,6 +957,14 @@ export default function DeepProfilePage() {
           className="mb-6"
           compact
         />
+
+        {/* Job Readiness Score */}
+        {candidate.id && (
+          <JobReadinessScore
+            candidateId={candidate.id}
+            className="mb-6"
+          />
+        )}
 
         {/* Profile Hero */}
         <Card className="mb-8">

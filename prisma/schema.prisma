@@ -187,6 +187,9 @@ model Candidate {
   isPremium          Boolean?
   rawProfileText     String?
 
+  // Job Readiness Engine
+  jobReadiness      Json?     // ReadinessScore object from engine
+
   // Data freshness tracking
   githubFetchedAt   DateTime?
   linkedinFetchedAt DateTime?
