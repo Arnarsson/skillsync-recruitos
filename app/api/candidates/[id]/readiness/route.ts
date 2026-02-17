@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeReadinessScore } from "@/services/jobReadiness";
 import type { ReadinessInput } from "@/services/jobReadiness";
+import { createExternalFetchers } from "@/services/jobReadiness/fetchers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -47,8 +48,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       location: candidate.location || undefined,
     };
 
-    // Compute readiness score
-    const readiness = await computeReadinessScore(input);
+    // Compute readiness score with external fetchers
+    const fetchers = createExternalFetchers();
+    const readiness = await computeReadinessScore(input, fetchers);
 
     // Cache result
     await prisma.candidate.update({

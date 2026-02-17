@@ -18,3 +18,4 @@ export type {
 } from './types';
 
 export { PILLAR_WEIGHTS, PILLAR_NAMES, READINESS_LEVELS, getReadinessLevel } from './types';
+export { createExternalFetchers } from './fetchers';
