@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { AnalysisLoadingScramble } from "@/components/ui/loading-scramble";
 import ScoreBadge from "@/components/ScoreBadge";
 import { BuildprintStrip } from "@/components/pipeline/BuildprintStrip";
-import { ScoreExplainer } from "@/components/ScoreExplainer";
+
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import {
   MapPin,
@@ -173,7 +173,7 @@ export function CandidatePipelineItem({
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
-  const [showScoreExplainer, setShowScoreExplainer] = useState(false);
+
   const [githubAnalysis, setGithubAnalysis] = useState<any>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
 
@@ -228,11 +228,17 @@ export function CandidatePipelineItem({
 
     setIsLoadingAnalysis(true);
     try {
+      // If candidate already has buildprint data (demo profiles), use it directly
+      if (candidate.buildprint) {
+        setGithubAnalysis({ buildprint: candidate.buildprint });
+      }
+
       const lookupId = githubUsername || candidate.id;
       // Fetch both developer profile and GitHub deep analysis in parallel
+      // Skip GitHub deep fetch if we already have buildprint data
       const [profileRes, githubRes] = await Promise.all([
         fetch(`/api/developers/${lookupId}?deep=true`),
-        lookupId && !isUuidLike(lookupId)
+        !candidate.buildprint && lookupId && !isUuidLike(lookupId)
           ? fetch(`/api/github/deep?username=${lookupId}`)
           : Promise.resolve(new Response(null, { status: 204 })),
       ]);
@@ -263,19 +269,20 @@ export function CandidatePipelineItem({
             try {
               setGithubAnalysis(JSON.parse(raw));
             } catch {
-              console.warn("GitHub deep analysis returned non-JSON payload");
+              // Non-JSON response, ignore
             }
           }
         }
       }
-    } catch (error) {
-      console.error("Failed to fetch deep analysis:", error);
+    } catch {
+      // Silently handle — demo profiles work offline, live profiles degrade gracefully
     } finally {
       setIsLoadingAnalysis(false);
       setHasLoadedAnalysis(true);
     }
   }, [
     candidate.id,
+    candidate.buildprint,
     hasLoadedAnalysis,
     isLoadingAnalysis,
     candidate.persona?.archetype,
@@ -347,7 +354,6 @@ export function CandidatePipelineItem({
   }
 
   return (
-    <>
     <Expandable
       expandDirection="vertical"
       expandBehavior="push"
@@ -442,20 +448,9 @@ export function CandidatePipelineItem({
                   ) : null}
                 </div>
 
-                {/* Score - Clickable for explainer */}
+                {/* Score */}
                 <div className="flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowScoreExplainer(true);
-                    }}
-                    className="hover:scale-105 transition-transform cursor-pointer h-auto p-0"
-                    title="Click to see score breakdown"
-                  >
-                    <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
-                  </Button>
+                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
                 </div>
 
                 {/* Expand Indicator */}
@@ -814,13 +809,5 @@ export function CandidatePipelineItem({
         </div>
       )}
     </Expandable>
-
-    {/* Score Explainer Sheet */}
-    <ScoreExplainer
-      candidate={candidate}
-      isOpen={showScoreExplainer}
-      onClose={() => setShowScoreExplainer(false)}
-    />
-    </>
   );
 }

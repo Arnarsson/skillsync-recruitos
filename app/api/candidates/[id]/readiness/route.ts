@@ -37,6 +37,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Parse cached GitHub data
+    const githubData = candidate.githubData as any;
+
     // Build readiness input from candidate data
     const input: ReadinessInput = {
       candidateId: candidate.id,
@@ -46,6 +49,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       currentRole: candidate.currentRole || undefined,
       skills: Array.isArray(candidate.skills) ? candidate.skills as string[] : undefined,
       location: candidate.location || undefined,
+      // Include full GitHub data from cache for pillar analysis
+      githubProfile: githubData?.profile,
+      githubRepos: githubData?.repos,
+      githubEvents: githubData?.events,
     };
 
     // Compute readiness score with external fetchers

@@ -189,6 +189,7 @@ model Candidate {
 
   // Job Readiness Engine
   jobReadiness      Json?     // ReadinessScore object from engine
+  githubData        Json?     // Cached GitHub API data (profile, repos, events)
 
   // Data freshness tracking
   githubFetchedAt   DateTime?
