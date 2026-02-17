@@ -477,12 +477,12 @@ export function CandidatePipelineItem({
                   compact
                 />
 
-                {/* Job Readiness Score */}
+                {/* Outreach Timing - Full version for prominence */}
                 <JobReadinessScore
                   candidateId={candidate.id}
                   readinessInput={buildReadinessInput(candidate)}
-                  compact
-                  className="mb-2"
+                  compact={false}
+                  className="mb-4"
                 />
 
                 {/* GitHub Activity Highlights */}
@@ -525,97 +525,42 @@ export function CandidatePipelineItem({
                   ))}
                 </div>
 
-                {/* Match Score Factors */}
-                {candidate.scoreBreakdown && normalizedScoreBreakdown && (
+                {/* Skills Match */}
+                {candidate.scoreBreakdown && ((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
+                  (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
                   <div className="mb-6">
-                    <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-2">
-                      <Target className="w-4 h-4" />
-                      Why {candidate.alignmentScore}%?
-                    </h4>
-                    <div className="space-y-2">
-                      {/* Base fit - expandable */}
-                      <details className="group">
-                        <summary className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-muted/30 cursor-pointer hover:bg-muted/40 transition-colors list-none">
-                          <div className="flex items-center gap-2">
-                            <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform group-open:rotate-180" />
-                            <span className="text-muted-foreground">Profile baseline</span>
-                          </div>
-                          <span className="font-semibold">{normalizedScoreBreakdown.base}%</span>
-                        </summary>
-                        <div className="mt-2 px-3 py-2 text-xs text-muted-foreground bg-muted/10 rounded border border-muted/20">
-                          <p className="leading-relaxed">
-                            We analyze their GitHub profile (languages used, project types, activity patterns, experience level)
-                            and compare it against your job requirements to establish a baseline compatibility score.
-                            This score increases when they match specific required skills or location preferences.
-                          </p>
-                        </div>
-                      </details>
-                      {/* Skills match */}
-                      {normalizedScoreBreakdown.skills > 0 && (
-                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-green-500/5 border border-green-500/10">
-                          <span className="text-green-600">Has required skills</span>
-                          <span className="font-semibold text-green-600">+{normalizedScoreBreakdown.skills}%</span>
-                        </div>
-                      )}
-                      {/* Preferred bonus */}
-                      {normalizedScoreBreakdown.preferred > 0 && (
-                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-blue-500/5 border border-blue-500/10">
-                          <span className="text-blue-600">Nice-to-have skills</span>
-                          <span className="font-semibold text-blue-600">+{normalizedScoreBreakdown.preferred}%</span>
-                        </div>
-                      )}
-                      {/* Location */}
-                      {normalizedScoreBreakdown.location > 0 ? (
-                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-yellow-500/5 border border-yellow-500/10">
-                          <span className="text-yellow-600">Location match</span>
-                          <span className="font-semibold text-yellow-600">+{normalizedScoreBreakdown.location}%</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-muted/10 group relative">
-                          <span className="text-muted-foreground/60">Different location (remote OK?)</span>
-                          <span className="font-semibold text-muted-foreground/60">+0%</span>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        {t("candidate.requiredSkills")}
+                      </h4>
+                      <span className="text-xs font-semibold text-foreground">
+                        {candidate.scoreBreakdown.requiredMatched?.length || 0} of{" "}
+                        {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMissing?.length || 0)}{" "}
+                        matched
+                      </span>
                     </div>
-
-                    {/* Skills Match Summary */}
-                    {((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
-                      (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
-                      <div className="mt-4 pt-3 border-t">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t("candidate.requiredSkills")}
-                          </span>
-                          <span className="text-xs font-semibold text-foreground">
-                            {candidate.scoreBreakdown.requiredMatched?.length || 0} of{" "}
-                            {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
-                              (candidate.scoreBreakdown.requiredMissing?.length || 0)}{" "}
-                            matched
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
-                            <Badge
-                              key={skill}
-                              className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal"
-                            >
-                              <Check className="w-3 h-3" />
-                              {skill}
-                            </Badge>
-                          ))}
-                          {candidate.scoreBreakdown.requiredMissing?.map((skill) => (
-                            <Badge
-                              key={skill}
-                              variant="outline"
-                              className="text-muted-foreground/50 text-xs gap-1 opacity-50 font-normal"
-                            >
-                              <AlertTriangle className="w-3 h-3" />
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
+                        <Badge
+                          key={skill}
+                          className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                        >
+                          <Check className="w-3 h-3" />
+                          {skill}
+                        </Badge>
+                      ))}
+                      {candidate.scoreBreakdown.requiredMissing?.map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="outline"
+                          className="text-muted-foreground/40 text-xs gap-1 opacity-40 font-normal px-2.5 py-1"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
