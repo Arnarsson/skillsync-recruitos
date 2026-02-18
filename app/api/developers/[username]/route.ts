@@ -18,6 +18,42 @@ export async function GET(
     const profile = await getUserProfile(username, accessToken);
 
     if (!profile) {
+      // GitHub returned no profile — try DB fallback before 404
+      const dbCandidate = await prisma.candidate.findFirst({
+        where: {
+          OR: [
+            { githubUsername: username },
+            { id: username },
+          ],
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      if (dbCandidate) {
+        const parsedSkills = Array.isArray(dbCandidate.skills)
+          ? (dbCandidate.skills as string[])
+          : [];
+        return NextResponse.json({
+          user: {
+            login: dbCandidate.githubUsername || username,
+            name: dbCandidate.name || username,
+            avatar_url: dbCandidate.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(dbCandidate.name || username)}&background=random`,
+            bio: dbCandidate.headline || null,
+            location: dbCandidate.location || null,
+            company: dbCandidate.company || null,
+            public_repos: 0,
+            followers: 0,
+            following: 0,
+            created_at: dbCandidate.createdAt.toISOString(),
+          },
+          repos: [],
+          totalStars: 0,
+          skills: parsedSkills,
+          contributions: 0,
+          deep: false,
+        });
+      }
+
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
