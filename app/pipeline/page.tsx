@@ -1162,7 +1162,7 @@ export default function PipelinePage() {
     }
 
     return filtered;
-  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills, techStackFilter]);
+  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills, techStackFilter, hardRequirementsConfig]);
 
   // Convert candidates to Kanban format
   const kanbanCandidates: PipelineCandidate[] = useMemo(() => {
@@ -1251,7 +1251,9 @@ export default function PipelinePage() {
                 {jobContext?.company || "Your Candidates"} •{" "}
                 {loading || isInitializing
                   ? "Loading candidates…"
-                  : `Showing ${filteredCandidates.length} candidate${filteredCandidates.length !== 1 ? "s" : ""}`}
+                  : filteredCandidates.length < candidates.length
+                    ? `${filteredCandidates.length} of ${candidates.length} candidates (filtered)`
+                    : `${filteredCandidates.length} candidate${filteredCandidates.length !== 1 ? "s" : ""}`}
               </p>
               {mustHaveSkills.length > 0 && (
                 <Badge
