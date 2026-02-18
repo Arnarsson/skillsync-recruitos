@@ -17,8 +17,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
+    // Accept both Prisma ID and GitHub username as lookup key
     const candidate = await prisma.candidate.findFirst({
-      where: userId ? { id, userId } : { id },
+      where: userId
+        ? { OR: [{ id }, { githubUsername: id }], userId }
+        : { OR: [{ id }, { githubUsername: id }] },
     });
 
     if (!candidate) {

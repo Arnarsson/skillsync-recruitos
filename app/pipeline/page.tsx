@@ -431,7 +431,6 @@ export default function PipelinePage() {
       // Check if we just came from intake (fresh job context)
       const pendingAutoSearch = localStorage.getItem("apex_pending_auto_search");
       const freshFromIntake = pendingAutoSearch === "true";
-      console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
 
       // Local fallback candidates (used for QA/demo/offline continuity)
       let localCandidates: Candidate[] = [];
@@ -505,8 +504,6 @@ export default function PipelinePage() {
       const needsCandidates = existingCandidates.length === 0 || jobContextChanged || freshFromIntake;
       const shouldAutoSearch = hasRequiredSkills && needsCandidates;
 
-      console.log("[Pipeline] shouldAutoSearch:", shouldAutoSearch, "| hasSkills:", hasRequiredSkills, "| needsCandidates:", needsCandidates);
-
       if (shouldAutoSearch && parsedJobContext?.requiredSkills) {
         // Clear the pending flag
         localStorage.removeItem("apex_pending_auto_search");
@@ -550,49 +547,24 @@ export default function PipelinePage() {
                 skills?: string[];
                 score: number;
               }) => {
-                // Calculate alignment score based on job requirements
-                const userSkills = user.skills || [];
-                const userBio = user.bio || "";
-
-                // Simple inline scoring
-                const requiredSkills = jobReqs.requiredSkills || [];
-                const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
-                const userBioLower = userBio.toLowerCase();
-
-                const matchedRequired: string[] = [];
-                requiredSkills.forEach((skill: string) => {
-                  const skillLower = skill.toLowerCase();
-                  if (
-                    userSkillsLower.some((s: string) => s.includes(skillLower) || skillLower.includes(s)) ||
-                    userBioLower.includes(skillLower)
-                  ) {
-                    matchedRequired.push(skill);
+                const { score, breakdown } = calculateAlignmentScore(
+                  { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
+                  {
+                    requiredSkills: jobReqs.requiredSkills,
+                    preferredSkills: jobReqs.preferredSkills,
+                    location: jobReqs.location,
                   }
-                });
-
-                const baseScore = 50;
-                const skillsScore = requiredSkills.length > 0
-                  ? Math.round((matchedRequired.length / requiredSkills.length) * 35)
-                  : 0;
-                const score = Math.min(99, Math.max(30, baseScore + skillsScore));
+                );
 
                 return {
                   id: user.username,
+                  githubUsername: user.username,
                   name: user.name || user.username,
                   currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
                   company: user.company || "Independent",
                   location: user.location || "Remote",
                   alignmentScore: score,
-                  scoreBreakdown: {
-                    requiredMatched: matchedRequired,
-                    requiredMissing: requiredSkills.filter((s: string) => !matchedRequired.includes(s)),
-                    preferredMatched: [],
-                    locationMatch: "none" as const,
-                    baseScore,
-                    skillsScore,
-                    preferredScore: 0,
-                    locationScore: 0,
-                  },
+                  scoreBreakdown: breakdown,
                   avatar: user.avatar,
                   skills: user.skills || [],
                   createdAt: new Date().toISOString(),
@@ -607,14 +579,12 @@ export default function PipelinePage() {
               let savedCount = 0;
               for (const c of newCandidates) {
                 try {
-                  await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
+                  await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB', githubUsername: (c as any).githubUsername } as any);
                   savedCount++;
                 } catch (saveErr) {
-                  // Log the real error (e.g. 409 duplicate or auth failure) so it's visible in console
                   console.warn("[Pipeline] Could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
                 }
               }
-              console.log("[Pipeline] Persisted", savedCount, "of", newCandidates.length, "candidates to API (rest are shown in-memory)");
             }
           } catch (error) {
             console.error("[Pipeline] Auto-search error:", error);
@@ -838,6 +808,7 @@ export default function PipelinePage() {
 
           return {
             id: user.username,
+            githubUsername: user.username,
             name: user.name || user.username,
             currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
             company: user.company || "Independent",
@@ -857,7 +828,7 @@ export default function PipelinePage() {
         // Persist to API (best-effort)
         for (const c of newCandidates) {
           try {
-            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
+            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB', githubUsername: (c as any).githubUsername } as any);
           } catch (saveErr) {
             console.warn("[Pipeline] autoSearch: could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
           }
@@ -909,6 +880,7 @@ export default function PipelinePage() {
 
           return {
             id: user.username,
+            githubUsername: user.username,
             name: user.name || user.username,
             currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
             company: user.company || "Independent",
@@ -924,7 +896,7 @@ export default function PipelinePage() {
         // Persist new candidates to API (best-effort)
         for (const c of newCandidates) {
           try {
-            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
+            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB', githubUsername: (c as any).githubUsername } as any);
           } catch (saveErr) {
             console.warn("[Pipeline] handleSearch: could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
           }

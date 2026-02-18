@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { candidateCreateSchema } from "@/lib/validation/apiSchemas";
 import { requireOptionalAuth } from "@/lib/auth-guard";
+import { enrichCandidateBackground } from "@/services/unifiedEnrichment";
 
 const VALID_ORDER_BY = ["createdAt", "alignmentScore", "name"] as const;
 const VALID_SOURCE_TYPES = ["GITHUB", "LINKEDIN", "MANUAL"] as const;
@@ -209,6 +210,13 @@ export async function POST(request: NextRequest) {
         linkedinFetchedAt: body.sourceType === "LINKEDIN" ? new Date() : null,
       },
     });
+
+    // Trigger background enrichment for GitHub candidates
+    if (candidate.sourceType === "GITHUB" && candidate.githubUsername) {
+      enrichCandidateBackground(candidate.id, candidate.githubUsername).catch(err => {
+        console.error("[Candidates API] Background enrichment failed:", err);
+      });
+    }
 
     return NextResponse.json({ candidate }, { status: 201 });
   } catch (error) {
