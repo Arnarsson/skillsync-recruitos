@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { candidateCreateSchema } from "@/lib/validation/apiSchemas";
-import { requireAuth, requireOptionalAuth } from "@/lib/auth-guard";
+import { requireOptionalAuth } from "@/lib/auth-guard";
+import { enrichCandidateBackground } from "@/services/unifiedEnrichment";
 
 const VALID_ORDER_BY = ["createdAt", "alignmentScore", "name"] as const;
 const VALID_SOURCE_TYPES = ["GITHUB", "LINKEDIN", "MANUAL"] as const;
@@ -92,11 +93,13 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new candidate
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  // Use optional auth so demo/unauthenticated users don't receive a 401.
+  // When there is no session, candidates are not persisted to the DB — that is
+  // acceptable for demo mode. Authenticated users get the full DB-backed flow.
+  const auth = await requireOptionalAuth();
+  const userId = auth?.user?.id ?? null;
 
   try {
-    const userId = auth.user.id!;
 
     let rawBody: unknown;
     try {
@@ -123,6 +126,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = parsed.data;
+
+    // Demo / unauthenticated path: return a synthetic candidate without DB persistence.
+    // This lets the pipeline UI display candidates without requiring a login session.
+    if (!userId) {
+      const syntheticCandidate = {
+        id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        ...body,
+        userId: null,
+        pipelineStage: body.pipelineStage ?? "sourced",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        capturedAt: body.capturedAt ?? new Date().toISOString(),
+      };
+      return NextResponse.json({ candidate: syntheticCandidate }, { status: 201 });
+    }
 
     const candidate = await prisma.candidate.create({
       data: {
@@ -192,6 +210,13 @@ export async function POST(request: NextRequest) {
         linkedinFetchedAt: body.sourceType === "LINKEDIN" ? new Date() : null,
       },
     });
+
+    // Trigger background enrichment for GitHub candidates
+    if (candidate.sourceType === "GITHUB" && candidate.githubUsername) {
+      enrichCandidateBackground(candidate.id, candidate.githubUsername).catch(err => {
+        console.error("[Candidates API] Background enrichment failed:", err);
+      });
+    }
 
     return NextResponse.json({ candidate }, { status: 201 });
   } catch (error) {

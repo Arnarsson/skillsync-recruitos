@@ -22,6 +22,7 @@ vi.mock('next-auth', () => ({
 }));
 
 // auth-guard: requireAuth returns 401 (consistent with no session)
+// requireOptionalAuth returns null (no session, but no hard failure — used for demo mode)
 vi.mock('@/lib/auth-guard', async () => {
   const { NextResponse } = await import('next/server');
   return {
@@ -30,6 +31,7 @@ vi.mock('@/lib/auth-guard', async () => {
         NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       )
     ),
+    requireOptionalAuth: vi.fn(() => Promise.resolve(null)),
     withAuth: vi.fn(
       () => async () =>
         NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -168,12 +170,16 @@ describe('API Route Authentication', () => {
       expect(res.status).not.toBe(401);
     });
 
-    it('POST /api/candidates returns 401', async () => {
+    it('POST /api/candidates supports demo/unauthenticated mode (no 401)', async () => {
+      // POST /api/candidates intentionally allows unauthenticated requests so that
+      // the demo pipeline flow can display candidates without requiring a login.
+      // When unauthenticated, the handler returns a synthetic 201 response instead
+      // of persisting to the DB, and never returns 401.
       const { POST } = await import('@/app/api/candidates/route');
       const res = await POST(
         makePostRequest('/api/candidates', { name: 'Test', sourceType: 'MANUAL' })
       );
-      expect(res.status).toBe(401);
+      expect(res.status).not.toBe(401);
     });
 
     it('POST /api/outreach returns 401', async () => {

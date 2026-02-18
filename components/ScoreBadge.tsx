@@ -16,6 +16,7 @@ interface ScoreBadgeProps {
   showLabel?: boolean;
   showTooltip?: boolean;
   className?: string;
+  hasGithubData?: boolean; // When false, score is based on text-only matching
 }
 
 export function getScoreInfo(score: number) {
@@ -65,9 +66,21 @@ export default function ScoreBadge({
   showLabel = true,
   showTooltip = true,
   className,
+  hasGithubData = true,
 }: ScoreBadgeProps) {
   const { lang } = useLanguage();
-  const info = getScoreInfo(score);
+  // Cap score display at 50 and use grey styling when no GitHub data to back it up
+  const effectiveScore = !hasGithubData && score > 50 ? 50 : score;
+  const info = !hasGithubData
+    ? {
+        label: "Unverified",
+        labelDa: "Ikke verificeret",
+        color: "text-zinc-400",
+        bg: "bg-zinc-500/20",
+        border: "border-zinc-500/30",
+        ring: "ring-zinc-500/30",
+      }
+    : getScoreInfo(effectiveScore);
   const label = lang === "da" ? info.labelDa : info.label;
 
   const sizeClasses = {
@@ -93,7 +106,7 @@ export default function ScoreBadge({
       )}
     >
       <div className={cn("font-bold", info.color, sizeClasses[size])}>
-        <div className="flex items-center justify-center h-full">{score}</div>
+        <div className="flex items-center justify-center h-full">{effectiveScore}</div>
       </div>
       {showLabel && (
         <div
@@ -105,6 +118,9 @@ export default function ScoreBadge({
         >
           {label}
         </div>
+      )}
+      {!hasGithubData && (
+        <div className="text-[9px] text-zinc-500 text-center px-1 pb-1">No GitHub data</div>
       )}
     </div>
   );

@@ -15,7 +15,7 @@ export default function Footer() {
           {/* Resources */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              ressourcer
+              resources
             </h3>
             <ul className="space-y-3">
               <li>
@@ -23,7 +23,7 @@ export default function Footer() {
                   href="/guides/technical-recruiting"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  guide til tech recruiting
+                  guide to tech recruiting
                 </Link>
               </li>
               <li>
@@ -31,7 +31,7 @@ export default function Footer() {
                   href="/compare"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  sammenlign platforme
+                  compare platforms
                 </Link>
               </li>
               <li>
@@ -47,7 +47,7 @@ export default function Footer() {
                   href="#pricing"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  priser
+                  pricing
                 </Link>
               </li>
             </ul>
@@ -56,7 +56,7 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h3 className="text-sm text-muted-foreground mb-4 lowercase">
-              virksomhed
+              company
             </h3>
             <ul className="space-y-3">
               <li>
@@ -64,7 +64,7 @@ export default function Footer() {
                   href="/contact"
                   className="text-sm text-foreground hover:text-primary transition-colors lowercase"
                 >
-                  kontakt
+                  contact
                 </Link>
               </li>
               <li>
@@ -84,7 +84,7 @@ export default function Footer() {
 
         <div className="flex items-center justify-between pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground lowercase">
-            © {new Date().getFullYear()} recruitos. alle rettigheder forbeholdes.
+            © {new Date().getFullYear()} recruitos. all rights reserved.
           </p>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             $

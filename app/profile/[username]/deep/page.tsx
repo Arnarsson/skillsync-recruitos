@@ -2088,17 +2088,30 @@ export default function DeepProfilePage() {
         {activeTab === "github" && (
           <div className="space-y-6">
             {/* GitHub Data Context Banner */}
-            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-primary">Public Activity Only</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  This analysis reflects public GitHub activity only. Private repositories and
-                  enterprise work are not included. Contribution data may underrepresent actual
-                  coding activity.
-                </p>
+            {!loadingGithub && (githubAnalysis ? (
+              <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-primary">Public Activity Only</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This analysis reflects public GitHub activity only. Private repositories and
+                    enterprise work are not included. Contribution data may underrepresent actual
+                    coding activity.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-600">No Public GitHub Activity Found</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No public repositories or contribution data could be retrieved for this profile.
+                    Analysis is based on public profile information only.
+                  </p>
+                </div>
+              </div>
+            ))}
 
             {loadingGithub ? (
               <Card>

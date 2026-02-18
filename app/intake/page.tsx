@@ -35,26 +35,27 @@ import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { ChatInterface } from "@/components/calibration/ChatInterface";
 
 const DEMO_JOB_CONTEXT = {
-  title: "Senior Full-Stack Engineer",
-  company: "FinTech Startup",
-  location: "Copenhagen, Denmark (Hybrid)",
-  experienceLevel: "5+ years",
-  requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL", "AWS"],
-  preferredSkills: ["Payment Systems", "Python", "Redis", "Kubernetes"],
-  summary: "Seeking an experienced Senior Full-Stack Engineer to join our growing fintech team. You will build scalable payment infrastructure, lead technical architecture decisions, and mentor junior developers.",
-  rawText: `Role: Senior Full-Stack Engineer
-Location: Copenhagen, Denmark (Hybrid - 3 days onsite)
+  title: "Staff Frontend Infrastructure Engineer",
+  company: "Acme Corp",
+  location: "Remote (Global)",
+  experienceLevel: "7+ years",
+  requiredSkills: ["JavaScript", "TypeScript", "Node.js", "Open Source"],
+  preferredSkills: ["React", "testing", "performance optimization"],
+  summary: "Seeking a seasoned Staff Frontend Infrastructure Engineer to own our build tooling, developer experience, and open-source presence. You will drive the evolution of our frontend platform and mentor engineers across the org.",
+  rawText: `Role: Staff Frontend Infrastructure Engineer
+Location: Remote (Global)
 
 Job Summary:
-We are seeking an experienced Senior Full-Stack Engineer to join our growing fintech team. You will be responsible for building scalable payment infrastructure, leading technical architecture decisions, and mentoring junior developers.
+We are seeking a seasoned Staff Frontend Infrastructure Engineer to own our build tooling, developer experience, and open-source presence. This is a high-leverage IC role reporting to the VP of Engineering.
 
 Requirements:
-- 5+ years of experience with TypeScript/JavaScript and React
-- Strong backend experience with Node.js, Python, or Go
-- Experience with PostgreSQL and Redis
-- Familiarity with cloud infrastructure (AWS/GCP)
-- Experience with payment systems or financial services (preferred)
-- Strong communication skills and ability to work cross-functionally`
+- 7+ years of experience with JavaScript and TypeScript
+- Deep expertise in Node.js and the JS/TS ecosystem
+- Proven track record with open-source projects (authored or major contributor)
+- Experience optimizing frontend build pipelines and developer tooling
+- Familiarity with React and modern frontend frameworks (preferred)
+- Experience with testing infrastructure and performance optimization (preferred)
+- Strong communication skills and ability to mentor engineers`
 };
 
 // Loading steps are now translated via t() calls

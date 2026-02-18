@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -48,7 +48,90 @@ import {
 } from "@/lib/candidate-identity";
 import { DataSourceBanner } from "@/components/DataSourceBanner";
 import { JobReadinessScore } from "@/components/JobReadinessScore";
+import { computeReadinessScore } from "@/services/jobReadiness/engine";
 import type { ReadinessInput } from "@/services/jobReadiness/types";
+
+// ===== Receptivity Badge =====
+// Lazily fetched from /api/candidates/[id]/readiness; falls back to local compute for demo profiles.
+interface ReceptivityBadgeProps {
+  candidateId: string;
+  readinessInput: ReadinessInput;
+}
+
+function ReceptivityBadge({ candidateId, readinessInput }: ReceptivityBadgeProps) {
+  const [score, setScore] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/candidates/${candidateId}/readiness`);
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setScore(typeof data.overall === "number" ? data.overall : null);
+          } else {
+            // Not in DB (e.g. demo profile) — compute locally from the input data
+            const result = await computeReadinessScore(readinessInput);
+            if (!cancelled) setScore(result.overall);
+          }
+        }
+      } catch {
+        // Silently fail — badge is an enhancement, not critical
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // readinessInput intentionally omitted — stable after mount, candidateId is the key
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidateId]);
+
+  // Subtle loading state: tiny pulsing dot, doesn't block the card
+  if (isLoading) {
+    return (
+      <div className="flex-shrink-0 flex items-center px-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/25 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (score === null) return null;
+
+  let emoji: string;
+  let label: string;
+  let badgeClass: string;
+
+  if (score >= 70) {
+    emoji = "🟢";
+    label = "Receptive now";
+    badgeClass = "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400";
+  } else if (score >= 40) {
+    emoji = "🟡";
+    label = "Likely open";
+    badgeClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  } else {
+    emoji = "🔴";
+    label = "Low signal";
+    badgeClass = "border-red-400/20 bg-red-500/5 text-red-600 dark:text-red-400";
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn("flex-shrink-0 text-[10px] px-2 py-0.5 hidden sm:flex", badgeClass)}
+      title={`Receptivity score: ${score}/100`}
+    >
+      {emoji} {label}
+    </Badge>
+  );
+}
 
 /** Build ReadinessInput from candidate data (works for both DB and demo candidates) */
 function buildReadinessInput(candidate: Candidate): ReadinessInput {
@@ -95,6 +178,7 @@ function buildReadinessInput(candidate: Candidate): ReadinessInput {
 interface ScoreBreakdown {
   requiredMatched: string[];
   requiredMissing: string[];
+  requiredMatchedInferred?: string[];  // Skills matched from bio/title text only (not GitHub topics)
   preferredMatched: string[];
   locationMatch: "exact" | "remote" | "none";
   baseScore: number;
@@ -291,6 +375,20 @@ export function CandidatePipelineItem({
     githubUsername,
   ]);
 
+  // Determine if we have real GitHub data backing the score
+  const hasGithubData = (() => {
+    const bp = githubAnalysis?.buildprint || candidate.buildprint;
+    if (!bp) return false;
+    const vals = [
+      bp.impact?.value,
+      bp.collaboration?.value,
+      bp.consistency?.value,
+      bp.complexity?.value,
+      bp.ownership?.value,
+    ].filter((v) => typeof v === 'number');
+    return vals.length > 0 && vals.some((v) => (v as number) > 0);
+  })();
+
   // In compact mode, render a simplified non-expandable version
   if (compact) {
     return (
@@ -330,7 +428,7 @@ export function CandidatePipelineItem({
 
           {/* Score */}
           <div className="flex-shrink-0">
-            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} />
+            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} hasGithubData={hasGithubData} />
           </div>
         </div>
 
@@ -448,9 +546,15 @@ export function CandidatePipelineItem({
                   ) : null}
                 </div>
 
+                {/* Receptivity Badge */}
+                <ReceptivityBadge
+                  candidateId={candidate.id}
+                  readinessInput={buildReadinessInput(candidate)}
+                />
+
                 {/* Score */}
                 <div className="flex-shrink-0">
-                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
+                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} hasGithubData={hasGithubData} />
                 </div>
 
                 {/* Expand Indicator */}
@@ -522,6 +626,7 @@ export function CandidatePipelineItem({
 
                 {/* Skills Match */}
                 {candidate.scoreBreakdown && ((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
+                  (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0) > 0 ||
                   (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
@@ -529,19 +634,34 @@ export function CandidatePipelineItem({
                         {t("candidate.requiredSkills")}
                       </h4>
                       <span className="text-xs font-semibold text-foreground">
-                        {candidate.scoreBreakdown.requiredMatched?.length || 0} of{" "}
                         {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0)} of{" "}
+                        {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0) +
                           (candidate.scoreBreakdown.requiredMissing?.length || 0)}{" "}
                         matched
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
+                      {/* Skills matched via GitHub topics — verified with green ✓ */}
+                      {candidate.scoreBreakdown.requiredMatched
+                        ?.filter(skill => !candidate.scoreBreakdown!.requiredMatchedInferred?.includes(skill))
+                        .map((skill) => (
+                          <Badge
+                            key={skill}
+                            className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                          >
+                            <Check className="w-3 h-3" />
+                            {skill}
+                          </Badge>
+                        ))}
+                      {/* Skills matched from bio/title text only — inferred with amber ~ */}
+                      {candidate.scoreBreakdown.requiredMatchedInferred?.map((skill) => (
                         <Badge
                           key={skill}
-                          className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                          className="bg-amber-500/10 text-amber-700 border-amber-500/20 text-xs gap-1 font-normal px-2.5 py-1"
                         >
-                          <Check className="w-3 h-3" />
+                          <span className="text-xs font-bold">~</span>
                           {skill}
                         </Badge>
                       ))}

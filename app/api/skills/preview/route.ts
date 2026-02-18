@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createOctokit } from "@/lib/github";
-import { normalizeSkill, getGitHubLanguage, FRAMEWORK_TO_LANGUAGE } from "@/lib/search/skillNormalizer";
+import { normalizeSkill, getGitHubLanguage, FRAMEWORK_TO_LANGUAGE, META_SKILLS } from "@/lib/search/skillNormalizer";
 import type { HardRequirementsConfig } from "@/types";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
@@ -16,6 +16,7 @@ interface SkillInsight {
   count: number;
   isLimiting: boolean;
   potentialGain?: number;
+  fallback?: boolean;
 }
 
 interface SkillSuggestion {
@@ -39,7 +40,7 @@ interface PreviewResponse {
 
 // Cache for GitHub search results (skill -> count)
 // Simple in-memory cache with TTL
-const searchCache = new Map<string, { count: number; timestamp: number; fallback: boolean }>();
+const searchCache = new Map<string, { count: number; timestamp: number; fallback: boolean; apiFallback: boolean }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const fallbackWarningCache = new Set<string>();
 
@@ -65,20 +66,66 @@ function getFallbackSkillCount(skill: string): number {
   return heuristicCounts[normalized] ?? 30000;
 }
 
+/** Demo-mode hardcoded counts — realistic GitHub volumes without any API calls */
+const DEMO_SKILL_COUNTS: Record<string, number> = {
+  javascript: 250000,
+  typescript: 180000,
+  python: 320000,
+  java: 280000,
+  react: 90000,
+  "node.js": 120000,
+  nodejs: 120000,
+  "c#": 110000,
+  go: 85000,
+  rust: 45000,
+  aws: 70000,
+  kubernetes: 60000,
+  postgresql: 80000,
+  redis: 75000,
+  testing: 50000,
+};
+
+function getDemoCount(skill: string): number {
+  const key = skill.toLowerCase().trim();
+  return DEMO_SKILL_COUNTS[key] ?? DEMO_SKILL_COUNTS[normalizeSkill(skill) ?? ""] ?? 40000;
+}
+
 /**
  * Search GitHub for candidates with a specific skill
  * Returns the total_count from the search API
+ *
+ * fallback: true when the count is an estimate (not live GitHub data).
+ * apiFallback: true ONLY when GitHub API returned an error (rate-limit etc.).
+ *   Meta-skill bypasses and demo-mode counts set fallback=true but apiFallback=false,
+ *   so the total-candidates cap / low-confidence path is not triggered by them.
  */
 async function getSkillCandidateCount(
   skill: string,
   octokit: ReturnType<typeof createOctokit>,
   location?: string
-): Promise<{ count: number; fallback: boolean }> {
+): Promise<{ count: number; fallback: boolean; apiFallback: boolean }> {
+  // Demo mode: skip GitHub API entirely and return realistic hardcoded counts
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  if (isDemoMode) {
+    const count = getDemoCount(skill);
+    return { count, fallback: true, apiFallback: false };
+  }
+
+  // Meta-skills (e.g. "Open Source") don't map to GitHub languages.
+  // OSS contributors are ubiquitous on GitHub — use a very high estimate.
+  // apiFallback is false: this is an intentional bypass, not an API error.
+  if (META_SKILLS.includes(skill.toLowerCase().trim())) {
+    const count = 500000;
+    const cacheKey = `${skill}:${location || "global"}`;
+    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: true, apiFallback: false });
+    return { count, fallback: true, apiFallback: false };
+  }
+
   // Check cache first
   const cacheKey = `${skill}:${location || "global"}`;
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return { count: cached.count, fallback: cached.fallback };
+    return { count: cached.count, fallback: cached.fallback, apiFallback: cached.apiFallback };
   }
 
   try {
@@ -117,8 +164,8 @@ async function getSkillCandidateCount(
     const count = data.total_count;
 
     // Cache the result
-    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: false });
-    return { count, fallback: false };
+    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: false, apiFallback: false });
+    return { count, fallback: false, apiFallback: false };
   } catch (error) {
     const status =
       (error as { status?: number })?.status ??
@@ -127,7 +174,7 @@ async function getSkillCandidateCount(
     // Graceful degradation: avoid breaking the UI when GitHub search is throttled.
     if (status === 403 || status === 429) {
       const fallback = getFallbackSkillCount(skill);
-      searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true });
+      searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true, apiFallback: true });
 
       if (!fallbackWarningCache.has(cacheKey)) {
         fallbackWarningCache.add(cacheKey);
@@ -135,13 +182,13 @@ async function getSkillCandidateCount(
           `[SkillsPreview] GitHub rate limit hit for "${skill}", using fallback estimate`
         );
       }
-      return { count: fallback, fallback: true };
+      return { count: fallback, fallback: true, apiFallback: true };
     }
 
     console.warn(`Error searching for skill "${skill}"`, error);
     const fallback = getFallbackSkillCount(skill);
-    searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true });
-    return { count: fallback, fallback: true };
+    searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true, apiFallback: true });
+    return { count: fallback, fallback: true, apiFallback: true };
   }
 }
 
@@ -190,10 +237,22 @@ export async function POST(request: NextRequest) {
     const skillCounts = await Promise.all(
       skills.map(async (skill) => {
         const result = await getSkillCandidateCount(skill.name, octokit, location);
-        return { name: skill.name, tier: skill.tier, count: result.count, usedFallback: result.fallback };
+        return {
+          name: skill.name,
+          tier: skill.tier,
+          count: result.count,
+          usedFallback: result.fallback,
+          // apiFallback is true only when GitHub returned an error (rate-limit etc.).
+          // Meta-skill and demo bypasses set fallback=true but apiFallback=false,
+          // so they don't trigger the conservative 5k cap or low-confidence label.
+          usedApiFallback: result.apiFallback,
+        };
       })
     );
+    // usedFallback: any estimate label is shown (includes meta-skills, demo, API errors)
     const usedFallback = skillCounts.some((s) => s.usedFallback);
+    // usedApiFallback: only true when real GitHub API errors occurred
+    const usedApiFallback = skillCounts.some((s) => s.usedApiFallback);
 
     // Determine which skills are limiting (< 20 candidates for must-haves)
     const LIMITING_THRESHOLD = 20;
@@ -264,13 +323,20 @@ export async function POST(request: NextRequest) {
     let estimateMin: number | undefined;
     let estimateMax: number | undefined;
 
-    if (usedFallback) {
-      // When rate-limited and heuristics are used, keep estimate conservative.
+    const isDemoModeResponse = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+    if (usedApiFallback && !isDemoModeResponse) {
+      // When GitHub API returned errors (rate-limit / auth), keep estimate conservative.
+      // Note: meta-skill bypasses (Open Source → 500k) do NOT set usedApiFallback,
+      // so they won't trigger this cap even though they set usedFallback=true.
       totalCandidates = Math.min(totalCandidates, 5000);
       confidence = "low";
       note = "Approximate estimate (GitHub rate-limited). Pipeline results are the source of truth.";
       estimateMin = Math.max(0, Math.floor(totalCandidates * 0.25));
       estimateMax = totalCandidates;
+    } else if (isDemoModeResponse) {
+      // Demo mode: hardcoded counts are realistic — show medium confidence
+      confidence = "medium";
+      note = "Demo mode estimates. Real counts will vary by job location and requirements.";
     } else if (estimateMode === "strict") {
       confidence = "medium";
       note = "Conservative estimate for candidates matching all must-have skills.";
@@ -301,6 +367,7 @@ export async function POST(request: NextRequest) {
         count: skill.count,
         isLimiting,
         potentialGain: potentialGain && potentialGain > 0 ? potentialGain : undefined,
+        fallback: skill.usedFallback,
       };
 
       // Generate suggestion for limiting skills

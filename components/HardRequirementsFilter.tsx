@@ -164,7 +164,7 @@ export function HardRequirementsFilter({
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 Hard Requirements
-                {config.enabled && candidateCount !== undefined && totalCandidates !== undefined ? (
+                {config.enabled && candidateCount !== undefined && totalCandidates !== undefined && totalCandidates > 0 ? (
                   <span className="text-sm font-medium text-muted-foreground">
                     ({candidateCount.toLocaleString()} of {totalCandidates.toLocaleString()} candidates match)
                   </span>

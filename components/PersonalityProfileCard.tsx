@@ -329,8 +329,10 @@ export default function PersonalityProfileCard({ profile }: PersonalityProfileCa
       <div className="flex items-start gap-2 text-xs text-muted-foreground/60 px-2">
         <Info className="w-3 h-3 mt-0.5 shrink-0" />
         <span>
-          Profile generated from public GitHub activity. Accuracy improves with more data
-          points. Confidence: {profile.confidence}%.
+          {profile.confidence > 30
+            ? "Profile generated from public GitHub activity. Accuracy improves with more data points."
+            : "Profile generated from public information (no GitHub activity found)."}
+          {" "}Confidence: {profile.confidence}%.
         </span>
       </div>
     </div>

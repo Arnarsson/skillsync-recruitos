@@ -323,46 +323,62 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
         - Evidence-Based: Base all inferences on specific resume/profile data points.
         - Tone: Professional, objective, and analytical with narrative clarity.
 
-        ARCHETYPE SELECTION GUIDE (Choose the BEST match from these 12):
+        ARCHETYPE SELECTION GUIDE (Choose ONE primary archetype from these 6 evidence-based types):
 
-        1. "The Strategic Scaler 🚀" - Pattern: Joins post-PMF companies (Series B-D), builds 0→1 products, scales to 10M+ users
-           Select if: Rapid promotions (every 1-2 yrs), vertical climb, multiple startups, "launched new product" language
+        These archetypes are grounded in observable GitHub signals — not personality guesses.
+        Each archetype has specific signals to look for in the candidate's GitHub data (repos, languages, commit patterns, contributions).
 
-        2. "The Hands-On Fixer 🔧" - Pattern: Dives into broken systems, refactors, optimizes, then moves on (tenure <2 yrs)
-           Select if: "Improved performance X%", "refactored", "migrated", short tenures, technical focus
+        1. "architect" / "The Architect"
+           Pattern: Designs systems, creates foundational infrastructure, structures codebases.
+           GitHub signals: Well-organized repos, configuration/infra files dominant in commits, detailed READMEs,
+           monorepo or clearly namespaced repo setups, CI/CD pipelines they built.
+           Select if: Profile shows repo structure depth, high config-file ratio, doc-heavy commits, infrastructure focus.
 
-        3. "The Domain Expert 📚" - Pattern: Deep specialist (ML, security, payments) with 5-10+ years in same niche
-           Select if: Long tenure (5+ yrs), deep technical skills, specialist language, academic background
+        2. "maintainer" / "The Maintainer"
+           Pattern: Sustains and improves existing projects. High reliability, long-term commitment.
+           GitHub signals: Consistent commit cadence over months/years, high ratio of contributions to existing repos
+           vs. creating new ones, active in PR reviews, responds to issues, low repo-abandonment rate.
+           Select if: Contribution graph is steady over 40+ weeks/year, commits to others' repos, long-lived repos.
 
-        4. "The People Catalyst 🤝" - Pattern: Builds teams, mentors, creates high-trust cultures
-           Select if: "Scaled team X to Y", "mentored", management roles, high retention mentions
+        3. "pioneer" / "The Pioneer"
+           Pattern: Creates new things. High repo creation rate, early technology adoption, experimental.
+           GitHub signals: Creates new repos frequently (6+ per year), explores new languages/frameworks before
+           they are mainstream, repos may be smaller/experimental, high star counts on innovative projects.
+           Select if: Many original repos, diverse languages including newer ones, star accumulation, frequent forks.
 
-        5. "The Operator Perfectionist ⚙️" - Pattern: Process-driven, loves dashboards, optimizes for efficiency
-           Select if: "Built analytics stack", "improved processes", ops/systems roles, data-driven language
+        4. "collaborator" / "The Collaborator"
+           Pattern: Works well with others. High PR activity, code review engagement, community-oriented.
+           GitHub signals: Opens PRs to other people's repos, active reviewer, participates in discussions,
+           contributes to popular open-source projects, notable followers/following ratio.
+           Select if: External PR contributions, OSS merged PRs to starred repos, community engagement signals.
 
-        6. "The Visionary Architect 🏛️" - Pattern: Designs systems for 10x scale, thinks 3-5 years ahead
-           Select if: "Designed for scale", principal/architect titles, platform/infrastructure work
+        5. "specialist" / "The Specialist"
+           Pattern: Deep expertise in a narrow domain. Concentrated language/framework usage with depth.
+           GitHub signals: 70%+ of code in 1-2 languages, large/deep repos with high commit counts per repo,
+           ecosystem tooling (libraries, plugins, CLIs) in their domain, package publishing (npm/PyPI/crates.io).
+           Select if: Overwhelmingly one language, deep commit history per repo, domain-specific tooling/packages.
 
-        7. "The Revenue Driver 💰" - Pattern: Product decisions tied to ARR, close to sales, metric-obsessed
-           Select if: "Increased revenue X%", growth roles, mentions of monetization, conversion optimization
+        6. "craftsperson" / "The Craftsperson"
+           Pattern: Prioritizes code quality, testing, and maintainability. Clean code advocate.
+           GitHub signals: Test directories present across repos, CI/CD pipelines configured, small focused commits
+           (few files per commit), conventional commit messages, linter/formatter configs present.
+           Select if: Test-driven repos, CI coverage, disciplined commit style, quality tooling.
 
-        8. "The User Champion ❤️" - Pattern: Lives in user research, ships beautiful experiences, high empathy
-           Select if: Design background, "user-centric", UX research, product design, empathy language
-
-        9. "The Rapid Executor ⚡" - Pattern: Ships daily, breaks things, iterates fast, biased to action
-           Select if: Very short tenures, "shipped X features", startup DNA, move fast language
-
-        10. "The Data Scientist 📊" - Pattern: Every decision backed by analysis, loves experiments, skeptical
-            Select if: Analytics background, "A/B testing", "data-driven", quantitative focus
-
-        11. "The Generalist Swiss Army Knife 🛠️" - Pattern: Can do anything - code, design, sell, analyze
-            Select if: Diverse skill set, early-stage startups, "wore many hats", varied experiences
-
-        12. "The Enterprise Navigator 🏢" - Pattern: Thrives in large orgs, politics-savvy, stakeholder whisperer
-            Select if: Big tech (FAANG), long tenure at large companies, "cross-functional", enterprise focus
+        ARCHETYPE RESPONSE FORMAT:
+        - "archetype": the machine-readable key exactly as listed above (e.g. "pioneer")
+        - "archetype_label": the display label (e.g. "The Pioneer")
+        - "evidence_summary": 1-2 sentences directly linking the archetype choice to specific GitHub signals observed
+          in this profile (e.g. "Created 9 original repos in 12 months across 7 languages including Bun and Deno 2.
+          Accumulated 342 total stars, suggesting a pattern of early technology adoption.")
+        - "primary_signals": array of 2-3 specific, factual GitHub signals backing the choice
+          (e.g. ["Created 9 new repos in last 12 months", "Uses 7 languages including Zig and Bun",
+          "342 total stars across projects"])
+        - "persona_archetype": a compelling 2-sentence elevator pitch narrative about the archetype pattern
+          (this field remains for backward compatibility — write it as a story, not just the label)
 
         Analysis Instructions:
-        1. **Archetype**: Select from the 12 archetypes above. Write as a 2-sentence elevator pitch identifying the career PATTERN with specific examples.
+        1. **Archetype**: Select ONE from the 6 archetypes above. Populate all archetype response fields.
+           Write "persona_archetype" as a 2-sentence elevator pitch identifying the career PATTERN with specific examples.
 
         2. **Behavioral Profile**: Analyze communication style, motivations, risk tolerance, leadership potential from "About" section and role descriptions.
 
@@ -417,6 +433,12 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
     // Map to internal Persona interface (with enhanced fields)
     return {
       archetype: data.persona_archetype,
+      // Evidence-based archetype fields (new)
+      archetypeLabel: data.archetype_label || undefined,
+      evidenceSummary: data.evidence_summary || undefined,
+      primarySignals: Array.isArray(data.primary_signals) && data.primary_signals.length > 0
+        ? data.primary_signals
+        : undefined,
       psychometric: {
         communicationStyle: data.psychometric_profile?.communication_style || "Unknown",
         primaryMotivator: data.psychometric_profile?.primary_motivator || "Unknown",
@@ -490,6 +512,12 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
         // Map to internal Persona interface (same as above)
         return {
           archetype: data.persona_archetype,
+          // Evidence-based archetype fields (new)
+          archetypeLabel: data.archetype_label || undefined,
+          evidenceSummary: data.evidence_summary || undefined,
+          primarySignals: Array.isArray(data.primary_signals) && data.primary_signals.length > 0
+            ? data.primary_signals
+            : undefined,
           psychometric: {
             communicationStyle: data.psychometric_profile?.communication_style || "Unknown",
             primaryMotivator: data.psychometric_profile?.primary_motivator || "Unknown",

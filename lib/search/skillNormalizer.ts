@@ -178,11 +178,25 @@ for (const [canonical, aliases] of Object.entries(SKILL_ALIASES)) {
 }
 
 /**
+ * Meta-skills are high-level concepts (e.g. "Open Source") that don't map to
+ * specific GitHub languages/frameworks. Searching GitHub for them is meaningless
+ * and produces confusing results or console errors. Return null so callers can
+ * substitute a sensible fallback count instead of hitting the API.
+ */
+export const META_SKILLS = ['open source', 'open-source', 'oss', 'open_source'];
+
+/**
  * Normalize a skill/language string to its canonical form
  * @param input - Skill string (e.g., "C++", "React.js", "golang")
- * @returns Canonical skill name or null if not recognized
+ * @returns Canonical skill name or null if not recognized (including meta-skills)
  */
 export function normalizeSkill(input: string): string | null {
+  // Meta-skills are philosophical/community concepts, not searchable languages.
+  // Skip them silently so no console error fires for missing tag_alias mappings.
+  if (META_SKILLS.includes(input.toLowerCase().trim())) {
+    return null;
+  }
+
   const normalized = normalizeString(input);
   return normalizedAliasMap.get(normalized) || null;
 }
