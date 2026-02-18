@@ -221,9 +221,10 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[API] Pipeline analytics error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[API] Pipeline analytics error:", msg);
     return NextResponse.json(
-      { error: "Failed to compute analytics" },
+      { error: "Failed to compute analytics", detail: msg },
       { status: 500 }
     );
   }
