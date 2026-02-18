@@ -36,9 +36,8 @@ const SCORE_BUCKETS = [
 ] as const;
 
 export async function GET() {
-  const auth = await requireOptionalAuth();
-
   try {
+    const auth = await requireOptionalAuth();
     const where: { userId?: string } = {};
     if (auth?.user?.id) {
       where.userId = auth.user.id;
