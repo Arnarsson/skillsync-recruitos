@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireAuth, requireOptionalAuth } from "@/lib/auth-guard";
 import { criteriaSetCreateSchema } from "@/lib/validation/apiSchemas";
 
 export async function GET() {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  const auth = await requireOptionalAuth();
 
-  const userId = auth.user.id || null;
-  if (!userId) {
-    return NextResponse.json({ error: "Missing user id in session" }, { status: 400 });
+  // Unauthenticated users get an empty list instead of 401
+  if (!auth?.user?.id) {
+    return NextResponse.json({ criteriaSets: [] });
   }
 
   const sets = await prisma.criteriaSet.findMany({
-    where: { userId },
+    where: { userId: auth.user.id },
     orderBy: { updatedAt: "desc" },
   });
 

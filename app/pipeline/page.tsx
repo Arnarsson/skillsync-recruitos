@@ -491,7 +491,19 @@ export default function PipelinePage() {
           existingCandidates = localCandidates;
           existingCandidates = rerankCandidatesForContext(existingCandidates, parsedJobContext);
           if (isActive) setCandidates(existingCandidates);
-          console.log("[Pipeline] Unauthenticated mode, using local fallback candidates:", existingCandidates.length);
+        } else {
+          // No local data and not authenticated — show demo candidates as fallback
+          const demoCandidates = rerankCandidatesForContext(
+            getDemoCandidates() as unknown as Candidate[],
+            parsedJobContext || {
+              title: "Staff Frontend Infrastructure Engineer",
+              requiredSkills: ["JavaScript", "TypeScript", "Node.js", "Open Source"],
+              preferredSkills: ["React", "testing"],
+              location: "Remote",
+            }
+          );
+          existingCandidates = demoCandidates as unknown as Candidate[];
+          if (isActive) setCandidates(existingCandidates);
         }
       } else if (jobContextChanged || freshFromIntake) {
         // Start fresh when job context changes
