@@ -263,6 +263,8 @@ export default function PipelinePage() {
   const adminSuffix = ""; // No longer needed with context-based admin
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
+  // isInitializing prevents the empty-state flash while isDemoMode resolves after hydration
+  const [isInitializing, setIsInitializing] = useState(true);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [jobContext, setJobContext] = useState<{
@@ -618,7 +620,9 @@ export default function PipelinePage() {
       }
     };
 
-    initializePipeline();
+    initializePipeline().finally(() => {
+      if (isActive) setIsInitializing(false);
+    });
 
     // Cleanup function - set isActive to false when component unmounts
     return () => {
@@ -1736,7 +1740,7 @@ export default function PipelinePage() {
         </AnimatePresence>
 
         {/* Loading State with Text Scramble */}
-        {loading && candidates.length === 0 && (
+        {(loading || isInitializing) && candidates.length === 0 && (
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <PipelineLoadingScramble />
@@ -1784,7 +1788,7 @@ export default function PipelinePage() {
         )}
 
         {/* Candidates List with Split View or Kanban */}
-        {!loading && filteredCandidates.length === 0 ? (
+        {!loading && !isInitializing && filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
