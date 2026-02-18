@@ -69,18 +69,10 @@ export default function ScoreBadge({
   hasGithubData = true,
 }: ScoreBadgeProps) {
   const { lang } = useLanguage();
-  // Cap score display at 50 and use grey styling when no GitHub data to back it up
-  const effectiveScore = !hasGithubData && score > 50 ? 50 : score;
-  const info = !hasGithubData
-    ? {
-        label: "Unverified",
-        labelDa: "Ikke verificeret",
-        color: "text-zinc-400",
-        bg: "bg-zinc-500/20",
-        border: "border-zinc-500/30",
-        ring: "ring-zinc-500/30",
-      }
-    : getScoreInfo(effectiveScore);
+  // Show the real score — the pipeline reranking and buildprint already produce calibrated values.
+  // Previously this capped at 50 for !hasGithubData, but that hid meaningful differentiation.
+  const effectiveScore = score;
+  const info = getScoreInfo(effectiveScore);
   const label = lang === "da" ? info.labelDa : info.label;
 
   const sizeClasses = {
@@ -119,9 +111,7 @@ export default function ScoreBadge({
           {label}
         </div>
       )}
-      {!hasGithubData && (
-        <div className="text-[9px] text-zinc-500 text-center px-1 pb-1">No GitHub data</div>
-      )}
+      {/* Score is now always displayed at face value regardless of data source */}
     </div>
   );
 

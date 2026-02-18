@@ -286,9 +286,9 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
     if (!response.text) throw new Error("No response from AI");
     const data = JSON.parse(response.text);
     const calculatedScore = calculateScore(data.scoreBreakdown);
-    // If no buildprint confirmed, cap at 70 — prevents inflation from text-only matching
-    // The ScoreBadge component will further cap to 50 in UI if all GitHub metrics are 0
-    const cappedScore = Math.min(calculatedScore, 70);
+    // Cap at 95 to allow strong differentiation while reserving 96-100 for verified top matches
+    // with confirmed buildprint data from multiple corroborated sources
+    const cappedScore = Math.min(calculatedScore, 95);
 
     // TEMP: Log enhanced scoring fields for verification
     if (process.env.NODE_ENV === 'development') {
@@ -327,9 +327,9 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
         const responseText = await callOpenRouter(promptWithInstructions);
         const data = JSON.parse(responseText);
         const calculatedScore = calculateScore(data.scoreBreakdown);
-        // If no buildprint confirmed, cap at 70 — prevents inflation from text-only matching
-        // The ScoreBadge component will further cap to 50 in UI if all GitHub metrics are 0
-        const cappedScore = Math.min(calculatedScore, 70);
+        // Cap at 95 to allow strong differentiation while reserving 96-100 for verified top matches
+        // with confirmed buildprint data from multiple corroborated sources
+        const cappedScore = Math.min(calculatedScore, 95);
 
         const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
 

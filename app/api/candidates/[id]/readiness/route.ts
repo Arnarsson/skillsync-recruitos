@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { computeReadinessScore } from "@/services/jobReadiness";
 import type { ReadinessInput } from "@/services/jobReadiness";
 import { createExternalFetchers } from "@/services/jobReadiness/fetchers";
+import { isDemoProfile } from "@/lib/demoData";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -25,6 +26,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!candidate) {
+      // For demo candidates not in DB, return a graceful empty readiness response
+      if (isDemoProfile(id)) {
+        return NextResponse.json({
+          candidateId: id,
+          overallScore: null,
+          pillars: [],
+          computedAt: new Date().toISOString(),
+          demo: true,
+        });
+      }
       return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
     }
 

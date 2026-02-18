@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAdmin } from "@/lib/adminContext";
-import { getDemoCandidates } from "@/lib/demoData";
+import { getDemoCandidates, DEMO_JOB } from "@/lib/demoData";
 import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -389,29 +389,21 @@ export default function PipelinePage() {
       // DEMO MODE: Load real demo profiles with receipts
       if (isDemoMode) {
         console.log("[Pipeline] Demo mode - loading real demo profiles");
-        let demoJobContext = {
-          title: "Staff Frontend Infrastructure Engineer",
-          company: "Acme Corp",
-          requiredSkills: ["JavaScript", "TypeScript", "Node.js", "Open Source"],
-          preferredSkills: ["React", "testing", "performance optimization"],
-          location: "Remote (Global)",
+        const demoJobContext = {
+          title: DEMO_JOB.title,
+          company: DEMO_JOB.company,
+          requiredSkills: DEMO_JOB.requiredSkills,
+          preferredSkills: DEMO_JOB.preferredSkills,
+          location: DEMO_JOB.location,
         };
-        try {
-          const stored = localStorage.getItem("apex_job_context");
-          if (stored) {
-            demoJobContext = JSON.parse(stored);
-          }
-        } catch {
-          // ignore
-        }
 
-        const demoCandidates = rerankCandidatesForContext(
-          getDemoCandidates() as unknown as Candidate[],
-          demoJobContext
+        // Demo candidates already have calibrated buildprint scores — sort by score, don't rerank.
+        const rawDemoCandidates = getDemoCandidates() as unknown as Candidate[];
+        const sortedDemoCandidates = [...rawDemoCandidates].sort(
+          (a, b) => (b.alignmentScore || 0) - (a.alignmentScore || 0)
         );
         if (isActive) {
-          // Cast to local Candidate type (safe because we control the demo data structure)
-          setCandidates(demoCandidates as unknown as Candidate[]);
+          setCandidates(sortedDemoCandidates);
           setJobContext(demoJobContext);
         }
         return; // Skip normal initialization in demo mode
@@ -496,10 +488,10 @@ export default function PipelinePage() {
           const demoCandidates = rerankCandidatesForContext(
             getDemoCandidates() as unknown as Candidate[],
             parsedJobContext || {
-              title: "Staff Frontend Infrastructure Engineer",
-              requiredSkills: ["JavaScript", "TypeScript", "Node.js", "Open Source"],
-              preferredSkills: ["React", "testing"],
-              location: "Remote",
+              title: DEMO_JOB.title,
+              requiredSkills: DEMO_JOB.requiredSkills,
+              preferredSkills: DEMO_JOB.preferredSkills,
+              location: DEMO_JOB.location,
             }
           );
           existingCandidates = demoCandidates as unknown as Candidate[];

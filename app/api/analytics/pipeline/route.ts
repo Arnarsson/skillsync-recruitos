@@ -224,9 +224,30 @@ export async function GET() {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[API] Pipeline analytics error:", msg);
-    return NextResponse.json(
-      { error: "Failed to compute analytics", detail: msg },
-      { status: 500 }
-    );
+    // Return empty analytics instead of 500 — avoids breaking the UI
+    // when the database is unreachable (e.g. demo mode, cold start).
+    return NextResponse.json({
+      funnel: PIPELINE_STAGES.map((stage) => ({
+        stage,
+        label: STAGE_LABELS[stage],
+        count: 0,
+        conversionRate: null,
+      })),
+      sourceBreakdown: [],
+      scoreDistribution: SCORE_BUCKETS.map((b) => ({
+        bucket: b.label,
+        count: 0,
+      })),
+      topSkills: [],
+      topLocations: [],
+      timeline: [],
+      summary: {
+        total: 0,
+        averageScore: 0,
+        highestScore: 0,
+        activePipeline: 0,
+        addedThisWeek: 0,
+      },
+    });
   }
 }

@@ -33,30 +33,9 @@ import { useLanguage } from "@/lib/i18n";
 import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { ChatInterface } from "@/components/calibration/ChatInterface";
+import { DEMO_JOB } from "@/lib/demoData";
 
-const DEMO_JOB_CONTEXT = {
-  title: "Staff Frontend Infrastructure Engineer",
-  company: "Acme Corp",
-  location: "Remote (Global)",
-  experienceLevel: "7+ years",
-  requiredSkills: ["JavaScript", "TypeScript", "Node.js", "Open Source"],
-  preferredSkills: ["React", "testing", "performance optimization"],
-  summary: "Seeking a seasoned Staff Frontend Infrastructure Engineer to own our build tooling, developer experience, and open-source presence. You will drive the evolution of our frontend platform and mentor engineers across the org.",
-  rawText: `Role: Staff Frontend Infrastructure Engineer
-Location: Remote (Global)
-
-Job Summary:
-We are seeking a seasoned Staff Frontend Infrastructure Engineer to own our build tooling, developer experience, and open-source presence. This is a high-leverage IC role reporting to the VP of Engineering.
-
-Requirements:
-- 7+ years of experience with JavaScript and TypeScript
-- Deep expertise in Node.js and the JS/TS ecosystem
-- Proven track record with open-source projects (authored or major contributor)
-- Experience optimizing frontend build pipelines and developer tooling
-- Familiarity with React and modern frontend frameworks (preferred)
-- Experience with testing infrastructure and performance optimization (preferred)
-- Strong communication skills and ability to mentor engineers`
-};
+const DEMO_JOB_CONTEXT = DEMO_JOB;
 
 // Loading steps are now translated via t() calls
 

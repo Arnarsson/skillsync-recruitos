@@ -60,6 +60,12 @@ export async function GET(request: NextRequest) {
       where.pipelineStage = pipelineStage;
     }
 
+    // Filter by location
+    const location = searchParams.get("location");
+    if (location && location.trim()) {
+      where.location = { contains: location.trim() };
+    }
+
     // Search by name, company, currentRole
     const search = searchParams.get("search");
     if (search && search.trim()) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createOctokit } from "@/lib/github";
+import { isDemoProfile, getDemoProfile } from "@/lib/demoData";
 
 export const maxDuration = 60;
 
@@ -410,6 +411,38 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error("[Work Analysis] Error:", error);
     const message = error instanceof Error ? error.message : String(error);
+
+    // For demo candidates, return a graceful fallback instead of 500
+    const { id: errorId } = await params;
+    if (isDemoProfile(errorId)) {
+      const demoProfile = getDemoProfile(errorId);
+      return NextResponse.json({
+        cached: false,
+        githubUsername: errorId,
+        candidateName: demoProfile?.name || errorId,
+        analyzedAt: new Date().toISOString(),
+        demo: true,
+        user: demoProfile ? {
+          name: demoProfile.name,
+          bio: demoProfile.bio,
+          location: demoProfile.location,
+          company: demoProfile.company,
+          followers: demoProfile.followers,
+          following: demoProfile.following,
+          publicRepos: demoProfile.publicRepos,
+          createdAt: demoProfile.createdAt,
+          avatarUrl: demoProfile.avatar,
+        } : null,
+        commitPatterns: { timeOfDay: { morning: 0, afternoon: 0, evening: 0, night: 0 }, dayOfWeek: {}, totalPushEvents: 0, recentActivityCount: 0 },
+        contributions: [],
+        languages: demoProfile?.languages?.map(l => ({ name: l.name, percentage: l.percentage, repoCount: 0 })) || [],
+        topRepos: demoProfile?.topRepos || [],
+        techStack: demoProfile?.skills?.map(s => ({ name: s, count: 1, proficiency: "familiar" })) || [],
+        stats: { totalStars: 0, totalForks: 0, ownedRepos: 0, forkedRepos: 0, totalEvents: 0 },
+        aiInsights: { error: "Unavailable in demo mode" },
+      });
+    }
+
     return NextResponse.json(
       { error: "Failed to generate work analysis", details: message },
       { status: 500 }
