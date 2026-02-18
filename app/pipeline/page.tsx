@@ -386,8 +386,11 @@ export default function PipelinePage() {
 
     const initializePipeline = async () => {
       setPipelineError(null);
+      // Check URL param directly to avoid hydration timing issues with context
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDemoFromUrl = urlParams.get("demo") === "true" || localStorage.getItem("recruitos_demo_mode") === "true";
       // DEMO MODE: Load real demo profiles with receipts
-      if (isDemoMode) {
+      if (isDemoMode || isDemoFromUrl) {
         console.log("[Pipeline] Demo mode - loading real demo profiles");
         const demoJobContext = {
           title: DEMO_JOB.title,
@@ -405,9 +408,12 @@ export default function PipelinePage() {
         if (isActive) {
           setCandidates(sortedDemoCandidates);
           setJobContext(demoJobContext);
-          // Clear stale skills config from previous sessions
+          // Clear stale data from previous sessions
           localStorage.removeItem("apex_skills_config");
           localStorage.removeItem("apex_skills_draft");
+          localStorage.removeItem("apex_pending_auto_search");
+          // Save demo job context so other pages can use it
+          localStorage.setItem("apex_job_context", JSON.stringify(demoJobContext));
         }
         return; // Skip normal initialization in demo mode
       }
