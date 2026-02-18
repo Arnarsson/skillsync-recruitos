@@ -144,7 +144,8 @@ export async function GET() {
     const skillFreq: Record<string, number> = {};
     for (const c of candidates) {
       if (c.skills && Array.isArray(c.skills)) {
-        for (const skill of c.skills as string[]) {
+        for (const skill of c.skills as unknown[]) {
+          if (typeof skill !== 'string') continue;
           const normalized = skill.trim().toLowerCase();
           if (normalized) {
             skillFreq[normalized] = (skillFreq[normalized] || 0) + 1;
