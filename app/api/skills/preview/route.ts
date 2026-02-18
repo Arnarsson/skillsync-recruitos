@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createOctokit } from "@/lib/github";
-import { normalizeSkill, getGitHubLanguage, FRAMEWORK_TO_LANGUAGE } from "@/lib/search/skillNormalizer";
+import { normalizeSkill, getGitHubLanguage, FRAMEWORK_TO_LANGUAGE, META_SKILLS } from "@/lib/search/skillNormalizer";
 import type { HardRequirementsConfig } from "@/types";
 
 type SkillTier = "must-have" | "nice-to-have" | "bonus";
@@ -16,6 +16,7 @@ interface SkillInsight {
   count: number;
   isLimiting: boolean;
   potentialGain?: number;
+  fallback?: boolean;
 }
 
 interface SkillSuggestion {
@@ -65,6 +66,30 @@ function getFallbackSkillCount(skill: string): number {
   return heuristicCounts[normalized] ?? 30000;
 }
 
+/** Demo-mode hardcoded counts — realistic GitHub volumes without any API calls */
+const DEMO_SKILL_COUNTS: Record<string, number> = {
+  javascript: 250000,
+  typescript: 180000,
+  python: 320000,
+  java: 280000,
+  react: 90000,
+  "node.js": 120000,
+  nodejs: 120000,
+  "c#": 110000,
+  go: 85000,
+  rust: 45000,
+  aws: 70000,
+  kubernetes: 60000,
+  postgresql: 80000,
+  redis: 75000,
+  testing: 50000,
+};
+
+function getDemoCount(skill: string): number {
+  const key = skill.toLowerCase().trim();
+  return DEMO_SKILL_COUNTS[key] ?? DEMO_SKILL_COUNTS[normalizeSkill(skill) ?? ""] ?? 40000;
+}
+
 /**
  * Search GitHub for candidates with a specific skill
  * Returns the total_count from the search API
@@ -74,6 +99,22 @@ async function getSkillCandidateCount(
   octokit: ReturnType<typeof createOctokit>,
   location?: string
 ): Promise<{ count: number; fallback: boolean }> {
+  // Demo mode: skip GitHub API entirely and return realistic hardcoded counts
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  if (isDemoMode) {
+    const count = getDemoCount(skill);
+    return { count, fallback: true };
+  }
+
+  // Meta-skills (e.g. "Open Source") don't map to GitHub languages.
+  // OSS contributors are ubiquitous on GitHub — use a very high estimate.
+  if (META_SKILLS.includes(skill.toLowerCase().trim())) {
+    const count = 500000;
+    const cacheKey = `${skill}:${location || "global"}`;
+    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: true });
+    return { count, fallback: true };
+  }
+
   // Check cache first
   const cacheKey = `${skill}:${location || "global"}`;
   const cached = searchCache.get(cacheKey);
@@ -264,13 +305,18 @@ export async function POST(request: NextRequest) {
     let estimateMin: number | undefined;
     let estimateMax: number | undefined;
 
-    if (usedFallback) {
+    const isDemoModeResponse = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+    if (usedFallback && !isDemoModeResponse) {
       // When rate-limited and heuristics are used, keep estimate conservative.
       totalCandidates = Math.min(totalCandidates, 5000);
       confidence = "low";
       note = "Approximate estimate (GitHub rate-limited). Pipeline results are the source of truth.";
       estimateMin = Math.max(0, Math.floor(totalCandidates * 0.25));
       estimateMax = totalCandidates;
+    } else if (isDemoModeResponse) {
+      // Demo mode: hardcoded counts are realistic — show medium confidence
+      confidence = "medium";
+      note = "Demo mode estimates. Real counts will vary by job location and requirements.";
     } else if (estimateMode === "strict") {
       confidence = "medium";
       note = "Conservative estimate for candidates matching all must-have skills.";
@@ -301,6 +347,7 @@ export async function POST(request: NextRequest) {
         count: skill.count,
         isLimiting,
         potentialGain: potentialGain && potentialGain > 0 ? potentialGain : undefined,
+        fallback: skill.usedFallback,
       };
 
       // Generate suggestion for limiting skills

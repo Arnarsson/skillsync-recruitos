@@ -57,6 +57,7 @@ interface SkillInsight {
   count: number;
   isLimiting: boolean;
   potentialGain?: number;
+  fallback?: boolean;
 }
 
 interface PreviewResponse {
@@ -301,7 +302,13 @@ function SkillChip({
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
           ) : insight ? (
             <span className="text-xs text-muted-foreground">
-              {insight.count === 0 ? "no matches" : `${insight.count.toLocaleString()} candidates`}
+              {insight.count > 0
+                ? insight.fallback
+                  ? `~${insight.count.toLocaleString()} est.`
+                  : `${insight.count.toLocaleString()} candidates`
+                : insight.fallback
+                  ? "~30k+ est."
+                  : "no matches"}
             </span>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
