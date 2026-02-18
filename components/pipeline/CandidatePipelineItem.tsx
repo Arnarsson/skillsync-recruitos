@@ -178,6 +178,7 @@ function buildReadinessInput(candidate: Candidate): ReadinessInput {
 interface ScoreBreakdown {
   requiredMatched: string[];
   requiredMissing: string[];
+  requiredMatchedInferred?: string[];  // Skills matched from bio/title text only (not GitHub topics)
   preferredMatched: string[];
   locationMatch: "exact" | "remote" | "none";
   baseScore: number;
@@ -625,6 +626,7 @@ export function CandidatePipelineItem({
 
                 {/* Skills Match */}
                 {candidate.scoreBreakdown && ((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
+                  (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0) > 0 ||
                   (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
@@ -632,19 +634,34 @@ export function CandidatePipelineItem({
                         {t("candidate.requiredSkills")}
                       </h4>
                       <span className="text-xs font-semibold text-foreground">
-                        {candidate.scoreBreakdown.requiredMatched?.length || 0} of{" "}
                         {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0)} of{" "}
+                        {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0) +
                           (candidate.scoreBreakdown.requiredMissing?.length || 0)}{" "}
                         matched
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
+                      {/* Skills matched via GitHub topics — verified with green ✓ */}
+                      {candidate.scoreBreakdown.requiredMatched
+                        ?.filter(skill => !candidate.scoreBreakdown!.requiredMatchedInferred?.includes(skill))
+                        .map((skill) => (
+                          <Badge
+                            key={skill}
+                            className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                          >
+                            <Check className="w-3 h-3" />
+                            {skill}
+                          </Badge>
+                        ))}
+                      {/* Skills matched from bio/title text only — inferred with amber ~ */}
+                      {candidate.scoreBreakdown.requiredMatchedInferred?.map((skill) => (
                         <Badge
                           key={skill}
-                          className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                          className="bg-amber-500/10 text-amber-700 border-amber-500/20 text-xs gap-1 font-normal px-2.5 py-1"
                         >
-                          <Check className="w-3 h-3" />
+                          <span className="text-xs font-bold">~</span>
                           {skill}
                         </Badge>
                       ))}
