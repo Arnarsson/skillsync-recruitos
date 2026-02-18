@@ -40,7 +40,7 @@ interface PreviewResponse {
 
 // Cache for GitHub search results (skill -> count)
 // Simple in-memory cache with TTL
-const searchCache = new Map<string, { count: number; timestamp: number; fallback: boolean }>();
+const searchCache = new Map<string, { count: number; timestamp: number; fallback: boolean; apiFallback: boolean }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const fallbackWarningCache = new Set<string>();
 
@@ -93,33 +93,39 @@ function getDemoCount(skill: string): number {
 /**
  * Search GitHub for candidates with a specific skill
  * Returns the total_count from the search API
+ *
+ * fallback: true when the count is an estimate (not live GitHub data).
+ * apiFallback: true ONLY when GitHub API returned an error (rate-limit etc.).
+ *   Meta-skill bypasses and demo-mode counts set fallback=true but apiFallback=false,
+ *   so the total-candidates cap / low-confidence path is not triggered by them.
  */
 async function getSkillCandidateCount(
   skill: string,
   octokit: ReturnType<typeof createOctokit>,
   location?: string
-): Promise<{ count: number; fallback: boolean }> {
+): Promise<{ count: number; fallback: boolean; apiFallback: boolean }> {
   // Demo mode: skip GitHub API entirely and return realistic hardcoded counts
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   if (isDemoMode) {
     const count = getDemoCount(skill);
-    return { count, fallback: true };
+    return { count, fallback: true, apiFallback: false };
   }
 
   // Meta-skills (e.g. "Open Source") don't map to GitHub languages.
   // OSS contributors are ubiquitous on GitHub — use a very high estimate.
+  // apiFallback is false: this is an intentional bypass, not an API error.
   if (META_SKILLS.includes(skill.toLowerCase().trim())) {
     const count = 500000;
     const cacheKey = `${skill}:${location || "global"}`;
-    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: true });
-    return { count, fallback: true };
+    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: true, apiFallback: false });
+    return { count, fallback: true, apiFallback: false };
   }
 
   // Check cache first
   const cacheKey = `${skill}:${location || "global"}`;
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return { count: cached.count, fallback: cached.fallback };
+    return { count: cached.count, fallback: cached.fallback, apiFallback: cached.apiFallback };
   }
 
   try {
@@ -158,8 +164,8 @@ async function getSkillCandidateCount(
     const count = data.total_count;
 
     // Cache the result
-    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: false });
-    return { count, fallback: false };
+    searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: false, apiFallback: false });
+    return { count, fallback: false, apiFallback: false };
   } catch (error) {
     const status =
       (error as { status?: number })?.status ??
@@ -168,7 +174,7 @@ async function getSkillCandidateCount(
     // Graceful degradation: avoid breaking the UI when GitHub search is throttled.
     if (status === 403 || status === 429) {
       const fallback = getFallbackSkillCount(skill);
-      searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true });
+      searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true, apiFallback: true });
 
       if (!fallbackWarningCache.has(cacheKey)) {
         fallbackWarningCache.add(cacheKey);
@@ -176,13 +182,13 @@ async function getSkillCandidateCount(
           `[SkillsPreview] GitHub rate limit hit for "${skill}", using fallback estimate`
         );
       }
-      return { count: fallback, fallback: true };
+      return { count: fallback, fallback: true, apiFallback: true };
     }
 
     console.warn(`Error searching for skill "${skill}"`, error);
     const fallback = getFallbackSkillCount(skill);
-    searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true });
-    return { count: fallback, fallback: true };
+    searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true, apiFallback: true });
+    return { count: fallback, fallback: true, apiFallback: true };
   }
 }
 
@@ -231,10 +237,22 @@ export async function POST(request: NextRequest) {
     const skillCounts = await Promise.all(
       skills.map(async (skill) => {
         const result = await getSkillCandidateCount(skill.name, octokit, location);
-        return { name: skill.name, tier: skill.tier, count: result.count, usedFallback: result.fallback };
+        return {
+          name: skill.name,
+          tier: skill.tier,
+          count: result.count,
+          usedFallback: result.fallback,
+          // apiFallback is true only when GitHub returned an error (rate-limit etc.).
+          // Meta-skill and demo bypasses set fallback=true but apiFallback=false,
+          // so they don't trigger the conservative 5k cap or low-confidence label.
+          usedApiFallback: result.apiFallback,
+        };
       })
     );
+    // usedFallback: any estimate label is shown (includes meta-skills, demo, API errors)
     const usedFallback = skillCounts.some((s) => s.usedFallback);
+    // usedApiFallback: only true when real GitHub API errors occurred
+    const usedApiFallback = skillCounts.some((s) => s.usedApiFallback);
 
     // Determine which skills are limiting (< 20 candidates for must-haves)
     const LIMITING_THRESHOLD = 20;
@@ -306,8 +324,10 @@ export async function POST(request: NextRequest) {
     let estimateMax: number | undefined;
 
     const isDemoModeResponse = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-    if (usedFallback && !isDemoModeResponse) {
-      // When rate-limited and heuristics are used, keep estimate conservative.
+    if (usedApiFallback && !isDemoModeResponse) {
+      // When GitHub API returned errors (rate-limit / auth), keep estimate conservative.
+      // Note: meta-skill bypasses (Open Source → 500k) do NOT set usedApiFallback,
+      // so they won't trigger this cap even though they set usedFallback=true.
       totalCandidates = Math.min(totalCandidates, 5000);
       confidence = "low";
       note = "Approximate estimate (GitHub rate-limited). Pipeline results are the source of truth.";
