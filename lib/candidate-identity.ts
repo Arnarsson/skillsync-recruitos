@@ -7,9 +7,11 @@ export interface CandidateIdentitySource {
 }
 
 export function isUuidLike(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value
-  );
+  // Standard UUID (8-4-4-4-12 hex with dashes)
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return true;
+  // Prisma CUID (starts with "c", 25 alphanumeric chars) — e.g. "cmlik21rb0001k0048z2afnex"
+  if (/^c[a-z0-9]{24}$/i.test(value)) return true;
+  return false;
 }
 
 export function parseGitHubUsernameFromUrl(sourceUrl?: string | null): string | null {

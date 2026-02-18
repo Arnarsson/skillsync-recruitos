@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAdmin } from "@/lib/adminContext";
 import { getDemoCandidates, DEMO_JOB } from "@/lib/demoData";
+import { resolveProfileSlug } from "@/lib/candidate-identity";
 import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -112,6 +113,9 @@ interface SkillsConfig {
 
 interface Candidate {
   id: string;
+  githubUsername?: string | null;
+  linkedinId?: string | null;
+  username?: string;
   name: string;
   currentRole: string;
   company: string;
@@ -1187,22 +1191,26 @@ export default function PipelinePage() {
 
   // Convert candidates to Kanban format
   const kanbanCandidates: PipelineCandidate[] = useMemo(() => {
-    return filteredCandidates.map((c) => ({
-      id: c.id,
-      name: c.name,
-      username: c.id,
-      avatar: c.avatar,
-      role: c.currentRole,
-      score: c.alignmentScore,
-      stage: candidateStages[c.id] || "sourced",
-      addedAt: c.createdAt || new Date().toISOString(),
-      lastActivity: c.createdAt,
-    }));
+    return filteredCandidates.map((c) => {
+      return {
+        id: c.id,
+        name: c.name,
+        username: resolveProfileSlug(c),
+        avatar: c.avatar,
+        role: c.currentRole,
+        score: c.alignmentScore,
+        stage: candidateStages[c.id] || "sourced",
+        addedAt: c.createdAt || new Date().toISOString(),
+        lastActivity: c.createdAt,
+        // Store whether this is a real GitHub profile
+        _hasGithub: !!(c.githubUsername || c.sourceUrl?.includes("github.com")),
+      };
+    });
   }, [filteredCandidates, candidateStages]);
 
   // Handle Kanban candidate click - open profile
   const handleKanbanCandidateClick = useCallback((candidate: PipelineCandidate) => {
-    router.push(`/profile/${candidate.id}`);
+    router.push(`/profile/${candidate.username}`);
   }, [router]);
 
   // Score distribution for chart
@@ -1419,7 +1427,7 @@ export default function PipelinePage() {
 
                     {/* One-Click Actions */}
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Link href={`/profile/${candidate.id}`} className="flex-1">
+                      <Link href={`/profile/${resolveProfileSlug(candidate)}`} className="flex-1">
                         <Button size="sm" variant="outline" className="w-full text-xs">
                           View Profile
                         </Button>
@@ -2151,7 +2159,7 @@ export default function PipelinePage() {
                         {selectedCandidates.map((c) => (
                           <td key={c.id} className="py-4 px-2 text-center">
                             <div className="flex gap-2 justify-center">
-                              <Link href={`/profile/${c.id}`}>
+                              <Link href={`/profile/${resolveProfileSlug(c)}`}>
                                 <Button size="sm" variant="outline" className="text-xs">
                                   View Profile
                                 </Button>

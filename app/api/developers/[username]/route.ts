@@ -66,8 +66,14 @@ export async function GET(
     console.warn("[Developers API] GitHub profile fetch failed, trying fallback", error);
 
     // Fallback to latest captured candidate data when GitHub is unavailable/rate-limited.
+    // Also handles Prisma CUID IDs that were incorrectly used as profile slugs.
     const fallbackCandidate = await prisma.candidate.findFirst({
-      where: { githubUsername: username },
+      where: {
+        OR: [
+          { githubUsername: username },
+          { id: username },
+        ],
+      },
       orderBy: { updatedAt: "desc" },
     });
 

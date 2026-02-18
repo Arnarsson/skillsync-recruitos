@@ -275,12 +275,22 @@ export default function ProfilePage({
       setError(null);
       try {
         const response = await fetch(`/api/developers/${username}`);
-        const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch profile");
+          // Try to parse error body, but don't crash if it's not JSON
+          let errorMsg = "Failed to fetch profile";
+          try {
+            const data = await response.json();
+            errorMsg = data.error || errorMsg;
+          } catch {
+            // Non-JSON error response — use status text
+            errorMsg = `Profile unavailable (${response.status})`;
+          }
+          setError(errorMsg);
+          return;
         }
 
+        const data = await response.json();
         setProfile(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -572,9 +582,15 @@ export default function ProfilePage({
       <div className="min-h-screen pt-24 pb-16 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="text-2xl font-bold mb-4">{error || "Developer not found"}</h1>
-          <Button asChild variant="link" className="focus-visible:ring-2 focus-visible:ring-primary">
-            <Link href="/search">Back to search</Link>
-          </Button>
+          <p className="text-muted-foreground mb-6">This profile could not be loaded. The candidate may not have a linked GitHub account.</p>
+          <div className="flex gap-4 justify-center">
+            <Button asChild variant="default" className="focus-visible:ring-2 focus-visible:ring-primary">
+              <Link href="/pipeline">Back to pipeline</Link>
+            </Button>
+            <Button asChild variant="link" className="focus-visible:ring-2 focus-visible:ring-primary">
+              <Link href="/search">Search</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
