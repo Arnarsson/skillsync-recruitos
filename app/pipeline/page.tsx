@@ -594,14 +594,17 @@ export default function PipelinePage() {
 
               setCandidates(newCandidates);
               // Persist new candidates to API (best-effort)
+              let savedCount = 0;
               for (const c of newCandidates) {
                 try {
                   await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
-                } catch {
-                  // Candidate may already exist, ignore
+                  savedCount++;
+                } catch (saveErr) {
+                  // Log the real error (e.g. 409 duplicate or auth failure) so it's visible in console
+                  console.warn("[Pipeline] Could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
                 }
               }
-              console.log("[Pipeline] Saved", newCandidates.length, "candidates to API");
+              console.log("[Pipeline] Persisted", savedCount, "of", newCandidates.length, "candidates to API (rest are shown in-memory)");
             }
           } catch (error) {
             console.error("[Pipeline] Auto-search error:", error);
@@ -820,8 +823,8 @@ export default function PipelinePage() {
         for (const c of newCandidates) {
           try {
             await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
-          } catch {
-            // Ignore duplicates
+          } catch (saveErr) {
+            console.warn("[Pipeline] autoSearch: could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
           }
         }
       }
@@ -887,8 +890,8 @@ export default function PipelinePage() {
         for (const c of newCandidates) {
           try {
             await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
-          } catch {
-            // Ignore duplicates
+          } catch (saveErr) {
+            console.warn("[Pipeline] handleSearch: could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
           }
         }
 
@@ -1054,17 +1057,44 @@ export default function PipelinePage() {
           if (req.type === 'location') {
             const candidateLocation = candidate.location?.toLowerCase() || '';
             const requiredLocation = String(req.value).toLowerCase();
-            
+
+            // No location data on candidate — can't match
+            if (!candidateLocation) return false;
+
             // Special cases
             if (requiredLocation === 'remote') return true; // Everyone can work remote
             if (requiredLocation === 'europe') {
-              const europeanCountries = ['denmark', 'sweden', 'norway', 'finland', 'germany', 
-                                         'uk', 'france', 'spain', 'italy', 'netherlands', 'poland'];
+              const europeanCountries = ['denmark', 'sweden', 'norway', 'finland', 'germany',
+                                         'uk', 'united kingdom', 'france', 'spain', 'italy',
+                                         'netherlands', 'poland', 'austria', 'switzerland',
+                                         'belgium', 'portugal', 'czech', 'hungary', 'romania'];
               return europeanCountries.some(country => candidateLocation.includes(country));
             }
-            
-            // Check if candidate location contains required location
-            return candidateLocation.includes(requiredLocation);
+
+            // Alias map: canonical country name → common aliases & city names
+            const locationAliases: Record<string, string[]> = {
+              'denmark':         ['denmark', 'danmark', 'dk', 'copenhagen', 'københavn', 'aarhus', 'odense', 'aalborg', 'esbjerg'],
+              'sweden':          ['sweden', 'sverige', 'se', 'stockholm', 'gothenburg', 'göteborg', 'malmö', 'malmo', 'uppsala'],
+              'norway':          ['norway', 'norge', 'no', 'oslo', 'bergen', 'stavanger', 'trondheim'],
+              'finland':         ['finland', 'suomi', 'fi', 'helsinki', 'tampere', 'turku', 'espoo'],
+              'germany':         ['germany', 'deutschland', 'de', 'berlin', 'munich', 'münchen', 'hamburg', 'frankfurt', 'cologne', 'köln'],
+              'netherlands':     ['netherlands', 'holland', 'nl', 'amsterdam', 'rotterdam', 'the hague', 'den haag', 'utrecht'],
+              'united kingdom':  ['united kingdom', 'uk', 'gb', 'england', 'scotland', 'wales', 'london', 'manchester', 'birmingham', 'edinburgh'],
+              'france':          ['france', 'fr', 'paris', 'lyon', 'marseille', 'toulouse', 'bordeaux'],
+              'spain':           ['spain', 'españa', 'es', 'madrid', 'barcelona', 'valencia', 'seville'],
+              'portugal':        ['portugal', 'pt', 'lisbon', 'lisboa', 'porto'],
+              'austria':         ['austria', 'österreich', 'at', 'vienna', 'wien', 'graz', 'salzburg'],
+              'switzerland':     ['switzerland', 'schweiz', 'ch', 'zurich', 'zürich', 'geneva', 'genève', 'bern'],
+              'poland':          ['poland', 'polska', 'pl', 'warsaw', 'warszawa', 'krakow', 'kraków', 'wrocław'],
+              'italy':           ['italy', 'italia', 'it', 'rome', 'roma', 'milan', 'milano', 'naples', 'turin'],
+              'usa':             ['usa', 'united states', 'us', 'america', 'new york', 'san francisco', 'los angeles', 'seattle', 'chicago', 'boston', 'austin'],
+              'canada':          ['canada', 'ca', 'toronto', 'vancouver', 'montreal', 'calgary', 'ottawa'],
+              'australia':       ['australia', 'au', 'sydney', 'melbourne', 'brisbane', 'perth', 'adelaide'],
+            };
+
+            // Look up aliases for the required location (fall back to the value itself)
+            const aliases = locationAliases[requiredLocation] ?? [requiredLocation];
+            return aliases.some(alias => candidateLocation.includes(alias));
           }
           
           if (req.type === 'experience') {
@@ -1219,9 +1249,9 @@ export default function PipelinePage() {
               </h1>
               <p className="text-sm text-muted-foreground">
                 {jobContext?.company || "Your Candidates"} •{" "}
-                {enforceHardRequirements && mustHaveSkills.length > 0
-                  ? `${filteredCandidates.length} matching candidates`
-                  : `${candidates.length} candidates found`}
+                {loading || isInitializing
+                  ? "Loading candidates…"
+                  : `Showing ${filteredCandidates.length} candidate${filteredCandidates.length !== 1 ? "s" : ""}`}
               </p>
               {mustHaveSkills.length > 0 && (
                 <Badge
@@ -1549,7 +1579,9 @@ export default function PipelinePage() {
               <Users className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">All Candidates</h2>
               <Badge variant="outline" className="text-xs">
-                {filteredCandidates.length} of {candidates.length}
+                {filteredCandidates.length < candidates.length
+                  ? `${filteredCandidates.length} of ${candidates.length}`
+                  : filteredCandidates.length}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
