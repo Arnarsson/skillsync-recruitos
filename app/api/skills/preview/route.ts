@@ -83,6 +83,15 @@ const DEMO_SKILL_COUNTS: Record<string, number> = {
   postgresql: 80000,
   redis: 75000,
   testing: 50000,
+  sql: 142000,
+  "data pipelines": 18000,
+  "data engineering": 24000,
+  "machine learning": 95000,
+  docker: 178000,
+  spark: 32000,
+  airflow: 15000,
+  kafka: 28000,
+  etl: 12000,
 };
 
 function getDemoCount(skill: string): number {
