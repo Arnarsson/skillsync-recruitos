@@ -374,6 +374,20 @@ export function CandidatePipelineItem({
     githubUsername,
   ]);
 
+  // Determine if we have real GitHub data backing the score
+  const hasGithubData = (() => {
+    const bp = githubAnalysis?.buildprint || candidate.buildprint;
+    if (!bp) return false;
+    const vals = [
+      bp.impact?.value,
+      bp.collaboration?.value,
+      bp.consistency?.value,
+      bp.complexity?.value,
+      bp.ownership?.value,
+    ].filter((v) => typeof v === 'number');
+    return vals.length > 0 && vals.some((v) => (v as number) > 0);
+  })();
+
   // In compact mode, render a simplified non-expandable version
   if (compact) {
     return (
@@ -413,7 +427,7 @@ export function CandidatePipelineItem({
 
           {/* Score */}
           <div className="flex-shrink-0">
-            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} />
+            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} hasGithubData={hasGithubData} />
           </div>
         </div>
 
@@ -539,7 +553,7 @@ export function CandidatePipelineItem({
 
                 {/* Score */}
                 <div className="flex-shrink-0">
-                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
+                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} hasGithubData={hasGithubData} />
                 </div>
 
                 {/* Expand Indicator */}
