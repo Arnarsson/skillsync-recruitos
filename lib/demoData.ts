@@ -382,7 +382,7 @@ export const DEMO_PROFILES: DemoProfile[] = [
           { "label": "Original Repos", "value": "68 / 76", "url": "https://github.com/fnielsen?tab=repositories&type=source", "type": "stat" }
         ]
       },
-      "overallScore": 75
+      "overallScore": 67
     },
     "topRepos": [
       { "name": "afinn", "fullName": "fnielsen/afinn", "description": "AFINN sentiment analysis in Python", "url": "https://github.com/fnielsen/afinn", "stars": 120, "forks": 35, "language": "Python", "topics": ["nlp", "sentiment-analysis", "python", "data-science"], "updatedAt": "2025-01-05T00:00:00Z" },
@@ -452,7 +452,7 @@ export const DEMO_PROFILES: DemoProfile[] = [
           { "label": "Original Repos", "value": "80 / 92", "url": "https://github.com/thomasahle?tab=repositories&type=source", "type": "stat" }
         ]
       },
-      "overallScore": 71
+      "overallScore": 58
     },
     "topRepos": [
       { "name": "sunfish", "fullName": "thomasahle/sunfish", "description": "Sunfish: a Python chess engine in 111 lines of code", "url": "https://github.com/thomasahle/sunfish", "stars": 45, "forks": 10, "language": "Python", "topics": ["chess", "algorithms", "python"], "updatedAt": "2025-01-20T00:00:00Z" },

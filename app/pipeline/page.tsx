@@ -405,6 +405,9 @@ export default function PipelinePage() {
         if (isActive) {
           setCandidates(sortedDemoCandidates);
           setJobContext(demoJobContext);
+          // Clear stale skills config from previous sessions
+          localStorage.removeItem("apex_skills_config");
+          localStorage.removeItem("apex_skills_draft");
         }
         return; // Skip normal initialization in demo mode
       }
@@ -517,9 +520,10 @@ export default function PipelinePage() {
           localStorage.setItem("apex_job_context_hash", jobContextHash);
         }
 
-        // Use only top 2 skills for search - more specific queries return 0 results from GitHub
+        // Use top 2 skills + location for search — location qualifier filters to the right market
         const skills = parsedJobContext.requiredSkills.slice(0, 2);
-        const query = skills.join(" ");
+        const locationSuffix = parsedJobContext.location ? ` ${parsedJobContext.location.split(",")[0].trim()}` : "";
+        const query = skills.join(" ") + locationSuffix;
         console.log("[Pipeline] Auto-searching with query:", query);
 
         if (query) {
@@ -753,8 +757,8 @@ export default function PipelinePage() {
       }
     }
 
-    // No GitHub evidence available at search time — cap at 60. Score improves after enrichment.
-    const totalScore = Math.min(60, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
+    // Cap at 95 — real differentiation comes from skill match + location match
+    const totalScore = Math.min(95, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
 
     return {
       score: totalScore,
