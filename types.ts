@@ -126,6 +126,12 @@ export interface ScoreBreakdown {
   industry: ScoreComponent;
   seniority: ScoreComponent;
   location: ScoreComponent;
+  // Pipeline search-time skill matching (no AI scoring, no buildprint evidence)
+  requiredMatched?: string[];          // Skills confirmed via GitHub topics
+  requiredMatchedInferred?: string[];  // Skills matched from bio text, not GitHub topics
+  requiredMissing?: string[];          // Required skills not found
+  preferredMatched?: string[];         // Nice-to-have skills matched
+  locationMatch?: "exact" | "remote" | "none";
 }
 
 // NEW: Enhanced persona sub-interfaces (Sprint 2)

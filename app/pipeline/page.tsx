@@ -122,7 +122,17 @@ interface Candidate {
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
-  scoreBreakdown?: ScoreBreakdown;
+  scoreBreakdown?: ScoreBreakdown & {
+    requiredMatched?: string[];
+    requiredMatchedInferred?: string[];
+    requiredMissing?: string[];
+    preferredMatched?: string[];
+    locationMatch?: "exact" | "remote" | "none";
+    baseScore?: number;
+    skillsScore?: number;
+    preferredScore?: number;
+    locationScore?: number;
+  };
   persona?: {
     archetype?: string;
     riskAssessment?: {
@@ -637,7 +647,20 @@ export default function PipelinePage() {
   const calculateAlignmentScore = (
     user: { skills?: string[]; bio: string; location: string },
     jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
-  ): { score: number; breakdown: ScoreBreakdown } => {
+  ): {
+    score: number;
+    breakdown: {
+      requiredMatched: string[];
+      requiredMatchedInferred: string[];
+      requiredMissing: string[];
+      preferredMatched: string[];
+      locationMatch: "exact" | "remote" | "none";
+      baseScore: number;
+      skillsScore: number;
+      preferredScore: number;
+      locationScore: number;
+    };
+  } => {
     const baseScore = 40;
     let skillsScore = 0;
     let preferredScore = 0;
@@ -646,14 +669,16 @@ export default function PipelinePage() {
     const userSkillsLower = (user.skills || []).map((s) => s.toLowerCase());
     const userBioLower = (user.bio || "").toLowerCase();
 
-    // Helper to check if user has a skill
-    const userHasSkill = (skillName: string): boolean => {
+    // Helpers to check skill match source
+    const userHasSkillViaTopics = (skillName: string): boolean => {
       const skillLower = skillName.toLowerCase();
-      return (
-        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
-        userBioLower.includes(skillLower)
-      );
+      return userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s));
     };
+    const userHasSkillViaBio = (skillName: string): boolean => {
+      return userBioLower.includes(skillName.toLowerCase());
+    };
+    const userHasSkill = (skillName: string): boolean =>
+      userHasSkillViaTopics(skillName) || userHasSkillViaBio(skillName);
 
     // Try to use skills config from skills-review page (has tier weights)
     const skillsConfigStr = typeof window !== "undefined"
@@ -661,6 +686,7 @@ export default function PipelinePage() {
       : null;
 
     const requiredMatched: string[] = [];
+    const requiredMatchedInferred: string[] = []; // Matched via bio text only, not GitHub topics
     const requiredMissing: string[] = [];
     const preferredMatched: string[] = [];
 
@@ -679,9 +705,13 @@ export default function PipelinePage() {
         // bonus match: +2 points each (max ~6 for 3 skills)
 
         mustHaves.forEach(skill => {
-          if (userHasSkill(skill.name)) {
+          if (userHasSkillViaTopics(skill.name)) {
             skillsScore += 8;
             requiredMatched.push(skill.name);
+          } else if (userHasSkillViaBio(skill.name)) {
+            skillsScore += 8;
+            requiredMatched.push(skill.name);
+            requiredMatchedInferred.push(skill.name); // Bio-only: unverified
           } else {
             skillsScore -= 5; // Penalty for missing must-have
             requiredMissing.push(skill.name);
@@ -712,8 +742,11 @@ export default function PipelinePage() {
       const preferredSkills = jobRequirements.preferredSkills || [];
 
       requiredSkills.forEach((skill) => {
-        if (userHasSkill(skill)) {
+        if (userHasSkillViaTopics(skill)) {
           requiredMatched.push(skill);
+        } else if (userHasSkillViaBio(skill)) {
+          requiredMatched.push(skill);
+          requiredMatchedInferred.push(skill); // Bio-only: unverified
         } else {
           requiredMissing.push(skill);
         }
@@ -746,12 +779,14 @@ export default function PipelinePage() {
       }
     }
 
-    const totalScore = Math.min(99, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
+    // No GitHub evidence available at search time — cap at 60. Score improves after enrichment.
+    const totalScore = Math.min(60, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
 
     return {
       score: totalScore,
       breakdown: {
         requiredMatched,
+        requiredMatchedInferred,
         requiredMissing,
         preferredMatched,
         locationMatch,
