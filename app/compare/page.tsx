@@ -98,7 +98,7 @@ function getScorePercentage(breakdown: ScoreBreakdown | undefined, key: Dimensio
 
 // ===== Component =====
 
-export default function ComparePage() {
+function ComparePageContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -662,5 +662,14 @@ export default function ComparePage() {
         )}
       </div>
     </div>
+  );
+}
+
+import { Suspense } from "react";
+export default function ComparePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
+      <ComparePageContent />
+    </Suspense>
   );
 }

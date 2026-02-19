@@ -512,7 +512,7 @@ function CandidateDetailPanel({
 
 // ===== Main Page =====
 
-export default function TalentGraphPage() {
+function TalentGraphPageContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CandidateNodeData>>([]);
@@ -973,5 +973,14 @@ export default function TalentGraphPage() {
         />
       )}
     </div>
+  );
+}
+
+import { Suspense } from "react";
+export default function TalentGraphPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
+      <TalentGraphPageContent />
+    </Suspense>
   );
 }

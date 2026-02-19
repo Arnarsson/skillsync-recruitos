@@ -268,7 +268,7 @@ function rerankCandidatesForContext(
   return rescored;
 }
 
-export default function PipelinePage() {
+function PipelinePageContent() {
   const { t } = useLanguage();
   const { isAdmin, isDemoMode } = useAdmin();
   const { status } = useSession();
@@ -2239,5 +2239,16 @@ export default function PipelinePage() {
         onRemoveCandidate={(id) => setSelectedIds((prev) => prev.filter((i) => i !== id))}
       />
     </div>
+  );
+}
+
+
+import { Suspense } from "react";
+
+export default function PipelinePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading pipeline...</div></div>}>
+      <PipelinePageContent />
+    </Suspense>
   );
 }
