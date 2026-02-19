@@ -35,7 +35,7 @@ interface CreditPackage {
   savings?: string | null;
 }
 
-export default function CreditsPage() {
+function CreditsPageContent() {
   const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -343,5 +343,14 @@ export default function CreditsPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+import { Suspense } from "react";
+export default function CreditsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
+      <CreditsPageContent />
+    </Suspense>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { resolveProfileSlug } from "@/lib/candidate-identity";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -440,7 +441,7 @@ export function CandidateDetailPanel({
       {/* Actions - Fixed Footer */}
       <div className="p-4 border-t bg-background">
         <div className="flex gap-2">
-          <Link href={`/profile/${candidate.id}/deep`} className="flex-1">
+          <Link href={`/profile/${resolveProfileSlug(candidate)}/deep`} className="flex-1">
             <Button className="w-full gap-2">
               <Brain className="w-4 h-4" />
               Full Profile

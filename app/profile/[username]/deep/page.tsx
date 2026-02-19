@@ -72,6 +72,8 @@ import OutreachModal from "@/components/OutreachModal";
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LinkedInConnectionPath } from "@/components/LinkedInConnectionPath";
+import { DataSourceBanner } from "@/components/DataSourceBanner";
+import { JobReadinessScore } from "@/components/JobReadinessScore";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -949,6 +951,29 @@ export default function DeepProfilePage() {
           </Card>
         )}
 
+        {/* Data Source Transparency Banner */}
+        <DataSourceBanner
+          hasLinkedIn={!!enrichmentData?.linkedin?.bestMatch || !!candidate.linkedinUrl}
+          className="mb-6"
+          compact
+        />
+
+        {/* Job Readiness Score */}
+        {candidate.id && (
+          <JobReadinessScore
+            candidateId={candidate.id}
+            readinessInput={{
+              candidateId: candidate.id,
+              githubUsername: username,
+              currentCompany: candidate.company || undefined,
+              currentRole: candidate.currentRole || undefined,
+              skills: candidate.skills,
+              location: candidate.location || undefined,
+            }}
+            className="mb-6"
+          />
+        )}
+
         {/* Profile Hero */}
         <Card className="mb-8">
           <CardContent className="pt-6">
@@ -1532,13 +1557,13 @@ export default function DeepProfilePage() {
                   </Card>
                 )}
 
-                {/* Psychometric */}
+                {/* Candidate Insights */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSection('psychometric')}>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
-                          Psychometric Profile
+                          Candidate Insights
                         </CardTitle>
                         {expandedSections.psychometric ? (
                           <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -2063,17 +2088,30 @@ export default function DeepProfilePage() {
         {activeTab === "github" && (
           <div className="space-y-6">
             {/* GitHub Data Context Banner */}
-            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-primary">Public Activity Only</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  This analysis reflects public GitHub activity only. Private repositories and
-                  enterprise work are not included. Contribution data may underrepresent actual
-                  coding activity.
-                </p>
+            {!loadingGithub && (githubAnalysis ? (
+              <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-primary">Public Activity Only</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This analysis reflects public GitHub activity only. Private repositories and
+                    enterprise work are not included. Contribution data may underrepresent actual
+                    coding activity.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-600">No Public GitHub Activity Found</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No public repositories or contribution data could be retrieved for this profile.
+                    Analysis is based on public profile information only.
+                  </p>
+                </div>
+              </div>
+            ))}
 
             {loadingGithub ? (
               <Card>

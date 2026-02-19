@@ -67,7 +67,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error("Candidate fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch candidate" },
+      {
+        error: "Failed to fetch candidate",
+        details: error instanceof Error ? error.message : String(error),
+        code: (error as any)?.code,
+      },
       { status: 500 }
     );
   }
@@ -187,6 +191,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.isPremium !== undefined) data.isPremium = body.isPremium;
     if (body.rawProfileText !== undefined)
       data.rawProfileText = body.rawProfileText;
+
+    // Data freshness timestamps
+    if (body.githubFetchedAt !== undefined)
+      data.githubFetchedAt = new Date(body.githubFetchedAt);
+    if (body.linkedinFetchedAt !== undefined)
+      data.linkedinFetchedAt = new Date(body.linkedinFetchedAt);
 
     // Verify ownership before updating (userId is guaranteed by auth check above)
     const existing = await prisma.candidate.findFirst({

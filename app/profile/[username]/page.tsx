@@ -49,6 +49,7 @@ import { calculateBestTimeToReach, BestTimeToReach as BestTimeData } from "@/lib
 import { analyzeRisingStar, RisingStarAnalysis } from "@/lib/risingStars";
 import { generateInterviewPrep, InterviewPrepKit } from "@/lib/interviewPrep";
 import { SalaryEstimatorPanel } from "@/components/profile/SalaryEstimatorPanel";
+import { DataSourceBanner } from "@/components/DataSourceBanner";
 
 interface Repo {
   name: string;
@@ -274,12 +275,22 @@ export default function ProfilePage({
       setError(null);
       try {
         const response = await fetch(`/api/developers/${username}`);
-        const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch profile");
+          // Try to parse error body, but don't crash if it's not JSON
+          let errorMsg = "Failed to fetch profile";
+          try {
+            const data = await response.json();
+            errorMsg = data.error || errorMsg;
+          } catch {
+            // Non-JSON error response — use status text
+            errorMsg = `Profile unavailable (${response.status})`;
+          }
+          setError(errorMsg);
+          return;
         }
 
+        const data = await response.json();
         setProfile(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -571,9 +582,15 @@ export default function ProfilePage({
       <div className="min-h-screen pt-24 pb-16 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="text-2xl font-bold mb-4">{error || "Developer not found"}</h1>
-          <Button asChild variant="link" className="focus-visible:ring-2 focus-visible:ring-primary">
-            <Link href="/search">Back to search</Link>
-          </Button>
+          <p className="text-muted-foreground mb-6">This profile could not be loaded. The candidate may not have a linked GitHub account.</p>
+          <div className="flex gap-4 justify-center">
+            <Button asChild variant="default" className="focus-visible:ring-2 focus-visible:ring-primary">
+              <Link href="/pipeline">Back to pipeline</Link>
+            </Button>
+            <Button asChild variant="link" className="focus-visible:ring-2 focus-visible:ring-primary">
+              <Link href="/search">Search</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -696,6 +713,9 @@ export default function ProfilePage({
           </div>
         </div>
 
+        {/* Data Source Transparency Banner */}
+        <DataSourceBanner hasLinkedIn={!!linkedInProfile} className="mb-6" />
+
         {/* LinkedIn Enrich Bar */}
         {!linkedInProfile && (
           <Card className={`mb-6 bg-indigo-600/10 ${linkedInError ? 'border-red-500/40' : linkedInSuggestions ? 'border-emerald-500/40' : 'border-indigo-500/20'}`}>
@@ -780,7 +800,7 @@ export default function ProfilePage({
                     <Linkedin className="w-6 h-6 text-indigo-400" />
                     <div className="flex-1 min-w-[200px]">
                       <p className="heading-sm normal-case">Enrich with LinkedIn</p>
-                      <p className="caption">Add LinkedIn URL for network mapping & enhanced psychometrics</p>
+                      <p className="caption">Add LinkedIn URL for network mapping & enhanced behavioral analysis</p>
                     </div>
                     {brightDataService.isConfigured() ? (
                       <div className="flex gap-2 items-center flex-wrap">
@@ -967,7 +987,7 @@ export default function ProfilePage({
             </TabsTrigger>
             <TabsTrigger value="psychometric" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               <Brain className="w-4 h-4" aria-hidden="true" />
-              <span>Psychometric</span>
+              <span>Behavioral</span>
             </TabsTrigger>
             <TabsTrigger value="interview" className="gap-2 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               <Calendar className="w-4 h-4" aria-hidden="true" />
@@ -1091,7 +1111,7 @@ export default function ProfilePage({
             )}
           </TabsContent>
 
-          {/* Psychometric Tab */}
+          {/* Behavioral Profile Tab */}
           <TabsContent value="psychometric">
             {psychProfile ? (
               <div className="space-y-6">
@@ -1106,7 +1126,7 @@ export default function ProfilePage({
               <div className="card-base">
                 <div className="py-12 text-center">
                   <Brain className="w-12 h-12 mx-auto mb-4 text-slate-500" />
-                  <p className="body-sm">Generating psychometric profile...</p>
+                  <p className="body-sm">Generating behavioral profile...</p>
                 </div>
               </div>
             )}

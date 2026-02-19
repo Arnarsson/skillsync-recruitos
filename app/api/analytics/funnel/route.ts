@@ -36,9 +36,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(analytics);
   } catch (error) {
     console.error('[API] Error fetching funnel analytics:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    // Return empty analytics instead of 500 to avoid breaking the UI
+    return NextResponse.json({
+      period: { start: new Date().toISOString(), end: new Date().toISOString() },
+      totalSearches: 0,
+      totalCandidates: 0,
+      conversions: [],
+      qualityMetrics: { avgScore: 0, scoreDistribution: {} },
+    });
   }
 }

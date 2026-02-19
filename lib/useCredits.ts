@@ -97,7 +97,7 @@ export function useCredits() {
    */
   const purchasePackage = useCallback(async (packageId: string) => {
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await fetch("/api/checkout/credits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ packageId }),

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { resolveProfileSlug } from "@/lib/candidate-identity";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { candidateService } from "@/services/candidateService";
@@ -246,7 +247,7 @@ export default function AnalysePage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link href={`/profile/${candidate.id}/deep`}>
+                <Link href={`/profile/${resolveProfileSlug(candidate)}/deep`}>
                   <Card className="group overflow-hidden hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer">
                     <CardContent className="p-6">
                       <div className="flex flex-col sm:flex-row gap-6">

@@ -286,6 +286,9 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
     if (!response.text) throw new Error("No response from AI");
     const data = JSON.parse(response.text);
     const calculatedScore = calculateScore(data.scoreBreakdown);
+    // Cap at 95 to allow strong differentiation while reserving 96-100 for verified top matches
+    // with confirmed buildprint data from multiple corroborated sources
+    const cappedScore = Math.min(calculatedScore, 95);
 
     // TEMP: Log enhanced scoring fields for verification
     if (process.env.NODE_ENV === 'development') {
@@ -305,7 +308,7 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
     return {
       id: uuid,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'Candidate')}&background=random&color=fff`,
-      alignmentScore: calculatedScore,
+      alignmentScore: cappedScore,
       unlockedSteps: [FunnelStage.SHORTLIST],
       persona: personaData, // Attach persona if it exists
       ...data
@@ -324,13 +327,16 @@ export const analyzeCandidateProfile = async (resumeText: string, jobContext: st
         const responseText = await callOpenRouter(promptWithInstructions);
         const data = JSON.parse(responseText);
         const calculatedScore = calculateScore(data.scoreBreakdown);
+        // Cap at 95 to allow strong differentiation while reserving 96-100 for verified top matches
+        // with confirmed buildprint data from multiple corroborated sources
+        const cappedScore = Math.min(calculatedScore, 95);
 
         const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
 
         return {
           id: uuid,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'Candidate')}&background=random&color=fff`,
-          alignmentScore: calculatedScore,
+          alignmentScore: cappedScore,
           unlockedSteps: [FunnelStage.SHORTLIST],
           persona: personaData,
           ...data

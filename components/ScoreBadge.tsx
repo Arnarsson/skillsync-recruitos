@@ -16,6 +16,7 @@ interface ScoreBadgeProps {
   showLabel?: boolean;
   showTooltip?: boolean;
   className?: string;
+  hasGithubData?: boolean; // When false, score is based on text-only matching
 }
 
 export function getScoreInfo(score: number) {
@@ -65,9 +66,13 @@ export default function ScoreBadge({
   showLabel = true,
   showTooltip = true,
   className,
+  hasGithubData = true,
 }: ScoreBadgeProps) {
   const { lang } = useLanguage();
-  const info = getScoreInfo(score);
+  // Show the real score — the pipeline reranking and buildprint already produce calibrated values.
+  // Previously this capped at 50 for !hasGithubData, but that hid meaningful differentiation.
+  const effectiveScore = score;
+  const info = getScoreInfo(effectiveScore);
   const label = lang === "da" ? info.labelDa : info.label;
 
   const sizeClasses = {
@@ -93,7 +98,7 @@ export default function ScoreBadge({
       )}
     >
       <div className={cn("font-bold", info.color, sizeClasses[size])}>
-        <div className="flex items-center justify-center h-full">{score}</div>
+        <div className="flex items-center justify-center h-full">{effectiveScore}</div>
       </div>
       {showLabel && (
         <div
@@ -106,6 +111,7 @@ export default function ScoreBadge({
           {label}
         </div>
       )}
+      {/* Score is now always displayed at face value regardless of data source */}
     </div>
   );
 

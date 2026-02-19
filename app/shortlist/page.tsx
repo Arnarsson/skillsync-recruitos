@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { resolveProfileSlug } from "@/lib/candidate-identity";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -308,7 +309,7 @@ export default function ShortlistPage() {
                       {/* Actions */}
                       <div className="flex gap-2">
                         <Link
-                          href={`/profile/${candidate.id}/deep`}
+                          href={`/profile/${resolveProfileSlug(candidate)}/deep`}
                           className="flex-1"
                         >
                           <Button variant="outline" size="sm" className="w-full">

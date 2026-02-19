@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   Expandable,
@@ -13,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { AnalysisLoadingScramble } from "@/components/ui/loading-scramble";
 import ScoreBadge from "@/components/ScoreBadge";
 import { BuildprintStrip } from "@/components/pipeline/BuildprintStrip";
-import { ScoreExplainer } from "@/components/ScoreExplainer";
+
 import { BehavioralBadges } from "@/components/BehavioralBadges";
 import {
   MapPin,
@@ -36,6 +37,8 @@ import {
   Lock,
   Eye,
   Activity,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -43,10 +46,139 @@ import {
   isUuidLike,
   resolveProfileSlug,
 } from "@/lib/candidate-identity";
+import { DataSourceBanner } from "@/components/DataSourceBanner";
+import { JobReadinessScore } from "@/components/JobReadinessScore";
+import { computeReadinessScore } from "@/services/jobReadiness/engine";
+import type { ReadinessInput } from "@/services/jobReadiness/types";
+
+// ===== Receptivity Badge =====
+// Lazily fetched from /api/candidates/[id]/readiness; falls back to local compute for demo profiles.
+interface ReceptivityBadgeProps {
+  candidateId: string;
+  readinessInput: ReadinessInput;
+}
+
+function ReceptivityBadge({ candidateId, readinessInput }: ReceptivityBadgeProps) {
+  const [score, setScore] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/candidates/${candidateId}/readiness`);
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setScore(typeof data.overall === "number" ? data.overall : null);
+          } else {
+            // Not in DB (e.g. demo profile) — compute locally from the input data
+            const result = await computeReadinessScore(readinessInput);
+            if (!cancelled) setScore(result.overall);
+          }
+        }
+      } catch {
+        // Silently fail — badge is an enhancement, not critical
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // readinessInput intentionally omitted — stable after mount, candidateId is the key
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidateId]);
+
+  // Subtle loading state: tiny pulsing dot, doesn't block the card
+  if (isLoading) {
+    return (
+      <div className="flex-shrink-0 flex items-center px-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/25 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (score === null) return null;
+
+  let emoji: string;
+  let label: string;
+  let badgeClass: string;
+
+  if (score >= 70) {
+    emoji = "🟢";
+    label = "Receptive now";
+    badgeClass = "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400";
+  } else if (score >= 40) {
+    emoji = "🟡";
+    label = "Likely open";
+    badgeClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  } else {
+    emoji = "🔴";
+    label = "Low signal";
+    badgeClass = "border-red-400/20 bg-red-500/5 text-red-600 dark:text-red-400";
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn("flex-shrink-0 text-[10px] px-2 py-0.5 hidden sm:flex", badgeClass)}
+      title={`Receptivity score: ${score}/100`}
+    >
+      {emoji} {label}
+    </Badge>
+  );
+}
+
+/** Build ReadinessInput from candidate data (works for both DB and demo candidates) */
+function buildReadinessInput(candidate: Candidate): ReadinessInput {
+  const input: ReadinessInput = {
+    candidateId: candidate.id,
+    githubUsername: candidate.githubUsername || candidate.username,
+    currentCompany: candidate.company || undefined,
+    currentRole: candidate.currentRole || undefined,
+    skills: candidate.skills,
+    location: candidate.location || undefined,
+  };
+
+  // Map demo profile fields to GitHub profile format
+  const c = candidate as any;
+  if (c.followers != null || c.publicRepos != null) {
+    input.githubProfile = {
+      login: candidate.githubUsername || candidate.username || candidate.name,
+      public_repos: c.publicRepos ?? 0,
+      followers: c.followers ?? 0,
+      following: c.following ?? 0,
+      created_at: c.createdAt || '2020-01-01T00:00:00Z',
+      bio: c.bio ?? null,
+      company: candidate.company || null,
+    };
+  }
+
+  // Map topRepos to engine format
+  if (c.topRepos?.length) {
+    input.githubRepos = c.topRepos.map((r: any) => ({
+      name: r.name || r.fullName?.split('/')?.pop() || '',
+      language: r.language || null,
+      stargazers_count: r.stars ?? r.stargazers_count ?? 0,
+      forks_count: r.forks ?? r.forks_count ?? 0,
+      pushed_at: r.updatedAt || r.pushed_at || new Date().toISOString(),
+      created_at: r.createdAt || r.created_at || '2023-01-01T00:00:00Z',
+      topics: r.topics || [],
+      fork: r.fork ?? false,
+    }));
+  }
+
+  return input;
+}
 
 interface ScoreBreakdown {
   requiredMatched: string[];
   requiredMissing: string[];
+  requiredMatchedInferred?: string[];  // Skills matched from bio/title text only (not GitHub topics)
   preferredMatched: string[];
   locationMatch: "exact" | "remote" | "none";
   baseScore: number;
@@ -125,7 +257,7 @@ export function CandidatePipelineItem({
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
-  const [showScoreExplainer, setShowScoreExplainer] = useState(false);
+
   const [githubAnalysis, setGithubAnalysis] = useState<any>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
 
@@ -180,11 +312,17 @@ export function CandidatePipelineItem({
 
     setIsLoadingAnalysis(true);
     try {
+      // If candidate already has buildprint data (demo profiles), use it directly
+      if (candidate.buildprint) {
+        setGithubAnalysis({ buildprint: candidate.buildprint });
+      }
+
       const lookupId = githubUsername || candidate.id;
       // Fetch both developer profile and GitHub deep analysis in parallel
+      // Skip GitHub deep fetch if we already have buildprint data
       const [profileRes, githubRes] = await Promise.all([
         fetch(`/api/developers/${lookupId}?deep=true`),
-        lookupId && !isUuidLike(lookupId)
+        !candidate.buildprint && lookupId && !isUuidLike(lookupId)
           ? fetch(`/api/github/deep?username=${lookupId}`)
           : Promise.resolve(new Response(null, { status: 204 })),
       ]);
@@ -215,19 +353,20 @@ export function CandidatePipelineItem({
             try {
               setGithubAnalysis(JSON.parse(raw));
             } catch {
-              console.warn("GitHub deep analysis returned non-JSON payload");
+              // Non-JSON response, ignore
             }
           }
         }
       }
-    } catch (error) {
-      console.error("Failed to fetch deep analysis:", error);
+    } catch {
+      // Silently handle — demo profiles work offline, live profiles degrade gracefully
     } finally {
       setIsLoadingAnalysis(false);
       setHasLoadedAnalysis(true);
     }
   }, [
     candidate.id,
+    candidate.buildprint,
     hasLoadedAnalysis,
     isLoadingAnalysis,
     candidate.persona?.archetype,
@@ -235,6 +374,20 @@ export function CandidatePipelineItem({
     candidate.risks,
     githubUsername,
   ]);
+
+  // Determine if we have real GitHub data backing the score
+  const hasGithubData = (() => {
+    const bp = githubAnalysis?.buildprint || candidate.buildprint;
+    if (!bp) return false;
+    const vals = [
+      bp.impact?.value,
+      bp.collaboration?.value,
+      bp.consistency?.value,
+      bp.complexity?.value,
+      bp.ownership?.value,
+    ].filter((v) => typeof v === 'number');
+    return vals.length > 0 && vals.some((v) => (v as number) > 0);
+  })();
 
   // In compact mode, render a simplified non-expandable version
   if (compact) {
@@ -275,7 +428,7 @@ export function CandidatePipelineItem({
 
           {/* Score */}
           <div className="flex-shrink-0">
-            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} />
+            <ScoreBadge score={candidate.alignmentScore} size="sm" showTooltip={false} hasGithubData={hasGithubData} />
           </div>
         </div>
 
@@ -299,7 +452,6 @@ export function CandidatePipelineItem({
   }
 
   return (
-    <>
     <Expandable
       expandDirection="vertical"
       expandBehavior="push"
@@ -394,20 +546,15 @@ export function CandidatePipelineItem({
                   ) : null}
                 </div>
 
-                {/* Score - Clickable for explainer */}
+                {/* Receptivity Badge */}
+                <ReceptivityBadge
+                  candidateId={candidate.id}
+                  readinessInput={buildReadinessInput(candidate)}
+                />
+
+                {/* Score */}
                 <div className="flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowScoreExplainer(true);
-                    }}
-                    className="hover:scale-105 transition-transform cursor-pointer h-auto p-0"
-                    title="Click to see score breakdown"
-                  >
-                    <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} />
-                  </Button>
+                  <ScoreBadge score={candidate.alignmentScore} size="md" showTooltip={false} hasGithubData={hasGithubData} />
                 </div>
 
                 {/* Expand Indicator */}
@@ -422,13 +569,49 @@ export function CandidatePipelineItem({
 
               {/* Expanded Content */}
               <ExpandableContent preset="blur-md" className="px-4 pb-4">
-                {/* Buildprint Strip */}
+                {/* Data Source Transparency */}
+                <DataSourceBanner
+                  hasLinkedIn={candidate.source === "linkedin"}
+                  className="pt-2 mb-3"
+                  compact
+                />
+
+                {/* Outreach Timing - Full version for prominence */}
+                <JobReadinessScore
+                  candidateId={candidate.id}
+                  readinessInput={buildReadinessInput(candidate)}
+                  compact={false}
+                  className="mb-4"
+                />
+
+                {/* GitHub Activity Highlights */}
                 {githubAnalysis && (
-                  <div className="pt-2 pb-3 border-t mb-3">
-                    <BuildprintStrip
-                      githubAnalysis={githubAnalysis}
-                      userProfile={{ totalStars: candidate.skills?.length || 0 }}
-                    />
+                  <div className="pt-3 pb-3 border-t mb-3">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                      GitHub Activity
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 text-xs">
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.impact?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Impact</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.collaboration?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Teamwork</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.consistency?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Activity</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.complexity?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Depth</div>
+                      </div>
+                      <div className="text-center col-span-3 sm:col-span-1">
+                        <div className="text-base sm:text-sm font-semibold text-foreground">{githubAnalysis.buildprint?.ownership?.value || 0}</div>
+                        <div className="text-[10px] text-muted-foreground">Leadership</div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -441,88 +624,58 @@ export function CandidatePipelineItem({
                   ))}
                 </div>
 
-                {/* Score Breakdown */}
-                {candidate.scoreBreakdown && normalizedScoreBreakdown && (
+                {/* Skills Match */}
+                {candidate.scoreBreakdown && ((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
+                  (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0) > 0 ||
+                  (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
                   <div className="mb-6">
-                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                      <Target className="w-4 h-4 text-primary" />
-                      {t("candidate.scoreBreakdown")}
-                    </h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="p-2 rounded-lg bg-muted/50 text-center">
-                        <div className="text-lg font-bold text-muted-foreground">
-                          {normalizedScoreBreakdown.base}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{t("candidate.base")}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-green-500/10 text-center">
-                        <div className="text-lg font-bold text-green-500">
-                          +{normalizedScoreBreakdown.skills}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{t("score.skills")}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-blue-500/10 text-center">
-                        <div className="text-lg font-bold text-blue-500">
-                          +{normalizedScoreBreakdown.preferred}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{t("candidate.preferred")}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-yellow-500/10 text-center relative group">
-                        <div className="text-lg font-bold text-yellow-500">
-                          +{normalizedScoreBreakdown.location}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{t("score.location")}</div>
-                        {/* Location score tooltip for 0% */}
-                        {normalizedScoreBreakdown.location === 0 && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
-                            <div className="bg-popover text-popover-foreground text-xs p-2 rounded-lg shadow-lg border max-w-[200px] whitespace-normal">
-                              <div className="flex items-center gap-1 mb-1">
-                                <Info className="w-3 h-3" />
-                                {t("score.remoteEligible")}
-                              </div>
-                              <p className="text-muted-foreground">
-                                {lang === "da"
-                                  ? "Kandidatens lokation matcher ikke direkte, men kan være remote-kompatibel."
-                                  : "Location doesn't match directly, but may be remote-compatible."}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        {t("candidate.requiredSkills")}
+                      </h4>
+                      <span className="text-xs font-semibold text-foreground">
+                        {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0)} of{" "}
+                        {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMatchedInferred?.length || 0) +
+                          (candidate.scoreBreakdown.requiredMissing?.length || 0)}{" "}
+                        matched
+                      </span>
                     </div>
-
-                    {/* Skills Match */}
-                    {((candidate.scoreBreakdown.requiredMatched?.length || 0) > 0 ||
-                      (candidate.scoreBreakdown.requiredMissing?.length || 0) > 0) && (
-                      <div className="mt-3">
-                        <div className="text-xs font-medium text-muted-foreground mb-2">
-                          {t("candidate.requiredSkills")} ({candidate.scoreBreakdown.requiredMatched?.length || 0}/
-                          {(candidate.scoreBreakdown.requiredMatched?.length || 0) +
-                            (candidate.scoreBreakdown.requiredMissing?.length || 0)})
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {candidate.scoreBreakdown.requiredMatched?.map((skill) => (
-                            <Badge
-                              key={skill}
-                              className="bg-green-500/20 text-green-600 border-green-500/30 text-xs gap-1"
-                            >
-                              <Check className="w-3 h-3" />
-                              {skill}
-                            </Badge>
-                          ))}
-                          {candidate.scoreBreakdown.requiredMissing?.map((skill) => (
-                            <Badge
-                              key={skill}
-                              variant="outline"
-                              className="text-muted-foreground text-xs gap-1 opacity-60"
-                            >
-                              <AlertTriangle className="w-3 h-3" />
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {/* Skills matched via GitHub topics — verified with green ✓ */}
+                      {candidate.scoreBreakdown.requiredMatched
+                        ?.filter(skill => !candidate.scoreBreakdown!.requiredMatchedInferred?.includes(skill))
+                        .map((skill) => (
+                          <Badge
+                            key={skill}
+                            className="bg-green-500/10 text-green-700 border-green-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                          >
+                            <Check className="w-3 h-3" />
+                            {skill}
+                          </Badge>
+                        ))}
+                      {/* Skills matched from bio/title text only — inferred with amber ~ */}
+                      {candidate.scoreBreakdown.requiredMatchedInferred?.map((skill) => (
+                        <Badge
+                          key={skill}
+                          className="bg-amber-500/10 text-amber-700 border-amber-500/20 text-xs gap-1 font-normal px-2.5 py-1"
+                        >
+                          <span className="text-xs font-bold">~</span>
+                          {skill}
+                        </Badge>
+                      ))}
+                      {candidate.scoreBreakdown.requiredMissing?.map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="outline"
+                          className="text-muted-foreground/40 text-xs gap-1 opacity-40 font-normal px-2.5 py-1"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -545,7 +698,7 @@ export function CandidatePipelineItem({
 
                 {/* Deep Analysis Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {/* Psychometric Profile */}
+                  {/* Behavioral Profile */}
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <h4 className="text-xs uppercase text-muted-foreground mb-2 flex items-center gap-2">
                       <Brain className="w-4 h-4" />
@@ -612,20 +765,21 @@ export function CandidatePipelineItem({
                   </div>
                 </div>
 
-                {/* Strengths & Concerns - Clickable with Evidence */}
+                {/* Strengths & Concerns - More spacious layout */}
                 {(deepAnalysis?.strengths?.length ||
                   deepAnalysis?.concerns?.length ||
                   candidate.keyEvidence?.length ||
                   candidate.risks?.length) && (
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     {(deepAnalysis?.strengths && deepAnalysis.strengths.length > 0) ||
                     (candidate.keyEvidence && candidate.keyEvidence.length > 0) ? (
                       <div>
-                        <h4 className="text-xs uppercase text-muted-foreground mb-2">
+                        <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 text-green-500" />
                           {t("candidate.keyStrengths")}
                         </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {(deepAnalysis?.strengths || candidate.keyEvidence || []).slice(0, 3).map((strength, i) => {
+                        <div className="flex flex-wrap gap-2">
+                          {(deepAnalysis?.strengths || candidate.keyEvidence || []).slice(0, 4).map((strength, i) => {
                             const isEvidenceItem = typeof strength === 'object' && strength !== null;
                             const text = isEvidenceItem ? (strength as EvidenceItem).text : String(strength);
                             const hasEvidence = isEvidenceItem && (strength as EvidenceItem).sourceUrl;
@@ -634,13 +788,14 @@ export function CandidatePipelineItem({
                               <Badge
                                 key={i}
                                 variant="outline"
-                                className={`text-xs text-green-600 border-green-500/30 ${
-                                  hasEvidence ? 'cursor-pointer hover:bg-green-500/10' : ''
-                                }`}
+                                className={cn(
+                                  "text-xs text-green-700 bg-green-500/5 border-green-500/20 px-2.5 py-1",
+                                  hasEvidence && 'cursor-pointer hover:bg-green-500/10 hover:border-green-500/30'
+                                )}
                                 onClick={hasEvidence ? () => setSelectedEvidence(strength as EvidenceItem) : undefined}
                               >
                                 {text}
-                                {hasEvidence && <Eye className="w-2.5 h-2.5 ml-1" />}
+                                {hasEvidence && <Eye className="w-3 h-3 ml-1 opacity-50" />}
                               </Badge>
                             );
                           })}
@@ -650,11 +805,12 @@ export function CandidatePipelineItem({
                     {(deepAnalysis?.concerns && deepAnalysis.concerns.length > 0) ||
                     (candidate.risks && candidate.risks.length > 0) ? (
                       <div>
-                        <h4 className="text-xs uppercase text-muted-foreground mb-2">
+                        <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-yellow-500" />
                           {t("candidate.areasToExplore")}
                         </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {(deepAnalysis?.concerns || candidate.risks || []).slice(0, 3).map((concern, i) => {
+                        <div className="flex flex-wrap gap-2">
+                          {(deepAnalysis?.concerns || candidate.risks || []).slice(0, 4).map((concern, i) => {
                             const isEvidenceItem = typeof concern === 'object' && concern !== null;
                             const text = isEvidenceItem ? (concern as EvidenceItem).text : String(concern);
                             const hasEvidence = isEvidenceItem && (concern as EvidenceItem).sourceUrl;
@@ -663,13 +819,14 @@ export function CandidatePipelineItem({
                               <Badge
                                 key={i}
                                 variant="outline"
-                                className={`text-xs text-yellow-600 border-yellow-500/30 ${
-                                  hasEvidence ? 'cursor-pointer hover:bg-yellow-500/10' : ''
-                                }`}
+                                className={cn(
+                                  "text-xs text-yellow-700 bg-yellow-500/5 border-yellow-500/20 px-2.5 py-1",
+                                  hasEvidence && 'cursor-pointer hover:bg-yellow-500/10 hover:border-yellow-500/30'
+                                )}
                                 onClick={hasEvidence ? () => setSelectedEvidence(concern as EvidenceItem) : undefined}
                               >
                                 {text}
-                                {hasEvidence && <Eye className="w-2.5 h-2.5 ml-1" />}
+                                {hasEvidence && <Eye className="w-3 h-3 ml-1 opacity-50" />}
                               </Badge>
                             );
                           })}
@@ -772,13 +929,5 @@ export function CandidatePipelineItem({
         </div>
       )}
     </Expandable>
-
-    {/* Score Explainer Sheet */}
-    <ScoreExplainer
-      candidate={candidate}
-      isOpen={showScoreExplainer}
-      onClose={() => setShowScoreExplainer(false)}
-    />
-    </>
   );
 }

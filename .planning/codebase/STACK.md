@@ -1,176 +1,177 @@
 # Technology Stack
 
-**Analysis Date:** 2026-01-24
+**Analysis Date:** 2026-02-16
 
 ## Languages
 
 **Primary:**
-- TypeScript 5 - All application code, strict mode enabled
-- JavaScript - Configuration files (postcss, next.config)
+- TypeScript 5.x - Full application codebase (frontend, backend, utilities)
 
-**Styling:**
-- CSS - Via Tailwind CSS v4 with PostCSS
+**Secondary:**
+- JavaScript - Node.js build scripts (`scripts/i18n-audit.cjs`)
+- SQL - PostgreSQL via Prisma ORM
 
 ## Runtime
 
 **Environment:**
-- Node.js (LTS) - Development and production
+- Node.js 22.x
 
 **Package Manager:**
-- npm - Primary package manager
-- Lockfile: `package-lock.json` (present)
+- npm (lockfile: `package-lock.json` present)
 
 ## Frameworks
 
 **Core:**
-- Next.js 16.1.2 - App Router (all routes in `/app`), server and client components
-- React 19.2.3 - UI rendering with latest features
+- Next.js 16.1.2 - Full-stack React framework with App Router
+- React 19.2.3 - UI component library
 - React DOM 19.2.3 - DOM rendering
 
-**Authentication:**
-- NextAuth 4.24.13 - OAuth with GitHub provider
-- @auth/core 0.34.3 - Underlying auth logic
+**Build & Development:**
+- Tailwind CSS 4 - Utility-first CSS framework with PostCSS 4
+- TypeScript - Static type checking
 
-**UI Components:**
-- Radix UI v1 - Primitives for accessible components
-  - `@radix-ui/react-avatar`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`
-  - `@radix-ui/react-select`, `@radix-ui/react-tabs`, `@radix-ui/react-tooltip`
-  - `@radix-ui/react-scroll-area`, `@radix-ui/react-progress`, `@radix-ui/react-slider`
-  - `@radix-ui/react-switch`, `@radix-ui/react-collapsible`, `@radix-ui/react-separator`
-- shadcn/ui - Pre-built component library on Radix UI
-- Cult UI - Community components (dock, expandable)
-  - `components/ui/dock.tsx` - Mac-style dock with spring animations (modified for custom icons)
-  - `components/ui/expandable.tsx` - Expandable cards with blur/fade/slide animations
+**Testing:**
+- Vitest 4.0.18 - Unit and integration test runner
+- @vitest/ui - Visual test UI
+- @vitest/coverage-v8 - Code coverage reporting
+- @testing-library/react 16.3.2 - React component testing
+- @testing-library/jest-dom 6.9.1 - DOM matchers
+- Playwright 1.58.0 - End-to-end testing
+- jsdom 28.0.0 - DOM environment for Node tests
 
-**Styling:**
-- Tailwind CSS 4 - Utility-first CSS framework
-- @tailwindcss/postcss 4 - PostCSS plugin for Tailwind
-- class-variance-authority 0.7.1 - Variant utilities for component styling
-- tailwind-merge 3.4.0 - Merge Tailwind classes without conflicts
+**Development Tools:**
+- ESLint 9 - Code linting (Next.js extended config)
+- Prettier 3.1.1 - Code formatting (100 char line width, 2-space tabs)
+- Husky 9.1.7 - Git hooks (pre-commit runs Vitest)
+- TypeScript 5.x - Type checking (`npm run type-check`)
 
-**Animation & Motion:**
-- Framer Motion 12.26.2 - Spring/easing animations
-- Motion 12.26.2 - Animation utility library
+## Key Dependencies
 
-**UI Utilities:**
-- Lucide React 0.562.0 - Icon library
-- cmdk 1.1.1 - Command palette / search UI
-- Sonner 2.0.7 - Toast notifications
-- clsx 2.1.1 - Conditional className binding
-- react-use-measure 2.1.7 - Measure DOM elements (required for Expandable)
+**Critical Infrastructure:**
+- @prisma/client 6.19.2 - PostgreSQL ORM and query builder
+- prisma 6.19.2 - Prisma CLI for migrations
 
-**Charts & Visualization:**
-- Recharts 2.15.1 - Chart components (line, bar, etc.)
-- @xyflow/react 12.10.0 - Node-link diagram library for network graphs
+**Authentication & Authorization:**
+- next-auth 4.24.13 - OAuth/session management with GitHub provider
+- @auth/core 0.34.3 - NextAuth core library
 
-## Data & ORM
+**AI & LLM Integration:**
+- @google/genai 1.36.0 - Google Gemini API client (primary AI)
+- Stripe 20.1.2 - Payment processing and webhooks
+
+**UI Components & Utilities:**
+- @radix-ui/* (multiple) - Headless UI component library (avatar, checkbox, collapsible, dialog, dropdown, label, popover, progress, scroll-area, select, separator, slider, slot, switch, tabs, tooltip)
+- Lucide React 0.562.0 - SVG icon library
+- cmdk 1.1.1 - Command palette component
+- Framer Motion 12.26.2 - Animation library
+- motion 12.26.2 - Animation utilities
+- clsx 2.1.1 - Conditional className utility
+- class-variance-authority 0.7.1 - Variant CSS utility
+- tailwind-merge 3.4.0 - Merge Tailwind class utilities
+- Sonner 2.0.7 - Toast notification library
+- recharts 2.15.1 - React charting library
+- Resend 6.9.1 - Email sending service
+
+**Data Drag & Drop:**
+- @dnd-kit/core 6.3.1 - Drag and drop library
+- @dnd-kit/sortable 10.0.0 - Sortable items extension
+- @dnd-kit/utilities 3.2.2 - DnD utilities
+
+**Graph Visualization:**
+- @xyflow/react 12.10.0 - Node and edge graph visualization
+
+**File Upload:**
+- react-dropzone 14.3.8 - Drop zone component
+- react-use-measure 2.1.7 - DOM measurement hook
+
+**Data Validation & Parsing:**
+- zod 4.3.5 - TypeScript-first schema validation
+
+**Error Tracking & Monitoring:**
+- @sentry/nextjs 10.38.0 - Error tracking and performance monitoring
+- Sentry integrations for client, server, and edge runtimes
+
+**Storage & Caching (Legacy):**
+- @vercel/kv 3.0.0 - Vercel KV (deprecated, replaced by Prisma)
 
 **Database:**
-- Prisma 7.2.0 - ORM for PostgreSQL
-- @prisma/client 7.2.0 - Query client
+- @supabase/supabase-js 2.90.1 - Supabase client (optional, for legacy features)
 
-**Database Provider:**
-- PostgreSQL - Primary database (configured in `prisma/schema.prisma`)
-
-**Supabase:**
-- @supabase/supabase-js 2.90.1 - Supabase client (optional, for persistent storage)
-
-## API & External Services
-
-**AI/ML:**
-- @google/genai 1.36.0 - Google Gemini API client
-
-**Web Scraping:**
-- Firecrawl - Job description scraping (configured via `FIRECRAWL_API_KEY`)
-- BrightData - LinkedIn profile extraction (configured via `BRIGHTDATA_API_KEY`)
-
-**GitHub Integration:**
-- @octokit/rest 22.0.1 - GitHub API client for developer search and profile analysis
-
-**Payments:**
-- Stripe 20.1.2 - Payment processing (server-side)
-- @stripe/stripe-js 8.6.1 - Stripe client (client-side for checkout)
-
-**Alternative AI:**
-- OpenRouter API - Optional fallback for Gemini models (via HTTP, OpenAI-compatible format)
-
-## Validation & Data
-
-**Schema & Validation:**
-- Zod 4.3.5 - TypeScript-first schema validation
-
-## Development Tools
-
-**Linting:**
-- ESLint 9 - Code quality enforcement
-- eslint-config-next 16.1.2 - Next.js-specific ESLint rules
-
-**Formatting:**
-- Prettier 3.1.1 - Code formatter (configured via `.prettierrc`)
-
-**Build:**
-- TypeScript 5 - Type checking with `npm run type-check`
-- ESLint - Code linting with `npm run lint`
-- Prettier - Formatting with `npm run format`
-
-**Testing:** (Configured but disabled)
-- Vitest - Test runner (config: `vitest.config.ts.bak`)
-- Playwright - E2E testing (config: `playwright.config.ts.bak`)
+**API Clients:**
+- @octokit/rest 22.0.1 - GitHub API wrapper
+- @stripe/stripe-js 8.6.1 - Stripe.js client
 
 ## Configuration
 
-**TypeScript:**
-- `tsconfig.json` - Strict mode, ES2022 target, JSX React
+**Environment Variables:**
+
+*Critical (required for operation):*
+- `GEMINI_API_KEY` - Google Gemini AI access
+- `FIRECRAWL_API_KEY` - Job description web scraping
+- `NEXTAUTH_SECRET` - NextAuth session signing (generate with `openssl rand -base64 32`)
+- `NEXTAUTH_URL` - NextAuth callback URL
+- `GITHUB_ID`, `GITHUB_SECRET` - GitHub OAuth credentials (or `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`)
+- `DATABASE_URL` - PostgreSQL pooled connection (Prisma)
+- `DIRECT_DATABASE_URL` - PostgreSQL direct connection (migrations only)
+
+*Payment & Credits (required for paid features):*
+- `STRIPE_SECRET_KEY` - Stripe API secret
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe public key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing
+
+*Optional Features:*
+- `OPENROUTER_API_KEY` - Alternative AI inference (fallback to Gemini 3-Flash)
+- `BRIGHTDATA_API_KEY` - LinkedIn profile extraction
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` - Team features
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL` - Email outreach
+- `TEAMTAILOR_API_TOKEN` - ATS integration (Danish market)
+- `RECRUITOS_EXTENSION_API_KEY` - LinkedIn extension ingestion
+- `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` - Error tracking
+- `SENTRY_AUTH_TOKEN` - Source map uploads
+
+**TypeScript Configuration** (`tsconfig.json`):
 - Path aliases: `@/*` resolves to project root
+- Strict mode enabled
+- Target: ES2020, Module: ESNext
 
-**Next.js:**
-- `next.config.ts` - Standalone output mode, GitHub avatars image domain
-- `/.next` - Built output directory (gitignored)
+**Build Configuration** (`next.config.ts`):
+- Sentry integration for error tracking
+- GitHub avatar image optimization (`avatars.githubusercontent.com`)
+- Source map uploads during build (Sentry)
 
-**Environment:**
-- `.env` - Local development (not committed)
-- `.env.example` - Template with all required/optional variables
-- `.env.vercel` - Vercel deployment secrets
+**Format Configuration** (`.prettierrc`):
+- 100 character line width
+- 2-space indentation
+- Single quotes for JS (not JSX)
+- Trailing commas (ES5 compatible)
+- Semicolons required
 
-**Database:**
-- `prisma/schema.prisma` - Data model and migrations
-- Provider: PostgreSQL
-
-**CSS:**
-- `postcss.config.mjs` - PostCSS with Tailwind plugin
-- Tailwind config embedded in PostCSS
+**Linting Configuration** (`.eslintrc.json`):
+- Base: ESLint recommended + TypeScript recommended
+- React and React Hooks plugins required
+- No explicit `any` types allowed
+- Unused variable warning with underscore prefix exception
+- Console usage restricted to warn/error/info
+- Const preference, no `var`
 
 ## Platform Requirements
 
 **Development:**
-- Node.js LTS
-- npm 10+
-- PostgreSQL database (local or Supabase)
+- Node.js 22.x (specified in `package.json` engines)
+- PostgreSQL 12+ for local development
+- Git (for Husky pre-commit hooks)
 
 **Production:**
-- Next.js standalone server (standalone output mode)
-- PostgreSQL database
-- Environment variables for all external services
+- Node.js 22.x LTS
+- PostgreSQL 12+ (Cloud hosted via Supabase, AWS RDS, or similar)
+- Environment variables configured
+- Sentry account (optional but recommended)
 
 **Deployment Targets:**
-- Vercel (native Next.js support)
-- Any Node.js hosting (Docker compatible via standalone mode)
-
-## Key Dependencies Summary
-
-| Dependency | Version | Purpose |
-|-----------|---------|---------|
-| next | 16.1.2 | Web framework |
-| react | 19.2.3 | UI library |
-| typescript | 5 | Type safety |
-| @google/genai | 1.36.0 | AI analysis |
-| stripe | 20.1.2 | Payments |
-| @supabase/supabase-js | 2.90.1 | Database (optional) |
-| @octokit/rest | 22.0.1 | GitHub API |
-| tailwindcss | 4 | Styling |
-| prisma | 7.2.0 | ORM |
-| next-auth | 4.24.13 | Authentication |
+- Vercel (Next.js native platform, includes Sentry integration)
+- Self-hosted Node.js compatible servers
+- Docker containers
 
 ---
 
-*Stack analysis: 2026-01-24*
+*Stack analysis: 2026-02-16*

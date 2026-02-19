@@ -48,11 +48,11 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
 function getSecurityHeaders(): Record<string, string> {
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://sourcetrace.vercel.app",
+    "script-src 'self' 'unsafe-inline' https://sourcetrace.vercel.app https://www.sourcetrace.xyz https://vercel.live",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
-    "img-src 'self' data: https://avatars.githubusercontent.com https://api.dicebear.com https://ui-avatars.com",
-    "connect-src 'self' https://api.github.com https://api.firecrawl.dev https://api.brightdata.com https://api.teamtailor.com https://generativelanguage.googleapis.com https://openrouter.ai https://*.stripe.com https://*.ingest.sentry.io https://*.supabase.co wss://*.supabase.co https://sourcetrace.vercel.app",
+    "img-src 'self' data: https://avatars.githubusercontent.com https://api.dicebear.com https://ui-avatars.com https://static.licdn.com https://media.licdn.com",
+    "connect-src 'self' https://api.github.com https://api.firecrawl.dev https://api.brightdata.com https://api.teamtailor.com https://generativelanguage.googleapis.com https://openrouter.ai https://*.stripe.com https://*.ingest.sentry.io https://*.supabase.co wss://*.supabase.co https://sourcetrace.vercel.app https://www.sourcetrace.xyz",
     "frame-src 'self'",
     "frame-ancestors 'self'",
     "object-src 'none'",

@@ -45,9 +45,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(insights);
   } catch (error) {
     console.error("Behavioral insights API error:", error);
-    return NextResponse.json(
-      { error: "Failed to analyze behavioral signals" },
-      { status: 500 }
-    );
+    // Return graceful empty data instead of 500 — avoids breaking the UI
+    // when GITHUB_TOKEN is missing or the API is rate-limited.
+    const emptyInsights: BehavioralInsights = {
+      activitySignals: {
+        openToWork: false,
+        confidence: "low" as const,
+        signals: [],
+        lastProfileUpdate: null,
+        activityTrend: "stable" as const,
+        recentActivityCount: 0,
+      },
+      engagementScore: {
+        score: 0,
+        factors: {
+          activityRecency: 0,
+          contactability: 0,
+          signalStrength: 0,
+          responsiveness: 0,
+        },
+        bestOutreachTime: null,
+        timezone: null,
+      },
+      fetchedAt: new Date().toISOString(),
+    };
+    return NextResponse.json(emptyInsights);
   }
 }

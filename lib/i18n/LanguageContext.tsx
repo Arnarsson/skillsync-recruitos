@@ -26,7 +26,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(
 );
 
 const STORAGE_KEY = "recruitos_lang";
-const DEFAULT_LANG: Language = "da";
+const DEFAULT_LANG: Language = "en";
 
 function getNestedValue(obj: Record<string, unknown>, path: string): string {
   const keys = path.split(".");

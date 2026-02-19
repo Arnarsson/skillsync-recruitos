@@ -33,29 +33,9 @@ import { useLanguage } from "@/lib/i18n";
 import { validateLinkedInUrl, normalizeLinkedInUrl, type LinkedInValidationResult } from "@/lib/urlNormalizer";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { ChatInterface } from "@/components/calibration/ChatInterface";
+import { DEMO_JOB } from "@/lib/demoData";
 
-const DEMO_JOB_CONTEXT = {
-  title: "Senior Full-Stack Engineer",
-  company: "FinTech Startup",
-  location: "Copenhagen, Denmark (Hybrid)",
-  experienceLevel: "5+ years",
-  requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL", "AWS"],
-  preferredSkills: ["Payment Systems", "Python", "Redis", "Kubernetes"],
-  summary: "Seeking an experienced Senior Full-Stack Engineer to join our growing fintech team. You will build scalable payment infrastructure, lead technical architecture decisions, and mentor junior developers.",
-  rawText: `Role: Senior Full-Stack Engineer
-Location: Copenhagen, Denmark (Hybrid - 3 days onsite)
-
-Job Summary:
-We are seeking an experienced Senior Full-Stack Engineer to join our growing fintech team. You will be responsible for building scalable payment infrastructure, leading technical architecture decisions, and mentoring junior developers.
-
-Requirements:
-- 5+ years of experience with TypeScript/JavaScript and React
-- Strong backend experience with Node.js, Python, or Go
-- Experience with PostgreSQL and Redis
-- Familiarity with cloud infrastructure (AWS/GCP)
-- Experience with payment systems or financial services (preferred)
-- Strong communication skills and ability to work cross-functionally`
-};
+const DEMO_JOB_CONTEXT = DEMO_JOB;
 
 // Loading steps are now translated via t() calls
 

@@ -74,7 +74,7 @@ export const generatePersona = async (rawProfileText: string): Promise<Persona> 
         Analysis Instructions:
         1. **Archetype**: Select from the 12 archetypes above. Write as a 2-sentence elevator pitch identifying the career PATTERN with specific examples.
 
-        2. **Psychometric Profile**: Analyze communication style, motivations, risk tolerance, leadership potential from "About" section and role descriptions.
+        2. **Behavioral Profile**: Analyze communication style, motivations, risk tolerance, leadership potential from "About" section and role descriptions.
 
         3. **Career Trajectory**: Analyze job history progression:
            - Growth velocity: How quickly they advance (rapid/steady/slow)

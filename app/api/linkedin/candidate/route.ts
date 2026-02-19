@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { requireUserOrExtension } from "@/lib/extension-auth";
 import { linkedinCandidateSchema } from "@/lib/validation/apiSchemas";
+import { enrichCandidateBackground } from "@/services/unifiedEnrichment";
 
 /**
  * POST /api/linkedin/candidate
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
       isPremium: (profile.isPremium as boolean) || false,
       ...(hasAdvancedProfile ? { advancedProfile: advancedProfile as unknown as Prisma.InputJsonValue } : {}),
       capturedAt: capturedAt ? new Date(capturedAt as string) : new Date(),
+      linkedinFetchedAt: new Date(),
     };
 
     // Check for existing candidate
@@ -153,6 +155,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[LinkedIn Extension] Candidate received:", candidate.name, candidate.linkedinId, isNew ? "NEW" : "UPDATED");
+
+    // Trigger background enrichment if GitHub username is available
+    if (candidate.githubUsername) {
+      enrichCandidateBackground(candidate.id, candidate.githubUsername).catch(err => {
+        console.error("[LinkedIn Extension] Background enrichment failed:", err);
+        // Non-blocking - enrichment failure doesn't fail the API response
+      });
+    }
 
     return NextResponse.json({
       success: true,

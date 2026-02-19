@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAdmin } from "@/lib/adminContext";
-import { getDemoCandidates } from "@/lib/demoData";
+import { getDemoCandidates, DEMO_JOB } from "@/lib/demoData";
+import { resolveProfileSlug } from "@/lib/candidate-identity";
 import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -112,6 +113,9 @@ interface SkillsConfig {
 
 interface Candidate {
   id: string;
+  githubUsername?: string | null;
+  linkedinId?: string | null;
+  username?: string;
   name: string;
   currentRole: string;
   company: string;
@@ -122,7 +126,17 @@ interface Candidate {
   createdAt?: string;
   risks?: string[];
   keyEvidence?: string[];
-  scoreBreakdown?: ScoreBreakdown;
+  scoreBreakdown?: ScoreBreakdown & {
+    requiredMatched?: string[];
+    requiredMatchedInferred?: string[];
+    requiredMissing?: string[];
+    preferredMatched?: string[];
+    locationMatch?: "exact" | "remote" | "none";
+    baseScore?: number;
+    skillsScore?: number;
+    preferredScore?: number;
+    locationScore?: number;
+  };
   persona?: {
     archetype?: string;
     riskAssessment?: {
@@ -254,7 +268,7 @@ function rerankCandidatesForContext(
   return rescored;
 }
 
-export default function PipelinePage() {
+function PipelinePageContent() {
   const { t } = useLanguage();
   const { isAdmin, isDemoMode } = useAdmin();
   const { status } = useSession();
@@ -263,6 +277,8 @@ export default function PipelinePage() {
   const adminSuffix = ""; // No longer needed with context-based admin
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
+  // isInitializing prevents the empty-state flash while isDemoMode resolves after hydration
+  const [isInitializing, setIsInitializing] = useState(true);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [jobContext, setJobContext] = useState<{
@@ -289,7 +305,7 @@ export default function PipelinePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Hard requirements filter - exclude candidates missing must-have skills
-  const [enforceHardRequirements, setEnforceHardRequirements] = useState(true);
+  const [enforceHardRequirements, setEnforceHardRequirements] = useState(false);
   const [mustHaveSkills, setMustHaveSkills] = useState<string[]>([]);
   const [hardRequirementsConfig, setHardRequirementsConfig] = useState<HardRequirementsConfig | undefined>(undefined);
 
@@ -304,7 +320,7 @@ export default function PipelinePage() {
           .map(s => s.name.toLowerCase());
         setMustHaveSkills(mustHaves);
         setHardRequirementsConfig(config.hardRequirements || undefined);
-        setEnforceHardRequirements(mustHaves.length > 0);
+        setEnforceHardRequirements(false); // Always default to broad match
       } catch {}
     }
   }, []);
@@ -374,32 +390,34 @@ export default function PipelinePage() {
 
     const initializePipeline = async () => {
       setPipelineError(null);
+      // Check URL param directly to avoid hydration timing issues with context
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDemoFromUrl = urlParams.get("demo") === "true" || localStorage.getItem("recruitos_demo_mode") === "true";
       // DEMO MODE: Load real demo profiles with receipts
-      if (isDemoMode) {
+      if (isDemoMode || isDemoFromUrl) {
         console.log("[Pipeline] Demo mode - loading real demo profiles");
-        let demoJobContext = {
-          title: "Senior Full-Stack Engineer",
-          company: "FinTech Startup",
-          requiredSkills: ["TypeScript", "React", "Node.js", "PostgreSQL"],
-          location: "Remote",
+        const demoJobContext = {
+          title: DEMO_JOB.title,
+          company: DEMO_JOB.company,
+          requiredSkills: DEMO_JOB.requiredSkills,
+          preferredSkills: DEMO_JOB.preferredSkills,
+          location: DEMO_JOB.location,
         };
-        try {
-          const stored = localStorage.getItem("apex_job_context");
-          if (stored) {
-            demoJobContext = JSON.parse(stored);
-          }
-        } catch {
-          // ignore
-        }
 
-        const demoCandidates = rerankCandidatesForContext(
-          getDemoCandidates() as unknown as Candidate[],
-          demoJobContext
+        // Demo candidates already have calibrated buildprint scores — sort by score, don't rerank.
+        const rawDemoCandidates = getDemoCandidates() as unknown as Candidate[];
+        const sortedDemoCandidates = [...rawDemoCandidates].sort(
+          (a, b) => (b.alignmentScore || 0) - (a.alignmentScore || 0)
         );
         if (isActive) {
-          // Cast to local Candidate type (safe because we control the demo data structure)
-          setCandidates(demoCandidates as unknown as Candidate[]);
+          setCandidates(sortedDemoCandidates);
           setJobContext(demoJobContext);
+          // Clear stale data from previous sessions
+          localStorage.removeItem("apex_skills_config");
+          localStorage.removeItem("apex_skills_draft");
+          localStorage.removeItem("apex_pending_auto_search");
+          // Save demo job context so other pages can use it
+          localStorage.setItem("apex_job_context", JSON.stringify(demoJobContext));
         }
         return; // Skip normal initialization in demo mode
       }
@@ -418,7 +436,6 @@ export default function PipelinePage() {
       // Check if we just came from intake (fresh job context)
       const pendingAutoSearch = localStorage.getItem("apex_pending_auto_search");
       const freshFromIntake = pendingAutoSearch === "true";
-      console.log("[Pipeline] Init - freshFromIntake:", freshFromIntake, "hasJobContext:", !!parsedJobContext);
 
       // Local fallback candidates (used for QA/demo/offline continuity)
       let localCandidates: Candidate[] = [];
@@ -479,7 +496,19 @@ export default function PipelinePage() {
           existingCandidates = localCandidates;
           existingCandidates = rerankCandidatesForContext(existingCandidates, parsedJobContext);
           if (isActive) setCandidates(existingCandidates);
-          console.log("[Pipeline] Unauthenticated mode, using local fallback candidates:", existingCandidates.length);
+        } else {
+          // No local data and not authenticated — show demo candidates as fallback
+          const demoCandidates = rerankCandidatesForContext(
+            getDemoCandidates() as unknown as Candidate[],
+            parsedJobContext || {
+              title: DEMO_JOB.title,
+              requiredSkills: DEMO_JOB.requiredSkills,
+              preferredSkills: DEMO_JOB.preferredSkills,
+              location: DEMO_JOB.location,
+            }
+          );
+          existingCandidates = demoCandidates as unknown as Candidate[];
+          if (isActive) setCandidates(existingCandidates);
         }
       } else if (jobContextChanged || freshFromIntake) {
         // Start fresh when job context changes
@@ -492,8 +521,6 @@ export default function PipelinePage() {
       const needsCandidates = existingCandidates.length === 0 || jobContextChanged || freshFromIntake;
       const shouldAutoSearch = hasRequiredSkills && needsCandidates;
 
-      console.log("[Pipeline] shouldAutoSearch:", shouldAutoSearch, "| hasSkills:", hasRequiredSkills, "| needsCandidates:", needsCandidates);
-
       if (shouldAutoSearch && parsedJobContext?.requiredSkills) {
         // Clear the pending flag
         localStorage.removeItem("apex_pending_auto_search");
@@ -503,9 +530,10 @@ export default function PipelinePage() {
           localStorage.setItem("apex_job_context_hash", jobContextHash);
         }
 
-        // Use only top 2 skills for search - more specific queries return 0 results from GitHub
+        // Use top 2 skills + location for search — location qualifier filters to the right market
         const skills = parsedJobContext.requiredSkills.slice(0, 2);
-        const query = skills.join(" ");
+        const locationSuffix = parsedJobContext.location ? ` ${parsedJobContext.location.split(",")[0].trim()}` : "";
+        const query = skills.join(" ") + locationSuffix;
         console.log("[Pipeline] Auto-searching with query:", query);
 
         if (query) {
@@ -537,49 +565,24 @@ export default function PipelinePage() {
                 skills?: string[];
                 score: number;
               }) => {
-                // Calculate alignment score based on job requirements
-                const userSkills = user.skills || [];
-                const userBio = user.bio || "";
-
-                // Simple inline scoring
-                const requiredSkills = jobReqs.requiredSkills || [];
-                const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
-                const userBioLower = userBio.toLowerCase();
-
-                const matchedRequired: string[] = [];
-                requiredSkills.forEach((skill: string) => {
-                  const skillLower = skill.toLowerCase();
-                  if (
-                    userSkillsLower.some((s: string) => s.includes(skillLower) || skillLower.includes(s)) ||
-                    userBioLower.includes(skillLower)
-                  ) {
-                    matchedRequired.push(skill);
+                const { score, breakdown } = calculateAlignmentScore(
+                  { skills: user.skills || [], bio: user.bio || "", location: user.location || "" },
+                  {
+                    requiredSkills: jobReqs.requiredSkills,
+                    preferredSkills: jobReqs.preferredSkills,
+                    location: jobReqs.location,
                   }
-                });
-
-                const baseScore = 50;
-                const skillsScore = requiredSkills.length > 0
-                  ? Math.round((matchedRequired.length / requiredSkills.length) * 35)
-                  : 0;
-                const score = Math.min(99, Math.max(30, baseScore + skillsScore));
+                );
 
                 return {
                   id: user.username,
+                  githubUsername: user.username,
                   name: user.name || user.username,
                   currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
                   company: user.company || "Independent",
                   location: user.location || "Remote",
                   alignmentScore: score,
-                  scoreBreakdown: {
-                    requiredMatched: matchedRequired,
-                    requiredMissing: requiredSkills.filter((s: string) => !matchedRequired.includes(s)),
-                    preferredMatched: [],
-                    locationMatch: "none" as const,
-                    baseScore,
-                    skillsScore,
-                    preferredScore: 0,
-                    locationScore: 0,
-                  },
+                  scoreBreakdown: breakdown,
                   avatar: user.avatar,
                   skills: user.skills || [],
                   createdAt: new Date().toISOString(),
@@ -591,14 +594,15 @@ export default function PipelinePage() {
 
               setCandidates(newCandidates);
               // Persist new candidates to API (best-effort)
+              let savedCount = 0;
               for (const c of newCandidates) {
                 try {
-                  await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
-                } catch {
-                  // Candidate may already exist, ignore
+                  await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB', githubUsername: (c as any).githubUsername } as any);
+                  savedCount++;
+                } catch (saveErr) {
+                  console.warn("[Pipeline] Could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
                 }
               }
-              console.log("[Pipeline] Saved", newCandidates.length, "candidates to API");
             }
           } catch (error) {
             console.error("[Pipeline] Auto-search error:", error);
@@ -617,7 +621,9 @@ export default function PipelinePage() {
       }
     };
 
-    initializePipeline();
+    initializePipeline().finally(() => {
+      if (isActive) setIsInitializing(false);
+    });
 
     // Cleanup function - set isActive to false when component unmounts
     return () => {
@@ -629,7 +635,20 @@ export default function PipelinePage() {
   const calculateAlignmentScore = (
     user: { skills?: string[]; bio: string; location: string },
     jobRequirements: { requiredSkills?: string[]; preferredSkills?: string[]; location?: string }
-  ): { score: number; breakdown: ScoreBreakdown } => {
+  ): {
+    score: number;
+    breakdown: {
+      requiredMatched: string[];
+      requiredMatchedInferred: string[];
+      requiredMissing: string[];
+      preferredMatched: string[];
+      locationMatch: "exact" | "remote" | "none";
+      baseScore: number;
+      skillsScore: number;
+      preferredScore: number;
+      locationScore: number;
+    };
+  } => {
     const baseScore = 40;
     let skillsScore = 0;
     let preferredScore = 0;
@@ -638,14 +657,16 @@ export default function PipelinePage() {
     const userSkillsLower = (user.skills || []).map((s) => s.toLowerCase());
     const userBioLower = (user.bio || "").toLowerCase();
 
-    // Helper to check if user has a skill
-    const userHasSkill = (skillName: string): boolean => {
+    // Helpers to check skill match source
+    const userHasSkillViaTopics = (skillName: string): boolean => {
       const skillLower = skillName.toLowerCase();
-      return (
-        userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s)) ||
-        userBioLower.includes(skillLower)
-      );
+      return userSkillsLower.some((s) => s.includes(skillLower) || skillLower.includes(s));
     };
+    const userHasSkillViaBio = (skillName: string): boolean => {
+      return userBioLower.includes(skillName.toLowerCase());
+    };
+    const userHasSkill = (skillName: string): boolean =>
+      userHasSkillViaTopics(skillName) || userHasSkillViaBio(skillName);
 
     // Try to use skills config from skills-review page (has tier weights)
     const skillsConfigStr = typeof window !== "undefined"
@@ -653,6 +674,7 @@ export default function PipelinePage() {
       : null;
 
     const requiredMatched: string[] = [];
+    const requiredMatchedInferred: string[] = []; // Matched via bio text only, not GitHub topics
     const requiredMissing: string[] = [];
     const preferredMatched: string[] = [];
 
@@ -671,9 +693,13 @@ export default function PipelinePage() {
         // bonus match: +2 points each (max ~6 for 3 skills)
 
         mustHaves.forEach(skill => {
-          if (userHasSkill(skill.name)) {
+          if (userHasSkillViaTopics(skill.name)) {
             skillsScore += 8;
             requiredMatched.push(skill.name);
+          } else if (userHasSkillViaBio(skill.name)) {
+            skillsScore += 8;
+            requiredMatched.push(skill.name);
+            requiredMatchedInferred.push(skill.name); // Bio-only: unverified
           } else {
             skillsScore -= 5; // Penalty for missing must-have
             requiredMissing.push(skill.name);
@@ -704,8 +730,11 @@ export default function PipelinePage() {
       const preferredSkills = jobRequirements.preferredSkills || [];
 
       requiredSkills.forEach((skill) => {
-        if (userHasSkill(skill)) {
+        if (userHasSkillViaTopics(skill)) {
           requiredMatched.push(skill);
+        } else if (userHasSkillViaBio(skill)) {
+          requiredMatched.push(skill);
+          requiredMatchedInferred.push(skill); // Bio-only: unverified
         } else {
           requiredMissing.push(skill);
         }
@@ -738,12 +767,14 @@ export default function PipelinePage() {
       }
     }
 
-    const totalScore = Math.min(99, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
+    // Cap at 95 — real differentiation comes from skill match + location match
+    const totalScore = Math.min(95, Math.max(30, baseScore + skillsScore + preferredScore + locationScore));
 
     return {
       score: totalScore,
       breakdown: {
         requiredMatched,
+        requiredMatchedInferred,
         requiredMissing,
         preferredMatched,
         locationMatch,
@@ -795,6 +826,7 @@ export default function PipelinePage() {
 
           return {
             id: user.username,
+            githubUsername: user.username,
             name: user.name || user.username,
             currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
             company: user.company || "Independent",
@@ -814,9 +846,9 @@ export default function PipelinePage() {
         // Persist to API (best-effort)
         for (const c of newCandidates) {
           try {
-            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
-          } catch {
-            // Ignore duplicates
+            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB', githubUsername: (c as any).githubUsername } as any);
+          } catch (saveErr) {
+            console.warn("[Pipeline] autoSearch: could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
           }
         }
       }
@@ -866,6 +898,7 @@ export default function PipelinePage() {
 
           return {
             id: user.username,
+            githubUsername: user.username,
             name: user.name || user.username,
             currentRole: user.bio?.split(/[.\n]/)[0]?.trim() || "Developer",
             company: user.company || "Independent",
@@ -881,9 +914,9 @@ export default function PipelinePage() {
         // Persist new candidates to API (best-effort)
         for (const c of newCandidates) {
           try {
-            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB' });
-          } catch {
-            // Ignore duplicates
+            await candidateService.create({ ...(c as unknown as Partial<GlobalCandidate>), name: c.name, sourceType: 'GITHUB', githubUsername: (c as any).githubUsername } as any);
+          } catch (saveErr) {
+            console.warn("[Pipeline] handleSearch: could not persist candidate", c.name, ":", saveErr instanceof Error ? saveErr.message : saveErr);
           }
         }
 
@@ -1049,17 +1082,44 @@ export default function PipelinePage() {
           if (req.type === 'location') {
             const candidateLocation = candidate.location?.toLowerCase() || '';
             const requiredLocation = String(req.value).toLowerCase();
-            
+
+            // No location data on candidate — can't match
+            if (!candidateLocation) return false;
+
             // Special cases
             if (requiredLocation === 'remote') return true; // Everyone can work remote
             if (requiredLocation === 'europe') {
-              const europeanCountries = ['denmark', 'sweden', 'norway', 'finland', 'germany', 
-                                         'uk', 'france', 'spain', 'italy', 'netherlands', 'poland'];
+              const europeanCountries = ['denmark', 'sweden', 'norway', 'finland', 'germany',
+                                         'uk', 'united kingdom', 'france', 'spain', 'italy',
+                                         'netherlands', 'poland', 'austria', 'switzerland',
+                                         'belgium', 'portugal', 'czech', 'hungary', 'romania'];
               return europeanCountries.some(country => candidateLocation.includes(country));
             }
-            
-            // Check if candidate location contains required location
-            return candidateLocation.includes(requiredLocation);
+
+            // Alias map: canonical country name → common aliases & city names
+            const locationAliases: Record<string, string[]> = {
+              'denmark':         ['denmark', 'danmark', 'dk', 'copenhagen', 'københavn', 'aarhus', 'odense', 'aalborg', 'esbjerg'],
+              'sweden':          ['sweden', 'sverige', 'se', 'stockholm', 'gothenburg', 'göteborg', 'malmö', 'malmo', 'uppsala'],
+              'norway':          ['norway', 'norge', 'no', 'oslo', 'bergen', 'stavanger', 'trondheim'],
+              'finland':         ['finland', 'suomi', 'fi', 'helsinki', 'tampere', 'turku', 'espoo'],
+              'germany':         ['germany', 'deutschland', 'de', 'berlin', 'munich', 'münchen', 'hamburg', 'frankfurt', 'cologne', 'köln'],
+              'netherlands':     ['netherlands', 'holland', 'nl', 'amsterdam', 'rotterdam', 'the hague', 'den haag', 'utrecht'],
+              'united kingdom':  ['united kingdom', 'uk', 'gb', 'england', 'scotland', 'wales', 'london', 'manchester', 'birmingham', 'edinburgh'],
+              'france':          ['france', 'fr', 'paris', 'lyon', 'marseille', 'toulouse', 'bordeaux'],
+              'spain':           ['spain', 'españa', 'es', 'madrid', 'barcelona', 'valencia', 'seville'],
+              'portugal':        ['portugal', 'pt', 'lisbon', 'lisboa', 'porto'],
+              'austria':         ['austria', 'österreich', 'at', 'vienna', 'wien', 'graz', 'salzburg'],
+              'switzerland':     ['switzerland', 'schweiz', 'ch', 'zurich', 'zürich', 'geneva', 'genève', 'bern'],
+              'poland':          ['poland', 'polska', 'pl', 'warsaw', 'warszawa', 'krakow', 'kraków', 'wrocław'],
+              'italy':           ['italy', 'italia', 'it', 'rome', 'roma', 'milan', 'milano', 'naples', 'turin'],
+              'usa':             ['usa', 'united states', 'us', 'america', 'new york', 'san francisco', 'los angeles', 'seattle', 'chicago', 'boston', 'austin'],
+              'canada':          ['canada', 'ca', 'toronto', 'vancouver', 'montreal', 'calgary', 'ottawa'],
+              'australia':       ['australia', 'au', 'sydney', 'melbourne', 'brisbane', 'perth', 'adelaide'],
+            };
+
+            // Look up aliases for the required location (fall back to the value itself)
+            const aliases = locationAliases[requiredLocation] ?? [requiredLocation];
+            return aliases.some(alias => candidateLocation.includes(alias));
           }
           
           if (req.type === 'experience') {
@@ -1071,8 +1131,6 @@ export default function PipelinePage() {
           if (req.type === 'language') {
             const requiredLang = String(req.value).toLowerCase();
             const candidateBio = `${candidate.currentRole} ${candidate.company} ${candidate.location}`.toLowerCase();
-            // Simple heuristic: check if language name appears in bio or location
-            // In a real app, you'd have structured language data
             return candidateBio.includes(requiredLang);
           }
           
@@ -1127,26 +1185,30 @@ export default function PipelinePage() {
     }
 
     return filtered;
-  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills, techStackFilter]);
+  }, [sortedCandidates, filterScore, filterRange, enforceHardRequirements, mustHaveSkills, techStackFilter, hardRequirementsConfig]);
 
   // Convert candidates to Kanban format
   const kanbanCandidates: PipelineCandidate[] = useMemo(() => {
-    return filteredCandidates.map((c) => ({
-      id: c.id,
-      name: c.name,
-      username: c.id,
-      avatar: c.avatar,
-      role: c.currentRole,
-      score: c.alignmentScore,
-      stage: candidateStages[c.id] || "sourced",
-      addedAt: c.createdAt || new Date().toISOString(),
-      lastActivity: c.createdAt,
-    }));
+    return filteredCandidates.map((c) => {
+      return {
+        id: c.id,
+        name: c.name,
+        username: resolveProfileSlug(c),
+        avatar: c.avatar,
+        role: c.currentRole,
+        score: c.alignmentScore,
+        stage: candidateStages[c.id] || "sourced",
+        addedAt: c.createdAt || new Date().toISOString(),
+        lastActivity: c.createdAt,
+        // Store whether this is a real GitHub profile
+        _hasGithub: !!(c.githubUsername || c.sourceUrl?.includes("github.com")),
+      };
+    });
   }, [filteredCandidates, candidateStages]);
 
   // Handle Kanban candidate click - open profile
   const handleKanbanCandidateClick = useCallback((candidate: PipelineCandidate) => {
-    router.push(`/profile/${candidate.id}`);
+    router.push(`/profile/${candidate.username}`);
   }, [router]);
 
   // Score distribution for chart
@@ -1214,9 +1276,11 @@ export default function PipelinePage() {
               </h1>
               <p className="text-sm text-muted-foreground">
                 {jobContext?.company || "Your Candidates"} •{" "}
-                {enforceHardRequirements && mustHaveSkills.length > 0
-                  ? `${filteredCandidates.length} matching candidates`
-                  : `${candidates.length} candidates found`}
+                {loading || isInitializing
+                  ? "Loading candidates…"
+                  : filteredCandidates.length < candidates.length
+                    ? `${filteredCandidates.length} of ${candidates.length} candidates (filtered)`
+                    : `${filteredCandidates.length} candidate${filteredCandidates.length !== 1 ? "s" : ""}`}
               </p>
               {mustHaveSkills.length > 0 && (
                 <Badge
@@ -1361,7 +1425,7 @@ export default function PipelinePage() {
 
                     {/* One-Click Actions */}
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Link href={`/profile/${candidate.id}`} className="flex-1">
+                      <Link href={`/profile/${resolveProfileSlug(candidate)}`} className="flex-1">
                         <Button size="sm" variant="outline" className="w-full text-xs">
                           View Profile
                         </Button>
@@ -1544,7 +1608,9 @@ export default function PipelinePage() {
               <Users className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">All Candidates</h2>
               <Badge variant="outline" className="text-xs">
-                {filteredCandidates.length} of {candidates.length}
+                {filteredCandidates.length < candidates.length
+                  ? `${filteredCandidates.length} of ${candidates.length}`
+                  : filteredCandidates.length}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
@@ -1735,7 +1801,7 @@ export default function PipelinePage() {
         </AnimatePresence>
 
         {/* Loading State with Text Scramble */}
-        {loading && candidates.length === 0 && (
+        {(loading || isInitializing) && candidates.length === 0 && (
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <PipelineLoadingScramble />
@@ -1783,7 +1849,7 @@ export default function PipelinePage() {
         )}
 
         {/* Candidates List with Split View or Kanban */}
-        {!loading && filteredCandidates.length === 0 ? (
+        {!loading && !isInitializing && filteredCandidates.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-16 text-center">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -2091,7 +2157,7 @@ export default function PipelinePage() {
                         {selectedCandidates.map((c) => (
                           <td key={c.id} className="py-4 px-2 text-center">
                             <div className="flex gap-2 justify-center">
-                              <Link href={`/profile/${c.id}`}>
+                              <Link href={`/profile/${resolveProfileSlug(c)}`}>
                                 <Button size="sm" variant="outline" className="text-xs">
                                   View Profile
                                 </Button>
@@ -2171,5 +2237,16 @@ export default function PipelinePage() {
         onRemoveCandidate={(id) => setSelectedIds((prev) => prev.filter((i) => i !== id))}
       />
     </div>
+  );
+}
+
+
+import { Suspense } from "react";
+
+export default function PipelinePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading pipeline...</div></div>}>
+      <PipelinePageContent />
+    </Suspense>
   );
 }

@@ -399,7 +399,7 @@
     "privateReposNote": "May work primarily in private repositories"
   },
   "candidate": {
-    "psychometricProfile": "Psychometric Profile",
+    "psychometricProfile": "Candidate Insights",
     "interviewGuide": "Interview Guide",
     "fullDeepProfile": "Full Deep Profile",
     "clickDeepProfile": "Click \"Deep Profile\" for full AI analysis",
@@ -412,6 +412,9 @@
     "preferred": "Preferred",
     "noVisibleActivity": "No visible public activity",
     "privateActivityNote": "This developer may work primarily on private repositories or enterprise projects. '0 commits' doesn't mean inactive.",
+    "dataSourceBannerGithub": "This profile is based on public GitHub activity",
+    "dataSourceBannerBoth": "This profile is based on public GitHub activity and LinkedIn data",
+    "dataSourceBannerNote": "Only publicly available data is used. Scores reflect observed behavior, not the full picture.",
     "confidenceHigh": "High confidence",
     "confidenceModerate": "Moderate confidence",
     "confidenceLow": "Low confidence",

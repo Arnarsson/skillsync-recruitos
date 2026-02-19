@@ -126,6 +126,12 @@ export interface ScoreBreakdown {
   industry: ScoreComponent;
   seniority: ScoreComponent;
   location: ScoreComponent;
+  // Pipeline search-time skill matching (no AI scoring, no buildprint evidence)
+  requiredMatched?: string[];          // Skills confirmed via GitHub topics
+  requiredMatchedInferred?: string[];  // Skills matched from bio text, not GitHub topics
+  requiredMissing?: string[];          // Required skills not found
+  preferredMatched?: string[];         // Nice-to-have skills matched
+  locationMatch?: "exact" | "remote" | "none";
 }
 
 // NEW: Enhanced persona sub-interfaces (Sprint 2)
@@ -170,6 +176,15 @@ export interface CompensationIntelligence {
   likelySalaryExpectation: number;
 }
 
+// Evidence-based developer archetypes (grounded in observable GitHub patterns)
+export type EvidenceArchetypeName =
+  | 'architect'
+  | 'maintainer'
+  | 'pioneer'
+  | 'collaborator'
+  | 'specialist'
+  | 'craftsperson';
+
 export interface Persona {
   archetype: string;
   psychometric: {
@@ -182,6 +197,11 @@ export interface Persona {
   redFlags: string[]; // Kept for backward compatibility
   greenFlags: string[]; // Kept for backward compatibility
   reasoning: string;
+
+  // Evidence-based archetype fields (added for GitHub-grounded profiling)
+  archetypeLabel?: string;        // Display label, e.g. "The Pioneer"
+  evidenceSummary?: string;       // 1-2 sentence statement linking archetype to GitHub signals
+  primarySignals?: string[];      // 2-3 specific GitHub signals backing the archetype choice
 
   // NEW: Enhanced persona data (Sprint 2 - 23 additional fields)
   careerTrajectory?: CareerTrajectory;

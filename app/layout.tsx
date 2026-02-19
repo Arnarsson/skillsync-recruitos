@@ -65,8 +65,9 @@ export default function RootLayout({
       <head>
         {process.env.NODE_ENV === "production" && (
           <Script
-            src="https://sourcetrace.vercel.app/t.js"
-            data-key="st_a9ecf75601de46ab8c97a017f6d57960"
+            src="https://www.sourcetrace.xyz/t.js"
+            data-site="0ec61172-ff11-4d5a-a00b-41050b0b5dd4"
+            data-key="st_b0bc9f0109ab46a3ba5ef5e7272be047"
             strategy="afterInteractive"
           />
         )}

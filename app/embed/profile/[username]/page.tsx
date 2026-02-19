@@ -45,7 +45,7 @@ interface ProfileData {
   deep: boolean;
 }
 
-export default function EmbeddedProfilePage({ params }: { params: Promise<{ username: string }> }) {
+function EmbeddedProfilePageContent({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const searchParams = useSearchParams();
   const theme = searchParams.get("theme") || "dark";
@@ -215,5 +215,14 @@ export default function EmbeddedProfilePage({ params }: { params: Promise<{ user
         {psychProfile && <PsychometricCard profile={psychProfile} />}
       </div>
     </div>
+  );
+}
+
+import { Suspense } from "react";
+export default function EmbeddedProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  return (
+    <Suspense fallback={<div className="p-8 text-center animate-pulse">Loading...</div>}>
+      <EmbeddedProfilePageContent params={params} />
+    </Suspense>
   );
 }

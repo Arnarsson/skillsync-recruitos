@@ -1,196 +1,274 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-01-24
+**Analysis Date:** 2026-02-16
 
 ## Naming Patterns
 
 **Files:**
-- React components: PascalCase (e.g., `SearchBar.tsx`, `NetworkMap.tsx`, `CandidateNode`)
-- Services: camelCase with "Service" suffix (e.g., `geminiService.ts`, `candidateService.ts`, `behavioralSignalsService.ts`)
-- Utilities/helpers: camelCase (e.g., `locationNormalizer.ts`, `skillNormalizer.ts`, `experienceParser.ts`)
-- Hooks: camelCase with "use" prefix (e.g., `usePersistedState.ts`)
-- Test files: Mirror source name with `.test.ts` or `.spec.ts` suffix (e.g., `geminiService.test.ts`, `usePersistedState.test.ts`)
-- API routes: Use slash-separated paths in Next.js App Router (e.g., `app/api/search/route.ts`, `app/api/profile/analyze/route.ts`)
+- Service files: `camelCaseService.ts` (e.g., `geminiService.ts`, `candidateService.ts`, `citedEvidenceService.ts`)
+- Components: PascalCase (e.g., `PricingCard.tsx`, `NetworkMap.tsx`, `AdminDock.tsx`)
+- Utilities and libraries: kebab-case or camelCase for modules (e.g., `anti-gaming-filters.ts`, `auth.ts`, `pricing.ts`)
+- Test files: Match source file with `.test.ts` or `.spec.ts` suffix (e.g., `candidateService.test.ts`, `usePersistedState.test.ts`)
+- API routes: Use directory structure matching endpoint paths, e.g., `app/api/candidates/route.ts`
 
-**Functions:**
-- camelCase for all function names: `analyzeCandidateProfile()`, `generatePersona()`, `searchDevelopers()`
-- Event handlers start with "handle": `handleKeyDown()`, `handleSearch()`, `handleNodeClick()`
-- Query/fetch functions use past tense: `fetchLinkedInProfile()`, `collectBehavioralSignals()`, `collectEvidence()`
-- Predicate functions use "is/has/should" prefix: `isTarget`, `isMutual`, `hasApiKey()`
+**Functions and Constants:**
+- Functions: camelCase (e.g., `calculateScore`, `parseJsonSafe`, `fetchCandidates`)
+- Exported constants: UPPER_SNAKE_CASE (e.g., `VALID_ORDER_BY`, `MAX_LIMIT`, `DEFAULT_LIMIT`)
+- Internal constants: camelCase (e.g., `primaryModel`, `secondaryModel`)
+- Type/interface names: PascalCase (e.g., `Candidate`, `AlignmentScore`, `UseCandidatesReturn`)
+- Enum names: PascalCase with UPPER_SNAKE_CASE values (e.g., `FunnelStage`, `ConfidenceLevel`)
 
 **Variables:**
-- camelCase: `query`, `showSuggestions`, `mockCandidate`, `alignmentScore`
-- Boolean prefixes: `is`, `has`, `should`, `can` (e.g., `isAdmin`, `hasError`, `shouldRetry`)
-- Constants: UPPER_SNAKE_CASE (e.g., `CANDIDATES_STORAGE_KEY`, `PRICING`, `AI_MODELS`)
-- React state: `[value, setValue]` pattern, where variable names are simple nouns (e.g., `[query, setQuery]`, `[mounted, setMounted]`)
+- State variables: camelCase (e.g., `candidates`, `isLoading`, `error`)
+- Prefixed flags: is/has pattern (e.g., `isLoading`, `hasError`, `hasSubmitted`)
+- Callback functions: camelCase starting with verb (e.g., `fetchCandidates`, `updateCandidate`, `createCandidate`)
+- Mocked/test values: prefix with `mock` (e.g., `mockCandidate`, `mockFetch`)
 
-**Types/Interfaces:**
-- PascalCase (e.g., `Candidate`, `SearchResult`, `GitHubUser`, `BrightDataProfile`)
-- Props interfaces end with "Props" (e.g., `NetworkMapProps`, `SearchBarProps`)
-- Service objects/modules: lowercase with "Service" suffix (e.g., `candidateService`, `geminiService`)
+**Types:**
+- Interface names: PascalCase, no `I` prefix (e.g., `Candidate`, `UseCandidatesReturn`, `PricingCardProps`)
+- Generic types: Single letter (e.g., `<T>`) or descriptive (e.g., `<ApiResponse>`)
+- Optional interface fields: Use `?` modifier, not `null` as default
+- Type aliases for discriminated unions: PascalCase (e.g., `EnrichmentResult`)
 
 ## Code Style
 
 **Formatting:**
-- Tool: Prettier (`.prettierrc` configured)
+- Tool: Prettier
 - Print width: 100 characters
 - Tab width: 2 spaces
-- Single quotes for strings: `'string'`
-- Double quotes for JSX attributes: `<Component prop="value" />`
-- Trailing commas: ES5 style (objects/arrays, no function params)
-- Arrow functions: No parentheses for single parameter (e.g., `e => e.value`, not `(e) => e.value`)
-- Semi-colons: Always included
-- End of line: LF (Unix style)
+- Quotes: Single quotes for JS/TS (e.g., `'use client'`, `'vitest'`), double quotes for JSX attributes
+- Trailing comma: ES5 style (objects/arrays only, not function params)
+- Arrow parens: Omit when single parameter (e.g., `items.map(item =>` not `(item) =>`)
+- Semicolons: Required (enabled in config)
+- End of line: LF
 
 **Linting:**
-- Tool: ESLint with TypeScript support (`.eslintrc.json`)
+- Tool: ESLint with Next.js + TypeScript configuration
 - Key rules enforced:
-  - `@typescript-eslint/no-explicit-any`: Error - avoid `any` types
-  - `@typescript-eslint/no-unused-vars`: Warn - unused vars forbidden (except prefixed with `_`)
-  - `react-hooks/rules-of-hooks`: Error - enforce hook rules
-  - `react-hooks/exhaustive-deps`: Warn - check effect dependencies
-  - `no-console`: Warn - limit console usage, allow `warn`/`error`/`info`
-  - `no-var`: Error - use `const`/`let` only
-  - `prefer-const`: Warn - use `const` when variable never reassigned
-  - `react/react-in-jsx-scope`: Off - React 19+ doesn't need scope
-  - `react/prop-types`: Off - TypeScript replaces prop-types
+  - `@typescript-eslint/no-explicit-any`: ERROR (no `any` types)
+  - `@typescript-eslint/no-unused-vars`: WARN (allow underscore-prefixed for intentional ignores, e.g., `_unused`)
+  - `no-var`: ERROR (use `const`/`let` only)
+  - `prefer-const`: WARN (const over let when possible)
+  - `no-console`: WARN (allow `console.warn`, `console.error`, `console.info` for logging)
+  - `react-hooks/rules-of-hooks`: ERROR
+  - `react-hooks/exhaustive-deps`: WARN
+- Ignore patterns: `dist`, `node_modules`, `*.config.js`, `*.config.ts`, `.auto-claude`
 
 ## Import Organization
 
 **Order:**
-1. React/Next.js core imports: `import { useState } from 'react'`
-2. Third-party libraries: `import { motion } from 'framer-motion'`
-3. UI components from shadcn/ui: `import { Button } from '@/components/ui/button'`
-4. Local custom components: `import { SearchBar } from '@/components/SearchBar'`
-5. Services: `import { geminiService } from '@/services/geminiService'`
-6. Types: `import { Candidate } from '@/types'`
-7. Utilities/lib: `import { parseSearchQuery } from '@/lib/github'`
-8. Relative imports (if used): `import { helper } from '../utils'`
-9. CSS/styles: `import '@xyflow/react/dist/style.css'`
+1. React and Next.js imports (e.g., `import { useState } from 'react'`, `import { NextRequest } from 'next/server'`)
+2. Third-party library imports (e.g., `import { GoogleGenAI } from '@google/genai'`, `import { Check } from 'lucide-react'`)
+3. Local absolute imports using `@/` path alias (e.g., `import { Candidate } from '@/types'`, `import { candidateService } from '@/services/candidateService'`)
+4. Relative imports (rare; prefer absolute when possible)
 
 **Path Aliases:**
 - `@/*` resolves to project root (configured in `tsconfig.json`)
-- Always use absolute paths with `@/`: `import { Button } from '@/components/ui/button'`
-- Never use relative paths like `../../../components/Button`
+- Always use `@/` for local imports across the project
+- Examples: `@/types`, `@/services/candidateService`, `@/components/ui/dock`, `@/lib/db`, `@/hooks/useCandidates`
+
+**Re-exports:**
+- Services export a named object or default export: `export const candidateService = { ... }` or `export const geminiService = { ... }`
+- Components always use default exports: `export default function PricingCard(...) { }`
 
 ## Error Handling
 
 **Patterns:**
-- Try/catch blocks for async operations and risky sync operations
-- Error logging: Use `console.error()` or `console.warn()` with context prefix (e.g., `console.error('Search error:', error)`)
-- In development: Log errors with details using `if (process.env.NODE_ENV === 'development')`
-- In production: Log only safe, non-sensitive error messages
-- Async errors in services: Throw Error objects with descriptive messages: `throw new Error('API Key missing')`
-- Missing required values: Check and throw early: `if (!apiKey) throw new Error('API Key missing')`
-- API responses: Check `response.ok` before parsing JSON
-- Graceful degradation: Return fallback values instead of throwing (e.g., `return []` for failed fetches, fallback to localStorage)
-
-**Examples:**
-```typescript
-// Service error handling - throw for critical failures
-try {
-  const data = await fetch(url);
-  if (!data.ok) throw new Error('API request failed');
-  return await data.json();
-} catch (err: unknown) {
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Fetch error:', err);
+- Try-catch blocks for async operations: explicit error handling in all `async/await` chains
+- Error type checking: Use `instanceof Error` to safely extract messages (e.g., `err instanceof Error ? err.message : String(err)`)
+- Generic error fallback: Always provide a default message when Error type is unknown
+- Shared error handler pattern: Functions like `handleResponse<T>` (in `candidateService.ts`) centralize error logic:
+  ```typescript
+  async function handleResponse<T>(response: Response, action: string): Promise<T> {
+    if (!response.ok) {
+      let message = `Failed to ${action}`;
+      try {
+        const body = await response.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // response body was not JSON — use default message
+      }
+      throw new Error(message);
+    }
+    return response.json() as Promise<T>;
   }
-  throw new Error('Failed to fetch');
-}
+  ```
+- Silent error handling for background operations: Background mutations (like background refresh) catch errors silently; only foreground operations expose errors to UI
 
-// Component error handling - log and continue
-try {
-  const result = await api.analyze(candidate);
-  return result;
-} catch (error) {
-  console.error('Analysis error:', error);
-  return null; // Graceful fallback
-}
-```
-
-## Logging
-
-**Framework:** Console API (`console.log`, `console.warn`, `console.error`)
-
-**Patterns:**
-- Prefix logs with context in brackets: `console.log('[Enrichment] Starting analysis')`
-- Service logs include service name: `console.warn('[NetworkAnalysis] BrightData key not configured')`
-- Development-only verbose logs: Wrap in `if (process.env.NODE_ENV === 'development')`
-- Production logs: Only warn/error level, no debug info
-- Error context: Include the error object: `console.error('Fetch error:', error)`
-- Disable ESLint for console in development-heavy files: Use `/* eslint-disable no-console */` at top
-
-**Examples:**
-```typescript
-// Top of service file if heavy logging
-/* eslint-disable no-console */
-
-// Conditional logging
-if (process.env.NODE_ENV === 'development') {
-  console.log('[Service] Detailed debug info:', data);
-}
-
-// Always log errors
-console.error('Operation failed:', error);
-```
+**Logging:**
+- Framework: `console` methods (warn, error, info, log)
+- Prefixing: Use service/module bracket notation for context (e.g., `[CitedEvidence]`, `[SocialMatrix]`, `[Scraper]`)
+- Allowed in production: `console.warn`, `console.error`, `console.info` (as per ESLint rule)
+- Development-only: Wrap dev logs in `if (process.env.NODE_ENV === 'development')` to prevent bloat
+- Examples:
+  ```typescript
+  console.log('[CitedEvidence] 🔄 Falling back to OpenRouter...');
+  console.error('[CitedEvidence] OpenRouter fallback failed:', fallbackError);
+  console.warn('[SocialMatrix] GitHub quick check failed:', error);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Scraper] Tier 1: Simple WebFetch...');
+  }
+  ```
 
 ## Comments
 
 **When to Comment:**
-- Complex algorithms or non-obvious logic: Add explanatory comments
-- Architecture decisions: Document "why" not "what"
-- TODOs and FIXMEs: Include context (e.g., `// TODO: Add API mocking`)
-- JSDoc for public functions/exports: Document parameters and return types
-- Inline comments for subtle bugs or workarounds
+- Explain "why" not "what" (code should be self-documenting)
+- Use for complex algorithms or non-obvious decisions
+- Document workarounds or temporary fixes with context
+- Rarely needed for simple operations
 
 **JSDoc/TSDoc:**
-- Used for service exports and public functions
-- Include descriptions and key architecture details
-- Example from `enrichmentServiceV2.ts`:
-```typescript
-/**
- * Profile Enrichment Pipeline V2
- *
- * Based on BrightData consultant's recommended architecture:
- * - Bright Data SERP API: Discover alternative sources
- * - Bright Data Web Scraper API: Fetch content from discovered URLs
- * - Gemini AI: Build unified persona + compute alignment
- */
-```
+- Use for exported functions, interfaces, and public APIs
+- Include parameter descriptions, return type, and usage examples for complex functions
+- Example:
+  ```typescript
+  /**
+   * Fetch a paginated, filterable list of candidates.
+   * Returns both the candidate array and the total count for pagination.
+   */
+  async fetchAll(filters?: CandidateFilters): Promise<{ candidates: Candidate[]; total: number }>
+  ```
 
 ## Function Design
 
 **Size:**
-- Keep functions focused and under 100 lines when possible
-- Break complex operations into helper functions
-- Services organize related functions as exported object: `export const candidateService = { fetchAll(), save(), ... }`
+- Keep functions focused and small (aim for <50 lines)
+- Extract complex logic into separate utility functions
+- Example violation: `app/pipeline/page.tsx` (1881 lines) needs decomposition into smaller components
 
 **Parameters:**
-- Use destructuring for object parameters: `function analyze({ name, experience }: Candidate)`
-- 3+ parameters: Consider object parameter pattern
-- Avoid positional parameters for optional values
-- Type all parameters explicitly (no `any`)
+- Limit parameters to 3-4; use object destructuring for multiple params
+- Use type annotations for all parameters: `(id: string, data: Partial<Candidate>): Promise<Candidate>`
+- Optional parameters should use `?` on the type, not runtime checks
+- Use `Record<string, unknown>` for flexible object params instead of `any`
 
 **Return Values:**
-- Async functions return `Promise<T>` with explicit type
-- Always specify return type in function signature
-- Return early for validation/errors
-- Example: `async function fetchAll(): Promise<Candidate[]>`
+- Always type return values explicitly (no implicit returns)
+- For success/failure patterns, return discriminated unions (e.g., `EnrichmentResult` in `types.ts`)
+- Async functions always return `Promise<T>`
+- Void returns only for side-effect functions (event handlers, state setters)
+
+**Async Functions:**
+- Always return `Promise<T>`, never bare async without return
+- Use `async/await` (not `.then()` chains)
+- Wrap in try-catch for all potentially failing operations
+- Use `finally` for cleanup
+
+**Callbacks:**
+- Use `useCallback` with stable dependency arrays in React components
+- Name callbacks with action prefix: `fetchCandidates`, `updateCandidate`, `deleteCandidate`
+- Provide explicit dependency arrays; use ESLint rule to enforce
 
 ## Module Design
 
 **Exports:**
-- Services export as named objects: `export const candidateService = { ... }`
-- Components export as default: `export default function SearchBar()`
-- Utilities export as named functions: `export function parseSearchQuery()`
-- Types/interfaces always exported: `export interface Candidate { ... }`
+- Services: Export a named object containing methods (e.g., `export const candidateService = { fetchAll, create, ... }`)
+- Components: Always default export (e.g., `export default function PricingCard(...)`)
+- Utilities: Named exports for utility functions, default export for single-export modules
+- Types: Always named exports (e.g., `export interface Candidate`, `export type EnrichmentResult`)
 
 **Barrel Files:**
-- Used for UI components: `import { Button } from '@/components/ui/button'`
-- Services typically exported individually
-- Index files group related exports by feature
+- Not used; components import directly from files
+- Avoid deep nesting; organize by feature/concern instead
+
+**File Organization:**
+- One main export per file (services, components)
+- Group related helper functions in same file if <30 lines
+- Extract utilities to separate files if reused across multiple modules
+- Keep test files co-located with source (same directory)
+
+## Code Examples
+
+**Service Pattern (candidateService.ts):**
+```typescript
+export const candidateService = {
+  async fetchAll(filters?: CandidateFilters): Promise<{ candidates: Candidate[]; total: number }> {
+    const url = buildUrl(BASE_URL, filters);
+    const response = await fetch(url);
+    return handleResponse<...>(response, 'fetch candidates');
+  },
+
+  async create(data: Partial<Candidate> & { name: string }): Promise<Candidate> {
+    const response = await fetch(BASE_URL, { method: 'POST', body: JSON.stringify(data) });
+    return handleResponse<Candidate>(response, 'create candidate');
+  }
+};
+```
+
+**Component Pattern (PricingCard.tsx):**
+```typescript
+interface PricingCardProps {
+  name: string;
+  price: string;
+  popular?: boolean;
+}
+
+export default function PricingCard({ name, price, popular }: PricingCardProps) {
+  return (
+    <div className={`border ${popular ? 'border-blue-500' : 'border-white/10'}`}>
+      {/* JSX content */}
+    </div>
+  );
+}
+```
+
+**Hook Pattern (useCandidates.ts):**
+```typescript
+export function useCandidates(filters?: CandidateFilters): UseCandidatesReturn {
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCandidates = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await candidateService.fetchAll(filters);
+      setCandidates(result.candidates);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchCandidates();
+  }, [fetchCandidates]);
+
+  return { candidates, isLoading, error, refresh: fetchCandidates };
+}
+```
+
+**API Route Pattern (app/api/candidates/route.ts):**
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { requireOptionalAuth } from '@/lib/auth-guard';
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await requireOptionalAuth();
+    const userId = auth?.user.id;
+
+    // Parse and validate parameters
+    const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') ?? '50'), 200);
+
+    // Business logic
+    const data = await fetchData();
+
+    // Return success response
+    return NextResponse.json({ data, success: true });
+  } catch (error) {
+    console.error('[API]', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
+```
 
 ---
 
-*Convention analysis: 2026-01-24*
+*Convention analysis: 2026-02-16*

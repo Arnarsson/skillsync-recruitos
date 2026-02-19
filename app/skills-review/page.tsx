@@ -57,6 +57,7 @@ interface SkillInsight {
   count: number;
   isLimiting: boolean;
   potentialGain?: number;
+  fallback?: boolean;
 }
 
 interface PreviewResponse {
@@ -295,20 +296,20 @@ function SkillChip({
             </Badge>
           )}
         </div>
-        {/* Candidate count */}
+        {/* Candidate count — no per-chip warning; zero state is handled by page-level banner */}
         <div className="flex items-center gap-1 mt-0.5">
           {isLoading ? (
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
           ) : insight ? (
-            <>
-              {isLimiting && <AlertTriangle className="w-3 h-3 text-amber-500" />}
-              <span className={cn(
-                "text-xs",
-                isLimiting ? "text-amber-500" : "text-muted-foreground"
-              )}>
-                {insight.count.toLocaleString()} candidates
-              </span>
-            </>
+            <span className="text-xs text-muted-foreground">
+              {insight.count > 0
+                ? insight.fallback
+                  ? `~${insight.count.toLocaleString()} est.`
+                  : `${insight.count.toLocaleString()} candidates`
+                : insight.fallback
+                  ? "~30k+ est."
+                  : "no matches"}
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
           )}
@@ -681,10 +682,27 @@ export default function SkillsReviewPage() {
     router.push("/pipeline");
   }, [skills, customSkills, hardRequirements, router]);
 
+  // Switch ALL must-have skills to nice-to-have (broad match fallback)
+  const handleSwitchToBroadMatch = useCallback(() => {
+    setSkills((prev) =>
+      prev.map((s) => (s.tier === "must-have" ? { ...s, tier: "nice-to-have" } : s))
+    );
+    setPreview(null);
+    toast.success("Switched to Broad Match — all must-haves moved to nice-to-have");
+  }, []);
+
   const hasChanges = JSON.stringify(skills) !== JSON.stringify(originalSkills) || customSkills.length > 0;
   const limitingCount = preview ? Object.entries(preview.perSkill).filter(([name, s]) =>
     s.isLimiting && skills.find(sk => sk.name === name)?.tier === "must-have"
   ).length : 0;
+
+  // True when every must-have skill returned 0 candidates from the API
+  const allMustHavesZero = useMemo(() => {
+    if (!preview || isLoadingPreview) return false;
+    const mustHaveSkills = skills.filter((s) => s.tier === "must-have");
+    if (mustHaveSkills.length === 0) return false;
+    return mustHaveSkills.every((s) => (preview.perSkill[s.name]?.count ?? 1) === 0);
+  }, [preview, skills, isLoadingPreview]);
   const candidateEstimateLabel = preview
     ? preview.confidence === "low" &&
       typeof preview.estimateMin === "number" &&
@@ -839,6 +857,29 @@ export default function SkillsReviewPage() {
             }}
           />
         </div>
+
+        {/* Zero-match banner: shown when ALL must-have skills return 0 candidates */}
+        {allMustHavesZero && (
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-amber-600 text-sm">Your must-have skills are too specific — no GitHub matches found.</p>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  Switch to Broad Match to move all must-haves to nice-to-have and surface relevant candidates.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500/40 text-amber-600 hover:bg-amber-500/10 flex-shrink-0"
+              onClick={handleSwitchToBroadMatch}
+            >
+              Switch to Broad Match
+            </Button>
+          </div>
+        )}
 
         {/* Three-column layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
