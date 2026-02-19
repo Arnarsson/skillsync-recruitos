@@ -487,10 +487,10 @@ describe('API Route Authentication', () => {
       expect([401, 403]).toContain(res.status);
     });
 
-    it('POST /api/stripe/checkout returns 401', async () => {
-      const { POST } = await import('@/app/api/stripe/checkout/route');
+    it('POST /api/checkout/credits returns 401', async () => {
+      const { POST } = await import('@/app/api/checkout/credits/route');
       const res = await POST(
-        makePostRequest('/api/stripe/checkout', { priceId: 'price_test' })
+        makePostRequest('/api/checkout/credits', { packageId: 'starter' })
       );
       expect([401, 403]).toContain(res.status);
     });

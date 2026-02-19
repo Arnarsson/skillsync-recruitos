@@ -172,6 +172,15 @@ async function getSkillCandidateCount(
 
     const count = data.total_count;
 
+    // If the live query returned 0 for a known skill/language, apply heuristic fallback.
+    // This happens when GitHub unauthenticated requests are restricted or rate-limited
+    // without throwing a 403/429 — they just return 0 results for the language qualifier.
+    if (count === 0 && (githubLang || isFramework)) {
+      const fallback = getFallbackSkillCount(skill);
+      searchCache.set(cacheKey, { count: fallback, timestamp: Date.now(), fallback: true, apiFallback: true });
+      return { count: fallback, fallback: true, apiFallback: true };
+    }
+
     // Cache the result
     searchCache.set(cacheKey, { count, timestamp: Date.now(), fallback: false, apiFallback: false });
     return { count, fallback: false, apiFallback: false };

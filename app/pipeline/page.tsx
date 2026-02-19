@@ -1131,8 +1131,6 @@ function PipelinePageContent() {
           if (req.type === 'language') {
             const requiredLang = String(req.value).toLowerCase();
             const candidateBio = `${candidate.currentRole} ${candidate.company} ${candidate.location}`.toLowerCase();
-            // Simple heuristic: check if language name appears in bio or location
-            // In a real app, you'd have structured language data
             return candidateBio.includes(requiredLang);
           }
           
