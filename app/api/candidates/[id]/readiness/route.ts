@@ -30,9 +30,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       if (isDemoProfile(id)) {
         return NextResponse.json({
           candidateId: id,
-          overallScore: null,
-          pillars: [],
+          overall: 0,
+          confidence: 0,
+          level: 'cold',
+          pillars: {},
           computedAt: new Date().toISOString(),
+          dataSourcesSummary: [],
           demo: true,
         });
       }

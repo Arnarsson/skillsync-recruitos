@@ -282,7 +282,7 @@ function getTopSignals(readiness: ReadinessScore, maxSignals: number = 4): Array
 // Generate a one-line summary for the level
 function getLevelSummary(readiness: ReadinessScore): string {
   const topSignals = getTopSignals(readiness, 2);
-  if (topSignals.length === 0) return LEVEL_CONFIG[readiness.level].description;
+  if (topSignals.length === 0) return LEVEL_CONFIG[readiness.level]?.description ?? "";
 
   // Build summary from top signals
   const parts = topSignals.map(s => {
