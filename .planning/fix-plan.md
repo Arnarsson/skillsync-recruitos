@@ -1,17 +1,20 @@
-# Fix Plan — RecruitOS (Codebase Review + Eureka QA Audit)
-Date: 2026-02-22
+# Fix Plan — RecruitOS (Codebase Review + Eureka QA Audits)
+Date: 2026-02-22 (Updated with authenticated Eureka audit v2)
 
 ## Overview
 
 This plan fixes all issues from:
 - `CODEBASE_REVIEW.md` (full codebase security/quality/testing audit)
-- The Eureka QA audit (5-flow UX test on recruitos.xyz demo)
+- Eureka QA audit v1 (5-flow UX test, unauthenticated demo mode)
+- Eureka QA audit v2 (authenticated real flow + deeper inspection)
 
 Issues are grouped into 6 phases by urgency. Each item lists the exact file(s), the problem, and the precise fix.
 
+**Total issues tracked: 19** (5 P0, 8 P1, 6 P2)
+
 ---
 
-## Phase 1 — P0: Demo Blockers (Day 1, ~4h total)
+## Phase 1 — P0: Demo Blockers (Day 1, ~6h total)
 
 These break the live demo end-to-end. Fix before any other work.
 
@@ -123,7 +126,65 @@ if (demoData) {
 }
 ```
 
-### 1.5 Skill normalization: Airflow, dbt return 0 matches
+### 1.5 Alignment scores fall back to 99% when no job context exists
+**File:** `app/pipeline/page.tsx` (scoring hook) + `components/pipeline/CandidatePipelineItem.tsx`
+**Problem:** When `apex_job_context` is empty, `computeAlignmentScore()` scores against 0 requirements and returns 96-99% — misleading. Recruiter sees "Excellent match" with no basis.
+**Fix (two parts):**
+
+Part A — Guard the score computation:
+```typescript
+// In the scoring computation
+const score = jobContext?.requirements?.length
+  ? computeAlignmentScore(candidate, jobContext)
+  : null;
+```
+
+Part B — Show "No job set" when score is null, and add a banner linking to /intake:
+```typescript
+// In CandidatePipelineItem collapsed row:
+{score !== null
+  ? <ScoreBadge value={score} />
+  : <span className="text-xs text-muted-foreground">No job set</span>}
+
+// At top of /pipeline when no job context:
+{!jobContext && (
+  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400 flex items-center justify-between">
+    <span>No job context — scores are unavailable.</span>
+    <Link href="/intake" className="underline">Define a job →</Link>
+  </div>
+)}
+```
+
+### 1.6 Checkbox nested in expand button — selection broken (DOM restructure)
+**File:** `components/pipeline/CandidatePipelineItem.tsx`
+**Problem:** Candidate select checkbox is a `<button>` nested inside the row's expand `<button>`. Click events bubble — clicking checkbox toggles expand instead of selecting the candidate. The entire Stage 3 flow (select → analyse) is unreachable.
+**Fix:** Separate checkbox and expand into sibling elements:
+```typescript
+// BEFORE (invalid HTML):
+// <button onClick={handleToggleExpand}>
+//   <button onClick={handleSelect} />  ← button in button
+//   <CandidateRowContent />
+// </button>
+
+// AFTER:
+<div className="relative flex items-center">
+  <button
+    onClick={(e) => { e.stopPropagation(); handleSelect(); }}
+    className="absolute left-0 z-10 p-2"
+    aria-label="Select candidate"
+  >
+    <Checkbox checked={isSelected} />
+  </button>
+  <button
+    onClick={handleToggleExpand}
+    className="flex-1 pl-10"
+  >
+    <CandidateRowContent />
+  </button>
+</div>
+```
+
+### 1.7 Skill normalization: Airflow, dbt return 0 matches
 **File:** `lib/search/skillNormalizer.ts`
 **Problem:** Gemini returns "Apache Airflow", "dbt" verbatim. These don't match any alias in `SKILL_ALIASES`, so GitHub search returns 0 results.
 **Fix:** Add aliases to the `SKILL_ALIASES` map:
@@ -200,7 +261,71 @@ grep -r 'rel="preload"' app/ public/ --include="*.tsx" --include="*.html"
 ```
 Remove the specific `<link rel="preload" as="style" ...>` that generates the warning. If it's Sentry-generated, add `disableLogger: true` (already set) and check Sentry config.
 
-### 2.5 Language state leaks to English UI
+### 2.5 Inline expand doesn't fire JIT AI for real (non-demo) candidates
+**File:** `components/pipeline/CandidatePipelineItem.tsx`
+**Problem:** Expanding a real (live-searched) candidate shows static "Click 'Deep Profile' for full AI analysis" placeholder instead of triggering the JIT deep profile fetch. Demo candidates have pre-populated data so this doesn't surface in demo mode.
+**Fix:** Verify `onExpandStart` prop on `<Expandable>` calls the deep profile API:
+```typescript
+// CandidatePipelineItem.tsx
+<Expandable
+  onExpandStart={() => {
+    if (!candidate.deepProfile && !isLoadingDeepProfile) {
+      fetchDeepProfile(candidate.id);
+    }
+  }}
+  expandDirection="vertical"
+  animationPreset="blur-md"
+>
+```
+Also ensure `<LoadingScramble>` is shown while `isLoadingDeepProfile === true`:
+```typescript
+{isLoadingDeepProfile
+  ? <LoadingScramble isLoading text="" />
+  : candidate.deepProfile
+  ? <DeepProfileContent data={candidate.deepProfile} />
+  : <p className="text-muted-foreground text-sm">Click 'Deep Profile' for full AI analysis</p>}
+```
+
+### 2.6 "Continue to Candidates" button silently blocks at 0 matches
+**File:** Skills review page (find the "Continue" button component)
+**Problem:** When `estimatedCandidates === 0`, clicking "Continue to Candidates" does nothing — no error, no toast, no explanation.
+**Fix:**
+```typescript
+const handleContinue = () => {
+  if (estimatedCandidates === 0) {
+    toast.error('0 candidates match. Demote a must-have skill to continue.');
+    return;
+  }
+  router.push('/pipeline');
+};
+```
+
+### 2.7 "Demote Limiting Skill" picks wrong skill
+**File:** Skills review page — auto-demote logic
+**Problem:** Auto-demote promotes SQL (fewest matches with >0) instead of "Data Pipelines" (0 matches — the actual blocker).
+**Fix:** Prioritize 0-match skills first:
+```typescript
+export function findLimitingSkill(skills: Skill[]): Skill {
+  const mustHaves = skills.filter(s => s.tier === 'must-have');
+  // Prioritize 0-match skills first, then fewest matches
+  const zeroMatch = mustHaves.filter(s => s.candidateCount === 0);
+  const pool = zeroMatch.length > 0 ? zeroMatch : mustHaves;
+  return pool.sort((a, b) => a.candidateCount - b.candidateCount)[0];
+}
+```
+
+### 2.8 LoadingScramble not used during AI waits
+**Files:** `components/pipeline/CandidatePipelineItem.tsx`, outreach modal component
+**Problem:** No scramble animation during any Gemini call — inline expand shows placeholder immediately, outreach modal shows nothing until success/error.
+**Fix:** Wrap all async Gemini result renders:
+```typescript
+{isPending
+  ? <LoadingScramble isLoading={true} text="" />
+  : <ResultContent data={result} />}
+```
+Apply to: (a) inline deep profile expand, (b) outreach generation modal, (c) any other AI-backed UI section.
+
+### 2.9 Language state leaks to English UI
 **File:** `lib/adminContext.tsx` or wherever `recruitos_lang` is read
 **Problem:** Language persists from a previous session. First-time users may see Danish UI.
 **Fix:** Set language default based on browser locale, not just localStorage:
@@ -634,6 +759,57 @@ const session = await stripe.checkout.sessions.create({
   // ... existing params
 }, { idempotencyKey });
 ```
+
+---
+
+## Appendix A — Additional P2 Issues (from Eureka v2)
+
+### A.1 Outreach error shows raw "Unauthorized" string to recruiter
+**File:** Outreach modal component
+**Problem:** `<p>Unauthorized</p>` rendered below the Generate button — developer error string, not user-facing.
+**Fix:**
+```typescript
+{error && (
+  <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive flex items-center justify-between">
+    <span>Sign in to generate outreach messages</span>
+    <Link href="/login" className="underline text-xs">Sign in →</Link>
+  </div>
+)}
+```
+
+### A.2 All demo candidates show "Low signal" / 0 receptivity
+**File:** Demo candidate seed data
+**Problem:** 5 demo candidates all show red "Low signal". The readiness spectrum (hot/warm/cold) is invisible.
+**Fix:** Seed varied readiness levels in demo data — at least one "hot" (72+), one "warming" (35-50), one "cold" (15-20). Already addressed by fix 1.4 (demo readiness map) — ensure the seed values vary.
+
+---
+
+## Complete Issue Tracker
+
+| # | Severity | Phase | Issue | File(s) |
+|---|----------|-------|-------|---------|
+| 1.1 | P0 | 1 | Outreach 401 in demo mode | `app/api/outreach/route.ts` + frontend |
+| 1.2 | P0 | 1 | Outreach zero loading state | Outreach modal component |
+| 1.3 | P0 | 1 | /analyse ignores shortlist data | `app/analyse/page.tsx` |
+| 1.4 | P0 | 1 | Readiness pillars empty in demo | `app/api/candidates/[id]/readiness/route.ts` |
+| 1.5 | P0 | 1 | Scores fall back to 99% with 0 reqs | Pipeline scoring hook |
+| 1.6 | P0 | 1 | Checkbox nested in button = no selection | `CandidatePipelineItem.tsx` |
+| 1.7 | P1 | 1 | Skill normalization (Airflow, dbt) | `lib/search/skillNormalizer.ts` |
+| 2.1 | P1 | 2 | Deep profile Match Score = 0 | Profile deep page |
+| 2.2 | P1 | 2 | Readiness badge buried on collapsed row | `CandidatePipelineItem.tsx` |
+| 2.3 | P2 | 2 | Pipeline demo log fires 3x | `app/pipeline/page.tsx` |
+| 2.4 | P2 | 2 | CSS preload warning x15 | `app/layout.tsx` |
+| 2.5 | P1 | 2 | Inline expand no JIT AI for real candidates | `CandidatePipelineItem.tsx` |
+| 2.6 | P1 | 2 | "Continue" silently blocks at 0 matches | Skills review page |
+| 2.7 | P1 | 2 | Demote logic picks wrong skill | Skills review auto-demote |
+| 2.8 | P1 | 2 | LoadingScramble not used during AI waits | Multiple components |
+| 2.9 | P2 | 2 | Language state leak | Lang context |
+| A.1 | P2 | 2 | Outreach raw "Unauthorized" string | Outreach modal |
+| A.2 | P2 | 2 | All demo candidates show "Low signal" | Demo seed data |
+| 3.1-3.8 | Critical | 3 | Security hardening (8 items) | Multiple API routes |
+| 4.1-4.7 | Medium | 4 | Type safety & code quality (7 items) | Multiple services |
+| 5.1-5.6 | Medium | 5 | Tests & CI (6 items) | CI + test files |
+| 6.1-6.6 | Low | 6 | Accessibility & polish (6 items) | Components + middleware |
 
 ---
 
