@@ -645,21 +645,35 @@ export default function SkillsReviewPage() {
 
   const handleQuickDemoteLimiting = useCallback(() => {
     if (!preview) return;
-    const limitingMustHave = skills.find(
+    const limitingMustHaves = skills.filter(
       (skill) => skill.tier === "must-have" && preview.perSkill[skill.name]?.isLimiting
     );
-    if (!limitingMustHave) return;
+    if (limitingMustHaves.length === 0) return;
+
+    // Prioritize 0-match skills first (actual blockers), then fewest matches
+    const sorted = [...limitingMustHaves].sort((a, b) => {
+      const aCount = preview.perSkill[a.name]?.count ?? 0;
+      const bCount = preview.perSkill[b.name]?.count ?? 0;
+      return aCount - bCount;
+    });
+    const toDemote = sorted[0];
 
     setSkills((prev) =>
       prev.map((skill) =>
-        skill.id === limitingMustHave.id ? { ...skill, tier: "nice-to-have" } : skill
+        skill.id === toDemote.id ? { ...skill, tier: "nice-to-have" } : skill
       )
     );
     setPreview(null);
-    toast.success(`Moved ${limitingMustHave.name} to nice-to-have`);
+    toast.success(`Moved ${toDemote.name} to nice-to-have`);
   }, [preview, skills]);
 
   const handleContinue = useCallback(() => {
+    // Warn if 0 candidates match — don't silently block
+    if (preview && preview.totalCandidates === 0) {
+      toast.error("0 candidates match these requirements. Demote a must-have skill to broaden your pool.");
+      return;
+    }
+
     const skillsConfig: SkillsConfig = {
       skills: skills.map((s, i) => ({
         name: s.name,
