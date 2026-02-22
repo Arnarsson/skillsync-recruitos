@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useAdmin } from "@/lib/adminContext";
 import { getDemoCandidates, DEMO_JOB } from "@/lib/demoData";
 import { resolveProfileSlug } from "@/lib/candidate-identity";
+import { normalizeLocation } from "@/lib/search/locationNormalizer";
 import { deserializePipelineState, serializePipelineState } from "@/lib/pipelineUrlState";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -530,9 +531,11 @@ function PipelinePageContent() {
           localStorage.setItem("apex_job_context_hash", jobContextHash);
         }
 
-        // Use top 2 skills + location for search — location qualifier filters to the right market
+        // Use top 2 skills + location for search — normalize neighborhood names to city (e.g. Østerbro → copenhagen)
         const skills = parsedJobContext.requiredSkills.slice(0, 2);
-        const locationSuffix = parsedJobContext.location ? ` ${parsedJobContext.location.split(",")[0].trim()}` : "";
+        const rawLocation = parsedJobContext.location ? parsedJobContext.location.split(",")[0].trim() : null;
+        const normalizedLoc = rawLocation ? normalizeLocation(rawLocation) : null;
+        const locationSuffix = normalizedLoc ? ` ${normalizedLoc}` : "";
         const query = skills.join(" ") + locationSuffix;
         console.log("[Pipeline] Auto-searching with query:", query);
 

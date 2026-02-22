@@ -8,7 +8,22 @@
 // Canonical location names with their variants (including local spellings)
 export const LOCATION_ALIASES: Record<string, string[]> = {
   // Denmark
-  'copenhagen': ['copenhagen', 'kobenhavn', 'københavn', 'cph', 'kbh'],
+  'copenhagen': [
+    'copenhagen', 'kobenhavn', 'københavn', 'cph', 'kbh',
+    // Copenhagen neighborhoods / districts (GitHub users rarely write the district name)
+    'østerbro', 'osterbro', 'oesterbro',
+    'nørrebro', 'norrebro', 'noerrebro',
+    'vesterbro', 'vesterbro',
+    'frederiksberg',
+    'amager', 'islands brygge', 'christianshavn',
+    'valby', 'vanløse', 'vanlose',
+    'bispebjerg', 'brønshøj', 'bronshoj',
+    'sydhavn', 'indre by', 'city centre',
+    'refshaleøen', 'refshaleoen',
+    'hellerup', 'gentofte', 'lyngby', 'glostrup', 'hvidovre', 'brøndby', 'brondby',
+    'taastrup', 'rødovre', 'rodover', 'ballerup', 'herlev', 'gladsaxe',
+    'søborg', 'soborg', 'bagsværd', 'bagsvard',
+  ],
   'aarhus': ['aarhus', 'århus'],
   'odense': ['odense'],
   'aalborg': ['aalborg', 'ålborg'],

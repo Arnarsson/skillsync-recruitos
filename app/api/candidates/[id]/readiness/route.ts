@@ -39,7 +39,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           demo: true,
         });
       }
-      return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
+      // Candidate not in DB yet (e.g. fresh search result not yet saved) — return empty readiness
+      // so the UI renders gracefully instead of retrying into an infinite error loop
+      return NextResponse.json({
+        candidateId: id,
+        overall: 0,
+        confidence: 0,
+        level: 'cold',
+        pillars: {},
+        computedAt: new Date().toISOString(),
+        dataSourcesSummary: [],
+        notInDb: true,
+      });
     }
 
     // Check for cached result (valid for 24 hours)
