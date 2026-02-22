@@ -718,7 +718,7 @@ export async function analyzeJobDescription(jobText: string): Promise<{
   location: string;
   summary: string;
 }> {
-  const systemPrompt = `You are a job description analyst that extracts skills optimized for GitHub developer search.
+  const systemPrompt = `You are a job description analyst that extracts skills and location optimized for GitHub developer search.
 You understand both Danish and English. Always respond with valid JSON only.
 
 CRITICAL RULES FOR SKILLS:
@@ -728,7 +728,19 @@ CRITICAL RULES FOR SKILLS:
 4. For frameworks, use the framework name: "Next.js", "Django", "Spring Boot"
 5. For languages, use proper names: "Python", "Go", "Rust", "Java"
 6. Keep skills concise - max 2 words typically
-7. Avoid vague terms like "problem solving", "agile", "teamwork" - focus on tech skills`;
+7. Avoid vague terms like "problem solving", "agile", "teamwork" - focus on tech skills
+
+CRITICAL RULES FOR LOCATION:
+- Always normalize to a searchable city name in English that GitHub users actually write in their profiles
+- Neighborhoods/districts → parent city: "Østerbro" → "Copenhagen", "Shoreditch" → "London", "Brooklyn" → "New York"
+- Local spellings → English: "København" → "Copenhagen", "München" → "Munich", "Köln" → "Cologne"
+- If the job is remote or no location found, return empty string
+- Examples: "Østerbro, Copenhagen" → "Copenhagen", "Nørrebro" → "Copenhagen", "Berlin Mitte" → "Berlin"
+
+CRITICAL RULES FOR SKILLS (programming languages):
+- "C++" stays "C++", but for GitHub search use "cpp" equivalent
+- Map to what developers actually tag their repos with: "ReactJS" → "React", "NodeJS" → "Node.js", "ML" → "Python"
+- SQL is NOT a GitHub language — if SQL is required, add "PostgreSQL" or "MySQL" as the actual skill instead`;
 
   const prompt = `
 Extract structured information from this job description. The text may be in Danish or English.
@@ -751,13 +763,15 @@ Return JSON:
   "requiredSkills": ["React", "TypeScript", "Node.js", "PostgreSQL"],
   "preferredSkills": ["Docker", "AWS", "GraphQL"],
   "experienceLevel": "string (e.g., '3-5 years', 'Senior', 'Junior')",
-  "location": "string",
+  "location": "string (canonical English city name e.g. 'Copenhagen', 'Berlin', 'London' — NOT neighborhoods or local spellings)",
   "summary": "string (2-3 sentences describing the role)"
 }
 
 GOOD skill examples: "React", "TypeScript", "Python", "AWS", "Docker", "Kubernetes", "PostgreSQL", "MongoDB", "GraphQL", "Node.js", "Go", "Rust", "Java", "Spring Boot", "Django", "FastAPI", "Next.js", "Vue.js", "Angular", "Redis", "Elasticsearch"
+GOOD location examples: "Copenhagen" (not "Østerbro" or "København"), "Munich" (not "München"), "New York" (not "Brooklyn")
 
-BAD skill examples (DO NOT USE): "Frontend development", "Backend systems", "Cloud computing", "API design principles", "Database management", "Modern JavaScript frameworks"`;
+BAD skill examples (DO NOT USE): "Frontend development", "Backend systems", "Cloud computing", "API design principles", "Database management", "Modern JavaScript frameworks"
+BAD location examples (DO NOT USE): "Østerbro", "København", "Nørrebro", "Munich Maxvorstadt", "Berlin Mitte" — always go up to city level`;
 
   const text = await callOpenRouter(prompt, systemPrompt);
   return parseJsonSafe(text) as {

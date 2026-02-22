@@ -531,8 +531,17 @@ function PipelinePageContent() {
           localStorage.setItem("apex_job_context_hash", jobContextHash);
         }
 
-        // Use top 2 skills + location for search — normalize neighborhood names to city (e.g. Østerbro → copenhagen)
-        const skills = parsedJobContext.requiredSkills.slice(0, 2);
+        // Map skills that aren't searchable on GitHub to their actual language equivalents
+        const GITHUB_SKILL_MAP: Record<string, string> = {
+          'SQL': 'PostgreSQL', 'NoSQL': 'MongoDB', 'ML': 'Python',
+          'Machine Learning': 'Python', 'Deep Learning': 'Python',
+          'ReactJS': 'React', 'NodeJS': 'Node.js', 'VueJS': 'Vue',
+          'C++': 'cpp', 'C#': 'csharp', 'Shell': 'Bash',
+        };
+        const rawSkills = parsedJobContext.requiredSkills.slice(0, 2);
+        const skills = rawSkills.map((s: string) => GITHUB_SKILL_MAP[s] || s);
+
+        // Normalize location — AI already returns city-level, fallback normalizer catches any stragglers
         const rawLocation = parsedJobContext.location ? parsedJobContext.location.split(",")[0].trim() : null;
         const normalizedLoc = rawLocation ? normalizeLocation(rawLocation) : null;
         const locationSuffix = normalizedLoc ? ` ${normalizedLoc}` : "";
