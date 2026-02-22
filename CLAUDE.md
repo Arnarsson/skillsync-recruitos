@@ -165,8 +165,30 @@ if (isAdmin) {
 
 Multi-language search parsing for natural queries like "c++ 5 års erfaring i københavn":
 
-**locationNormalizer.ts** - Location alias resolution:
+## ⚠️ SEMANTIC NORMALIZATION RULE — READ THIS FIRST
+
+**Never use lookup tables to solve semantic understanding problems.** The AI pipeline already reads and understands job descriptions. Use it.
+
+**WRONG approach:**
+```typescript
+// BAD: hardcoding every possible variant
+const NEIGHBORHOODS = { 'Østerbro': 'Copenhagen', 'Nørrebro': 'Copenhagen', ... }
+```
+
+**RIGHT approach:**
+Instruct `analyzeJobDescription()` in `lib/services/gemini/index.ts` to return canonical, searchable values. The AI handles all variants — neighborhood names, local spellings, non-GitHub skill names — in one place.
+
+Current rules enforced at the AI extraction layer (`analyzeJobDescription`):
+- **Location** → always canonical English city name: "Østerbro" → "Copenhagen", "München" → "Munich", "Brooklyn" → "New York"
+- **Skills** → always GitHub-searchable names: "SQL" → "PostgreSQL", "ML" → "Python", "ReactJS" → "React"
+
+`lib/search/locationNormalizer.ts` exists as a **last-resort fallback** for manual text queries (search bar), NOT as the primary normalization strategy. If you find yourself adding entries to it for new locations, stop and fix the AI prompt instead.
+
+---
+
+**locationNormalizer.ts** - Fallback alias resolution for raw text queries:
 - City name normalization (København → copenhagen, München → munich)
+- Copenhagen neighborhoods → "copenhagen" (Østerbro, Nørrebro, Vesterbro, etc.)
 - Country/region detection
 - Returns `{ location, remainingQuery }`
 
@@ -184,6 +206,11 @@ Multi-language search parsing for natural queries like "c++ 5 års erfaring i k�
 - `c++` → `cpp`, `c#` → `csharp` for GitHub API
 - Framework → Language: `react` → `javascript`
 - Returns `{ skill, githubLanguage, keyword, remainingQuery }`
+
+**Pipeline auto-search query builder** (`app/pipeline/page.tsx`):
+- Skills mapped through `GITHUB_SKILL_MAP` before search (SQL→PostgreSQL, ML→Python)
+- Location normalized via `normalizeLocation()` as final safety net
+- Primary normalization already happened at `analyzeJobDescription()` time
 
 **Integration in `lib/github.ts`**:
 ```typescript
