@@ -1,204 +1,187 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { Octokit } from '@octokit/rest';
 import { computeReadinessScore } from '../../../services/jobReadiness/engine';
-import type { ReadinessInput, ExternalFetchers } from '../../../services/jobReadiness/types';
+import { createExternalFetchers } from '../../../services/jobReadiness/fetchers';
+import type { ReadinessInput } from '../../../services/jobReadiness/types';
 import { PILLAR_NAMES } from '../../../services/jobReadiness/types';
 
-// Rich candidate profile simulating real-world data
-const richCandidate: ReadinessInput = {
-  candidateId: 'integration-test-1',
-  githubUsername: 'janedoe',
-  currentCompany: 'MegaCorp',
-  currentRole: 'Senior Engineer',
-  yearsAtCompany: 2.5,
-  location: 'San Francisco',
-  skills: ['TypeScript', 'React', 'Rust', 'Go'],
-  githubProfile: {
-    login: 'janedoe',
-    public_repos: 45,
-    followers: 150,
-    following: 400,
-    created_at: '2019-01-01T00:00:00Z',
-    bio: 'Open to work. Exploring distributed systems and Rust.',
-    company: '@MegaCorp',
-  },
-  githubRepos: [
-    // Old repos (JavaScript)
-    { name: 'old-app', language: 'JavaScript', stargazers_count: 25, forks_count: 5, pushed_at: new Date(Date.now() - 400 * 86400000).toISOString(), created_at: '2020-01-01T00:00:00Z', topics: ['web'], fork: false },
-    { name: 'another-old', language: 'JavaScript', stargazers_count: 10, forks_count: 2, pushed_at: new Date(Date.now() - 350 * 86400000).toISOString(), created_at: '2020-06-01T00:00:00Z', topics: ['frontend'], fork: false },
-    // Recent repos (new languages!)
-    { name: 'rust-experiments', language: 'Rust', stargazers_count: 5, forks_count: 0, pushed_at: new Date(Date.now() - 10 * 86400000).toISOString(), created_at: new Date(Date.now() - 60 * 86400000).toISOString(), topics: ['systems', 'rust'], fork: false },
-    { name: 'go-microservice', language: 'Go', stargazers_count: 3, forks_count: 1, pushed_at: new Date(Date.now() - 15 * 86400000).toISOString(), created_at: new Date(Date.now() - 45 * 86400000).toISOString(), topics: ['microservices', 'go'], fork: false },
-    // Profile README
-    { name: 'janedoe', language: 'Markdown', stargazers_count: 0, forks_count: 0, pushed_at: new Date(Date.now() - 3 * 86400000).toISOString(), created_at: '2023-01-01T00:00:00Z', topics: [], fork: false },
-    // Forked from interesting org
-    { name: 'cool-framework', language: 'TypeScript', stargazers_count: 500, forks_count: 100, pushed_at: new Date(Date.now() - 20 * 86400000).toISOString(), created_at: new Date(Date.now() - 30 * 86400000).toISOString(), topics: [], fork: true },
-  ],
-  githubEvents: [
-    // Heavy activity 60-90 days ago
-    ...Array(15).fill(null).map((_, i) => ({
-      type: 'PushEvent',
-      created_at: new Date(Date.now() - (60 + i * 2) * 86400000).toISOString(),
-      repo: { name: 'janedoe/old-app' },
+// Load .env so GITHUB_TOKEN is available in test environment
+config({ path: resolve(__dirname, '../../../.env') });
+
+/**
+ * Integration test — hits real GitHub API, no mocks, no fake data.
+ * Requires GITHUB_TOKEN in .env. Skips gracefully if missing.
+ *
+ * Tests against a well-known, stable GitHub user (sindresorhus)
+ * whose profile structure is unlikely to change drastically.
+ */
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const TEST_USERNAME = 'sindresorhus'; // prolific OSS dev, stable profile
+
+const describeWithGitHub = GITHUB_TOKEN ? describe : describe.skip;
+
+async function fetchRealCandidate(username: string): Promise<ReadinessInput> {
+  const octokit = new Octokit({ auth: GITHUB_TOKEN });
+
+  const [profileRes, reposRes, eventsRes] = await Promise.all([
+    octokit.users.getByUsername({ username }),
+    octokit.repos.listForUser({ username, per_page: 30, sort: 'pushed' }),
+    octokit.activity.listPublicEventsForUser({ username, per_page: 30 }),
+  ]);
+
+  const profile = profileRes.data;
+  const repos = reposRes.data;
+  const events = eventsRes.data;
+
+  return {
+    candidateId: `integration-real-${username}`,
+    githubUsername: username,
+    currentCompany: profile.company || undefined,
+    location: profile.location || undefined,
+    githubProfile: {
+      login: profile.login,
+      public_repos: profile.public_repos,
+      followers: profile.followers,
+      following: profile.following,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+      bio: profile.bio,
+      company: profile.company,
+    },
+    githubRepos: repos.map(r => ({
+      name: r.name,
+      language: r.language || null,
+      stargazers_count: r.stargazers_count,
+      forks_count: r.forks_count,
+      pushed_at: r.pushed_at || new Date().toISOString(),
+      created_at: r.created_at || new Date().toISOString(),
+      topics: r.topics || [],
+      fork: r.fork,
     })),
-    // Much less recent activity (activity cliff!)
-    { type: 'PushEvent', created_at: new Date(Date.now() - 5 * 86400000).toISOString(), repo: { name: 'janedoe/rust-experiments' } },
-    // Exploring other orgs
-    { type: 'WatchEvent', created_at: new Date(Date.now() - 2 * 86400000).toISOString(), repo: { name: 'interesting-co/framework' } },
-    { type: 'ForkEvent', created_at: new Date(Date.now() - 7 * 86400000).toISOString(), repo: { name: 'another-org/tool' } },
-    { type: 'WatchEvent', created_at: new Date(Date.now() - 10 * 86400000).toISOString(), repo: { name: 'third-org/lib' } },
-  ],
-  linkedinProfile: {
-    headline: 'Senior Engineer exploring new opportunities',
-    experience: [
-      { title: 'Senior Engineer', company: 'MegaCorp', startDate: new Date(Date.now() - 2.5 * 365 * 86400000).toISOString(), current: true },
-      { title: 'Engineer', company: 'PrevCo', startDate: '2021-01-01', endDate: '2023-06-01' },
-      { title: 'Junior Dev', company: 'StartupX', startDate: '2019-06-01', endDate: '2020-12-01' },
-    ],
-    skills: ['TypeScript', 'React', 'Node.js', 'Rust', 'Go', 'Docker', 'Kubernetes'],
-    posts: [
-      { text: 'Exploring new horizons', date: new Date(Date.now() - 10 * 86400000).toISOString(), reactions: 15 },
-      { text: 'Big launch!', date: new Date(Date.now() - 200 * 86400000).toISOString(), reactions: 80 },
-    ],
-  },
-};
+    githubEvents: events.map(e => ({
+      type: e.type || 'Unknown',
+      created_at: e.created_at || new Date().toISOString(),
+      repo: { name: e.repo.name },
+    })),
+  };
+}
 
-describe('Job Readiness Engine - Integration', () => {
-  it('full pipeline produces valid ReadinessScore', async () => {
-    const result = await computeReadinessScore(richCandidate);
+describeWithGitHub('Job Readiness Engine — Real GitHub Integration', () => {
+  let candidate: ReadinessInput;
 
-    expect(result.candidateId).toBe('integration-test-1');
+  // Fetch real data once for all tests
+  it('fetches real candidate data from GitHub API', async () => {
+    candidate = await fetchRealCandidate(TEST_USERNAME);
+
+    expect(candidate.githubUsername).toBe(TEST_USERNAME);
+    expect(candidate.githubProfile).toBeTruthy();
+    expect(candidate.githubProfile!.public_repos).toBeGreaterThan(0);
+    expect(candidate.githubRepos!.length).toBeGreaterThan(0);
+  }, 15000);
+
+  it('full pipeline produces valid ReadinessScore from real data', async () => {
+    if (!candidate) candidate = await fetchRealCandidate(TEST_USERNAME);
+
+    const result = await computeReadinessScore(candidate, createExternalFetchers());
+
+    expect(result.candidateId).toBe(`integration-real-${TEST_USERNAME}`);
     expect(result.overall).toBeGreaterThanOrEqual(0);
     expect(result.overall).toBeLessThanOrEqual(100);
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.level).toMatch(/^(cold|warming|warm|hot)$/);
     expect(result.computedAt).toBeTruthy();
     expect(result.dataSourcesSummary).toContain('github');
-  });
+  }, 15000);
 
-  it('rich data activates most pillars', async () => {
-    const result = await computeReadinessScore(richCandidate);
+  it('real data activates at least 4 pillars', async () => {
+    if (!candidate) candidate = await fetchRealCandidate(TEST_USERNAME);
+
+    const result = await computeReadinessScore(candidate);
 
     const scoredPillars = Object.values(result.pillars).filter(p => p.score !== null);
-    // With both GitHub and LinkedIn data, should have at least 5 pillars scoring
-    expect(scoredPillars.length).toBeGreaterThanOrEqual(5);
-  });
+    // Real GitHub profile with repos + events should activate multiple pillars
+    expect(scoredPillars.length).toBeGreaterThanOrEqual(4);
+  }, 15000);
 
-  it('all 7 pillar keys are present', async () => {
-    const result = await computeReadinessScore(richCandidate);
+  it('all 7 pillar keys are present in result', async () => {
+    if (!candidate) candidate = await fetchRealCandidate(TEST_USERNAME);
+
+    const result = await computeReadinessScore(candidate);
 
     for (const name of PILLAR_NAMES) {
       expect(result.pillars[name]).toBeDefined();
       expect(result.pillars[name].pillar).toBe(name);
     }
-  });
+  }, 15000);
 
-  it('partial data: only GitHub produces appropriate scores', async () => {
-    const githubOnly: ReadinessInput = {
-      candidateId: 'github-only',
-      githubUsername: 'testuser',
-      githubProfile: {
-        login: 'testuser',
-        public_repos: 20,
-        followers: 30,
-        following: 100,
-        created_at: '2020-01-01T00:00:00Z',
-        bio: 'Developer',
-        company: 'SomeCo',
-      },
-      githubRepos: [
-        { name: 'project', language: 'Python', stargazers_count: 10, forks_count: 2, pushed_at: new Date().toISOString(), created_at: '2022-01-01T00:00:00Z', topics: ['ml'], fork: false },
-      ],
-      githubEvents: [
-        { type: 'PushEvent', created_at: new Date().toISOString(), repo: { name: 'testuser/project' } },
-      ],
-    };
+  it('each scored pillar has at least one signal', async () => {
+    if (!candidate) candidate = await fetchRealCandidate(TEST_USERNAME);
 
-    const result = await computeReadinessScore(githubOnly);
-    expect(result.overall).toBeGreaterThanOrEqual(0);
-    // Without LinkedIn, some pillars will be null but engine still works
-    // GitHub-only still gives data to multiple pillars
-    // Verify the result is valid regardless of how many pillars fire
-    expect(result.overall).toBeLessThanOrEqual(100);
-  });
+    const result = await computeReadinessScore(candidate);
 
-  it('all fetchers fail produces graceful degradation', async () => {
-    const failingFetchers: ExternalFetchers = {
-      fetchLayoffsData: vi.fn().mockRejectedValue(new Error('Down')),
-      fetchCompanyNews: vi.fn().mockRejectedValue(new Error('Down')),
-      analyzeSentiment: vi.fn().mockRejectedValue(new Error('Down')),
-    };
+    for (const pillar of Object.values(result.pillars)) {
+      if (pillar.score !== null) {
+        expect(pillar.signals.length).toBeGreaterThan(0);
+        // Every signal must have valid normalizedValue
+        for (const signal of pillar.signals) {
+          expect(signal.normalizedValue).toBeGreaterThanOrEqual(0);
+          expect(signal.normalizedValue).toBeLessThanOrEqual(100);
+          expect(signal.confidence).toBeGreaterThan(0);
+          expect(signal.confidence).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  }, 15000);
 
-    const result = await computeReadinessScore(richCandidate, failingFetchers);
-    // Should still return valid result from GitHub-only data
-    expect(result.overall).toBeGreaterThanOrEqual(0);
-    expect(result.overall).toBeLessThanOrEqual(100);
-    expect(Object.keys(result.pillars)).toHaveLength(7);
-  });
+  it('score is deterministic across two runs with same data', async () => {
+    if (!candidate) candidate = await fetchRealCandidate(TEST_USERNAME);
 
-  it('empty candidate returns valid zero structure', async () => {
+    const result1 = await computeReadinessScore(candidate);
+    const result2 = await computeReadinessScore(candidate);
+
+    expect(result1.overall).toBe(result2.overall);
+    expect(result1.confidence).toBe(result2.confidence);
+    expect(result1.level).toBe(result2.level);
+  }, 15000);
+
+  it('empty candidate returns zero structure without crashing', async () => {
     const result = await computeReadinessScore({ candidateId: 'empty' });
 
     expect(result.overall).toBe(0);
     expect(result.confidence).toBe(0);
     expect(result.level).toBe('cold');
     expect(Object.keys(result.pillars)).toHaveLength(7);
-    // All pillars should be null
     for (const pillar of Object.values(result.pillars)) {
       expect(pillar.score).toBeNull();
     }
   });
 
-  it('re-weighting: null pillars do not affect total calculation', async () => {
-    // When only some pillars have data, remaining weight is redistributed
-    const minimalInput: ReadinessInput = {
-      candidateId: 'minimal',
+  it('re-weighting: null pillars redistribute correctly', async () => {
+    // Minimal input that only fires a subset of pillars
+    const minimal: ReadinessInput = {
+      candidateId: 'minimal-reweight',
       githubProfile: {
         login: 'test',
         public_repos: 5,
         followers: 10,
-        following: 500, // High ratio = network signal
+        following: 500,
         created_at: '2022-01-01T00:00:00Z',
         bio: 'Open to work!',
         company: null,
       },
     };
 
-    const result = await computeReadinessScore(minimalInput);
-    // Should have a score > 0 since we have some signals
+    const result = await computeReadinessScore(minimal);
+    const activePillars = Object.values(result.pillars).filter(p => p.score !== null);
+    const nullPillars = Object.values(result.pillars).filter(p => p.score === null);
+
+    // Should have some active and some null (partial data)
+    expect(activePillars.length).toBeGreaterThan(0);
+    expect(nullPillars.length).toBeGreaterThan(0);
+    // Score should still be > 0 from the active pillars
     expect(result.overall).toBeGreaterThan(0);
-    // Confidence should be non-zero
-    expect(result.confidence).toBeGreaterThan(0);
-  });
-
-  it('rich candidate with all positive signals scores warm or hot', async () => {
-    const result = await computeReadinessScore(richCandidate);
-    // Jane has: open to work, activity cliff, new languages, 2.5y tenure, profile README updated
-    // This should push her into warm or hot territory
-    expect(['warming', 'warm', 'hot']).toContain(result.level);
-  });
-
-  it('external fetchers enhance scores when available', async () => {
-    const enhancedFetchers: ExternalFetchers = {
-      fetchLayoffsData: vi.fn().mockResolvedValue({
-        hasLayoffs: true,
-        date: new Date().toISOString(),
-        count: 200,
-      }),
-      fetchCompanyNews: vi.fn().mockResolvedValue([
-        { title: 'Restructuring', date: new Date().toISOString(), sentiment: 0.2 },
-      ]),
-      analyzeSentiment: vi.fn().mockResolvedValue([
-        { text: 'Open to work', sentiment: 0.3, confidence: 0.8 },
-      ]),
-    };
-
-    const withFetchers = await computeReadinessScore(richCandidate, enhancedFetchers);
-    const withoutFetchers = await computeReadinessScore(richCandidate);
-
-    // With bad company news + layoffs, company health pillar should be higher
-    const companyWithFetchers = withFetchers.pillars.companyHealth;
-    const companyWithout = withoutFetchers.pillars.companyHealth;
-
-    expect(companyWithFetchers.score).toBeGreaterThan(companyWithout.score!);
   });
 });

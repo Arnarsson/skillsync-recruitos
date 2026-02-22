@@ -50,6 +50,7 @@ async function fetchFullGitHubData(githubUsername: string, accessToken?: string)
         followers: profile.followers,
         following: profile.following,
         created_at: profile.created_at,
+        updated_at: profile.updated_at,
         bio: profile.bio,
         company: profile.company,
       },

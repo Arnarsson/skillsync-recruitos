@@ -99,6 +99,7 @@ export interface ReadinessInput {
     followers: number;
     following: number;
     created_at: string;
+    updated_at?: string;
     bio: string | null;
     company: string | null;
   };

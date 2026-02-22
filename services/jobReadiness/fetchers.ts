@@ -1,114 +1,223 @@
 /**
  * External data fetchers for Job Readiness Engine
  *
- * Wires up BrightData, Firecrawl, and OpenRouter to power Company Health
- * and Sentiment pillars with real-world data.
+ * Direct API calls to BrightData and OpenRouter — no internal route dependencies.
+ * Works in any context: API routes, background jobs, tests.
  */
 
-import type { ExternalFetchers } from './types';
+import type { ExternalFetchers, ReadinessInput } from './types';
 
-const BRIGHTDATA_API_KEY = process.env.BRIGHTDATA_API_KEY || (typeof window !== 'undefined' ? localStorage.getItem('brightdata_api_key') : null);
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || (typeof window !== 'undefined' ? localStorage.getItem('firecrawl_api_key') : null);
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || (typeof window !== 'undefined' ? localStorage.getItem('openrouter_api_key') : null);
+const BRIGHTDATA_BASE_URL = 'https://api.brightdata.com/datasets/v3';
+const BRIGHTDATA_SERP_URL = 'https://api.brightdata.com/request';
+
+function getBrightDataKey(): string | null {
+  return process.env.BRIGHTDATA_API_KEY || null;
+}
+function getOpenRouterKey(): string | null {
+  return process.env.OPENROUTER_API_KEY || null;
+}
+function getSerpZone(): string {
+  return process.env.BRIGHTDATA_SERP_ZONE || 'serp_api1';
+}
+function getLinkedInDataset(): string {
+  return process.env.BRIGHTDATA_LINKEDIN_DATASET || 'gd_l1viktl72bvl7bjuj0';
+}
 
 /**
- * Fetch layoffs data for a company
- * Uses BrightData to scrape layoffs.fyi
+ * Poll BrightData snapshot until ready (with timeout)
  */
-async function fetchLayoffsData(company: string): Promise<{ hasLayoffs: boolean; date?: string; count?: number } | null> {
-  if (!BRIGHTDATA_API_KEY) return null;
+async function pollSnapshot(snapshotId: string, apiKey: string, timeoutMs = 30000): Promise<any | null> {
+  const start = Date.now();
+  const pollInterval = 2000;
+
+  while (Date.now() - start < timeoutMs) {
+    const progressRes = await fetch(`${BRIGHTDATA_BASE_URL}/progress/${snapshotId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!progressRes.ok) return null;
+
+    const progress = await progressRes.json();
+    if (progress.status === 'ready') {
+      const snapshotRes = await fetch(
+        `${BRIGHTDATA_BASE_URL}/snapshot/${snapshotId}?format=json`,
+        { headers: { 'Authorization': `Bearer ${apiKey}` } }
+      );
+      if (!snapshotRes.ok) return null;
+      return snapshotRes.json();
+    }
+    if (progress.status === 'error' || progress.status === 'failed') return null;
+
+    await new Promise(r => setTimeout(r, pollInterval));
+  }
+
+  return null; // Timeout
+}
+
+/**
+ * Fetch LinkedIn profile data via BrightData datasets API.
+ * Triggers scrape → polls for completion → returns parsed profile.
+ */
+async function fetchLinkedInProfile(url: string): Promise<ReadinessInput['linkedinProfile'] | null> {
+  const apiKey = getBrightDataKey();
+  if (!apiKey) return null;
 
   try {
-    // Use BrightData SERP to search layoffs.fyi
+    const triggerRes = await fetch(
+      `${BRIGHTDATA_BASE_URL}/trigger?dataset_id=${getLinkedInDataset()}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{ url }]),
+      }
+    );
+    if (!triggerRes.ok) {
+      console.error('[LinkedIn Fetcher] Trigger failed:', await triggerRes.text());
+      return null;
+    }
+
+    const triggerData = await triggerRes.json();
+    const snapshotId = triggerData.snapshot_id;
+    if (!snapshotId) return null;
+
+    const data = await pollSnapshot(snapshotId, apiKey);
+    if (!data) return null;
+
+    // Parse BrightData LinkedIn response
+    const profiles = Array.isArray(data) ? data : [data];
+    const profile = profiles[0];
+    if (!profile) return null;
+
+    return {
+      headline: profile.headline || profile.title || undefined,
+      experience: (profile.experience || profile.positions || []).map((exp: any) => ({
+        title: exp.title || exp.role || '',
+        company: exp.company || exp.company_name || '',
+        startDate: exp.start_date || exp.from || undefined,
+        endDate: exp.end_date || exp.to || undefined,
+        current: exp.current ?? (!exp.end_date ? true : false),
+      })),
+      skills: profile.skills || [],
+      posts: (profile.posts || profile.activity || []).slice(0, 10).map((p: any) => ({
+        text: p.text || p.content || '',
+        date: p.date || p.posted_at || new Date().toISOString(),
+        reactions: p.reactions || p.likes || 0,
+      })),
+    };
+  } catch (error) {
+    console.error('[LinkedIn Fetcher] Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch layoffs data via BrightData SERP (direct API call)
+ */
+async function fetchLayoffsData(company: string): Promise<{ hasLayoffs: boolean; date?: string; count?: number } | null> {
+  const apiKey = getBrightDataKey();
+  if (!apiKey) return null;
+
+  try {
     const searchQuery = `site:layoffs.fyi ${company}`;
-    const response = await fetch('/api/brightdata/serp', {
+    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&hl=en&num=5`;
+
+    const response = await fetch(BRIGHTDATA_SERP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        engine: 'google',
-        query: searchQuery,
-        limit: 5,
+        zone: getSerpZone(),
+        url: googleUrl,
+        format: 'raw',
+        data_format: 'parsed_light',
       }),
     });
 
     if (!response.ok) return null;
     const data = await response.json();
 
-    // Check if any results mention layoffs
-    const hasLayoffs = data.results?.some((r: any) =>
+    const organic = data?.organic || data?.results?.organic || data?.results || [];
+    const results = Array.isArray(organic) ? organic : [];
+
+    const hasLayoffs = results.some((r: any) =>
       r.title?.toLowerCase().includes('layoff') ||
+      r.snippet?.toLowerCase().includes('layoff') ||
       r.description?.toLowerCase().includes('layoff')
     );
 
     if (!hasLayoffs) return { hasLayoffs: false };
 
-    // Try to extract count and date from first result
-    const firstResult = data.results?.[0];
-    const description = firstResult?.description || '';
-
-    // Match patterns like "500 laid off", "200 employees", etc
+    const description = results[0]?.snippet || results[0]?.description || '';
     const countMatch = description.match(/(\d+)\s*(?:employees?|people|workers?|laid off)/i);
-    const count = countMatch ? parseInt(countMatch[1]) : undefined;
-
-    // Match date patterns (YYYY-MM-DD or Month YYYY)
     const dateMatch = description.match(/\d{4}-\d{2}-\d{2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4}/i);
-    const date = dateMatch ? dateMatch[0] : undefined;
 
-    return { hasLayoffs: true, date, count };
+    return {
+      hasLayoffs: true,
+      date: dateMatch?.[0],
+      count: countMatch ? parseInt(countMatch[1]) : undefined,
+    };
   } catch (error) {
-    console.error('fetchLayoffsData error:', error);
+    console.error('[Layoffs Fetcher] Error:', error);
     return null;
   }
 }
 
 /**
- * Fetch recent news articles about a company
- * Uses BrightData SERP + Firecrawl fallback
+ * Fetch company news via BrightData SERP (direct API call)
  */
 async function fetchCompanyNews(company: string): Promise<Array<{ title: string; date: string; sentiment: number }> | null> {
-  if (!BRIGHTDATA_API_KEY && !FIRECRAWL_API_KEY) return null;
+  const apiKey = getBrightDataKey();
+  if (!apiKey) return null;
 
   try {
-    // Search for recent company news
     const searchQuery = `${company} news`;
-    const response = await fetch('/api/brightdata/serp', {
+    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&hl=en&num=10`;
+
+    const response = await fetch(BRIGHTDATA_SERP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        engine: 'google',
-        query: searchQuery,
-        limit: 10,
+        zone: getSerpZone(),
+        url: googleUrl,
+        format: 'raw',
+        data_format: 'parsed_light',
       }),
     });
 
     if (!response.ok) return null;
     const data = await response.json();
 
-    if (!data.results || data.results.length === 0) return null;
+    const organic = data?.organic || data?.results?.organic || data?.results || [];
+    const results = Array.isArray(organic) ? organic : [];
+    if (results.length === 0) return null;
 
-    // Map results to news articles
-    const articles = data.results.slice(0, 5).map((r: any) => ({
+    return results.slice(0, 5).map((r: any) => ({
       title: r.title || '',
-      date: new Date().toISOString(), // SERP doesn't always give dates
-      sentiment: 0.5, // Neutral by default, will analyze with LLM below
+      date: new Date().toISOString(),
+      sentiment: 0.5,
     }));
-
-    return articles;
   } catch (error) {
-    console.error('fetchCompanyNews error:', error);
+    console.error('[Company News Fetcher] Error:', error);
     return null;
   }
 }
 
 /**
- * Analyze sentiment of text chunks using OpenRouter LLM
- * Returns sentiment scores: 0 (negative) to 1 (positive)
+ * Analyze sentiment via OpenRouter LLM (direct API call)
  */
 async function analyzeSentiment(texts: string[]): Promise<Array<{ text: string; sentiment: number; confidence: number }> | null> {
-  if (!OPENROUTER_API_KEY || texts.length === 0) return null;
+  const apiKey = getOpenRouterKey();
+  if (!apiKey || texts.length === 0) return null;
 
   try {
-    const prompt = `Analyze the sentiment of these texts on a scale from 0 (very negative) to 1 (very positive). Return JSON array with sentiment scores.
+    const prompt = `Analyze the sentiment of these texts on a scale from 0 (very negative) to 1 (very positive). Return JSON array.
 
 Texts:
 ${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}
@@ -119,8 +228,8 @@ Return format: [{"text": "...", "sentiment": 0.7, "confidence": 0.9}, ...]`;
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://recruitos.xyz',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://recruitos.xyz',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.0-flash-exp:free',
@@ -136,7 +245,6 @@ Return format: [{"text": "...", "sentiment": 0.7, "confidence": 0.9}, ...]`;
     if (!content) return null;
 
     const parsed = JSON.parse(content);
-    // Handle both array and object with results key
     const results = Array.isArray(parsed) ? parsed : (parsed.results || parsed.sentiments || []);
 
     return results.map((r: any, i: number) => ({
@@ -145,16 +253,18 @@ Return format: [{"text": "...", "sentiment": 0.7, "confidence": 0.9}, ...]`;
       confidence: typeof r.confidence === 'number' ? r.confidence : 0.7,
     }));
   } catch (error) {
-    console.error('analyzeSentiment error:', error);
+    console.error('[Sentiment Fetcher] Error:', error);
     return null;
   }
 }
 
 /**
- * Create external fetchers with live API integrations
+ * Create external fetchers with live API integrations.
+ * All calls go directly to external APIs — no internal route dependencies.
  */
 export function createExternalFetchers(): ExternalFetchers {
   return {
+    fetchLinkedInProfile,
     fetchLayoffsData,
     fetchCompanyNews,
     analyzeSentiment,

@@ -1,4 +1,4 @@
-import type { PillarResult, ReadinessInput, Signal } from './types';
+import type { PillarResult, ReadinessInput, Signal, DataSource } from './types';
 
 /**
  * Pillar 6: Profile Optimization (10%)
@@ -10,15 +10,18 @@ import type { PillarResult, ReadinessInput, Signal } from './types';
  * - Bio contains job-seeking keywords
  * - Personal website/blog repo recently pushed
  * - Profile completeness (filled in bio, company, location, etc.)
+ * - GitHub profile staleness (stale profile = data unreliable)
+ * - Company mismatch between GitHub and LinkedIn (strong transition signal)
  *
- * Fallback: GitHub profile/repos → null
+ * Fallback: GitHub profile/repos → LinkedIn → null
  */
 export async function computeProfileOptimization(
   input: ReadinessInput
 ): Promise<PillarResult> {
   const signals: Signal[] = [];
+  const fallbacksUsed: DataSource[] = [];
 
-  if (!input.githubProfile && !input.githubRepos) {
+  if (!input.githubProfile && !input.githubRepos && !input.linkedinProfile) {
     return {
       pillar: 'profileOptimization',
       score: null,
@@ -60,7 +63,6 @@ export async function computeProfileOptimization(
     );
     if (readmeRepo) {
       const daysSincePush = (Date.now() - new Date(readmeRepo.pushed_at).getTime()) / 86400000;
-      // Recently updated README = polishing profile
       let readmeScore: number;
       if (daysSincePush < 7) readmeScore = 100;
       else if (daysSincePush < 30) readmeScore = 70;
@@ -118,7 +120,6 @@ export async function computeProfileOptimization(
     if (p.company) completeness++;
     if (input.location) completeness++;
     if (p.public_repos > 0) completeness++;
-    // 4/4 = fully polished profile
     const completenessScore = Math.round((completeness / 4) * 60);
 
     signals.push({
@@ -129,6 +130,90 @@ export async function computeProfileOptimization(
       confidence: 0.4,
       detail: `Profile completeness: ${completeness}/4 fields filled`,
     });
+  }
+
+  // Signal 5: GitHub profile staleness
+  // Stale profile means the person may have moved on — the data we have is unreliable.
+  // This signal adjusts the pillar's own confidence, not the readiness score.
+  if (input.githubProfile?.updated_at) {
+    const daysSinceUpdate = (Date.now() - new Date(input.githubProfile.updated_at).getTime()) / 86400000;
+    let stalenessScore: number;
+    let stalenessConfidence: number;
+
+    if (daysSinceUpdate < 30) {
+      stalenessScore = 10;  // Fresh profile = not a readiness signal
+      stalenessConfidence = 0.3;
+    } else if (daysSinceUpdate < 90) {
+      stalenessScore = 25;
+      stalenessConfidence = 0.4;
+    } else if (daysSinceUpdate < 180) {
+      stalenessScore = 45;  // Getting stale = mild signal
+      stalenessConfidence = 0.5;
+    } else if (daysSinceUpdate < 365) {
+      stalenessScore = 60;  // Stale = person may not use GH anymore
+      stalenessConfidence = 0.5;
+    } else {
+      stalenessScore = 75;  // Very stale = GH is abandoned
+      stalenessConfidence = 0.5;
+    }
+
+    signals.push({
+      name: 'github_staleness',
+      value: daysSinceUpdate,
+      normalizedValue: stalenessScore,
+      source: 'github',
+      confidence: stalenessConfidence,
+      detail: `GitHub profile last updated ${Math.round(daysSinceUpdate)} days ago`,
+    });
+  }
+
+  // Signal 6: Company mismatch between GitHub and LinkedIn
+  // If GitHub company field doesn't match LinkedIn current role, the person
+  // is likely transitioning — very strong readiness signal.
+  if (input.githubProfile?.company && input.linkedinProfile?.experience) {
+    const githubCompany = input.githubProfile.company.replace(/^@/, '').toLowerCase().trim();
+    const currentLinkedIn = input.linkedinProfile.experience.find(e => e.current || !e.endDate);
+
+    if (currentLinkedIn) {
+      const linkedinCompany = currentLinkedIn.company.toLowerCase().trim();
+      const isMismatch = githubCompany.length > 0 &&
+        linkedinCompany.length > 0 &&
+        !githubCompany.includes(linkedinCompany) &&
+        !linkedinCompany.includes(githubCompany);
+
+      if (isMismatch) {
+        signals.push({
+          name: 'company_mismatch',
+          value: 1,
+          normalizedValue: 90,
+          source: 'linkedin',
+          confidence: 0.85,
+          detail: `GitHub: "${input.githubProfile.company}" vs LinkedIn: "${currentLinkedIn.company}" — likely transitioning`,
+        });
+        fallbacksUsed.push('linkedin');
+      }
+    }
+  }
+
+  // Signal 7: LinkedIn headline keywords
+  if (input.linkedinProfile?.headline) {
+    const headline = input.linkedinProfile.headline.toLowerCase();
+    const seekingKeywords = [
+      'open to work', 'looking for', 'seeking', 'available',
+      'actively looking', 'open to new', 'job hunting',
+    ];
+    const matches = seekingKeywords.filter(kw => headline.includes(kw));
+    if (matches.length > 0) {
+      signals.push({
+        name: 'linkedin_seeking_keywords',
+        value: matches.length,
+        normalizedValue: Math.min(100, matches.length * 60),
+        source: 'linkedin',
+        confidence: 0.95,
+        detail: `LinkedIn headline contains: ${matches.join(', ')}`,
+      });
+      fallbacksUsed.push('linkedin');
+    }
   }
 
   if (signals.length === 0) {
@@ -143,14 +228,15 @@ export async function computeProfileOptimization(
   }
 
   const score = aggregateSignals(signals);
+  const primarySource: DataSource = signals.some(s => s.source === 'linkedin') ? 'linkedin' : 'github';
 
   return {
     pillar: 'profileOptimization',
     score,
     confidence: signals.reduce((sum, s) => sum + s.confidence, 0) / signals.length,
     signals,
-    primarySource: 'github',
-    fallbacksUsed: [],
+    primarySource,
+    fallbacksUsed,
   };
 }
 
