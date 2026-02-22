@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0] - 2026-02-22
+
+### Added
+- **Job Readiness: LinkedIn pre-enrichment** — engine fetches LinkedIn profile automatically before pillar execution if URL is provided but profile data is missing
+- **Job Readiness: Staleness degradation** — GitHub-only pillar confidence degrades 10–70% when profile hasn't been updated in 30–365+ days (no penalty if LinkedIn data present)
+- **Job Readiness: Pillar 6 new signals** — profile staleness signal (0.3–0.5 conf), company mismatch between GitHub/LinkedIn (0.85 conf), LinkedIn seeking keywords (0.95 conf)
+- **BrightData direct API calls** — fetchers rewritten to call BrightData SERP and Datasets APIs directly (eliminates internal route hop, works in server context)
+- **LinkedIn profile fetcher** — async polling implementation using BrightData Datasets v3 API for real LinkedIn data
+- `/api/readiness-test` dev endpoint — live engine testing without DB, fetches GitHub data and computes score on demand
+- `updated_at` forwarded through enrichment pipeline for staleness calculation
+
+### Changed
+- `fetchers.ts` complete rewrite: server-only (no localStorage), direct external API calls
+- Integration tests now use real GitHub API (sindresorhus as test subject), 8 tests all live
+
 ## [0.3.0] - 2026-02-18
 
 ### Added

@@ -24,7 +24,7 @@ npm run format       # Format code with Prettier
 npm run type-check   # TypeScript type checking
 ```
 
-**Note**: Test commands (`npm test`, `npm run test:watch`, `npm run test:coverage`, `npm run validate`) are not configured in package.json. Test files exist in `/tests` but Vitest config is backed up (`vitest.config.ts.bak`).
+**Note**: `npm test` runs Vitest (314 tests, all passing). Dev server defaults to port 3000 but often runs on 3001 if 3000 is occupied.
 
 ## Environment Configuration
 
@@ -70,10 +70,17 @@ services/                   # Business logic
 ├── scrapingService.ts     # Firecrawl/BrightData integration
 ├── candidateService.ts    # Data persistence (localStorage + Supabase)
 ├── enrichmentServiceV2.ts # Profile enrichment pipeline
+├── unifiedEnrichment.ts   # Background enrichment coordinator (GitHub + LinkedIn + readiness)
 ├── networkAnalysisService.ts # Relationship mapping
 ├── behavioralSignalsService.ts # "Open to work" detection, activity signals
 ├── teamService.ts         # Team collaboration & shared pipelines
-└── logger.ts              # Centralized logging
+├── logger.ts              # Centralized logging
+└── jobReadiness/          # 7-pillar outreach timing engine
+    ├── engine.ts          # computeReadinessScore() — LinkedIn pre-enrichment + staleness degradation
+    ├── fetchers.ts        # BrightData direct API calls (SERP + Datasets v3)
+    ├── types.ts           # ReadinessInput, ReadinessScore, pillar types
+    ├── pillar1-network.ts through pillar7-sentiment.ts
+    └── index.ts           # Barrel export
 
 lib/                       # Utilities
 ├── services/gemini/       # Gemini client
@@ -189,6 +196,31 @@ function parseSearchQuery(query: string): ParsedSearchQuery {
   return { keywords, language: githubLanguage, location, experience, frameworkKeyword };
 }
 ```
+
+### Job Readiness Engine (`services/jobReadiness/`)
+
+7-pillar scoring system (0–100) for outreach timing:
+
+| Pillar | Source | Notes |
+|--------|--------|-------|
+| 1. networkIntelligence | GitHub followers/repos | Detects growth signals |
+| 2. engagementDecay | GitHub events | Activity cliff detection |
+| 3. skillDiversification | GitHub repos | New language adoption |
+| 4. companyHealth | BrightData SERP | Layoffs/news sentiment |
+| 5. tenureRisk | GitHub timeline | Job-hop pattern detection |
+| 6. profileOptimization | GitHub bio + LinkedIn | Staleness, seeking keywords, company mismatch |
+| 7. sentimentShift | OpenRouter AI | Recent commit message tone |
+
+**Readiness thresholds**: `cold` (0–24), `warming` (25–49), `warm` (50–74), `hot` (75+)
+
+**Staleness degradation**: GitHub-only confidence degrades 10–70% when `updated_at` is 30–365+ days old. No penalty if LinkedIn profile is present.
+
+**BrightData fetchers** (`fetchers.ts`):
+- `fetchLayoffsData()` / `fetchCompanyNews()` → SERP API direct
+- `fetchLinkedInProfile()` → Datasets v3 API with async polling (2s intervals, 10 attempts)
+- All server-only; API key from `process.env.BRIGHTDATA_API_KEY`
+
+**Dev endpoint**: `GET /api/readiness-test?username=X&linkedin=Y` — live test without DB.
 
 ### Behavioral Insights
 
