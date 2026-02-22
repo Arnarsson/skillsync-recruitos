@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { computeReadinessScore } from "@/services/jobReadiness";
 import type { ReadinessInput } from "@/services/jobReadiness";
 import { createExternalFetchers } from "@/services/jobReadiness/fetchers";
-import { isDemoProfile } from "@/lib/demoData";
+import { Octokit } from "@octokit/rest";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -26,21 +26,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!candidate) {
-      // For demo candidates not in DB, return a graceful empty readiness response
-      if (isDemoProfile(id)) {
-        return NextResponse.json({
-          candidateId: id,
-          overall: 0,
-          confidence: 0,
-          level: 'cold',
-          pillars: {},
-          computedAt: new Date().toISOString(),
-          dataSourcesSummary: [],
-          demo: true,
-        });
+      // If the id looks like a GitHub username (not a UUID), compute readiness on-the-fly.
+      // This handles demo mode and fresh search results that haven't been persisted to DB yet.
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      if (!isUuid) {
+        try {
+          const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+          const [profileRes, reposRes, eventsRes] = await Promise.all([
+            octokit.users.getByUsername({ username: id }),
+            octokit.repos.listForUser({ username: id, sort: "updated", per_page: 30 }),
+            octokit.activity.listPublicEventsForUser({ username: id, per_page: 30 }),
+          ]);
+          const input: ReadinessInput = {
+            candidateId: id,
+            githubUsername: id,
+            githubProfile: profileRes.data,
+            githubRepos: reposRes.data as any,
+            githubEvents: eventsRes.data as any,
+          };
+          const fetchers = createExternalFetchers();
+          const readiness = await computeReadinessScore(input, fetchers);
+          return NextResponse.json(readiness);
+        } catch {
+          // GitHub fetch failed — fall through to graceful zero response
+        }
       }
-      // Candidate not in DB yet (e.g. fresh search result not yet saved) — return empty readiness
-      // so the UI renders gracefully instead of retrying into an infinite error loop
       return NextResponse.json({
         candidateId: id,
         overall: 0,
@@ -65,8 +75,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Parse cached GitHub data
-    const githubData = candidate.githubData as any;
+    // Parse cached GitHub data — fetch on-demand if missing
+    let githubData = candidate.githubData as any;
+
+    if (!githubData && candidate.githubUsername) {
+      try {
+        const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+        const [profileRes, reposRes, eventsRes] = await Promise.all([
+          octokit.users.getByUsername({ username: candidate.githubUsername }),
+          octokit.repos.listForUser({ username: candidate.githubUsername, sort: "updated", per_page: 30 }),
+          octokit.activity.listPublicEventsForUser({ username: candidate.githubUsername, per_page: 30 }),
+        ]);
+        githubData = {
+          profile: profileRes.data,
+          repos: reposRes.data,
+          events: eventsRes.data,
+        };
+        // Cache for next call (fire-and-forget)
+        prisma.candidate.update({
+          where: { id: candidate.id },
+          data: { githubData: githubData as any, githubFetchedAt: new Date() },
+        }).catch(() => {});
+      } catch {
+        // Graceful fallback — compute with whatever we have
+      }
+    }
 
     // Build readiness input from candidate data
     const input: ReadinessInput = {

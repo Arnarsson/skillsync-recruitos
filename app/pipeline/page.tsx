@@ -538,36 +538,72 @@ function PipelinePageContent() {
           'ReactJS': 'React', 'NodeJS': 'Node.js', 'VueJS': 'Vue',
           'C++': 'cpp', 'C#': 'csharp', 'Shell': 'Bash',
         };
-        const rawSkills = parsedJobContext.requiredSkills.slice(0, 2);
+        const CITY_TO_COUNTRY: Record<string, string> = {
+          'copenhagen': 'Denmark', 'aarhus': 'Denmark', 'odense': 'Denmark',
+          'stockholm': 'Sweden', 'gothenburg': 'Sweden', 'malmo': 'Sweden',
+          'oslo': 'Norway', 'bergen': 'Norway',
+          'helsinki': 'Finland', 'espoo': 'Finland',
+          'berlin': 'Germany', 'munich': 'Germany', 'hamburg': 'Germany',
+          'amsterdam': 'Netherlands', 'rotterdam': 'Netherlands',
+          'london': 'UK', 'manchester': 'UK', 'edinburgh': 'UK',
+          'paris': 'France', 'madrid': 'Spain', 'barcelona': 'Spain',
+          'zurich': 'Switzerland', 'vienna': 'Austria',
+          'warsaw': 'Poland', 'krakow': 'Poland',
+          'prague': 'Czech Republic', 'brussels': 'Belgium',
+          'lisbon': 'Portugal', 'dublin': 'Ireland',
+        };
+        const rawSkills = parsedJobContext.requiredSkills.slice(0, 3);
         const skills = rawSkills.map((s: string) => GITHUB_SKILL_MAP[s] || s);
+        const primaryTwo = skills.slice(0, 2).join(" ");
 
         // Normalize location — AI already returns city-level, fallback normalizer catches any stragglers
         const rawLocation = parsedJobContext.location ? parsedJobContext.location.split(",")[0].trim() : null;
-        const normalizedLoc = rawLocation ? normalizeLocation(rawLocation) : null;
-        const locationSuffix = normalizedLoc ? ` ${normalizedLoc}` : "";
-        const query = skills.join(" ") + locationSuffix;
-        console.log("[Pipeline] Auto-searching with query:", query);
+        const cityLevel = rawLocation ? normalizeLocation(rawLocation) : null;
+        const country = cityLevel ? CITY_TO_COUNTRY[cityLevel.toLowerCase()] : null;
 
-        if (query) {
+        // Build query variants: specific → broad
+        const queries: string[] = cityLevel
+          ? [
+              `${primaryTwo} ${cityLevel}`,
+              ...(country ? [`${primaryTwo} ${country}`] : []),
+            ]
+          : [primaryTwo];
+
+        if (queries[0]) {
           if (isActive) {
-            setSearchQuery(query);
+            setSearchQuery(queries[0]);
             setLoading(true);
           }
 
           try {
-            const response = await fetch(
-              `/api/search?q=${encodeURIComponent(query)}&perPage=15`
+            const allSearchData = await Promise.all(
+              queries.map((q) =>
+                fetch(`/api/search?q=${encodeURIComponent(q)}&perPage=20`)
+                  .then((r) => r.json())
+                  .catch(() => ({ users: [] }))
+              )
             );
-            const data = await response.json();
-            console.log("[Pipeline] Search returned", data.users?.length || 0, "users");
+
+            // Merge and deduplicate by username
+            const seen = new Set<string>();
+            const mergedUsers: any[] = [];
+            for (const data of allSearchData) {
+              for (const user of data.users ?? []) {
+                if (!seen.has(user.username)) {
+                  seen.add(user.username);
+                  mergedUsers.push(user);
+                }
+              }
+            }
+            console.log("[Pipeline] Search returned", mergedUsers.length, "unique users from", queries.length, "queries");
 
             if (!isActive) return; // Component unmounted, don't update state
 
-            if (data.users && data.users.length > 0) {
+            if (mergedUsers.length > 0) {
               // Get job context for scoring
               const jobReqs = parsedJobContext || {};
 
-              const newCandidates = data.users.map((user: {
+              const newCandidates = mergedUsers.map((user: {
                 username: string;
                 name: string;
                 avatar: string;
@@ -798,6 +834,22 @@ function PipelinePageContent() {
     };
   };
 
+  // City → country fallback map (matches auto-search block above)
+  const CITY_TO_COUNTRY_RETRY: Record<string, string> = {
+    'copenhagen': 'Denmark', 'aarhus': 'Denmark', 'odense': 'Denmark',
+    'stockholm': 'Sweden', 'gothenburg': 'Sweden', 'malmo': 'Sweden',
+    'oslo': 'Norway', 'bergen': 'Norway',
+    'helsinki': 'Finland', 'espoo': 'Finland',
+    'berlin': 'Germany', 'munich': 'Germany', 'hamburg': 'Germany',
+    'amsterdam': 'Netherlands', 'rotterdam': 'Netherlands',
+    'london': 'UK', 'manchester': 'UK', 'edinburgh': 'UK',
+    'paris': 'France', 'madrid': 'Spain', 'barcelona': 'Spain',
+    'zurich': 'Switzerland', 'vienna': 'Austria',
+    'warsaw': 'Poland', 'krakow': 'Poland',
+    'prague': 'Czech Republic', 'brussels': 'Belgium',
+    'lisbon': 'Portugal', 'dublin': 'Ireland',
+  };
+
   // Auto-search function (separate from manual search to handle initial load)
   const autoSearchCandidates = async (query: string) => {
     if (!query.trim()) return;
@@ -805,18 +857,40 @@ function PipelinePageContent() {
     setPipelineError(null);
 
     try {
-      // Fetch more candidates to have better selection
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&perPage=15`
-      );
-      const data = await response.json();
+      // Build country fallback query from the primary query
+      const queryWords = query.trim().split(/\s+/);
+      const lastWord = queryWords[queryWords.length - 1]?.toLowerCase();
+      const countryFallback = lastWord ? CITY_TO_COUNTRY_RETRY[lastWord] : null;
+      const retryQueries = countryFallback
+        ? [query, `${queryWords.slice(0, -1).join(" ")} ${countryFallback}`]
+        : [query];
 
-      if (data.users && data.users.length > 0) {
+      const allSearchData = await Promise.all(
+        retryQueries.map((q) =>
+          fetch(`/api/search?q=${encodeURIComponent(q)}&perPage=20`)
+            .then((r) => r.json())
+            .catch(() => ({ users: [] }))
+        )
+      );
+
+      const seen = new Set<string>();
+      const mergedUsers: any[] = [];
+      for (const data of allSearchData) {
+        for (const user of data.users ?? []) {
+          if (!seen.has(user.username)) {
+            seen.add(user.username);
+            mergedUsers.push(user);
+          }
+        }
+      }
+      console.log("[Pipeline] autoSearch returned", mergedUsers.length, "unique users from", retryQueries.length, "queries");
+
+      if (mergedUsers.length > 0) {
         // Get job context for scoring
         const storedContext = localStorage.getItem("apex_job_context");
         const jobReqs = storedContext ? JSON.parse(storedContext) : {};
 
-        const newCandidates = data.users.map((user: {
+        const newCandidates = mergedUsers.map((user: {
           username: string;
           name: string;
           avatar: string;
@@ -2240,9 +2314,10 @@ function PipelinePageContent() {
         }}
         onClearSelection={() => setSelectedIds([])}
         onMoveToDeepDive={() => {
-          // Save selected IDs to localStorage and navigate to analyse page (Stage 3)
+          // Save selected IDs and full candidate objects to localStorage, then navigate to Stage 3
           if (selectedCandidates.length > 0) {
             localStorage.setItem("apex_shortlist", JSON.stringify(selectedIds));
+            localStorage.setItem("apex_shortlist_data", JSON.stringify(selectedCandidates));
             router.push("/analyse");
           }
         }}

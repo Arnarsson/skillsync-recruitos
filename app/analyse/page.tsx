@@ -59,9 +59,19 @@ export default function AnalysePage() {
         }
       }
 
-      // Load selected candidates from API
+      // Load selected candidates — prefer pre-saved shortlist data (works for demo + real candidates)
+      const shortlistData = localStorage.getItem("apex_shortlist_data");
       const shortlistIds = localStorage.getItem("apex_shortlist");
-      if (shortlistIds) {
+      if (shortlistData) {
+        try {
+          const saved = JSON.parse(shortlistData) as Candidate[];
+          const ids: string[] = shortlistIds ? JSON.parse(shortlistIds) : saved.map((c) => c.id);
+          setSelectedCandidates(saved.filter((c) => ids.includes(c.id)));
+        } catch (e) {
+          console.error("Failed to parse shortlist data:", e);
+        }
+      } else if (shortlistIds) {
+        // Fallback: fetch from API (for real candidates saved to DB)
         try {
           const ids: string[] = JSON.parse(shortlistIds);
           if (status === "authenticated") {
