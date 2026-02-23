@@ -991,18 +991,16 @@ export default function DeepProfilePage() {
                   </div>
                   <div className="text-right">
                     <div
-                      className={`text-4xl font-bold ${getScoreColor(
-                        candidate.alignmentScore
-                      )}`}
+                      className={`text-4xl font-bold ${candidate.alignmentScore > 0 ? getScoreColor(candidate.alignmentScore) : 'text-muted-foreground'}`}
                     >
-                      {candidate.alignmentScore}
+                      {candidate.alignmentScore > 0 ? candidate.alignmentScore : '—'}
                     </div>
                     <TooltipProvider>
                       <UITooltip>
                         <TooltipTrigger asChild>
                           <button className="text-xs text-primary hover:underline flex items-center gap-1">
                             <HelpCircle className="w-3 h-3" />
-                            Hvorfor {candidate.alignmentScore}?
+                            {candidate.alignmentScore > 0 ? `Hvorfor ${candidate.alignmentScore}?` : 'Not yet scored'}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs">
@@ -1186,8 +1184,8 @@ export default function DeepProfilePage() {
                     <TrendingUp className="w-5 h-5 text-blue-500" />
                     <span className="text-sm text-muted-foreground font-medium">Match Score</span>
                   </div>
-                  <div className={`text-3xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
-                    {candidate.alignmentScore}
+                  <div className={`text-3xl font-bold ${candidate.alignmentScore > 0 ? getScoreColor(candidate.alignmentScore) : 'text-muted-foreground'}`}>
+                    {candidate.alignmentScore > 0 ? candidate.alignmentScore : '—'}
                   </div>
                 </CardContent>
               </Card>
@@ -1251,10 +1249,10 @@ export default function DeepProfilePage() {
 
             {/* Alignment Score */}
             <BentoCard colSpan={1} rowSpan={1} className="flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-transparent min-h-[140px]">
-              <div className={`text-5xl font-bold ${getScoreColor(candidate.alignmentScore)}`}>
-                {candidate.alignmentScore}
+              <div className={`text-5xl font-bold ${candidate.alignmentScore > 0 ? getScoreColor(candidate.alignmentScore) : 'text-muted-foreground'}`}>
+                {candidate.alignmentScore > 0 ? candidate.alignmentScore : '—'}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">Alignment Score</p>
+              <p className="text-sm text-muted-foreground mt-1">{candidate.alignmentScore > 0 ? 'Alignment Score' : 'Not yet scored'}</p>
               {candidate.persona?.archetype && (
                 <Badge className="mt-2" variant="outline">
                   {candidate.persona.archetype.split(" ").slice(0, 2).join(" ")}

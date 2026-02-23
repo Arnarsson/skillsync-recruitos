@@ -38,7 +38,19 @@ export default function AnalysePage() {
   const { t } = useLanguage();
   const router = useRouter();
   const { status } = useSession();
-  const [selectedCandidates, setSelectedCandidates] = useState<Candidate[]>([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<Candidate[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const shortlistData = localStorage.getItem("apex_shortlist_data");
+      const shortlistIds = localStorage.getItem("apex_shortlist");
+      if (!shortlistData) return [];
+      const saved = JSON.parse(shortlistData) as Candidate[];
+      const ids: string[] = shortlistIds ? JSON.parse(shortlistIds) : saved.map((c) => c.id);
+      return saved.filter((c) => ids.includes(c.id));
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [jobContext, setJobContext] = useState<{
     title: string;

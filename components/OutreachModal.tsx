@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAdmin } from "@/lib/adminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,15 +77,20 @@ export default function OutreachModal({
   const [instructions, setInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [emailFormTone, setEmailFormTone] = useState<string | null>(null);
+  const { isDemoMode } = useAdmin();
 
   const generateMessages = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (isDemoMode) {
+        headers["x-demo-mode"] = "true";
+      }
       const response = await fetch("/api/outreach", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           candidateName: candidate.name,
@@ -104,6 +110,9 @@ export default function OutreachModal({
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in to generate outreach messages.");
+        }
         throw new Error(data.details || data.error || "Failed to generate messages");
       }
 

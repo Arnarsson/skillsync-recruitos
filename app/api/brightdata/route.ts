@@ -9,12 +9,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { action, apiKey, ...params } = body;
+    const { action, ...params } = body;
 
+    const apiKey = process.env.BRIGHTDATA_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "BrightData API key is required" },
-        { status: 400 }
+        { error: "BrightData not configured on server" },
+        { status: 503 }
       );
     }
 

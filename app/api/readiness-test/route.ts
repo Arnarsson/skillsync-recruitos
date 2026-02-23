@@ -12,6 +12,10 @@ import type { ReadinessInput } from "@/services/jobReadiness";
  *        GET /api/readiness-test?username=nc-sjw&linkedin=https://linkedin.com/in/...
  */
 export async function GET(request: NextRequest) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+  }
+
   const username = request.nextUrl.searchParams.get("username");
   const linkedinUrl = request.nextUrl.searchParams.get("linkedin") || undefined;
 

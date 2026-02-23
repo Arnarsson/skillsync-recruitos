@@ -64,6 +64,18 @@ export const SKILL_ALIASES: Record<string, string[]> = {
   'julia': ['julia'],
   'matlab': ['matlab'],
 
+  // Data Engineering tools (map verbose names to GitHub-searchable forms)
+  'airflow': ['airflow', 'apache airflow', 'apache-airflow'],
+  'kafka': ['kafka', 'apache kafka', 'apache-kafka', 'confluent kafka'],
+  'spark': ['spark', 'apache spark', 'apache-spark', 'pyspark'],
+  'flink': ['flink', 'apache flink', 'apache-flink'],
+  'dbt': ['dbt', 'dbt-core', 'data build tool'],
+  'bigquery': ['bigquery', 'google bigquery', 'bq'],
+  'redshift': ['redshift', 'amazon redshift', 'aws redshift'],
+  'snowflake': ['snowflake', 'snowflakedb'],
+  'databricks': ['databricks', 'delta lake'],
+  'elasticsearch': ['elasticsearch', 'elastic search', 'opensearch', 'elk'],
+
   // Shell & scripting
   'shell': ['shell', 'bash', 'zsh', 'sh', 'shell script', 'shellscript'],
   'powershell': ['powershell', 'pwsh', 'ps1'],

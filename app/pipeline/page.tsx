@@ -383,6 +383,9 @@ function PipelinePageContent() {
 
   // Note: expandedExplanation state moved to CandidatePipelineItem component
 
+  // Guard against multiple demo initializations (React StrictMode + dep changes)
+  const demoInitializedRef = useRef(false);
+
   // Load job context and candidates on mount
   useEffect(() => {
     // Use a local flag to handle React Strict Mode properly
@@ -396,6 +399,8 @@ function PipelinePageContent() {
       const isDemoFromUrl = urlParams.get("demo") === "true" || localStorage.getItem("recruitos_demo_mode") === "true";
       // DEMO MODE: Load real demo profiles with receipts
       if (isDemoMode || isDemoFromUrl) {
+        if (demoInitializedRef.current) return;
+        demoInitializedRef.current = true;
         console.log("[Pipeline] Demo mode - loading real demo profiles");
         const demoJobContext = {
           title: DEMO_JOB.title,

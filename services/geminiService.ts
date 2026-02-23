@@ -9,6 +9,37 @@ import type { EnrichmentResult } from '../types';
 // Re-export AI_MODELS for use by enrichmentService
 export { AI_MODELS };
 
+/**
+ * Sanitize a candidate object for safe prompt interpolation.
+ * Strips control characters and limits field lengths to prevent prompt injection.
+ */
+function sanitizeCandidateForPrompt(candidate: Candidate): Record<string, unknown> {
+  const sanitize = (val: unknown, maxLen = 200): unknown => {
+    if (typeof val === 'string') {
+      return val.replace(/[\r\n]+/g, ' ').replace(/[<>{}[\]`]/g, '').trim().slice(0, maxLen);
+    }
+    if (Array.isArray(val)) return val.slice(0, 20).map(v => sanitize(v, 100));
+    if (typeof val === 'object' && val !== null) {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(val)) out[k] = sanitize(v, maxLen);
+      return out;
+    }
+    return val;
+  };
+  // Only include fields relevant to AI analysis
+  return {
+    name: sanitize(candidate.name),
+    currentRole: sanitize(candidate.currentRole),
+    company: sanitize(candidate.company),
+    location: sanitize(candidate.location),
+    yearsExperience: candidate.yearsExperience,
+    alignmentScore: candidate.alignmentScore,
+    skills: sanitize(candidate.skills),
+    keyEvidence: sanitize(candidate.keyEvidence, 500),
+    risks: sanitize(candidate.risks, 500),
+  };
+}
+
 // Helper to safely get env vars
 const getEnv = (key: string) => {
   try {
@@ -789,7 +820,7 @@ export const generateDeepProfile = async (candidate: Candidate, jobContext: stri
   const prompt = `
         Analyze this candidate for the following Job Context:
         Job Context: ${jobContext}
-        Candidate: ${JSON.stringify(candidate)}
+        Candidate: ${JSON.stringify(sanitizeCandidateForPrompt(candidate))}
 
         Return JSON only with:
         {
@@ -831,9 +862,9 @@ export const generateOutreach = async (candidate: Candidate, context: string, jo
 // Step 3.5: Network Pathfinding Dossier - Strategic Intelligence Layer
 export const generateNetworkDossier = async (candidate: Candidate, jobContext: string): Promise<NetworkDossier> => {
   const prompt = `
-        Generate a Network Pathfinding Dossier for ${candidate.name}.
+        Generate a Network Pathfinding Dossier for ${sanitizeCandidateForPrompt(candidate).name}.
         Target Role: ${jobContext}
-        Candidate Data: ${JSON.stringify(candidate)}
+        Candidate Data: ${JSON.stringify(sanitizeCandidateForPrompt(candidate))}
 
         Return JSON matching this schema:
         {

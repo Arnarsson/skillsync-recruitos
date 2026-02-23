@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const maxDuration = 60;
+
+/** Sanitize user-controlled strings before interpolating into AI prompts */
+function sanitizeForPrompt(value: string | undefined | null, maxLen = 200): string {
+  if (!value) return "Unknown";
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/[<>{}[\]`]/g, "")
+    .trim()
+    .slice(0, maxLen);
+}
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
@@ -38,6 +49,9 @@ interface CompareRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body: CompareRequest = await request.json();
     const { candidates, jobContext } = body;
@@ -64,25 +78,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build candidate summaries for the prompt
+    // Build candidate summaries for the prompt (sanitize all user-controlled fields)
     const candidateSummaries = candidates
       .map(
         (c, i) => `
-Candidate ${i + 1} (ID: ${c.id}):
-- Name: ${c.name}
-- Current Role: ${c.currentRole}
-- Company: ${c.company}
-- Location: ${c.location}
+Candidate ${i + 1} (ID: ${sanitizeForPrompt(c.id, 50)}):
+- Name: ${sanitizeForPrompt(c.name)}
+- Current Role: ${sanitizeForPrompt(c.currentRole)}
+- Company: ${sanitizeForPrompt(c.company)}
+- Location: ${sanitizeForPrompt(c.location)}
 - Alignment Score: ${c.alignmentScore}/100
 - Years Experience: ${c.yearsExperience ?? "Unknown"}
-- Skills: ${c.skills?.join(", ") || "Not specified"}
-- Key Evidence: ${c.keyEvidence?.join("; ") || "Not available"}
-- Risks: ${c.risks?.join("; ") || "None identified"}
-- Summary: ${c.shortlistSummary || "Not available"}
-- Persona: ${c.persona?.archetype || "Not profiled"}
-- Soft Skills: ${c.persona?.softSkills?.join(", ") || "Not assessed"}
-- Green Flags: ${c.persona?.greenFlags?.join("; ") || "None"}
-- Red Flags: ${c.persona?.redFlags?.join("; ") || "None"}
+- Skills: ${c.skills?.map(s => sanitizeForPrompt(s, 50)).join(", ") || "Not specified"}
+- Key Evidence: ${c.keyEvidence?.map(e => sanitizeForPrompt(e, 100)).join("; ") || "Not available"}
+- Risks: ${c.risks?.map(r => sanitizeForPrompt(r, 100)).join("; ") || "None identified"}
+- Summary: ${sanitizeForPrompt(c.shortlistSummary, 500)}
+- Persona: ${sanitizeForPrompt(c.persona?.archetype)}
+- Soft Skills: ${c.persona?.softSkills?.map(s => sanitizeForPrompt(s, 50)).join(", ") || "Not assessed"}
+- Green Flags: ${c.persona?.greenFlags?.map(f => sanitizeForPrompt(f, 100)).join("; ") || "None"}
+- Red Flags: ${c.persona?.redFlags?.map(f => sanitizeForPrompt(f, 100)).join("; ") || "None"}
 - Score Breakdown:
   - Skills: ${c.scoreBreakdown?.skills?.percentage ?? "N/A"}%
   - Experience: ${c.scoreBreakdown?.experience?.percentage ?? "N/A"}%

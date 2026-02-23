@@ -52,7 +52,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
     if (typeof window === "undefined") return DEFAULT_LANG;
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === "en" || stored === "da" ? stored : DEFAULT_LANG;
+    if (stored === "en" || stored === "da") return stored;
+    // Default to browser locale, fallback to English
+    return navigator.language.startsWith("da") ? "da" : DEFAULT_LANG;
   });
   const [mounted, setMounted] = useState(false);
 
