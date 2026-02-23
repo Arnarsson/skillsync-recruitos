@@ -7,15 +7,13 @@ export async function POST(request: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const { apiKey: clientApiKey, url, dataset } = await request.json();
+    const { url } = await request.json();
 
-    // Use server-side env var, fallback to client-provided key
-    const apiKey = process.env.BRIGHTDATA_API_KEY || clientApiKey;
-
+    const apiKey = process.env.BRIGHTDATA_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { message: "BrightData API key is required. Set BRIGHTDATA_API_KEY in environment variables." },
-        { status: 400 }
+        { message: "BrightData not configured on server. Set BRIGHTDATA_API_KEY in environment variables." },
+        { status: 503 }
       );
     }
 

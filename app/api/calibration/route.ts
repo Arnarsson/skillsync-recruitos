@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 import { analyzeJobDescription } from "@/lib/services/gemini";
 
 interface FirecrawlResponse {
@@ -103,6 +104,9 @@ async function basicFetch(url: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await request.json();
     const { type, url, text } = body;

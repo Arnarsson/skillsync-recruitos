@@ -7,15 +7,13 @@ export async function POST(request: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const { apiKey: clientApiKey, snapshotId } = await request.json();
+    const { snapshotId } = await request.json();
 
-    // Use server-side env var, fallback to client-provided key
-    const apiKey = process.env.BRIGHTDATA_API_KEY || clientApiKey;
-
+    const apiKey = process.env.BRIGHTDATA_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { message: "BrightData API key is required" },
-        { status: 400 }
+        { message: "BrightData not configured on server" },
+        { status: 503 }
       );
     }
 

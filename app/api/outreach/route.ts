@@ -5,6 +5,16 @@ import { outreachGenerateSchema } from "@/lib/validation/apiSchemas";
 
 export const maxDuration = 60;
 
+/** Sanitize user-controlled strings before interpolating into AI prompts */
+function sanitizeForPrompt(value: string | undefined, maxLen = 200): string {
+  if (!value) return "Unknown";
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/[<>{}[\]`]/g, "")
+    .trim()
+    .slice(0, maxLen);
+}
+
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.0-flash-001";
 
@@ -58,9 +68,9 @@ Generate a personalized outreach message for recruiting.
 
 ${toneConfig.prompt}
 
-Candidate: ${candidateName} (${candidateRole} at ${company})
-Job Context: ${jobContext}
-Additional Instructions: ${instructions}
+Candidate: ${sanitizeForPrompt(candidateName)} (${sanitizeForPrompt(candidateRole)} at ${sanitizeForPrompt(company)})
+Job Context: ${sanitizeForPrompt(jobContext, 2000)}
+Additional Instructions: ${sanitizeForPrompt(instructions, 500)}
 
 IMPORTANT:
 - Keep the message concise (under 150 words)
@@ -167,6 +177,50 @@ export async function POST(request: NextRequest) {
 
   if (!session?.user && !isDemoMode) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Demo mode: return synthetic response without calling external AI
+  if (isDemoMode) {
+    try {
+      const body = await request.json();
+      const parsed = outreachGenerateSchema.safeParse(body);
+      const candidateName = parsed.success ? parsed.data.candidateName : "there";
+
+      const demoVariants: OutreachVariant[] = [
+        {
+          tone: "professional",
+          name: "Professional",
+          description: TONE_CONFIGS.professional.description,
+          message: `Hi ${candidateName},\n\nI came across your GitHub profile and was genuinely impressed by your work. We're building something ambitious at our company and your technical background aligns strongly with what we're looking for.\n\nWould you be open to a 15-minute chat this week to learn more?\n\nBest regards`,
+          isRecommended: false,
+        },
+        {
+          tone: "warm",
+          name: "Warm & Personal",
+          description: TONE_CONFIGS.warm.description,
+          message: `Hey ${candidateName}!\n\nI've been following some of your open-source contributions and I'm really impressed by the quality of your work. We share a passion for clean, well-architected code.\n\nI'd love to tell you about what we're working on — I think you'd find the technical challenges genuinely exciting. Coffee chat sometime this week?\n\nCheers`,
+          isRecommended: true,
+        },
+        {
+          tone: "technical",
+          name: "Technical",
+          description: TONE_CONFIGS.technical.description,
+          message: `Hi ${candidateName},\n\nYour approach to distributed systems caught my eye — especially how you've structured your recent projects. We're tackling similar problems at scale and could use someone with your depth.\n\nThe stack is modern (TypeScript, Go, K8s) and the problems are real. Happy to share our architecture doc if you're curious.\n\nLet me know if you'd like to dig in.`,
+          isRecommended: false,
+        },
+      ];
+
+      return NextResponse.json({
+        variants: demoVariants,
+        recommendedTone: "warm",
+        demo: true,
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
   }
 
   try {

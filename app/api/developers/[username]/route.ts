@@ -63,6 +63,13 @@ export async function GET(
     // Check if this is a deep profile request
     const deep = request.nextUrl.searchParams.get("deep") === "true";
 
+    if (deep && !session?.user) {
+      return NextResponse.json(
+        { error: "Authentication required for deep profile" },
+        { status: 401 }
+      );
+    }
+
     if (deep) {
       // Return full profile with contact info
       return NextResponse.json({
