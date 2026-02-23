@@ -739,7 +739,7 @@ export async function quickBehavioralCheck(
     candidateId,
     github,
     engagementRecency,
-    approachReadiness: engagementRecency === 'active' ? 'neutral' : 'neutral',
+    approachReadiness: engagementRecency === 'active' ? 'ready' : engagementRecency === 'dormant' ? 'not_ready' : 'neutral',
     generatedAt: new Date().toISOString(),
   };
 }

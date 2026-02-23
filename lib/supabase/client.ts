@@ -7,6 +7,11 @@ export function createBrowserClient() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
+    const missing = [
+      !supabaseUrl && "NEXT_PUBLIC_SUPABASE_URL",
+      !supabaseKey && "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    ].filter(Boolean);
+    console.warn(`[Supabase] Client not initialized — missing: ${missing.join(", ")}`);
     return null;
   }
 
